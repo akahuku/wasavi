@@ -1,0 +1,23 @@
+{
+  "name": "wasavi",
+  "version": "0.1.0",
+  "description": "VI editor for any web pages.",
+  "icons": {
+     "16": "icon016.png",
+     "48": "icon048.png",
+    "128": "icon128.png"
+  },
+  "permissions": ["tabs", "http://*/*"],
+  "background_page": "background.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*"],
+      "js": ["agent.js", "wasavi.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "options_page": "options.html",
+  "homepage_url":"http://appsweets.net/",
+  "update_url":"http://appsweets.net/wasavi/queryversion.php?chrome-xml"
+}

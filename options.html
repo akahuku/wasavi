@@ -1,0 +1,181 @@
+<!doctype html>
+<!--
+	options page of wasavi for google chrome/opera extension
+
+	@version $Id: options.html 94 2012-02-26 12:07:45Z akahuku $
+	@author akahuku@gmail.com
+ -->
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link rel="SHORTCUT ICON" href="icon016.png">
+		<title>wasavi options</title>
+		<style>
+			body {
+				background-color:#fff;
+				color:#000;
+				font-family:"trebuchet ms",
+							"lucida grande",
+							"lucida sans unicode",
+							"arial",
+							"helvetica",
+							sans-serif;
+			}
+			h1 {
+				margin:0 0 32px 0;
+				padding:0 0 12px 0;
+				font-size:24pt;
+				font-weight:bold;
+				border-bottom:1px solid silver;
+			}
+			h1 img {
+				vertical-align:middle;
+				margin:0 8px 0 0;
+			}
+			h1 div.credit {
+				float:right;
+				font-size:medium;
+			}
+			h2 {
+				float:left;
+				clear:left;
+				padding:0 0 0 100px;
+				margin:0;
+				font-size:12pt;
+				font-weight:bold;
+			}
+			div.opt-unit {
+				margin:0 0 0 300px;
+				padding:0;
+				font-family:"Consolas",
+							"Monaco",
+							"Courier New",
+							"Courier",
+							monospace;
+			}
+			div.opt-unit label {
+				display:block;
+			}
+			div.opt-unit2 {
+				background-color:#eaeef3;
+				position:fixed;
+				left:-8px;
+				right:-8px;
+				bottom:-8px;
+				padding:12px 0 20px 300px;
+				box-shadow: 0 0 2px 2px rgba(128,128,128,0.5) inset;
+			}
+			div.bottom {
+				height:100px;
+			}
+			div.tips {
+				width:640px;
+				font-size:80%;
+				color:#888;
+			}
+			hr {
+				visibility:hidden;
+			}
+			textarea#exrc {
+				width:640px;
+				height:320px;
+				background-color:#f0f0f0;
+				border:1px solid #808080;
+			}
+			button#save {
+				font-size:18pt;
+				font-weight:bold;
+			}
+			span#save-result {
+				color:#dd0000;
+			}
+		</style>
+		<script src="wasavi.js"></script>
+		<script src="agent.js"></script>
+		<script>
+			function handleSaveClick (e) {
+				var targets = JSON.parse(localStorage.getItem('targets'));
+				for (var i in targets) {
+					var el = document.getElementById(i);
+					if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+						targets[i] = el.checked;
+					}
+				}
+
+				var exrc = document.getElementById('exrc');
+
+				WasaviAgent.sendReq(
+					{
+						type:'set-storage', 
+						items: [
+							{key:'targets', value:JSON.stringify(targets)},
+							{key:'exrc', value:exrc.value}
+						],
+					},
+					function () {
+						var saveResult = document.getElementById('save-result');
+						saveResult.textContent = 'saved.';
+						setTimeout(function () {
+							saveResult.textContent = '';
+						}, 1000 * 2);
+					}
+				);
+			}
+			function handleDOMContentLoaded (e) {
+				var targets = JSON.parse(localStorage.getItem('targets'));
+				for (var i in targets) {
+					var el = document.getElementById(i);
+					if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+						el.checked = targets[i];
+					}
+				}
+
+				var exrc = document.getElementById('exrc');
+				exrc.value = localStorage.getItem('exrc') || '';
+
+				var save = document.getElementById('save');
+				save.addEventListener('click', handleSaveClick, false);
+			}
+
+			document.addEventListener('DOMContentLoaded', handleDOMContentLoaded, false);
+		</script>
+	</head>
+	<body>
+		<h1>
+			<div class="credit"><a href="http://appsweets.net/"><img src="appsweets.png">appsweets.net</a></div>
+			<img src="icon048.png">wasavi options
+		</h1>
+		<h2>
+			exrc
+		</h2>
+		<div class="opt-unit">
+			<textarea id="exrc"></textarea>
+			<div class="tips">
+				The contents of this text box are the initialization commands for wasavi.
+				There commands will be executed for every starting of wasavi editor.
+				You can write any ex commands you like.
+			</div>
+		</div>
+		<hr>
+		<h2>
+			target elements
+		</h2>
+		<div class="opt-unit">
+			<label><input type="checkbox" id="enableTextArea">textarea</label>
+			<label><input type="checkbox" id="enableText"    >input[type=text]</label>
+			<label><input type="checkbox" id="enableSearch"  >input[type=search]</label>
+			<label><input type="checkbox" id="enableTel"     >input[type=tel]</label>
+			<label><input type="checkbox" id="enableUrl"     >input[type=url]</label>
+			<label><input type="checkbox" id="enableEmail"   >input[type=email]</label>
+			<label><input type="checkbox" id="enablePassword">input[type=password]</label>
+			<label><input type="checkbox" id="enableNumber"  >input[type=number]</label>
+		</div>
+		<div class="bottom">
+		</div>
+		<div class="opt-unit2">
+			<button id="save">Save</button>
+			<span id="save-result"></span>
+		</div>
+	</body>
+</html>
+<!-- vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=html : -->
