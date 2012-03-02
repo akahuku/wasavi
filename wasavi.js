@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 95 2012-02-27 04:42:58Z akahuku $
+ * @version $Id: wasavi.js 96 2012-02-28 07:24:40Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -41,15 +41,15 @@
 	 * ----------------
 	 */
 
-	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 95 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 95 2012-02-27 04:42:58Z akahuku $';
-	/*const*/var CONTAINER_ID = 'wasavi_container';
-	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
-	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
-	/*const*/var IS_GECKO = navigator.product == 'Gecko' && navigator.userAgent.indexOf('Gecko/') != -1;
-	/*const*/var MONOSPACE_FONT_FAMILY = '"Consolas","Monaco","Courier New","Courier",monospace';
-	/*const*/var BRACKETS = '[{(<>)}]';
-	/*const*/var ACCEPTABLE_TYPES = {
+	/*@const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 96 $') || [1])[0];
+	/*@const*/var VERSION_DESC = '$Id: wasavi.js 96 2012-02-28 07:24:40Z akahuku $';
+	/*@const*/var CONTAINER_ID = 'wasavi_container';
+	/*@const*/var EDITOR_CORE_ID = 'wasavi_editor';
+	/*@const*/var LINE_INPUT_ID = 'wasavi_footer_input';
+	/*@const*/var IS_GECKO = navigator.product == 'Gecko' && navigator.userAgent.indexOf('Gecko/') != -1;
+	/*@const*/var MONOSPACE_FONT_FAMILY = '"Consolas","Monaco","Courier New","Courier",monospace';
+	/*@const*/var BRACKETS = '[{(<>)}]';
+	/*@const*/var ACCEPTABLE_TYPES = {
 		text:     'enableText',
 		search:   'enableSearch',
 		tel:      'enableTel',
@@ -58,7 +58,7 @@
 		password: 'enablePassword',
 		number:   'enableNumber'
 	};
-	/*const*/var SPECIAL_KEYS = {
+	/*@const*/var SPECIAL_KEYS = {
 		'-127':  '<delete>',
 		33:  '<pageup>',
 		34:  '<pagedown>',
@@ -73,8 +73,8 @@
 		116: '<f5>', 117:  '<f6>', 118:  '<f7>', 119:  '<f8>',
 		120: '<f9>', 121: '<f10>', 122: '<f11>', 123: '<f12>'
 	};
-	/*const*/var SPECIAL_KEYS_REVERSED = reverseObject(SPECIAL_KEYS);
-	/*const*/var WEBKIT_KEY_IDENTIFIERS_REVERSED = {
+	/*@const*/var SPECIAL_KEYS_REVERSED = reverseObject(SPECIAL_KEYS);
+	/*@const*/var WEBKIT_KEY_IDENTIFIERS_REVERSED = {
 		'U+0008':  -8,
 		'U+0009':  -9,
 		'U+001B':  -27,
@@ -92,12 +92,12 @@
 		'F5':116, 'F6': 117, 'F7': 118, 'F8': 119,
 		'F9':120, 'F10':121, 'F11':122, 'F12':123
 	};
-	/*const*/var WEBKIT_CTRL_SPECIAL_KEYS_REVERSED = {
+	/*@const*/var WEBKIT_CTRL_SPECIAL_KEYS_REVERSED = {
 		'U+00DB': 27,	// ^[
 		'U+0036': 30,	// ^^
 		'U+00BB': 31	// ^_
 	};
-	/*const*/var LATIN1_PROPS = {
+	/*@const*/var LATIN1_PROPS = {
 		0x0000:'Cc', 0x0001:'Cc', 0x0002:'Cc', 0x0003:'Cc', 0x0004:'Cc', 0x0005:'Cc', 0x0006:'Cc', 0x0007:'Cc',
 		0x0008:'Cc', 0x0009:'Zs', 0x000A:'Cc', 0x000B:'Cc', 0x000C:'Cc', 0x000D:'Cc', 0x000E:'Cc', 0x000F:'Cc',
 		0x0010:'Cc', 0x0011:'Cc', 0x0012:'Cc', 0x0013:'Cc', 0x0014:'Cc', 0x0015:'Cc', 0x0016:'Cc', 0x0017:'Cc',
@@ -115,7 +115,7 @@
 		0x0070:'Ll', 0x0071:'Ll', 0x0072:'Ll', 0x0073:'Ll', 0x0074:'Ll', 0x0075:'Ll', 0x0076:'Ll', 0x0077:'Ll',
 		0x0078:'Ll', 0x0079:'Ll', 0x007A:'Ll', 0x007B:'Ps', 0x007C:'Sm', 0x007D:'Pe', 0x007E:'Sm', 0x007F:'Cc'
 	};
-	/*const*/var EXFLAGS = {
+	/*@const*/var EXFLAGS = {
 		addr1: 1,
 		addr2: 2,
 		addr2All: 4,
@@ -132,7 +132,7 @@
 	 * ----------------
 	 */
 
-	function VariableItem (name, type, defaultValue, subSetter) {
+	/*@constructor*/function VariableItem (name, type, defaultValue, subSetter) {
 		this.name = name;
 		this.type = type;
 		this.isLateBind = type == 'r';
@@ -197,7 +197,7 @@
 			}
 		}
 	};
-	function Configurator (internals, abbrevs) {
+	/*@constructor*/function Configurator (internals, abbrevs) {
 		var vars = {};
 		var names = {};
 		function init () {
@@ -317,7 +317,7 @@
 		init();
 	}
 
-	function Position (row, col) {
+	/*@constructor*/function Position (row, col) {
 		this.row = row;
 		this.col = col;
 	}
@@ -356,7 +356,7 @@
 		}
 	};
 
-	function RegisterItem () {
+	/*@constructor*/function RegisterItem () {
 		this.isLineOrient = false;
 		this.data = '';
 	}
@@ -387,7 +387,7 @@
 		}
 	};
 
-	function Registers () {
+	/*@constructor*/function Registers () {
 		/*
 		 * available registers:
 		 *
@@ -532,7 +532,7 @@
 		load();
 	}
 
-	function PrefixInput () {
+	/*@constructor*/function PrefixInput () {
 		var register;
 		var operation;
 		var motion;
@@ -651,14 +651,14 @@
 		reset();
 	}
 
-	function CursorUI (editor, comCursor, editCursor) {
+	/*@constructor*/function CursorUI (editor, comCursor, editCursor) {
 		var cursorType = 'command';
 		var focused = false;
 		var visible = false;
 		var wrapper = null;
 		var isInComposition = false;
 
-		function CommandWrapper (mode) {
+		/*@constructor*/function CommandWrapper (mode) {
 			var cursorBlinkTimer;
 
 			function handleBlink () {
@@ -718,7 +718,7 @@
 			this.compositionComplete = function () {};
 		}
 
-		function EditWrapper (mode) {
+		/*@constructor*/function EditWrapper (mode) {
 			var leading;
 
 			function getCompositionSpan () {
@@ -972,7 +972,7 @@
 		this.__defineGetter__('isInComposition', function () { return isInComposition; });
 	}
 
-	function RegexConverter () {
+	/*@constructor*/function RegexConverter () {
 		var flips = {
 			'\\<': '\\b',
 			'\\>': '\\b',
@@ -1029,7 +1029,7 @@
 		this.getDefaultOption = getDefaultOption;
 	}
 
-	function Marks (editor) {
+	/*@constructor*/function Marks (editor) {
 		var marks = {};
 
 		function serialize () {
@@ -1155,7 +1155,7 @@
 		restore(targetElement.dataset.wasaviMarks || '');
 	}
 
-	function RegexFinderInfo () {
+	/*@constructor*/function RegexFinderInfo () {
 		var head;
 		var direction;
 		var offset;
@@ -1201,7 +1201,7 @@
 		this.setPattern = setPattern;
 	}
 
-	function Editor (element) {
+	/*@constructor*/function Editor (element) {
 		this.elm = $(element);
 		this.isLineOrientSelection = false;
 	}
@@ -1906,7 +1906,7 @@
 		};
 	};
 
-	function Scroller (editor) {
+	/*@constructor*/function Scroller (editor) {
 		var running = false;
 		var consumeMsecs = 250;
 		var timerPrecision = 1;
@@ -1967,7 +1967,7 @@
 		});
 	}
 
-	function ExCommand (name, shortName, syntax, flags, handler) {
+	/*@constructor*/function ExCommand (name, shortName, syntax, flags, handler) {
 		this.name = name;
 		this.shortName = shortName;
 		this.handler = handler;
@@ -2225,9 +2225,9 @@ flag23_loop:
 		}
 	};
 
-	function MapManager () {
+	/*@constructor*/function MapManager () {
 
-		function MapItem (name, rules, sequences) {
+		/*@constructor*/function MapItem (name, rules, sequences) {
 			this.register = function () {
 				for (var i = 0; i < arguments.length; i += 2) {
 					var lhs = arguments[i + 0];
@@ -2284,8 +2284,8 @@ flag23_loop:
 			this.__defineGetter__('name', function () { return name; });
 		}
 
-		/*const*/var NEST_MAX = 100;
-		/*const*/var MAP_INDICES = {
+		/*@const*/var NEST_MAX = 100;
+		/*@const*/var MAP_INDICES = {
 			 'command':0,
 			 'edit':1,
 			 'edit-overwrite':1
@@ -2423,7 +2423,7 @@ flag23_loop:
 		this.process = process;
 	}
 
-	function Backlog (container, con, scaler) {
+	/*@constructor*/function Backlog (container, con, scaler) {
 		var buffer = [];
 		this.push = function (arg) {
 			arg instanceof Array ?
@@ -2503,7 +2503,7 @@ flag23_loop:
 		});
 	}
 
-	function Bell () {
+	/*@constructor*/function Bell () {
 		var a = new Audio();
 		var src = '';
 		var enabled = false;
@@ -2536,7 +2536,7 @@ flag23_loop:
 		}
 	}
 
-	function SubstituteWorker () {
+	/*@constructor*/function SubstituteWorker () {
 		this.patternString = '';
 		this.pattern = null;
 		this.replFn = null;
@@ -2890,7 +2890,7 @@ flag23_loop:
 		}
 	};
 
-	function LineInputHistories (maxSize, names) {
+	/*@constructor*/function LineInputHistories (maxSize, names) {
 		var s = {};
 		var name;
 		var storageKey = 'wasavi_lineinput_histories';
@@ -2989,7 +2989,7 @@ flag23_loop:
 		init();
 	}
 
-	function EditLogger (editor, max) {
+	/*@constructor*/function EditLogger (editor, max) {
 		this.init(editor, max);
 	}
 	EditLogger.ITEM_TYPE = {
@@ -3000,7 +3000,7 @@ flag23_loop:
 		UNSHIFT: 4
 	};
 	EditLogger.prototype = new function () {
-		function EditLogItemBase () {
+		/*@constructor*/function EditLogItemBase () {
 			this.position;
 			this.data;
 			this.inputMethod = 'insertChars';
@@ -3044,7 +3044,7 @@ flag23_loop:
 		 *     abcABCdefghijklmn -> abcdefghijklmn
 		 *        ^                    ^
 		 */
-		function EditLogItemInsert () {}
+		/*@constructor*/function EditLogItemInsert () {}
 		EditLogItemInsert.prototype = extend(new EditLogItemBase, {
 			type: 'Insert',
 			init: function (p, d) {
@@ -3088,7 +3088,7 @@ flag23_loop:
 				return 1;
 			}
 		});
-		function EditLogItemOverwrite () {}
+		/*@constructor*/function EditLogItemOverwrite () {}
 		EditLogItemOverwrite.prototype = extend(new EditLogItemBase, {
 			type: 'Overwrite',
 			init: function (p, d, d2) {
@@ -3120,7 +3120,7 @@ flag23_loop:
 		 *        ^              ^
 		 *        def
 		 */
-		function EditLogItemDelete () {}
+		/*@constructor*/function EditLogItemDelete () {}
 		EditLogItemDelete.prototype = extend(new EditLogItemBase, {
 			type: 'Delete',
 			init: function (p, d, p2, lo) {
@@ -3144,7 +3144,7 @@ flag23_loop:
 		/*
 		 * shift: point, count
 		 */
-		function EditLogItemShift () {}
+		/*@constructor*/function EditLogItemShift () {}
 		EditLogItemShift.prototype = extend(new EditLogItemBase, {
 			type: 'Shift',
 			init: function (p, d, rc, sc) {
@@ -3203,7 +3203,7 @@ flag23_loop:
 		/*
 		 * unshift: point, count
 		 */
-		function EditLogItemUnshift () {}
+		/*@constructor*/function EditLogItemUnshift () {}
 		EditLogItemUnshift.prototype = extend(new EditLogItemBase, {
 			type: 'Unshift',
 			init: function () {
@@ -3222,7 +3222,7 @@ flag23_loop:
 		/*
 		 * edit log item cluster
 		 */
-		function EditLogItemCluster () {
+		/*@constructor*/function EditLogItemCluster () {
 			this.items = [];
 			this.nestLevel = 0;
 		}
@@ -3371,7 +3371,7 @@ flag23_loop:
 		};
 	};
 
-	function TextBlockRegex () {
+	/*@constructor*/function TextBlockRegex () {
 		var paragraphs;
 		var sections;
 		var sentenceForwardRegex =  /[.!?][)\]"']*(?:[ \t]+|\n)|[^\n]\n(?=\n+)|\n\s*(?=\S)|$/g;
@@ -3461,7 +3461,7 @@ flag23_loop:
 		this.setSectionMacros = setSectionMacros;
 	}
 
-	function PairBracketsIndicator (c, t, n) {
+	/*@constructor*/function PairBracketsIndicator (c, t, n) {
 		var timer;
 		var count;
 		var visible;
