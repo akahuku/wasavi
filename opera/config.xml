@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" version="0.1.101">
+    <name xml:lang="en" short="wasavi">wasavi</name>
+    <author href="http://appsweets.net" email="akahuku@gmail.com">akahuku@gmail.com</author>
+    <description>VI editor for any web page.</description>
+    <license href="http://www.opensource.org/licenses/bsd-license.php">Licensed under the New BSD License</license>
+    <icon src="icon016.png" width="16" height="16" />
+    <icon src="icon048.png" width="48" height="48" />
+    <icon src="icon128.png" width="128" height="128" />
+    <content src="background.html" encoding="UTF-8" type="text/html" />
+    <update-description href="http://appsweets.net/wasavi/queryversion.php?opera-xml" />
+</widget>
+
+
