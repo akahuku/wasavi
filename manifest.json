@@ -1,7 +1,7 @@
 {
   "name": "wasavi",
   "version": "0.1.0",
-  "description": "VI editor for any web pages.",
+  "description": "VI editor for any web page.",
   "icons": {
      "16": "icon016.png",
      "48": "icon048.png",
@@ -11,8 +11,8 @@
   "background_page": "background.html",
   "content_scripts": [
     {
-      "matches": ["http://*/*"],
-      "js": ["agent.js", "wasavi.js"],
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["agent.js"],
       "run_at": "document_start",
       "all_frames": true
     }

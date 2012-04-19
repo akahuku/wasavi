@@ -4,7 +4,8 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 96 2012-02-28 07:24:40Z akahuku $
+ * @version $Id: wasavi.js 100 2012-04-18 10:47:31Z akahuku $
+ * @sourceURL=wasavi.js
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -34,19 +35,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-(function () {
-
+(document.readyState != 'complete' || document.querySelectorAll('textarea,input').length > 0) &&
+(function (global) {
 	/*
 	 * constants
 	 * ----------------
 	 */
 
-	/*@const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 96 $') || [1])[0];
-	/*@const*/var VERSION_DESC = '$Id: wasavi.js 96 2012-02-28 07:24:40Z akahuku $';
+	/*@const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 100 $') || [1])[0];
+	/*@const*/var VERSION_DESC = '$Id: wasavi.js 100 2012-04-18 10:47:31Z akahuku $';
 	/*@const*/var CONTAINER_ID = 'wasavi_container';
 	/*@const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*@const*/var LINE_INPUT_ID = 'wasavi_footer_input';
-	/*@const*/var IS_GECKO = navigator.product == 'Gecko' && navigator.userAgent.indexOf('Gecko/') != -1;
+	/*@const*/var IS_GECKO =
+		window.navigator.product == 'Gecko'
+		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
+	/*@const*/var IS_JETPACK_CONTENT_SCRIPT =
+		typeof global.getInterface == 'function'
+		&& /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
+			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' ')
+		);
+	/*@const*/var CAN_COMMUNICATE_WITH_EXTENSION =
+		global.WasaviAgent
+		&& (
+			window.chrome && chrome.extension
+			|| global.opera && global.opera.extension
+			|| IS_GECKO && IS_JETPACK_CONTENT_SCRIPT
+		);
 	/*@const*/var MONOSPACE_FONT_FAMILY = '"Consolas","Monaco","Courier New","Courier",monospace';
 	/*@const*/var BRACKETS = '[{(<>)}]';
 	/*@const*/var ACCEPTABLE_TYPES = {
@@ -226,18 +241,21 @@
 			if (name in names) {
 				return internals[names[name]];
 			}
+			return undefined;
 		}
 		this.getInfo = function (name) {
 			var item = getItem(name);
 			if (item) {
 				return {name:item.name, type:item.type};
 			}
+			return undefined;
 		};
 		this.getData = function (name, reformat) {
 			var item = getItem(name);
 			if (item) {
 				return reformat ? item.visibleString : item.value;
 			}
+			return undefined;
 		};
 		this.setData = function (name, value) {
 			var off = false;
@@ -267,6 +285,7 @@
 				}
 			}
 			vars[item.name] = item.value;
+			return undefined;
 		};
 		this.dump = function (all) {
 			var result = ['*** options ***'];
@@ -916,7 +935,6 @@
 				case 'edit':
 				case 'edit-overwrite':
 					wrapper = new EditWrapper(cursorType);
-					compositionStartPos = editor.selectionStart;
 					break;
 				}
 			}
@@ -1066,9 +1084,7 @@
 			save();
 		}
 		function get (name) {
-			if (isValidName(name) && name in marks) {
-				return marks[name];
-			}
+			return isValidName(name) && name in marks ? marks[name] : undefined;
 		}
 		function update2 (pos, func) {
 			function setMarks () {
@@ -1196,7 +1212,7 @@
 		this.__defineGetter__('pattern', function () { return pattern; });
 		this.__defineGetter__('verticalOffset', function () { return verticalOffset; });
 		this.__defineGetter__('text', function () { return text; });
-		this.__defineSetter__('text', function (v) { texti = v; });
+		this.__defineSetter__('text', function (v) { text = v; });
 		this.push = push;
 		this.setPattern = setPattern;
 	}
@@ -1221,10 +1237,11 @@
 				args.pop();
 				return func;
 			}
+			return undefined;
 		}
 		function setRange (r, pos, isEnd) {
 			var iter = document.createNodeIterator(
-				this.elm.childNodes[pos.row], NodeFilter.SHOW_TEXT, null, false);
+				this.elm.childNodes[pos.row], window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
 			var node;
 			while ((node = iter.nextNode())) {
@@ -1328,34 +1345,34 @@
 
 			// getter
 			rows: function (arg) {
-				var row = arg;
+				var row3 = arg;
 				if (arg instanceof Position) {
-					row = arg.row;
+					row3 = arg.row;
 				}
-				if (row < 0 || row >= this.elm.childNodes.length) {
-					throw new Error('rows: argument row (' + row + ') out of range.');
+				if (row3 < 0 || row3 >= this.elm.childNodes.length) {
+					throw new Error('rows: argument row (' + row3 + ') out of range.');
 				}
-				return this.elm.childNodes[row].textContent.replace(/\n$/, '');
+				return this.elm.childNodes[row3].textContent.replace(/\n$/, '');
 			},
 			rowNodes: function (arg) {
-				var row = arg;
+				var row1 = arg;
 				if (arg instanceof Position) {
-					row = arg.row;
+					row1 = arg.row;
 				}
-				if (row < 0 || row >= this.elm.childNodes.length) {
-					throw new Error('rowNodes: argument row (' + row + ') out of range.');
+				if (row1 < 0 || row1 >= this.elm.childNodes.length) {
+					throw new Error('rowNodes: argument row (' + row1 + ') out of range.');
 				}
-				return this.elm.childNodes[row];
+				return this.elm.childNodes[row1];
 			},
 			rowTextNodes: function (arg) {
-				var row = arg;
+				var row2 = arg;
 				if (arg instanceof Position) {
-					row = arg.row;
+					row2 = arg.row;
 				}
-				if (row < 0 || row >= this.elm.childNodes.length) {
-					throw new Error('rowTextNodes: argument row (' + row + ') out of range.');
+				if (row2 < 0 || row2 >= this.elm.childNodes.length) {
+					throw new Error('rowTextNodes: argument row (' + row2 + ') out of range.');
 				}
-				var node = this.elm.childNodes[row];
+				var node = this.elm.childNodes[row2];
 				if (!node.firstChild) {
 					node.appendChild(document.createTextNode(''));
 				}
@@ -1467,11 +1484,11 @@
 
 			// setter
 			setRow: function (arg, text) {
-				var row = arg;
+				var row4 = arg;
 				if (arg instanceof Position) {
-					row = arg.row;
+					row4 = arg.row;
 				}
-				this.elm.childNodes[row].textContent = text.replace(/\n$/, '') + '\n';
+				this.elm.childNodes[row4].textContent = text.replace(/\n$/, '') + '\n';
 			},
 			setSelectionRange: function () {
 				if (arguments.length == 1) {
@@ -1506,7 +1523,7 @@
 			insertChars: function (arg, text) {
 				var iter = document.createNodeIterator(
 					this.elm.childNodes[arg.row],
-					NodeFilter.SHOW_TEXT, null, false);
+					window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var node;
 
@@ -1525,7 +1542,7 @@
 			},
 			overwriteChars: function (arg, text) {
 				var iter = document.createNodeIterator(
-					this.elm.childNodes[arg.row], NodeFilter.SHOW_TEXT, null, false);
+					this.elm.childNodes[arg.row], window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var node;
 				var textOffset = 0;
@@ -1654,7 +1671,7 @@
 				var div2 = this.elm.insertBefore(document.createElement('div'), div1.nextSibling);
 				var r = document.createRange();
 				var iter = document.createNodeIterator(
-					div1, NodeFilter.SHOW_TEXT, null, false);
+					div1, window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var node;
 				while ((node = iter.nextNode())) {
@@ -1697,7 +1714,7 @@
 			linearPositionToBinaryPosition: function (n) {
 				var result;
 				var iter = document.createNodeIterator(
-					this.elm, NodeFilter.SHOW_TEXT, null, false);
+					this.elm, window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var pa;
 				var node;
@@ -1795,29 +1812,29 @@
 				}
 			},
 			offsetBy: function (s, offset) {
-				var row = s.row;
+				var row5 = s.row;
 				var col = s.col;
 				var last = this.elm.childNodes.length - 1;
 				while (offset > 0) {
-					var node = this.elm.childNodes[row].textContent;
-					if (row == last && node.substr(-1) == '\n') {
-						node = node.substring(node.length - 1);
+					var node = this.elm.childNodes[row5].textContent;
+					if (row5 == last && node.substr(-1) == '\n') {
+						node = node.substring(0, node.length - 1);
 					}
 					var rest = node.length - col;
 					col += offset;
 					offset -= rest;
 					if (col >= node.length) {
-						if (row == last) {
+						if (row5 == last) {
 							col = node.length;
 							offset = 0;
 						}
 						else {
-							row++;
+							row5++;
 							col = 0;
 						}
 					}
 				}
-				return new Position(row, col);
+				return new Position(row5, col);
 			},
 
 			// getter properties
@@ -2323,6 +2340,7 @@ flag23_loop:
 			else if (arg === 'edit') {
 				return maps[1];
 			}
+			return undefined;
 		}
 		function process (keyCode, handler) {
 			function firstPropName (obj) {
@@ -2331,6 +2349,7 @@ flag23_loop:
 						return i;
 					}
 				}
+				return undefined;
 			}
 			function expandDelayed (lhs, rhs) {
 				timer = setTimeout(function () {
@@ -2504,35 +2523,54 @@ flag23_loop:
 	}
 
 	/*@constructor*/function Bell () {
-		var a = new Audio();
+		var a = new window.Audio();
 		var src = '';
+		var prefix = '';
 		var enabled = false;
+
 		if (a.canPlayType('audio/ogg')) {
 			src = 'beep.ogg';
-			enabled = true;
+			prefix = 'data:audio/ogg;base64,';
 		}
 		else if (a.canPlayType('audio/mpeg')) {
 			src = 'beep.mp3';
-			enabled = true;
+			prefix = 'data:audio/mpeg;base64,';
 		}
-		if (enabled) {
-			if (window.chrome && window.chrome.extension) {
-				src = chrome.extension.getURL(src);
-			}
-			a.src = src;
-			this.play = function () {
-				var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
-				if (enabled && vol > 0) {
-					!a.ended && a.pause();
-					a.loop = false;
-					a.volume = vol / 100;
-					a.currentTime = 0;
-					a.play();
-				}
-			};
+
+		if (src == '') {
+			this.play = function () {};
 		}
 		else {
-			this.play = function () {};
+			if (CAN_COMMUNICATE_WITH_EXTENSION) {
+				global.WasaviAgent.sendRequest({type:'bell', file:src + '.txt'}, function (res) {
+					if (res && res.data != '') {
+						a.src = prefix + res.data;
+						enabled = true;
+					}
+				});
+			}
+			else {
+				a.src = src;
+				enabled = true;
+			}
+
+			a.addEventListener('load', function () {
+				a.removeEventListener('load', arguments.callee, false);
+				enabled = true;
+			}, false);
+			
+			this.play = function () {
+				if (enabled) {
+					var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
+					if (vol > 0) {
+						!a.ended && a.pause();
+						a.loop = false;
+						a.volume = vol / 100;
+						a.currentTime = 0;
+						a.play();
+					}
+				}
+			};
 		}
 	}
 
@@ -2627,6 +2665,7 @@ flag23_loop:
 			this.substCount = 0;
 			this.foundCount = 0;
 			this.isConfirm ? this.kontinue(t) : this.burst(t);
+			return undefined;
 		},
 		burst: function (t) {
 			var prevOffset, prevRow, re;
@@ -2729,6 +2768,7 @@ flag23_loop:
 					return false;
 				}
 			}
+			return undefined;
 		},
 		doSubstitute: function (t, re, row, col) {
 			var replaced = this.replFn(re);
@@ -2778,7 +2818,7 @@ flag23_loop:
 			if (repl == '') {
 				return this.nullString;
 			}
-			var result, codes = [];
+			var result = undefined, codes = [];
 			var specialEscapes = {'n':'\\n', 't':'\\t'};
 			var specialLetters = {'"':'\\"', '\\':'\\\\'};
 			loop(0, 0, 0);
@@ -2791,7 +2831,6 @@ flag23_loop:
 			catch (e) {
 				result = null;
 			}
-			return result;
 
 			function loop (callDepth, interruptMode, start) {
 				var newOperand = true;
@@ -2887,6 +2926,7 @@ flag23_loop:
 				}
 				return i;
 			}
+			return result;
 		}
 	};
 
@@ -2948,6 +2988,7 @@ flag23_loop:
 			if (s[name].current > 0) {
 				return s[name].lines[--s[name].current];
 			}
+			return undefined;
 		}
 		function next () {
 			if (s[name].current < s[name].lines.length) {
@@ -2956,6 +2997,7 @@ flag23_loop:
 					return s[name].lines[s[name].current];
 				}
 			}
+			return undefined;
 		}
 
 		this.__defineGetter__('isInitial', function () {
@@ -3001,8 +3043,8 @@ flag23_loop:
 	};
 	EditLogger.prototype = new function () {
 		/*@constructor*/function EditLogItemBase () {
-			this.position;
-			this.data;
+			this.position = undefined;
+			this.data = undefined;
 			this.inputMethod = 'insertChars';
 		}
 		EditLogItemBase.prototype = {
@@ -3274,6 +3316,7 @@ flag23_loop:
 				else if (this.items.length == 1) {
 					return this.items[0];
 				}
+				return undefined;
 			}
 		};
 
@@ -3440,14 +3483,15 @@ flag23_loop:
 				throw new Error(_('invalid paragraph format: ' + m));
 			}
 			paragraphs = m;
-			paragraphRegex = sectionRegex = null;
+			paragraphForwardRegex = paragraphBackwardRegex =
+			sectionForwardRegex = sectionBackwardRegex = null;
 		}
 		function setSectionMacros (m) {
 			if (!/^[a-zA-Z ]+$/.test(m)) {
 				throw new Error(_('invalid section format: ' + m));
 			}
 			sections = m;
-			sectionRegex = null;
+			sectionForwardRegex = sectionBackwardRegex = null;
 		}
 
 		this.__defineGetter__('sentenceForward', getSentenceForward);
@@ -3518,6 +3562,7 @@ flag23_loop:
 				requestBell();
 			}
 		}
+		return undefined;
 	};
 
 	/*
@@ -3904,11 +3949,12 @@ flag23_loop:
 		}
 	}
 	function getHighestZindex () {
-		var iter = document.createNodeIterator(document.body, NodeFilter.SHOW_ELEMENT, null, false);
+		var iter = document.createNodeIterator(
+			document.body, window.NodeFilter.SHOW_ELEMENT, null, false);
 		var node;
 		var result = 0;
 		while ((node = iter.nextNode())) {
-			var z = (node.style.zIndex || getComputedStyle(node, '').zIndex) - 0;
+			var z = (node.style.zIndex || document.defaultView.getComputedStyle(node, '').zIndex) - 0;
 			if (z > result) {
 				result = z;
 			}
@@ -3922,8 +3968,8 @@ flag23_loop:
 	 */
 
 	function getLocalStorage (keyName, callback) {
-		if (window.chrome && chrome.extension) {
-			chrome.extension.sendRequest({type:'get-storage', key:keyName}, function (res) {
+		if (CAN_COMMUNICATE_WITH_EXTENSION) {
+			global.WasaviAgent.sendRequest({type:'get-storage', key:keyName}, function (res) {
 				callback && callback(res.value);
 			});
 		}
@@ -3932,8 +3978,8 @@ flag23_loop:
 		}
 	}
 	function setLocalStorage (keyName, value) {
-		if (window.chrome && chrome.extension) {
-			chrome.extension.sendRequest({type:'set-storage', key:keyName, value:value});
+		if (CAN_COMMUNICATE_WITH_EXTENSION) {
+			global.WasaviAgent.sendRequest({type:'set-storage', key:keyName, value:value});
 		}
 		else if (window.localStorage) {
 			localStorage.setItem(keyName, value);
@@ -4002,7 +4048,8 @@ flag23_loop:
 
 		// hack for opera: ensure repaint
 		if (window.opera) {
-			scrollBy(0, 1); scrollBy(0, -1);
+			window.scrollBy(0, 1); 
+			window.scrollBy(0, -1);
 		}
 
 		/*
@@ -4061,6 +4108,8 @@ flag23_loop:
 		var modeLineGradient = 'linear-gradient(top, ' + hsl + ' 0%,#000 100%);';
 		var fontFamily = config.vars.monospace ? MONOSPACE_FONT_FAMILY : s.fontFamily;
 		var borderStyles = getBorderStyle(s);
+		var paddingStyle = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' ') || '0';
+		var boxSizingPrefix = IS_GECKO ? '-moz-' : '';
 
 		// scale line height
 		var heightScaler = document.body.appendChild(document.createElement('span'));
@@ -4086,34 +4135,38 @@ flag23_loop:
 			'  position:absolute;',
 			'  background-color:#000;',
 			'  z-index:' + Math.min(getHighestZindex() + 100, 0x7fffffff) + ';',
+			'  line-height:1;',
+			'  text-align:left;',
+			'  text-indent:0;',
+			'  text-decoration:none;',
+			'  text-shadow:none;',
 			'}',
 			'#wasavi_editor {',
 			'  display:block;',
 			'  margin:0;',
-			'  padding:' + s.padding + ';',
+			'  padding:' + paddingStyle + ';',
 			borderStyles,
 			'  border-color:silver;',
 			'  border-style:solid;',
 			'  border-radius:0;',
-			'  box-sizing:border-box;',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  font:' + getFontStyle(s, MONOSPACE_FONT_FAMILY) + ';',
-			'  text-decoration:none;',
-			'  text-shadow:none;',
 			'  letter-spacing:' + s.letterSpacing + ';',
 			'  width:' + target.offsetWidth + 'px;',
 			'  height:' + target.offsetHeight + 'px;',
-			'  background:#fff url(' + otm + ') repeat-y;',
+			'  background:#fff url(' + otm + ') left top repeat-y;',
+			'  background-origin:content-box;',
 			'  overflow-x:hidden;',
 			'  overflow-y:scroll',
 			'}',
 			'#wasavi_multiline_scaler {',
 			'  position:fixed;',
 			'  overflow:scroll;',
-			'  padding:' + s.padding + ';',
+			'  padding:' + paddingStyle + ';',
 			borderStyles,
 			'  border-color:silver;',
 			'  border-style:solid;',
-			'  box-sizing:border-box;',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  font:' + getFontStyle(s, fontFamily) + ';',
 			'  text-decoration:none;',
 			'  text-shadow:none;',
@@ -4148,7 +4201,6 @@ flag23_loop:
 			'  border:none;',
 			'  font-family:' + fontFamily + ';',
 			'  font-size:10pt;',
-			'  line-height:1;',
 			'  left:0px;',
 			'  top:0px;',
 			'  white-space:pre-wrap;',
@@ -4185,7 +4237,6 @@ flag23_loop:
 			'  padding:2px 2px 1px 2px;',
 			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
 			'  font-size:10pt;',
-			'  line-height:1;',
 			'  overflow:hidden',
 			'}',
 			'#wasavi_footer_modeline {',
@@ -4229,7 +4280,6 @@ flag23_loop:
 			'  background-color:rgba(0,0,0,0.5);',
 			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
 			'  font-size:10pt;',
-			'  line-height:1;',
 			'  width:100%',
 			'}',
 			'#wasavi_console_container {',
@@ -4238,7 +4288,7 @@ flag23_loop:
 			'  margin:0;',
 			'  padding:6px;',
 			'  left:8px; top:8px;',
-			'  box-sizing:border-box;',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  border:none;',
 			'  border-radius:8px;',
 			'  width:' + (target.offsetWidth - 16) + 'px;',
@@ -4256,7 +4306,6 @@ flag23_loop:
 			'  height:' + (target.offsetHeight - (16 + 12)) + 'px;',
 			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
 			'  font-size:10pt;',
-			'  line-height:1;',
 			'  overflow-y:hidden;',
 			'  white-space:pre-wrap;',
 			window.chrome ? '  resize:none;' : '',
@@ -4458,7 +4507,7 @@ flag23_loop:
 				});
 
 				var ev = document.createEvent('Event');
-				ev.initEvent('wasavi_start', true, true);
+				ev.initEvent('wasavi_start', true, false);
 				document.dispatchEvent(ev);
 			}
 			else {
@@ -4504,7 +4553,7 @@ flag23_loop:
 
 		// fire terminate event
 		var ev = document.createEvent('Event');
-		ev.initEvent('wasavi_terminate', true, true);
+		ev.initEvent('wasavi_terminate', true, false);
 		document.dispatchEvent(ev);
 	}
 	function setupEventHandlers (install) {
@@ -5277,6 +5326,7 @@ flag23_loop:
 		else {
 			inputEscape();
 		}
+		return undefined;
 	}
 
 	/*
@@ -5615,6 +5665,7 @@ flag23_loop:
 				prevn = n;
 				n = t.rightPos(n);
 			}
+			return undefined;
 		}
 		function findMatchBackward (current, match) {
 			var depth = 0;
@@ -5637,6 +5688,7 @@ flag23_loop:
 				prevn = n;
 				n = t.leftPos(n);
 			}
+			return undefined;
 		}
 
 		count || (count = 1);
@@ -5662,6 +5714,7 @@ flag23_loop:
 				findMatchForward(BRACKETS.charAt(currentIndex), matchChar);
 			return result;
 		}
+		return undefined;
 	}
 	function motionFindByRegexFacade (pattern, t, count, direction, verticalOffset) {
 		var result;
@@ -5673,7 +5726,7 @@ flag23_loop:
 			result = motionFindByRegexForward(pattern, t, count);
 			break;
 		default:
-			return;
+			return undefined;
 		}
 
 		if (result) {
@@ -5739,7 +5792,7 @@ flag23_loop:
 							loop = true;
 						}
 						else {
-							return;
+							return undefined;
 						}
 					}
 				} while (loop);
@@ -5820,7 +5873,7 @@ flag23_loop:
 							loop = true;
 						}
 						else {
-							return;
+							return undefined;
 						}
 					}
 				} while (loop);
@@ -6330,6 +6383,7 @@ flag23_loop:
 		else {
 			inputEscape();
 		}
+		return undefined;
 	}
 	function openLine (c, t, after) {
 		var n, isTopOfText = false;
@@ -6654,6 +6708,7 @@ flag23_loop:
 		finally {
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
 		}
+		return undefined;
 	}
 	function exSetMark (t, a) {
 		var name = a.argv[0];
@@ -6661,6 +6716,7 @@ flag23_loop:
 			return _('Mark names must be a single character.');
 		}
 		marks.set(name, new Position(a.range[0], 0));
+		return undefined;
 	}
 	function exCopy (t, a) {
 		var rg = document.createRange();
@@ -6691,6 +6747,7 @@ flag23_loop:
 				terminated = true;
 			}
 		}
+		return undefined;
 	}
 	function exWrite (t, a, isForce, isAppend, target) {
 		target = (target || '').replace(/^\s+|\s+$/g, '');
@@ -6754,6 +6811,7 @@ flag23_loop:
 			t.selectionStart = ss;
 			t.selectionEnd = se;
 		}
+		return undefined;
 	}
 	function exExecuteRegister (t, a) {
 		var register = a.flags.register ? a.register : '@';
@@ -6770,6 +6828,7 @@ flag23_loop:
 			return result;
 		}
 		registers.set('@', command, true);
+		return undefined;
 	}
 	function executeExCommand (t, source) {
 		// @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
@@ -7205,6 +7264,7 @@ flag23_loop:
 
 	// persistent variables
 
+	var runType;
 	var exrc = '';
 	var exGlobalSpecified = false;
 	var substituteWorker;
@@ -7250,6 +7310,7 @@ flag23_loop:
 				abbrevs[rhs] = lhs;
 				break;
 			}
+			return undefined;
 		}),
 		new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
 			return exCopy.apply(this, arguments);
@@ -7325,6 +7386,7 @@ flag23_loop:
 
 				mapManager.getMap(mapName).register(lhs, rhs);
 			}
+			return undefined;
 		}),
 		new ExCommand('mark', 'ma', 'w1r', 1, function (t, a) {
 			return exSetMark(t, a);
@@ -7339,7 +7401,7 @@ flag23_loop:
 				return _('Destination is in inside source.');
 			}
 			if (dest == r[1]) {
-				return;
+				return undefined;
 			}
 
 			var rg = document.createRange();
@@ -7363,6 +7425,17 @@ flag23_loop:
 			}
 			t.setSelectionRange(t.getLineTopOffset2(row, 0));
 			isEditCompleted = true;
+			return undefined;
+		}),
+		new ExCommand('options', 'opt', '', 0, function (t, a) {
+			if (CAN_COMMUNICATE_WITH_EXTENSION) {
+				global.WasaviAgent.sendRequest({type:'open-options-page'});
+			}
+			else {
+				requestBell();
+				return _('Don\'t know how to open options page.');
+			}
+			return undefined;
 		}),
 		new ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (t, a) {
 			return exCommandDefault.handler.apply(this, arguments);
@@ -7386,6 +7459,7 @@ flag23_loop:
 			else {
 				requestShowMessage(
 					_('{0} {operation:0} have executed again.', result));
+				return undefined;
 			}
 		}),
 		new ExCommand('s', 's', 's', 2, function (t, a) {
@@ -7470,6 +7544,7 @@ flag23_loop:
 				return _('{0} is not an abbreviation.', lhs);
 			}
 			delete abbrevs[lhs];
+			return undefined;
 		}),
 		new ExCommand('undo', 'u', '', 0, function (t, a) {
 			var result = editLogger.undo();
@@ -7480,6 +7555,7 @@ flag23_loop:
 			else {
 				requestShowMessage(
 					_('{0} {operation:0} have canceled.', result));
+				return undefined;
 			}
 		}),
 		new ExCommand('unmap', 'unm', '!w1r', 0, function (t, a) {
@@ -7490,6 +7566,7 @@ flag23_loop:
 				return _('{0} is not mapped.', lhs);
 			}
 			map.remove(lhs);
+			return undefined;
 		}),
 		new ExCommand('version', 'ver', '', 0, function (t, a) {
 			requestShowMessage('wasavi/' + VERSION + ' ' + VERSION_DESC);
@@ -7721,6 +7798,7 @@ flag23_loop:
 	var isWordMotion;
 	var isSmoothScrollRequested;
 	var isReadonlyWarned;
+	var isSimpleCommandUpdateRequested;
 
 	var lastKeyCode;
 	var lastSimpleCommand;
@@ -7834,6 +7912,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'D': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7853,6 +7932,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'Y': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7870,6 +7950,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'r': {
 			'command': function (c, t) {
@@ -7898,6 +7979,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'A': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7907,6 +7989,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'i': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7916,6 +7999,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'I': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7925,6 +8009,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'o': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7934,6 +8019,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'O': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -7943,6 +8029,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'R': function (c, t) {
 			if (prefixInput.isEmptyOperation && !t.selected) {
@@ -7970,6 +8057,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// S: substitute text for whole lines (equivalents to cc)
 		'S': function (c, t) {
@@ -7980,6 +8068,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// s: substitute characters
 		's': function (c, t) {
@@ -7991,6 +8080,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// equivalents to :x
 		//	 ZZ
@@ -8013,6 +8103,7 @@ flag23_loop:
 				else {
 					inputEscape();
 				}
+				return undefined;
 			},
 			'@op': function (c, t) {
 				prefixInput.appendOperation(c);
@@ -8101,6 +8192,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// direct jump to specified column
 		'|': function (c, t) {
@@ -8127,6 +8219,7 @@ flag23_loop:
 					t, 1,
 					lastHorzFindCommand.stopBefore);
 			}
+			return undefined;
 		},
 		// repeat last find
 		';': function (c, t) {
@@ -8143,6 +8236,7 @@ flag23_loop:
 					t, prefixInput.count,
 					lastHorzFindCommand.stopBefore);
 			}
+			return undefined;
 		},
 		// down, line orient
 		'_': function (c, t) {
@@ -8293,6 +8387,7 @@ flag23_loop:
 					inputEscape();
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
+				return undefined;
 			}
 		},
 		// return to marked line at remembered column, character orient motion
@@ -8314,6 +8409,7 @@ flag23_loop:
 					inputEscape();
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
+				return undefined;
 			}
 		},
 		// back an sentence
@@ -8374,6 +8470,7 @@ flag23_loop:
 				else {
 					inputEscape();
 				}
+				return undefined;
 			}
 		},
 		// move to next section
@@ -8396,6 +8493,7 @@ flag23_loop:
 				else {
 					inputEscape();
 				}
+				return undefined;
 			}
 		},
 		'\u000d'/*enter*/: function (c, t) {
@@ -8596,6 +8694,7 @@ flag23_loop:
 			else {
 				requestShowMessage(_('No previous search pattern.'), true);
 			}
+			return undefined;
 		},
 		// search previous match for current pattern
 		'N': function (c, t) {
@@ -8610,6 +8709,7 @@ flag23_loop:
 			else {
 				requestShowMessage(_('No previous search pattern.'), true);
 			}
+			return undefined;
 		},
 
 		/*
@@ -8631,6 +8731,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// scroll down half (height of screen) lines
 		'\u0004'/*^D*/: function (c, t) {
@@ -8647,6 +8748,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// scroll up 1 line
 		'\u0019'/*^D*/: function (c, t) {
@@ -8663,6 +8765,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// scroll down 1 line
 		'\u0005'/*^E*/: function (c, t) {
@@ -8679,6 +8782,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// scroll up (height of screen - 2) lines
 		'\u0002'/*^B*/: function (c, t) {
@@ -8690,6 +8794,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'<pageup>': function (c, t) {
 			return this['\u0002'].apply(this, arguments);
@@ -8704,6 +8809,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'<pagedown>': function (c, t) {
 			return this['\u0006'].apply(this, arguments);
@@ -8787,6 +8893,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'\u007f'/*delete*/: function (c, t) {
 			return this['x'].apply(this, arguments);
@@ -8800,6 +8907,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'p': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -8810,6 +8918,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'P': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -8820,6 +8929,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'J': function (c, t) {
 			if (prefixInput.isEmptyOperation && t.selectionStartRow + prefixInput.count <= t.rowLength - 1) {
@@ -8830,6 +8940,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'.': function (c, t) {
 			if (lastSimpleCommand.length) {
@@ -8857,8 +8968,9 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape();aaa
+				inputEscape();
 			}
+			return undefined;
 		},
 		'\u0012'/*^R*/: function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -8876,6 +8988,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		'U': null,
 		'~': function (c, t) {
@@ -8887,6 +9000,7 @@ flag23_loop:
 			else {
 				inputEscape();
 			}
+			return undefined;
 		},
 		// clear screen
 		'\u000c'/*^L*/: function (c, t) {
@@ -9279,6 +9393,7 @@ flag23_loop:
 				keyCode -= 96;
 				return true;
 			}
+			return false;
 		}
 		if (window.chrome && 'keyIdentifier' in e) {
 			if (e.type == 'keydown') {
@@ -9368,7 +9483,7 @@ flag23_loop:
 	 * ----------------
 	 */
 
-	window.Wasavi = new function () {
+	global.Wasavi = new function () {
 		function getRunning () {
 			return !!$(CONTAINER_ID);
 		}
@@ -9431,6 +9546,14 @@ flag23_loop:
 			set exrc (v) {
 				exrc = String(v);
 			},
+			get runType () {
+				return runType;
+			},
+			set runType (v) {
+				if (runType == undefined) {
+					runType = v;
+				}
+			},
 			run: function (element) {
 				element = $(element);
 				if (!$(CONTAINER_ID)
@@ -9452,6 +9575,8 @@ flag23_loop:
 				uninstall(getEditorCore(), false);
 			},
 			notifyKeyevent: function (e) {
+				if (!window.chrome && e.type != 'keypress') return;
+				if (window.chrome && e.type != 'keydown' && e.type != 'keypress') return;
 				if (getRunning() && injectKeyevents) {
 					handleKeydown(e);
 				}
@@ -9487,12 +9612,28 @@ flag23_loop:
 	 * ----------------
 	 */
 
-	/*document.addEventListener('DOMContentLoaded', function () {
-		document.addEventListener('DOMFocusIn',handleDocumentFocus, true);
-	}, false);*/
+	(function () {
+		function dumpObject (obj) {
+			var a = [];
+			for (var i in obj) {
+				var s = i;
+				try {
+					s += ': ' + (global[i].toString().replace(/[\s\r\n\t]+/g, ' ').substring(0, 100));
+				}
+				catch (e) {
+					;
+				}
+				a.push(s);
+			}
+			console.log('*** wasavi.js dump Object ' + obj.toString() + ' ***\n\t' + a.join('\n\t'));
+		}
+		//dumpObject(global);
 
-	console.log(VERSION_DESC);
+		console.log(
+			'wasavi.js (' + VERSION_DESC + '):' +
+			'\n\trunning on ' + window.location.href.replace(/[?#].*$/, ''));
+	})();
 
-})();
+})(this);
 
 // vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :

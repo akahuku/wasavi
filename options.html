@@ -90,54 +90,18 @@
 				color:#dd0000;
 			}
 		</style>
-		<script src="wasavi.js"></script>
-		<script src="agent.js"></script>
 		<script>
-			function handleSaveClick (e) {
-				var targets = JSON.parse(localStorage.getItem('targets'));
-				for (var i in targets) {
-					var el = document.getElementById(i);
-					if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-						targets[i] = el.checked;
-					}
-				}
-
-				var exrc = document.getElementById('exrc');
-
-				WasaviAgent.sendReq(
-					{
-						type:'set-storage', 
-						items: [
-							{key:'targets', value:JSON.stringify(targets)},
-							{key:'exrc', value:exrc.value}
-						],
-					},
-					function () {
-						var saveResult = document.getElementById('save-result');
-						saveResult.textContent = 'saved.';
-						setTimeout(function () {
-							saveResult.textContent = '';
-						}, 1000 * 2);
-					}
-				);
+			if (window.chrome) {
+				document.write('<script src="wasavi.js"></scr' + 'ipt>');
+				document.write('<script src="agent.js"></scr' + 'ipt>');
 			}
-			function handleDOMContentLoaded (e) {
-				var targets = JSON.parse(localStorage.getItem('targets'));
-				for (var i in targets) {
-					var el = document.getElementById(i);
-					if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-						el.checked = targets[i];
-					}
-				}
-
-				var exrc = document.getElementById('exrc');
-				exrc.value = localStorage.getItem('exrc') || '';
-
-				var save = document.getElementById('save');
-				save.addEventListener('click', handleSaveClick, false);
+			else if (window.opera) {
+				document.write('<script src="wasavi.js"></scr' + 'ipt>');
+				document.write('<script src="includes/agent.js"></scr' + 'ipt>');
 			}
-
-			document.addEventListener('DOMContentLoaded', handleDOMContentLoaded, false);
+			else if (window.navigator.product == 'Gecko') {
+				//do nothing
+			}
 		</script>
 	</head>
 	<body>

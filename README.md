@@ -1,10 +1,10 @@
-wasavi (VI editor for any web pages)
+wasavi (VI editor for any web page)
 ====================================
 
 これはなに？
 ------------
 
-wasavi はいくつかの web ブラウザ用のエクステンションで、web ページ上の textarea 
+wasavi はいくつかの web ブラウザ用のエクステンションで、web ページ上の textarea
 要素を vi エディタ化します。
 
 wasavi はほぼすべての vi コマンド、およびいくつかの ex コマンドをサポートしま
@@ -18,6 +18,11 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 現在、以下の web ブラウザ用のエクステンションが用意されています。
 
 * Google Chrome
+  <http://appsweets.net/wasavi/wasavi.crx>
+* Opera
+  <http://appsweets.net/wasavi/wasavi.oex>
+* Firefox
+  <http://appsweets.net/wasavi/wasavi.xpi>
 
 以上のブラウザ用のエクステンションの標準的なインストール方法に従って導入してく
 ださい。
@@ -40,5 +45,7 @@ Insert を押下してください。言うまでもありませんが、終了�
 ------------
 
 ぜひ現象と再現方法を教えてください。
-バグレポートや要望の受け付けは github で行います。
-<http://github.com/akahuku/wasavi/issues>
+バグレポートや要望の受け付けは以下の場所で行います。
+  <http://appsweets.net/wasavi/#forum>
+github のアカウントを持っているなら issue でも構いません。
+  <http://github.com/akahuku/wasavi/issues>
