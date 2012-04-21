@@ -2,7 +2,7 @@
 <!--
 	options page of wasavi for google chrome/opera extension
 
-	@version $Id: options.html 94 2012-02-26 12:07:45Z akahuku $
+	@version $Id: options.html 102 2012-04-21 04:23:25Z akahuku $
 	@author akahuku@gmail.com
  -->
 <html>
@@ -92,12 +92,12 @@
 		</style>
 		<script>
 			if (window.chrome) {
-				document.write('<script src="wasavi.js"></scr' + 'ipt>');
 				document.write('<script src="agent.js"></scr' + 'ipt>');
+				document.write('<script src="wasavi.js"></scr' + 'ipt>');
 			}
 			else if (window.opera) {
-				document.write('<script src="wasavi.js"></scr' + 'ipt>');
 				document.write('<script src="includes/agent.js"></scr' + 'ipt>');
+				document.write('<script src="wasavi.js"></scr' + 'ipt>');
 			}
 			else if (window.navigator.product == 'Gecko') {
 				//do nothing

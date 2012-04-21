@@ -1,6 +1,6 @@
 // ==UserScript==
 // @include http://*/*
-// @include widget://*/*
+// @include https://*/*
 // ==/UserScript==
 //
 /**
@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 100 2012-04-18 10:47:31Z akahuku $
+ * @version $Id: agent.js 102 2012-04-21 04:23:25Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -177,7 +177,7 @@ function evalEx (code) {
 			callbacks = {};
 
 			for (var i in callbacksCurrent) {
-				if (data && data.__messageId == i) {
+				if (data && data.__messageId - i == 0) {
 					callbacksCurrent[i].run(data);
 				}
 				else if (now - callbacksCurrent[i].time < 60 * 1000) {
@@ -209,7 +209,10 @@ function evalEx (code) {
 			onMessageHandler = handler;
 		};
 		this.__defineGetter__('isOptionsPage', function () {
-			return location.hostname == extensionId.toLowerCase().replace(/@/g, '-at-')
+			return location.hostname == extensionId
+										.toLowerCase()
+										.replace(/@/g, '-at-')
+										.replace(/\./g, '-dot-')
 				&& location.pathname == '/wasavi/data/options.html';
 		});
 	}
@@ -344,7 +347,7 @@ function evalEx (code) {
 						items: [
 							{key:'targets', value:JSON.stringify(enableList)},
 							{key:'exrc', value:exrc}
-						],
+						]
 					},
 					function () {
 						var saveResult = document.getElementById('save-result');
@@ -378,6 +381,8 @@ function evalEx (code) {
 	 */
 
 	function handleAgentInitialized () {
+		var result = true;
+
 		//
 		window.addEventListener('keydown', handleKeydown, true);
 		window.addEventListener('keypress', handleKeypress, true);
@@ -392,11 +397,20 @@ function evalEx (code) {
 			}
 		}
 		else {
-			createPageAgent();
+			if (!createPageAgent()) {
+				window.removeEventListener('keydown', handleKeydown, true);
+				window.removeEventListener('keypress', handleKeypress, true);
+				result = false;
+			}
 		}
 
-		window.self == window.top && console.log(
-			'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
+		//
+		if (result) {
+			window.self == window.top && console.log(
+				'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
+		}
+
+		return result;
 	}
 
 	/**
@@ -498,11 +512,33 @@ function evalEx (code) {
 	}
 
 	function createPageAgent () {
+		var result = false;
+
 		var s = document.createElement('script');
 		s.type = 'text/javascript';
-		s.text = '(' + pageAgent.toString().replace('^(function)[^(]*/', '$1') + ')();';
-		document.documentElement.appendChild(s);
+		s.text = '(' + pageAgent.toString().replace(/^\s*(function)[^(]*/, '$1') + ')();';
+
+		var head = document.getElementsByTagName('head')[0];
+		if (head) {
+			var metas = head.getElementsByTagName('meta');
+			var titles = head.getElementsByTagName('title');
+			if (metas.length || titles.length) {
+				head.appendChild(s);
+				result = true;
+			}
+		}
+		else {
+			document.documentElement.appendChild(s);
+			result = true;
+		}
+
+		//console.log('page agent created. injected script location: ' + window.location.href);
+		return result;
 	}
+
+	/**
+	 * bootstrap
+	 */
 
 	function dumpObject (obj) {
 		var a = [];
@@ -545,10 +581,6 @@ function evalEx (code) {
 		console.log('*** agent.js dump Object: ' + ss + ' ***\n\t' + a.join('\n\t'));
 	}
 
-	/**
-	 * bootstrap
-	 */
-
 	extension = ExtensionWrapper.create();
 	extension.addMessageListener(handleMessage);
 
@@ -557,7 +589,6 @@ function evalEx (code) {
 	global.WasaviAgent = {
 		sendRequest:sendReq
 	};
-	//dumpObject(global);
 
 })(this);
 

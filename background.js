@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 100 2012-04-18 10:47:31Z akahuku $
+ * @version $Id: background.js 102 2012-04-21 04:23:25Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -33,7 +33,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /**
  * global variables
  */
@@ -165,6 +164,7 @@ function ExtensionWrapper () {
 	this.broadcast = function (message, exceptId) {};
 	this.executeScript = function (tabId, options, callback) {};
 	this.addRequestListener = function (handler) {};
+	this.openPage = function (file) {};
 	this.storage = new StorageWrapper;
 	this.extensionId = '';
 }
@@ -229,6 +229,9 @@ function ChromeExtensionWrapper () {
 				handler(req, sender.tab.id, res);
 			}
 		});
+	};
+	this.openPage = function (file) {
+		chrome.tabs.create({url:chrome.extension.getURL(file)});
 	};
 	this.storage = new WebStorageWrapper;
 	this.extensionId = location.hostname;
@@ -312,6 +315,12 @@ function OperaExtensionWrapper () {
 			}
 		}
 	};
+	this.openPage = function (file) {
+		opera.extension.tabs.create({
+			url:location.href.replace(/\/[^\/]*$/, '/') + file, 
+			focused:true
+		});
+	};
 	this.storage = new WebStorageWrapper;
 	this.extensionId = location.hostname;
 }
@@ -321,10 +330,7 @@ function OperaExtensionWrapper () {
  */
 
 function FirefoxJetpackExtensionWrapper () {
-	var tabs = require('tabs');
-	var pageMod = require('page-mod');
 	var self = require('self');
-	var widget = require('widget');
 
 	var tabIds = {};
 	var onMessageHandler;
@@ -365,7 +371,7 @@ function FirefoxJetpackExtensionWrapper () {
 		});
 	}
 
-	pageMod.PageMod({
+	require('page-mod').PageMod({
 		include:['*', self.data.url('options.html')],
 		contentScriptWhen:'start',
 		contentScriptFile:self.data.url('agent.js'),
@@ -373,10 +379,10 @@ function FirefoxJetpackExtensionWrapper () {
 			tabIds[getNewTabId()] = worker;
 			worker.on('detach', handleWorkerDetach);
 			worker.on('message', handleWorkerMessage);
-		},
+		}
 	});
 
-	widget.Widget({
+	require('widget').Widget({
 		id:'wasavi-widget',
 		label:'wasavi configuration',
 		contentURL:self.data.url('icon016.png'),
@@ -416,6 +422,9 @@ function FirefoxJetpackExtensionWrapper () {
 	this.addRequestListener = function (handler) {
 		onMessageHandler = handler;
 	};
+	this.openPage = function (file) {
+		require('tabs').open(self.data.url(file));
+	};
 	this.storage = new JetpackStorageWrapper;
 	this.extensionId = self.id;
 }
@@ -439,7 +448,7 @@ function initStorage () {
 			enableUrl: false,
 			enableEmail: false,
 			enablePassword: false,
-			enableNumber: false,
+			enableNumber: false
 		}));
 	}
 
@@ -517,6 +526,10 @@ function handleRequest (req, tabId, res) {
 				res({data:data});
 			});
 		}
+		break;
+
+	case 'open-options-page':
+		extension.openPage('options.html');
 		break;
 	}
 }
