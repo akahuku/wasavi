@@ -4,10 +4,10 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 102 2012-04-21 04:23:25Z akahuku $
+ * @version $Id: wasavi.js 107 2012-04-28 11:27:26Z akahuku $
  * @sourceURL=wasavi.js
- *
- *
+ */
+/**
  * Copyright (c) 2012 akahuku@gmail.com
  * All rights reserved.
  *
@@ -42,8 +42,8 @@
 	 * ----------------
 	 */
 
-	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 102 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 102 2012-04-21 04:23:25Z akahuku $';
+	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 107 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 107 2012-04-28 11:27:26Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -342,7 +342,7 @@
 	}
 	Position.prototype = {
 		toString: function () {
-			return JSON.stringify(this);
+			return '[object Position(' + this.row + ',' + this.col + ')]';
 		},
 		clone: function () {
 			return new Position(this.row, this.col);
@@ -424,8 +424,8 @@
 		 *  /       last searched text (read only) [vim compatible]
 		 */
 
-		var unnamed = new RegisterItem();
-		var named = {};
+		var unnamed;
+		var named;
 		var storageKey = 'wasavi_registers';
 
 		function serialize () {
@@ -455,6 +455,8 @@
 			setLocalStorage(storageKey, serialize());
 		}
 		function load () {
+			unnamed = new RegisterItem();
+			named = {};
 			getLocalStorage(storageKey, function (value) {
 				restore(value || '');
 			});
@@ -527,13 +529,13 @@
 		}
 		function dump () {
 			function dumpItem (item) {
-				var orientString = item.isLineOrient ? _('line') : _('char');
-				return _('[{0} orient]\n"{1}"', orientString, toVisibleString(item.data));
+				var orientString = item.isLineOrient ? _('L') : _('C');
+				return _('  {0}  {1}"', orientString, toVisibleString(item.data));
 			}
 			var a = [_('*** registers ***')];
-			a.push('""	' + dumpItem(unnamed));
+			a.push('""' + dumpItem(unnamed));
 			for (var i in named) {
-				named[i] && a.push('"' + i + '	' + dumpItem(named[i]));
+				named[i] && a.push('"' + i + dumpItem(named[i]));
 			}
 			return a;
 		}
@@ -672,21 +674,27 @@
 
 	/*constructor*/function CursorUI (editor, comCursor, editCursor) {
 		var cursorType = 'command';
+		var locked = false;
 		var focused = false;
 		var visible = false;
+		var inComposition = false;
 		var wrapper = null;
-		var isInComposition = false;
 
 		/*constructor*/function CommandWrapper (mode) {
 			var cursorBlinkTimer;
 
 			function handleBlink () {
-				var s = document.defaultView.getComputedStyle(comCursor, '');
-				if (s.visibility == 'visible') {
-					comCursor.style.visibility = 'hidden';
+				if (comCursor) {
+					var s = document.defaultView.getComputedStyle(comCursor, '');
+					if (s.visibility == 'visible') {
+						comCursor.style.visibility = 'hidden';
+					}
+					else {
+						comCursor.style.visibility = 'visible';
+					}
 				}
 				else {
-					comCursor.style.visibility = 'visible';
+					stopBlink();
 				}
 			}
 			function startBlink () {
@@ -733,6 +741,9 @@
 				comCursor.style.backgroundColor = 'gray';
 				comCursor.style.color = 'white';
 			};
+			this.dispose = function () {
+				stopBlink();
+			};
 			this.compositionUpdate =
 			this.compositionComplete = function () {};
 		}
@@ -752,6 +763,17 @@
 					var n = editor.selectionStart;
 					var r = document.createRange();
 					var node = editor.rowTextNodes(n);
+
+					if (node.nodeValue.length == 0) {
+						throw new Error('createCompositionSpan: nodeValue is empty.');
+					}
+					if (node.nodeValue.length < n.col) {
+						throw new Error(
+							'createCompositionSpan: nodeValue length less than ' + n.col + '.' +
+							' nodeValue: "' + node.nodeValue + '"'
+						);
+					}
+
 					r.setStart(node, 0);
 					r.setEnd(node, n.col);
 					r.surroundContents(span);
@@ -791,7 +813,7 @@
 				removeCompositionSpan();
 			};
 			this.show = function () {
-				if (runLevel || isInComposition) {
+				if (runLevel || inComposition) {
 					return;
 				}
 				editCursor.style.display = 'block';
@@ -800,10 +822,10 @@
 				var c = $(CONTAINER_ID).getBoundingClientRect();
 				var r = editor.rowNodes(s).getBoundingClientRect();
 
-				editCursor.style.left = (r.left - c.left) + 'px';
-				editCursor.style.top = (r.top - c.top) + 'px';
-				editCursor.style.width = (r.right - r.left) + 'px';
-				editCursor.style.height = (docClientHeight() - r.top - 1) + 'px';
+				editCursor.style.left = Math.floor(r.left - c.left) + 'px';
+				editCursor.style.top = Math.floor(r.top - c.top) + 'px';
+				editCursor.style.width = Math.floor(r.right - r.left) + 'px';
+				editCursor.style.height = Math.floor(docClientHeight() - r.top - 1) + 'px';
 
 				removeCompositionSpan();
 				var span = createCompositionSpan();
@@ -814,6 +836,7 @@
 				editCursor.focus();
 			};
 			this.lostFocus = function () {};
+			this.dispose = function () {};
 		}
 		function syncPosition () {
 			fixPosition();
@@ -840,8 +863,6 @@
 			span.id = 'wasavi_caret';
 			span.style.color = 'HighlightText';
 			span.style.backgroundColor = 'Highlight';
-			span.dataset.rowLeft = rb.left - eb.left;
-			span.dataset.rowTop = rb.top - eb.top;
 			if (/^[\r\n\t]?$/.test(span.textContent)) {
 				span.textContent = ' ';
 			}
@@ -872,19 +893,34 @@
 			}
 		}
 
+		function fold (s) {
+			var result = [];
+			while (s.length) {
+				result.push(s.substr(0, 80));
+				s = s.substr(80);
+			}
+			return result;
+		}
+
 		function getCoord () {
 			var div = $('wasavi_multiline_scaler');
 			var caret = $('wasavi_caret');
-			var b = caret.getBoundingClientRect();
-			var rowLeft = caret.dataset.rowLeft - 0;
-			var rowTop = caret.dataset.rowTop - 0;
-			var result = {
-				left:	b.left	 + div.scrollLeft - div.offsetLeft - div.clientLeft + rowLeft,
-				right:	b.right  + div.scrollLeft - div.offsetLeft - div.clientLeft + rowLeft,
-				top:	b.top	 + div.scrollTop  - div.offsetTop  - div.clientTop	+ rowTop,
-				bottom: b.bottom + div.scrollTop  - div.offsetTop  - div.clientTop	+ rowTop
+
+			var s = document.defaultView.getComputedStyle(editor.elm, '');
+			var firstRow = editor.rowNodes(0);
+			var currentRow = editor.rowNodes(editor.selectionStartRow);
+			var result2 = {
+				left:currentRow.offsetLeft - firstRow.offsetLeft
+					+ caret.offsetLeft
+					- parseInt(s.borderLeftWidth, 10),
+				top:currentRow.offsetTop - firstRow.offsetTop
+					+ caret.offsetTop
+					- parseInt(s.borderTopWidth, 10)
 			};
-			return result;
+			result2.right = result2.left + caret.offsetWidth;
+			result2.bottom = result2.top + caret.offsetHeight;
+
+			return result2;
 		}
 		function fixPosition () {
 			if (editor.selected) {return;}
@@ -910,6 +946,8 @@
 			}
 		}
 		function update (opts) {
+			if (locked) {return;}
+
 			if (opts) {
 				if ('visible' in opts) {
 					visible = opts.visible;
@@ -952,7 +990,7 @@
 			}
 		}
 		function handleCompositionStart (e) {
-			isInComposition = true;
+			inComposition = true;
 			wrapper.compositionUpdate(e.data);
 		}
 		function handleCompositionUpdate (e) {
@@ -960,7 +998,7 @@
 		}
 		function handleCompositionEnd (e) {
 			wrapper.compositionComplete(e.data);
-			isInComposition = false;
+			inComposition = false;
 			ensureVisible();
 			update();
 		}
@@ -975,19 +1013,24 @@
 			editCursor[method]('compositionend', handleCompositionEnd, false);
 			editCursor[method]('textInput', handleInput, false);
 		}
+		function dispose () {
+			wrapper && wrapper.dispose();
+			editor = comCursor = editCursor = wrapper = null;
+		}
 
 		this.ensureVisible = ensureVisible;
-		this.getCoord = getCoord;
-		this.fixPosition = fixPosition;
 		this.update = update;
 		this.setupEventHandlers = setupEventHandlers;
+		this.dispose = dispose;
 
 		this.__defineGetter__('type', function () { return cursorType; });
 		this.__defineGetter__('focused', function () { return focused; });
 		this.__defineGetter__('visible', function () { return visible; });
 		this.__defineGetter__('commandCursor', function () { return comCursor; });
 		this.__defineGetter__('editCursor', function () { return editCursor; });
-		this.__defineGetter__('isInComposition', function () { return isInComposition; });
+		this.__defineGetter__('inComposition', function () { return inComposition; });
+		this.__defineGetter__('locked', function () { return locked; });
+		this.__defineSetter__('locked', function (v) { locked = v; });
 	}
 
 	/*constructor*/function RegexConverter () {
@@ -1071,7 +1114,7 @@
 			}
 		}
 		function save () {
-			targetElement.dataset.wasaviMarks = serialize();
+			dataset(targetElement, 'wasaviMarks', serialize());
 		}
 		function isValidName (name) {
 			return /^[a-zA-Z']$/.test(name);
@@ -1086,7 +1129,7 @@
 		function get (name) {
 			return isValidName(name) && name in marks ? marks[name] : undefined;
 		}
-		function update2 (pos, func) {
+		function update (pos, func) {
 			function setMarks () {
 				var usedMarks = {};
 				var r = document.createRange();
@@ -1099,7 +1142,7 @@
 						r.setEnd(node, m.col);
 						var span = document.createElement('span');
 						span.className = 'wasavi_mark';
-						span.dataset.index = i;
+						dataset(span, 'index', i);
 						r.insertNode(span);
 					}
 				}
@@ -1109,7 +1152,7 @@
 				var nodes = document.querySelectorAll('#wasavi_editor > div > span.wasavi_mark');
 				for (var i = 0, goal = nodes.length; i < goal; i++) {
 					var span = nodes[i];
-					var index = span.dataset.index;
+					var index = dataset(span, 'index');
 					var m = marks[index];
 					marks[index].row = editor.indexOf(span.parentNode);
 					marks[index].col = calcColumn(span);
@@ -1162,13 +1205,17 @@
 			}
 			return a;
 		}
+		function dispose () {
+			editor = null;
+		}
 		this.set = set;
 		this.get = get;
-		this.update2 = update2;
+		this.update = update;
 		this.dump = dump;
 		this.save = save;
+		this.dispose = dispose;
 
-		restore(targetElement.dataset.wasaviMarks || '');
+		restore(dataset(targetElement, 'wasaviMarks') || '');
 	}
 
 	/*constructor*/function RegexFinderInfo () {
@@ -1219,6 +1266,9 @@
 
 	/*constructor*/function Editor (element) {
 		this.elm = $(element);
+		if (!this.elm) {
+			console.log('*** wasavi: Editor constructor: invalid element: ' + element);
+		}
 		this.isLineOrientSelection = false;
 	}
 	Editor.prototype = new function () {
@@ -1344,33 +1394,49 @@
 			},
 
 			// getter
-			rows: function (arg) {
+			rows: function (arg, context) {
 				var row3 = arg;
 				if (arg instanceof Position) {
 					row3 = arg.row;
 				}
-				if (row3 < 0 || row3 >= this.elm.childNodes.length) {
-					throw new Error('rows: argument row (' + row3 + ') out of range.');
+				if (typeof row3 != 'number' || isNaN(row3)) {
+					throw new Error('rows: argument row is not a number: ' + (context || ''));
 				}
-				return this.elm.childNodes[row3].textContent.replace(/\n$/, '');
+				if (row3 < 0 || row3 >= this.elm.childNodes.length) {
+					throw new Error('rows: argument row (' + row3 + ') out of range: ' + (context || ''));
+				}
+
+				var result = this.elm.childNodes[row3].textContent;
+				if (result.length && result.substr(-1) == '\n') {
+					return result.substr(0, result.length - 1);
+				}
+				else {
+					return result;
+				}
 			},
-			rowNodes: function (arg) {
+			rowNodes: function (arg, context) {
 				var row1 = arg;
 				if (arg instanceof Position) {
 					row1 = arg.row;
 				}
+				if (typeof row1 != 'number' || isNaN(row1)) {
+					throw new Error('rowsNodes: argument row is not a number: ' + (context || ''));
+				}
 				if (row1 < 0 || row1 >= this.elm.childNodes.length) {
-					throw new Error('rowNodes: argument row (' + row1 + ') out of range.');
+					throw new Error('rowNodes: argument row (' + row1 + ') out of range: ' + (context || ''));
 				}
 				return this.elm.childNodes[row1];
 			},
-			rowTextNodes: function (arg) {
+			rowTextNodes: function (arg, context) {
 				var row2 = arg;
 				if (arg instanceof Position) {
 					row2 = arg.row;
 				}
+				if (typeof row2 != 'number' || isNaN(row2)) {
+					throw new Error('rowTextNodes: argument row is not a number: ' + (context || ''));
+				}
 				if (row2 < 0 || row2 >= this.elm.childNodes.length) {
-					throw new Error('rowTextNodes: argument row (' + row2 + ') out of range.');
+					throw new Error('rowTextNodes: argument row (' + row2 + ') out of range: ' + (context || ''));
 				}
 				var node = this.elm.childNodes[row2];
 				if (!node.firstChild) {
@@ -1842,7 +1908,10 @@
 				return this.elm.childNodes.length;
 			},
 			get value () {
-				var result = this.elm.textContent;
+				var result = this.elm.textContent
+					.replace(/[\u2400-\u243f]/g, function (a) {
+						return String.fromCharCode(a.charCodeAt(0) & 0xff);
+					});
 				if (result.length && result.substr(-1) == '\n') {
 					result = result.substring(0, result.length - 1);
 				}
@@ -1855,19 +1924,19 @@
 				return new Position(this.selectionStartRow, this.selectionStartCol);
 			},
 			get selectionStartRow () {
-				return this.elm.dataset.wasaviSelStartRow - 0;
+				return dataset(this.elm, 'wasaviSelStartRow') - 0;
 			},
 			get selectionStartCol () {
-				return this.elm.dataset.wasaviSelStartCol - 0;
+				return dataset(this.elm, 'wasaviSelStartCol') - 0;
 			},
 			get selectionEnd () {
 				return new Position(this.selectionEndRow, this.selectionEndCol);
 			},
 			get selectionEndRow () {
-				return this.elm.dataset.wasaviSelEndRow - 0;
+				return dataset(this.elm, 'wasaviSelEndRow') - 0;
 			},
 			get selectionEndCol () {
-				return this.elm.dataset.wasaviSelEndCol - 0;
+				return dataset(this.elm, 'wasaviSelEndCol') - 0;
 			},
 			get scrollTop () {
 				return this.elm.scrollTop;
@@ -1885,7 +1954,7 @@
 						.replace(/>/g, '&gt;')
 						.replace(/\r\n/g, '\n')
 						.replace(/\u007f/g, '\u2421')
-						.replace(/[\u0000-\u0008\u000b-\u001b]/g, function (a) {
+						.replace(/[\u0000-\u0008\u000b-\u001f]/g, function (a) {
 							return String.fromCharCode(0x2400 + a.charCodeAt(0));
 						})
 						.replace(/\n/g, '\n</div><div>') +
@@ -1897,8 +1966,8 @@
 					v = this.linearPositionToBinaryPosition(v) || new Position(0, 0);
 				}
 				if (v instanceof Position) {
-					this.elm.dataset.wasaviSelStartRow = v.row;
-					this.elm.dataset.wasaviSelStartCol = v.col;
+					dataset(this.elm, 'wasaviSelStartRow', v.row);
+					dataset(this.elm, 'wasaviSelStartCol', v.col);
 				}
 			},
 			set selectionEnd (v) {
@@ -1906,11 +1975,15 @@
 					v = this.linearPositionToBinaryPosition(v) || new Position(0, 0);
 				}
 				if (v instanceof Position) {
-					this.elm.dataset.wasaviSelEndRow = v.row;
-					this.elm.dataset.wasaviSelEndCol = v.col;
+					dataset(this.elm, 'wasaviSelEndRow', v.row);
+					dataset(this.elm, 'wasaviSelEndCol', v.col);
 				}
 			},
 			set scrollTop (v) {
+				if (this.elm.scrollTop == 140 && v == 1
+				||  this.elm.scrollTop == 436 && v == 140) {
+					debugger;
+				}
 				this.elm.removeEventListener('scroll', handleScroll, false);
 				this.elm.scrollTop = v;
 				this.elm.addEventListener('scroll', handleScroll, false);
@@ -1923,7 +1996,7 @@
 		};
 	};
 
-	/*constructor*/function Scroller (editor) {
+	/*constructor*/function Scroller (editor, cursor, modeLine) {
 		var running = false;
 		var consumeMsecs = 250;
 		var timerPrecision = 1;
@@ -1932,10 +2005,10 @@
 		var scrollTopStart;
 		var scrollTopDest;
 		this.run = function (dest, callback) {
-			if (running) {
+			if (running || !targetElement || !cursor || !modeLine) {
 				return;
 			}
-			if (!config.vars.smooth) {
+			if (!config.vars.smooth || cursor.locked) {
 				editor.scrollTop = dest;
 				callback && callback();
 				return;
@@ -1951,13 +2024,18 @@
 					var now = +Date.now();
 					var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
+					if (!targetElement || !cursor || !modeLine) {
+						running = false;
+						return;
+					}
+
 					if (distance > 0 && y >= scrollTopDest
 					||	distance < 0 && y <= scrollTopDest) {
 						editor.scrollTop = scrollTopDest;
 						callback && callback();
 						cursor.ensureVisible();
 						cursor.update({visible:true});
-						$('wasavi_footer_modeline').style.display == '' && showPrefixInput(editor);
+						modeLine.style.display == '' && showPrefixInput(editor);
 						running = false;
 					}
 					else {
@@ -1966,6 +2044,9 @@
 					}
 				})();
 			}
+		};
+		this.dispose = function () {
+			editor = cursor = modeLine = null;
 		};
 		this.__defineGetter__('running', function () {
 			return running;
@@ -2465,13 +2546,14 @@ flag23_loop:
 			}
 
 			var totalHeight = 0;
+			var goalHeight = parseInt(con.clientHeight / scaler.offsetHeight) * scaler.offsetHeight;
 			while (buffer.length) {
 				if (con.value.length && con.value.substr(-1) != '\n') {
 					con.value += '\n';
 				}
 				var line = buffer.shift();
 				scaler.textContent = line;
-				if (totalHeight + scaler.offsetHeight > con.clientHeight || byLine) {
+				if (totalHeight + scaler.offsetHeight > goalHeight || byLine) {
 					if (totalHeight == 0) {
 						con.value += line;
 						con.setSelectionRange(con.value.length, con.value.length);
@@ -2503,6 +2585,9 @@ flag23_loop:
 						false, true);
 				}
 			}
+		};
+		this.dispose = function () {
+			container = con = scaler = null;
 		};
 		this.__defineGetter__('queued', function () {
 			return buffer.length > 0;
@@ -2563,11 +2648,14 @@ flag23_loop:
 				if (enabled) {
 					var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
 					if (vol > 0) {
-						!a.ended && a.pause();
-						a.loop = false;
-						a.volume = vol / 100;
-						a.currentTime = 0;
-						a.play();
+						try {
+							!a.ended && a.pause();
+							a.loop = false;
+							a.volume = vol / 100;
+							a.currentTime = 0;
+							a.play();
+						}
+						catch (e) {}
 					}
 				}
 			};
@@ -2931,7 +3019,7 @@ flag23_loop:
 	};
 
 	/*constructor*/function LineInputHistories (maxSize, names) {
-		var s = {};
+		var s;
 		var name;
 		var storageKey = 'wasavi_lineinput_histories';
 
@@ -2943,16 +3031,16 @@ flag23_loop:
 			if (!src || !(src instanceof Object)) return;
 
 			var tmp = {};
-			for (var name in s) {
-				if (!(name in src)) continue;
-				if (!(src[name] instanceof Object)) continue;
-				if (!(src[name].lines instanceof Array)) continue;
+			for (var na in s) {
+				if (!(na in src)) continue;
+				if (!(src[na] instanceof Object)) continue;
+				if (!(src[na].lines instanceof Array)) continue;
 
-				tmp[name] = {};
-				tmp[name].lines = src[name].lines.filter(function (s) {
+				tmp[na] = {};
+				tmp[na].lines = src[na].lines.filter(function (s) {
 					return typeof s == 'string';
 				}).slice(-maxSize);
-				tmp[name].current = tmp[name].length - 1;
+				tmp[na].current = tmp[na].length - 1;
 			}
 			s = extend(s, tmp);
 		}
@@ -2960,15 +3048,13 @@ flag23_loop:
 			setLocalStorage(storageKey, serialize());
 		}
 		function load () {
+			s = {};
+			names.forEach(function (na) {
+				s[na] = {lines:[], current:-1};
+			});
 			getLocalStorage(storageKey, function (value) {
 				restore(value || '');
 			});
-		}
-		function init () {
-			names.forEach(function (name) {
-				s[name] = {lines:[], current:-1};
-			});
-			load();
 		}
 		function push (line) {
 			line || (line = '');
@@ -3028,7 +3114,7 @@ flag23_loop:
 		this.save = save;
 		this.load = load;
 
-		init();
+		load();
 	}
 
 	/*constructor*/function EditLogger (editor, max) {
@@ -3097,16 +3183,28 @@ flag23_loop:
 					console.log(this.toString() + ': bad position!');
 					return 0;
 				}
+
 				var ss = this.position;
 				var se = this.position2 || t.offsetBy(ss, this.data.length);
+
+				if (this.hasOwnProperty('isLineOrient')) {
+					t.isLineOrientSelection = this.isLineOrient;
+				}
+				else {
+					t.isLineOrientSelection = this.data.length && this.data.substr(-1) == '\n';
+				}
+
 				if (t.getSelection(ss, se) != this.data) {
 					console.log(this.toString() + ': bad consistency!');
 					return 0;
 				}
-				marks.update2(t.selectionStart, function () {
+
+				marks.update(t.selectionStart, function () {
 					t.deleteRange(ss, se);
 				});
 				t.setSelectionRange(ss);
+				t.isLineOrientSelection = false;
+
 				return 1;
 			},
 			redo: function (t) {
@@ -3114,10 +3212,12 @@ flag23_loop:
 					console.log(this.toString() + ': bad position!');
 					return 0;
 				}
+
 				var data = this.data;
 				var inputMethod = this.inputMethod;
+
 				t.setSelectionRange(this.position);
-				marks.update2(this.position, function () {
+				marks.update(this.position, function () {
 					var re = data.match(/\n|[^\n]+/g);
 					if (!re) return;
 					for (var i = 0; i < re.length; i++) {
@@ -3127,6 +3227,7 @@ flag23_loop:
 					}
 				});
 				t.setSelectionRange(this.position);
+
 				return 1;
 			}
 		});
@@ -3174,7 +3275,6 @@ flag23_loop:
 				return EditLogItemInsert.prototype.redo.apply(this, arguments);
 			},
 			redo: function (t) {
-				t.isLineOrientSelection = this.isLineOrient;
 				return EditLogItemInsert.prototype.undo.apply(this, arguments);
 			},
 			dump: function (depth) {
@@ -3202,7 +3302,7 @@ flag23_loop:
 				var p = this.position;
 				var count = Math.min(p.row + this.rowCount, t.rowLength) - p.row;
 				var shiftCount = this.shiftCount;
-				marks.update2(this.position, function () {
+				marks.update(this.position, function () {
 					var s = multiply('\t', shiftCount);
 					var p1 = new Position(p.row, 0);
 					var p2 = new Position(p.row, s.length);
@@ -3225,7 +3325,7 @@ flag23_loop:
 				var p = this.position;
 				var count = Math.min(p.row + this.rowCount, t.rowLength) - p.row;
 				var shiftCount = this.shiftCount;
-				marks.update2(this.position, function () {
+				marks.update(this.position, function () {
 					var s = multiply('\t', shiftCount);
 					var p1 = new Position(p.row, 0);
 					for (var i = 0; i < count; i++) {
@@ -3374,8 +3474,8 @@ flag23_loop:
 							this.currentPosition = this.logs.length - 1;
 						}
 						this.cluster = null;
-						//logt3(this.logs.dump());
 					}
+					//console.log(this.logs.dump());
 				}
 				else {
 					throw new Exeception('edit logger doesn\'t open');
@@ -3396,6 +3496,11 @@ flag23_loop:
 				else {
 					return false;
 				}
+			},
+			dispose: function () {
+				this.editor = null;
+				this.logs = null;
+				this.cluster = null;
 			},
 			get logMax () {
 				return this.max;
@@ -3550,7 +3655,8 @@ flag23_loop:
 			}
 		}
 		this.clear = clear;
-		init();
+		this.dispose = clear;
+		timer = setTimeout(init, 1);
 	}
 	PairBracketsIndicator.getObject = function (c, t) {
 		if (BRACKETS.substring(BRACKETS.length / 2).indexOf(c) >= 0) {
@@ -3559,7 +3665,7 @@ flag23_loop:
 				return new PairBracketsIndicator(c, t, result);
 			}
 			else {
-				requestBell();
+				requestBell('Cannot find pair bracket.');
 			}
 		}
 		return undefined;
@@ -3927,40 +4033,80 @@ flag23_loop:
 	function docScrollTop () {
 		return Math.max(document.documentElement.scrollTop, document.body.scrollTop);
 	}
+	function docScrollWidth () {
+		return Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+	}
+	function docScrollHeight () {
+		return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+	}
 	function docClientWidth () {
 		return Math.min(document.documentElement.clientWidth, document.body.clientWidth)
 	}
 	function docClientHeight () {
 		return Math.min(document.documentElement.clientHeight, document.body.clientHeight)
 	}
-	function logt3 (line) {
-		var t3 = $('t3');
-		if (t3) {
-			var top = t3.value.length ? /^[^\n]+/.exec(t3.value)[0] : '';
-			line = line.replace(/[\r\n]+$/, '');
-			top = top.replace(/[\r\n]+$/, '');
-			if (line != top) {
-				t3.value = line + '\n' + t3.value;
-				console.log(line);
-			}
-		}
-		else {
-			console.log(line);
-		}
-	}
 	function getHighestZindex () {
 		var iter = document.createNodeIterator(
 			document.body, window.NodeFilter.SHOW_ELEMENT, null, false);
 		var node;
 		var result = 0;
+		var view = document.defaultView;
 		while ((node = iter.nextNode())) {
-			var z = (node.style.zIndex || document.defaultView.getComputedStyle(node, '').zIndex) - 0;
+			var z = (node.style.zIndex || view.getComputedStyle(node, '').zIndex) - 0;
 			if (z > result) {
 				result = z;
 			}
 		}
 		return result;
 	}
+	var dataset = (function () {
+		var datasetNameCache = {};
+		var nameRegex = /^[a-zA-Z]+$/;
+
+		function toHyphen (s) {
+			s = s.replace(/([a-z])([A-Z])/g, function ($0, $1, $2) {
+				return $1 + '-' + $2.toLowerCase();
+			});
+			return s;
+		}
+		function getDatasetKey (s) {
+			if (s in datasetNameCache) {
+				return datasetNameCache[s];
+			}
+			else {
+				s = toHyphen(s);
+				s = 'data-' + s;
+				s = s.toLowerCase();
+				return datasetNameCache[s] = s;;
+			}
+		}
+
+		return function (elm, name) {
+			if (arguments.length < 2) {
+				throw new Error('dataset: too few arguments.');
+			}
+			if (!elm) {
+				throw new Error('dataset: invalid elment.');
+			}
+			if (!nameRegex.test(name)) {
+				throw new Error('dataset: invalid name.');
+			}
+
+			name = getDatasetKey(name);
+
+			var result;
+
+			if (arguments.length == 2) {
+				result = elm.getAttribute(name);
+			}
+			else {
+				result = arguments[2].toString();
+				elm.setAttribute(name, result);
+			}
+
+			return result;
+		};
+	})();
 
 	/*
 	 * low-level functions for application management
@@ -3974,7 +4120,7 @@ flag23_loop:
 			});
 		}
 		else if (window.localStorage) {
-			callback && callback(localStorage.getItem(keyName));
+			callback && callback(window.localStorage.getItem(keyName));
 		}
 	}
 	function setLocalStorage (keyName, value) {
@@ -3986,10 +4132,18 @@ flag23_loop:
 		}
 	}
 	function getEditorCore () {
-		return new Editor(EDITOR_CORE_ID);
+		var result = new Editor(EDITOR_CORE_ID);
+		if (!result || !result.elm) {
+			console.log('*** getEditorCore: editor object or editor element cannot retrieve');
+		}
+		return result;
 	}
 	function getLineInput () {
-		return $(LINE_INPUT_ID);
+		var result = $(LINE_INPUT_ID);
+		if (!result) {
+			console.log('*** getLineInput: line input element cannot retrieve');
+		}
+		return result;
 	}
 	function isEditing (mode) {
 		mode || (mode = inputMode);
@@ -4059,9 +4213,9 @@ flag23_loop:
 		 *	 |
 		 *	 + style#wasavi_global_styles [style sheet]
 		 *	 |
-		 *	 + div#wasavi_editor [main editor screen]
+		 *	 + div#wasavi_editor [main editor screen] [POSITIONING TARGET]
 		 *	 |
-		 *	 + div#wasavi_footer
+		 *	 + div#wasavi_footer [POSITIONING TARGET]
 		 *	 |	 |
 		 *	 |	 + div#wasavi_footer_modeline [modeline]
 		 *	 |	 |
@@ -4079,7 +4233,7 @@ flag23_loop:
 		 *	 |					   |
 		 *	 |					   + input#wasavi_footer_input [line input editor]
 		 *	 |
-		 *	 + div#wasavi_console_container
+		 *	 + div#wasavi_console_container [POSITIONING TARGET]
 		 *	 |	 |
 		 *	 |	 + textarea#wasavi_console
 		 *	 |
@@ -4094,6 +4248,8 @@ flag23_loop:
 		 *	 |	 + span#wasavi_command_cursor_inner
 		 *	 |
 		 *	 + textarea#wasavi_edit_cursor [edit mode cursor]
+		 *	 |
+		 *	 + div#wasavi_cover [cover element]
 		 *
 		 */
 
@@ -4112,16 +4268,17 @@ flag23_loop:
 		var boxSizingPrefix = IS_GECKO ? '-moz-' : '';
 
 		// scale line height
-		var heightScaler = document.body.appendChild(document.createElement('span'));
-		style(heightScaler, {
+		var scaler = document.body.appendChild(document.createElement('span'));
+		style(scaler, {
 			font: getFontStyle(s, fontFamily),
 			textDecoration:'none',
 			textShadow:'none',
 			letterSpacing: s.letterSpacing
 		});
-		heightScaler.textContent = '0';
-		lineHeight = heightScaler.offsetHeight;
-		heightScaler.parentNode.removeChild(heightScaler);
+		scaler.textContent = '0';
+		lineHeight = scaler.offsetHeight;
+		charWidth = scaler.offsetWidth;
+		scaler.parentNode.removeChild(scaler);
 
 		// over text marker
 		var otm = getOverTextMarker(cnt, getFontStyle(s, fontFamily), '#000', '#fff');
@@ -4133,7 +4290,7 @@ flag23_loop:
 		styleElement.appendChild(document.createTextNode([
 			'#wasavi_container {',
 			'  position:absolute;',
-			'  background-color:#000;',
+			'  background-color:transparent;',
 			'  z-index:' + Math.min(getHighestZindex() + 100, 0x7fffffff) + ';',
 			'  line-height:1;',
 			'  text-align:left;',
@@ -4152,8 +4309,6 @@ flag23_loop:
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  font:' + getFontStyle(s, MONOSPACE_FONT_FAMILY) + ';',
 			'  letter-spacing:' + s.letterSpacing + ';',
-			'  width:' + target.offsetWidth + 'px;',
-			'  height:' + target.offsetHeight + 'px;',
 			'  background:#fff url(' + otm + ') left top repeat-y;',
 			'  background-origin:content-box;',
 			'  overflow-x:hidden;',
@@ -4171,14 +4326,13 @@ flag23_loop:
 			'  text-decoration:none;',
 			'  text-shadow:none;',
 			'  letter-spacing:' + s.letterSpacing + ';',
-			'  width:' + target.offsetWidth + 'px;',
-			'  height:' + target.offsetHeight + 'px;',
-			'  left:0px;',
-			'  top:0px;',
+			'  right:8px;',
+			'  bottom:8px;',
 			'  white-space:pre-wrap;',
 			'  overflow-x:auto;',
 			'  overflow-y:scroll;',
-			'  visibility:hidden',
+			'  visibility:hidden;',
+			'  background-color:white;',
 			'}',
 			'#wasavi_singleline_scaler {',
 			'  position:fixed;',
@@ -4201,12 +4355,13 @@ flag23_loop:
 			'  border:none;',
 			'  font-family:' + fontFamily + ';',
 			'  font-size:10pt;',
-			'  left:0px;',
-			'  top:0px;',
+			'  left:0;',
+			'  top:0;',
 			'  white-space:pre-wrap;',
 			'  overflow-x:auto;',
 			'  color:#fff;',
 			'  background-color:#000;',
+			'  line-height:1;',
 			'  visibility:hidden',
 			'}',
 			'#wasavi_editor > div {',
@@ -4237,12 +4392,13 @@ flag23_loop:
 			'  padding:2px 2px 1px 2px;',
 			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
 			'  font-size:10pt;',
-			'  overflow:hidden',
+			'  overflow:hidden;',
+			'  ' + boxSizingPrefix + 'box-sizing:content-box;',
 			'}',
 			'#wasavi_footer_modeline {',
 			'  text-align:right;',
 			'  padding:0 8px 1px 0;',
-			'  font-size:small;',
+			'  font-size:10pt;',
 			'  white-space:pre;',
 			'}',
 			'#wasavi_footer_alter {',
@@ -4259,6 +4415,7 @@ flag23_loop:
 			'#wasavi_footer_alter>table td {',
 			'  border:none;',
 			'  padding:0;',
+			'  line-height:1;',
 			'}',
 			'#wasavi_footer_input_indicator {',
 			'  width:1%;',
@@ -4266,7 +4423,6 @@ flag23_loop:
 			'  background-color:rgba(0,0,0,0.5)',
 			'}',
 			'#wasavi_footer_input_container {',
-			//'  width:99%;',
 			'  padding:0;',
 			'  background-color:transparent',
 			'}',
@@ -4287,12 +4443,9 @@ flag23_loop:
 			'  position:absolute;',
 			'  margin:0;',
 			'  padding:6px;',
-			'  left:8px; top:8px;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  border:none;',
 			'  border-radius:8px;',
-			'  width:' + (target.offsetWidth - 16) + 'px;',
-			'  height:' + (target.offsetHeight - 16) + 'px;',
 			'  background-color:rgba(0,0,0,0.8);',
 			'}',
 			'#wasavi_console {',
@@ -4308,7 +4461,8 @@ flag23_loop:
 			'  font-size:10pt;',
 			'  overflow-y:hidden;',
 			'  white-space:pre-wrap;',
-			window.chrome ? '  resize:none;' : '',
+			'  resize:none;',
+			'  line-height:1;',
 			'}',
 			'#wasavi_command_cursor {',
 			'  position:absolute;',
@@ -4341,7 +4495,7 @@ flag23_loop:
 			'  text-shadow:none;',
 			'  letter-spacing:' + s.letterSpacing + ';',
 			'  overflow-y:hidden;',
-			window.chrome ? '  resize:none;' : '',
+			'  resize:none;',
 			'  outline:none;',
 			'}',
 			'#wasavi_cover {',
@@ -4354,7 +4508,7 @@ flag23_loop:
 		// editor
 		var editorElement = cnt.appendChild(document.createElement('div'));
 		editorElement.id = EDITOR_CORE_ID;
-		editorElement.dataset.wasaviEditor = '1';
+		dataset(editorElement, 'wasaviEditor', 1);
 		var editor = new Editor(editorElement);
 
 		// caret position scaler
@@ -4405,8 +4559,8 @@ flag23_loop:
 		footerInput.spellcheck = false;
 
 		// footer background
-		footer.dataset.goalHeight = footer.offsetHeight;
-		footer.dataset.currentHeight = '1';
+		dataset(footer, 'goalHeight', footer.offsetHeight);
+		dataset(footer, 'currentHeight', 1);
 		footer.style.height = '0';
 
 		// console window
@@ -4433,19 +4587,22 @@ flag23_loop:
 		var cover = cnt.appendChild(document.createElement('div'));
 		cover.id = 'wasavi_cover';
 
-		// positioning
-		var rect = target.getBoundingClientRect();
-		style(cnt, {
-			left: (rect.left + docScrollLeft()) + 'px',
-			top: (rect.top + docScrollTop()) + 'px'
-		});
+		/*
+		 * positioning
+		 */
 
-		// initialize variables
+		setGeometory(target);
+
+		/* 
+		 * initialize variables
+		 */
+
 		targetElement = target;
 		terminated = false;
 		writeOnTermination = true;
 		state = 'normal';
 		runLevel = 0;
+		strokeCount = 0;
 		inputModeStack = [];
 		inputMode = 'command';
 		inputModeSub = '';
@@ -4464,22 +4621,23 @@ flag23_loop:
 		lastHorzFindCommand = {direction:0, letter:'', stopBefore:false};
 		lastRegexFindCommand = new RegexFinderInfo;
 		lastSubstituteInfo = {};
+		lastMessage = '';
 		requestedState = {};
 
 		editor.value = target.value;
 		editor.selectionStart = target.value
 			.substring(0, target.selectionStart)
-			.replace(/\r\n/g, '\n').length;
+			.replace(/\r\n/g, '\n')
+			.length;
 		editor.selectionEnd = editor.selectionStart;
 		editor.scrollTop = target.scrollTop;
 		editor.scrollLeft = target.scrollLeft;
 
 		marks = new Marks(editor);
 		cursor = new CursorUI(editor, cc, ec);
-		scroller = new Scroller(editor);
+		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
 		target.readOnly && config.setData('readonly');
-		setupEventHandlers(true);
 
 		refreshIdealWidthPixels(editor);
 		showMessage(
@@ -4489,29 +4647,40 @@ flag23_loop:
 			editor.rowLength,
 			target.value.length));
 
-		// animation
+		/*
+		 * start
+		 */
+
+		exGlobalSpecified = false;
+		editLogger.open(function () {
+			var result = executeExCommand(editor, exrc);
+			if (typeof result == 'string') {
+				showMessage(result, true);
+			}
+		});
+
+		cursor.ensureVisible();
+		cursor.update({type:inputMode, focused:true, visible:true});
+
+		var ev = document.createEvent('Event');
+		ev.initEvent('wasavi_start', true, false);
+		document.dispatchEvent(ev);
+
 		(function () {
-			footer.style.height = footer.dataset.currentHeight + 'px';
-			if (+footer.dataset.currentHeight >= +footer.dataset.goalHeight) {
+			if (!targetElement) {
+				return;
+			}
+
+			footer.style.height = dataset(footer, 'currentHeight') + 'px';
+
+			if (strokeCount 
+			|| +dataset(footer, 'currentHeight') >= +dataset(footer, 'goalHeight')) {
+				footer.style.height = dataset(footer, 'goalHeight') + 'px';
 				cnt.style.boxShadow = '0 1px 8px 4px #444';
-
-				cursor.ensureVisible();
-				cursor.update({type:inputMode, focused:true, visible:true});
-
-				exGlobalSpecified = false;
-				editLogger.open(function () {
-					var result = executeExCommand(editor, exrc);
-					if (typeof result == 'string') {
-						showMessage(result, true);
-					}
-				});
-
-				var ev = document.createEvent('Event');
-				ev.initEvent('wasavi_start', true, false);
-				document.dispatchEvent(ev);
+				setupEventHandlers(true);
 			}
 			else {
-				footer.dataset.currentHeight = +footer.dataset.currentHeight + 1;
+				dataset(footer, 'currentHeight', +dataset(footer, 'currentHeight') + 1);
 				setTimeout(arguments.callee, 10);
 			}
 		})();
@@ -4535,14 +4704,28 @@ flag23_loop:
 		// clear all objects and arrays
 		inputModeStack = null;
 		prefixInput = null;
+
+		pairBracketsIndicator && pairBracketsIndicator.dispose();
+		pairBracketsIndicator = null;
+
+		backlog.dispose();
 		backlog = null;
+
 		lastHorzFindCommand = null;
 		lastRegexFindCommand = null;
 		lastSubstituteInfo = null;
 		requestedState = null;
+
+		marks.dispose();
 		marks = null;
+
+		cursor.dispose();
 		cursor = null;
+
+		scroller.dispose();
 		scroller = null;
+
+		editLogger.dispose();
 		editLogger = null;
 
 		removeChild(cnt);
@@ -4589,6 +4772,89 @@ flag23_loop:
 		}
 
 		cursor.setupEventHandlers(method);
+	}
+	function setGeometory (target, fullscreen) {
+		var FULLSCREEN_MARGIN = 8;
+
+		if (target == undefined) {
+			target = targetElement;
+		}
+		if (fullscreen == undefined) {
+			fullscreen =  config.vars.fullscreen;
+		}
+		if (!target) {
+			return;
+		}
+
+		var container = $(CONTAINER_ID);
+		var editor = $(EDITOR_CORE_ID);
+		var footer = $('wasavi_footer');
+		var con = $('wasavi_console_container');
+		var conScaler = $('wasavi_console_scaler');
+		var mScaler = $('wasavi_multiline_scaler');
+
+		if (!container || !editor || !footer || !con || !conScaler || !mScaler) {
+			throw new Error(
+				'setGeometory: invalid element: ' +
+				[container, editor, footer, con, conScaler, mScaler].join(', ')
+			);
+		}
+
+		var rect;
+		var position = '';
+		var footerHeight = +dataset(footer, 'goalHeight');
+
+		if (fullscreen || !target) {
+			rect = {
+				left:FULLSCREEN_MARGIN,
+				top:FULLSCREEN_MARGIN,
+				width:docClientWidth() - (FULLSCREEN_MARGIN * 2),
+				height:docClientHeight() - footerHeight - (FULLSCREEN_MARGIN * 2)
+			};
+			position = 'fixed';
+		}
+		else {
+			rect = target.getBoundingClientRect();
+			position = 'absolute';
+		}
+
+		config.setData('lines', parseInt(rect.height / lineHeight));
+		config.setData('columns', parseInt(rect.width / charWidth));
+
+		style(container, {
+			position:position,
+			left:rect.left + 'px',
+			top:rect.top + 'px',
+			width:rect.width + 'px',
+			height:(rect.height + footerHeight) + 'px'
+		});
+
+		style(editor, {
+			left:0,
+			top:0,
+			width:rect.width + 'px',
+			height:rect.height + 'px'
+		});
+
+		style(footer, {
+			width:(rect.width - 4) + 'px'
+		});
+
+		style(con, {
+			left:'8px',
+			top:'8px',
+			width:(rect.width - 16) + 'px',
+			height:(rect.height - 16) + 'px'
+		});
+
+		style(conScaler, {
+			width:(rect.width - 16) + 'px'
+		});
+
+		style(mScaler, {
+			width:rect.width + 'px',
+			height:rect.height + 'px'
+		});
 	}
 	function setInputMode (newInputMode, newInputModeSub, initial) {
 		var newState;
@@ -4682,6 +4948,7 @@ flag23_loop:
 			var blink = pa.appendChild(document.createElement('blink'));
 			blink.textContent = '\u2588';
 		}
+		lastMessage = message;
 	}
 	function showLineInput (initial) {
 		if (state != 'line-input') {return;}
@@ -4692,7 +4959,7 @@ flag23_loop:
 		alter.style.display = 'none';
 		$('wasavi_footer_input_indicator').textContent = initial;
 		input.value = '';
-		input.dataset.current = '';
+		dataset(input, 'current', '');
 		input.focus();
 	}
 	function requestShowPrefixInput (message) {
@@ -4711,7 +4978,14 @@ flag23_loop:
 		}
 	}
 	function requestBell () {
-		requestedState.bell = true;
+		var result;
+		if (!requestedState.bell) {
+			requestedState.bell = {play:true};
+			if (arguments.length) {
+				result = requestedState.bell.message = _.apply(null, arguments);
+			}
+		}
+		return result;
 	}
 	function requestInputMode (mode, modeSub, initial) {
 		if (!requestedState.inputMode) {
@@ -4737,12 +5011,15 @@ flag23_loop:
 			keepRunLevel = args.pop();
 		}
 
+		var cursorState = {visible:cursor.visible};
+		cursor.update({visible:false});
+		cursor.locked = true;
 		!keepRunLevel && runLevel++;
 		try {
 			for (var j = 0; j < args.length; j++) {
 				switch (typeof args[j]) {
 				case 'number':
-					e.initUIEvent('wasavi_command', false, true, window, 0);
+					e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
 					mapManager.process(args[j], function (keyCode) {
 						processInput(keyCode, e);
 					});
@@ -4750,7 +5027,7 @@ flag23_loop:
 				case 'string':
 					var cmd = args[j];
 					for (var i = 0, goal = cmd.length; i < goal; i++) {
-						e.initUIEvent('wasavi_command', false, true, window, 0);
+						e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
 						mapManager.process(cmd.charCodeAt(i), function (keyCode) {
 							processInput(keyCode, e);
 						});
@@ -4761,6 +5038,11 @@ flag23_loop:
 		}
 		finally {
 			!keepRunLevel && runLevel--;
+			if (cursor) {
+				cursor.locked = false;
+				cursor.ensureVisible();
+				cursor.update(cursorState);
+			}
 		}
 	}
 	function processInput (code, e) {
@@ -4783,8 +5065,7 @@ flag23_loop:
 			lastRegexFindCommand.text = null;
 			if (config.vars.readonly && !isReadonlyWarned) {
 				isReadonlyWarned = true;
-				requestShowMessage(_('Warning: changing readonly element.'), true);
-				requestBell();
+				requestShowMessage(requestedBell('Warning: changing readonly element.'), true);
 			}
 		}
 		function execCommandMap (t, key, subkey, code) {
@@ -5053,7 +5334,7 @@ flag23_loop:
 			var canEscape = code == 0x1b
 				|| code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
 
-			input.dataset.current = input.value;
+			dataset(input, 'current', input.value);
 
 			if (subkey == inputMode && canEscape) {
 				mapkey = prefixInput.motion || prefixInput.operation;
@@ -5082,7 +5363,7 @@ flag23_loop:
 			else if (execLineInputEditMap(input, mapkey, subkey, code)) {
 				setTimeout(function () {
 					var input = getLineInput();
-					if (input.value != input.dataset.current) {
+					if (input.value != dataset(input, 'current')) {
 						var e = document.createEvent('Event');
 						e.initEvent('input', false, false);
 						input.dispatchEvent(e);
@@ -5147,8 +5428,13 @@ flag23_loop:
 				requestedState.logEditing = false;
 			}
 			if (requestedState.bell) {
-				bell.play();
-				requestedState.bell = false;
+				if (requestedState.bell.play) {
+					bell.play();
+				}
+				if (requestedState.bell.message) {
+					lastMessage = requestedState.bell.message;
+				}
+				requestedState.bell = null;
 			}
 			if (runLevel == 0 && state == 'normal' && (backlog.queued || backlog.visible)) {
 				backlog.write(false, messageUpdated);
@@ -5286,20 +5572,69 @@ flag23_loop:
 			return -1;
 		}
 
+		function getNodeIndex2 () {
+			log.push('t.elm.scrollTop: ' + t.elm.scrollTop);
+
+			for (var i = 0, goal = t.elm.childNodes.length; i < goal; i++) {
+				var rect = t.elm.childNodes[i].getBoundingClientRect();
+				rect = extend({
+					offsetTop:t.elm.childNodes[i].offsetTop,
+					offsetHeight:t.elm.childNodes[i].offsetHeight,
+				}, rect);
+				log.push(i + ': ' + JSON.stringify(rect));
+			}
+
+			var low = 0;
+			var high = t.elm.childNodes.length - 1;
+			var st = t.elm.scrollTop;
+			while (low <= high) {
+				var middle = parseInt((low + high) / 2);
+				var node = t.elm.childNodes[middle];
+				var rect = {
+					top:node.offsetTop,
+					bottom:node.offsetTop + node.offsetHeight
+				};
+				if (rect.top <= st && st < rect.bottom) {
+					log.push('***');
+					log.push(middle + ': ' + JSON.stringify(rect));
+					break;
+				}
+				else if (rect.bottom < st) {
+					low = middle + 1;
+				}
+				else {
+					high = middle - 1;
+				}
+			}
+			if (low > high) {
+				log.push('@@@');
+				var node = t.elm.childNodes[0];
+				var rect = {
+					top:node.offsetTop,
+					bottom:node.offsetTop + node.offsetHeight
+				};
+				log.push(middle + ': ' + JSON.stringify(rect));
+			}
+		}
+
 		var cover = $('wasavi_cover');
 		var coverDisplay = cover.style.display;
 		var cursorDisplay = cursor.visible;
 		var s = document.defaultView.getComputedStyle(t.elm, '');
 		var sl = docScrollLeft();
 		var st = docScrollTop();
+		var log = [];
 
 		cover.style.display = 'none';
 		cursor.update({visible:false});
 		try {
-			return {
-				top: getNodeIndex(),
-				bottom: getNodeIndex(t.elm.clientHeight - t.elm.clientTop - 1)
-			};
+			//getNodeIndex2();
+			var result = {};
+			result.top = getNodeIndex();
+			result.bottom = getNodeIndex(t.elm.clientHeight - t.elm.clientTop - 1);
+			//log.push('result: ' + JSON.stringify(result));
+			//console.log('getCurrentViewPositionIndices:\n' + log.join('\n'));
+			return result;
 		}
 		finally {
 			cover.style.display = coverDisplay;
@@ -5307,7 +5642,13 @@ flag23_loop:
 		}
 	}
 	function inputEscape () {
-		inputMode == 'command' && requestBell();
+		if (arguments.length) {
+			requestBell('{0} canceled.', toVisibleString(arguments[0]));
+		}
+		else {
+			inputMode == 'command' && requestBell('In command mode.');
+		}
+
 		prefixInput.reset();
 		requestShowPrefixInput();
 	}
@@ -5324,7 +5665,7 @@ flag23_loop:
 			return true;
 		}
 		else {
-			inputEscape();
+			inputEscape(c);
 		}
 		return undefined;
 	}
@@ -5337,7 +5678,7 @@ flag23_loop:
 	function motionLeft (c, t, count) {
 		count || (count = 1);
 		var n = t.selectionStart;
-		n.col <= 0 && requestBell();
+		n.col <= 0 && requestBell('Top of line.');
 		n.col = Math.max(n.col - count, 0);
 		t.selectionStart = n;
 		prefixInput.motion = c;
@@ -5348,7 +5689,7 @@ flag23_loop:
 		count || (count = 1);
 		var n = t.selectionEnd;
 		length = t.rows(n).length;
-		n.col >= length - 1 && requestBell();
+		n.col >= length - 1 && requestBell('Tail of line');
 		n.col = Math.min(n.col + count, length);
 		t.selectionEnd = n;
 		prefixInput.motion = c;
@@ -5372,7 +5713,7 @@ flag23_loop:
 	function motionNextWord (c, t, count, bigWord, wordEnd) {
 		var n = t.selectionEnd;
 		count || (count = 1);
-		n.col >= t.rows(n).length - 1 && n.row >= t.rowLength - 1 && requestBell();
+		n.col >= t.rows(n).length - 1 && n.row >= t.rowLength - 1 && requestBell('Tail of text.');
 
 		function doBigWord () {
 			for (var i = 0; i < count; i++) {
@@ -5511,7 +5852,7 @@ flag23_loop:
 	function motionPrevWord (c, t, count, bigWord) {
 		var n = t.selectionStart;
 		count || (count = 1);
-		n.col <= 0 && n.row <= 0 && requestBell();
+		n.col <= 0 && n.row <= 0 && requestBell('Top of text.');
 
 		if (bigWord) {
 			for (var i = 0; i < count; i++) {
@@ -5593,7 +5934,7 @@ flag23_loop:
 			t.selectionEnd = n;
 		}
 		else {
-			requestBell();
+			requestBell('Next search target not found.');
 		}
 		lastHorzFindCommand.direction = 1;
 		lastHorzFindCommand.letter = c;
@@ -5624,7 +5965,7 @@ flag23_loop:
 			t.selectionStart = n;
 		}
 		else {
-			requestBell();
+			requestBell('Previous search target not found.');
 		}
 		lastHorzFindCommand.direction = -1;
 		lastHorzFindCommand.letter = c;
@@ -5891,9 +6232,9 @@ flag23_loop:
 		var result = motionFindByRegexForward(regex, t, count, opts);
 		if (result) {
 			var n = t.linearPositionToBinaryPosition(result.offset + result.matchLength);
-			isLineOrient ?
-				t.setSelectionRange(t.getLineTopOffset2(n)) :
-				t.extendSelectionTo(n);
+			var n2 = t.getLineTopOffset2(n);
+			n.col = Math.max(n.col, n2.col);
+			isLineOrient ? t.setSelectionRange(n2) : t.extendSelectionTo(n);
 			isSmoothScrollRequested = true;
 			isVerticalMotion = true;
 		}
@@ -5933,9 +6274,9 @@ flag23_loop:
 		}
 		if (result) {
 			var n = t.linearPositionToBinaryPosition(result.offset + result.matchLength);
-			isLineOrient ?
-				t.setSelectionRange(t.getLineTopOffset2(n)) :
-				t.extendSelectionTo(n);
+			var n2 = t.getLineTopOffset2(n);
+			n.col = Math.max(n.col, n2.col);
+			isLineOrient ? t.setSelectionRange(n2) : t.extendSelectionTo(n);
 			isSmoothScrollRequested = true;
 			isVerticalMotion = true;
 		}
@@ -5982,7 +6323,7 @@ flag23_loop:
 
 		count || (count = 1);
 		refreshIdealWidthPixels(t);
-		n.row <= 0 && requestBell();
+		n.row <= 0 && requestBell('Top of text');
 		n.row = Math.max(n.row - count, 0);
 
 		var width = 0;
@@ -6015,7 +6356,7 @@ flag23_loop:
 
 		count || (count = 1);
 		refreshIdealWidthPixels(t);
-		n.row >= t.rowLength - 1 && requestBell();
+		n.row >= t.rowLength - 1 && requestBell('Tail of text.');
 		n.row = Math.min(n.row + count, t.rowLength - 1);
 
 		var width = 0;
@@ -6052,7 +6393,7 @@ flag23_loop:
 
 			scroller.run(y, function () {
 				var v2 = getCurrentViewPositionIndices(t);
-				if (v2.top > t.selectionStartRow) {
+				if (v2.top >= 0 && v2.top < t.rowLength && v2.top > t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.top, 0));
 				}
 			});
@@ -6063,7 +6404,7 @@ flag23_loop:
 
 			scroller.run(y, function () {
 				var v2 = getCurrentViewPositionIndices(t);
-				if (v2.bottom < t.selectionStartRow) {
+				if (v2.bottom >= 0 && v2.bottom < t.rowLength && v2.bottom < t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.bottom, 0));
 				}
 			});
@@ -6089,7 +6430,7 @@ flag23_loop:
 
 		var result = 0;
 		(isEditing() ? $call : editLogger.open).call(editLogger, function () {
-			marks.update2(t.selectionStart, function () {
+			marks.update(t.selectionStart, function () {
 				result = t.deleteRange(function (content) {
 					!isEditing() && editLogger.write(
 						EditLogger.ITEM_TYPE.DELETE,
@@ -6111,9 +6452,16 @@ flag23_loop:
 				EditLogger.ITEM_TYPE.INSERT, 
 				startn, s, keepPosition
 			);
-			marks.update2(startn, function () {
+			marks.update(startn, function () {
+				if (s.length >= 2
+				&& s.substr(-1) == '\n'
+				&& t.selectionStartRow == t.rowLength - 1) {
+					s = s.substr(0, s.length - 1);
+				}
+
 				var re = s.match(/\n|[^\n]+/g);
 				if (!re) return;
+
 				for (var i = 0; i < re.length; i++) {
 					switch (re[i]) {
 					case '\n':
@@ -6141,7 +6489,7 @@ flag23_loop:
 				EditLogger.ITEM_TYPE.OVERWRITE,
 				startn, s, t.rows(startn).substr(startn, s.length)
 			);
-			marks.update2(startn, function () {
+			marks.update(startn, function () {
 				var re = s.match(/\n|[^\n]+/g);
 				if (!re) return;
 				for (var i = 0; i < re.length; i++) {
@@ -6166,7 +6514,7 @@ flag23_loop:
 		editLogger.open(function () {
 			var startn = t.selectionStart;
 			editLogger.write(EditLogger.ITEM_TYPE.SHIFT, startn, '', rowCount, shiftCount);
-			marks.update2(startn, function () {
+			marks.update(startn, function () {
 				var s = multiply('\t', shiftCount);
 				var p1 = new Position(startn.row, 0);
 				for (var i = 0; i < rowCount; i++) {
@@ -6187,7 +6535,7 @@ flag23_loop:
 		editLogger.open(function () {
 			var startn = t.selectionStart;
 			editLogger.write(EditLogger.ITEM_TYPE.UNSHIFT, startn, '', rowCount, shiftCount);
-			marks.update2(startn, function () {
+			marks.update(startn, function () {
 				var s = multiply('\t', shiftCount);
 				var p1 = new Position(startn.row, 0);
 				var p2 = new Position(startn.row, s.length);
@@ -6328,22 +6676,23 @@ flag23_loop:
 						t.setSelectionRange(n);
 					}
 				}
-				if (t.selectionStartRow == t.rowLength - 1) {
-					data = data.replace(/\n$/, '');
-				}
-				for (var i = 0; i < count; i++) {
-					insert(t, data);
-				}
-				t.setSelectionRange(t.getLineTopOffset2(n));
+				editLogger.open(function () {
+					for (var i = 0; i < count; i++) {
+						insert(t, data);
+					}
+					t.setSelectionRange(t.getLineTopOffset2(n));
+				});
 			}
 			else {
 				if (!t.selected && isForward) {
 					n = t.rightPos(n);
 					t.setSelectionRange(n);
 				}
-				for (var i = 0; i < count; i++) {
-					insert(t, data);
-				}
+				editLogger.open(function () {
+					for (var i = 0; i < count; i++) {
+						insert(t, data);
+					}
+				});
 			}
 			isEditCompleted = true;
 		}
@@ -6381,7 +6730,7 @@ flag23_loop:
 			return false;
 		}
 		else {
-			inputEscape();
+			inputEscape(c);
 		}
 		return undefined;
 	}
@@ -6724,7 +7073,7 @@ flag23_loop:
 		rg.setEndAfter(t.rowNodes(a.range[1]));
 		var f = rg.cloneContents();
 		var dest = a.lineNumber;
-		marks.update2(new Position(dest, 0), function () {
+		marks.update(new Position(dest, 0), function () {
 			dest < 0 ?
 				rg.setStartBefore(t.rowNodes(0)) :
 				rg.setStartAfter(t.rowNodes(dest));
@@ -7321,7 +7670,7 @@ flag23_loop:
 			rg.setStartBefore(t.rowNodes(r[0]));
 			rg.setEndAfter(t.rowNodes(r[1]));
 			registers.set(a.flags.register ? a.register : '', rg.toString(), true, true);
-			marks.update2(new Position(r[0], 0), function () {
+			marks.update(new Position(r[0], 0), function () {
 				rg.deleteContents();
 			});
 			rg.detach();
@@ -7408,7 +7757,7 @@ flag23_loop:
 			rg.setStartBefore(t.rowNodes(r[0]));
 			rg.setEndAfter(t.rowNodes(r[1]));
 			var f = rg.cloneContents();
-			marks.update2(new Position(dest, 0), function () {
+			marks.update(new Position(dest, 0), function () {
 				var rg2 = document.createRange();
 				dest < 0 ?
 					rg2.setStartBefore(t.rowNodes(0)) :
@@ -7432,8 +7781,7 @@ flag23_loop:
 				global.WasaviAgent.sendRequest({type:'open-options-page'});
 			}
 			else {
-				requestBell();
-				return _('Don\'t know how to open options page.');
+				return requestBell('Don\'t know how to open options page.');
 			}
 			return undefined;
 		}),
@@ -7453,8 +7801,7 @@ flag23_loop:
 		new ExCommand('redo', 'r', '', 0, function (t, a) {
 			var result = editLogger.redo();
 			if (result === false) {
-				requestBell();
-				return _('No redo item.');
+				return requestBell('No redo item.');
 			}
 			else {
 				requestShowMessage(
@@ -7549,8 +7896,7 @@ flag23_loop:
 		new ExCommand('undo', 'u', '', 0, function (t, a) {
 			var result = editLogger.undo();
 			if (result === false) {
-				requestBell();
-				return _('No undo item.');
+				return requestBell('No undo item.');
 			}
 			else {
 				requestShowMessage(
@@ -7683,6 +8029,10 @@ flag23_loop:
 			new VariableItem('bellvolume', 'i', 25),      // O
 			new VariableItem('history', 'i', 20),         // O
 			new VariableItem('monospace', 'i', 20),       // O
+			new VariableItem('fullscreen', 'b', false, function (v) {
+				setGeometory(targetElement, v);
+				return v;
+			}),   // O
 
 			/* defined by vim */
 			new VariableItem('iskeyword', 'r', '^[a-zA-Z0-9_]+$'), // O
@@ -7700,7 +8050,7 @@ flag23_loop:
 			//new VariableItem('backup', 's', ''),
 			//new VariableItem('cdpath', 's', ':'),
 			//new VariableItem('cedit', 's', ''),
-			//new VariableItem('columns', 'i',	80),
+			new VariableItem('columns', 'i', 0),
 			//new VariableItem('combined', 'b', false),
 			//new VariableItem('comment', 'b', false),
 			//new VariableItem('escapetime', 'i', 6),
@@ -7713,7 +8063,7 @@ flag23_loop:
 			//new VariableItem('inputencoding', 's', ''),
 			//new VariableItem('keytime', 'i', 6),
 			//new VariableItem('leftright', 'b', false),
-			//new VariableItem('lines', 'i', 25),
+			new VariableItem('lines', 'i', 0),
 			//new VariableItem('lisp', 'b', false),
 			//new VariableItem('lock', 'b', true),
 			new VariableItem('matchtime', 'i', 5),
@@ -7755,7 +8105,9 @@ flag23_loop:
 			'ts':   'tabstop',			'tty': 'term',			'ttytype': 'term',
 			'ul':   'undolevels',		'w':   'window',		'wa':   'writeany',
 			'wi':   'window',			'wl':   'wraplen',		'wm':   'wrapmargin',
-			'ws':   'wrapscan'
+			'ws':   'wrapscan',
+
+			'fs':   'fullscreen'
 		}
 	);
 	var enableList = {
@@ -7774,12 +8126,13 @@ flag23_loop:
 	var targetElement;
 	var terminated;
 	var writeOnTermination;
+	var state;
+	var runLevel;
+	var strokeCount;
 	var marks;
 	var cursor;
 	var scroller;
 	var editLogger;
-	var runLevel;
-	var state;
 	var prefixInput;
 	var inputModeStack;
 	var inputMode;
@@ -7788,6 +8141,7 @@ flag23_loop:
 	var editedString;
 	var requestedState;
 	var lineHeight;
+	var charWidth;
 	var idealWidthPixels;
 	var backlog;
 	var pairBracketsIndicator;
@@ -7805,6 +8159,7 @@ flag23_loop:
 	var lastHorzFindCommand;
 	var lastRegexFindCommand;
 	var lastSubstituteInfo;
+	var lastMessage;
 
 	/*
 	 * editor functions mapping
@@ -7828,7 +8183,7 @@ flag23_loop:
 					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', keyName(c)));
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-register': function (c, t) {
@@ -7910,7 +8265,7 @@ flag23_loop:
 				return startEdit(c, t, false, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -7930,7 +8285,7 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -7948,7 +8303,7 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -7961,7 +8316,7 @@ flag23_loop:
 					requestSimpleCommandUpdate();
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -7977,7 +8332,7 @@ flag23_loop:
 				return startEdit(c, t, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -7987,7 +8342,7 @@ flag23_loop:
 				return startEdit(c, t, true, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -7997,7 +8352,7 @@ flag23_loop:
 				return startEdit(c, t, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8007,7 +8362,7 @@ flag23_loop:
 				return startEdit(c, t, false, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8017,7 +8372,7 @@ flag23_loop:
 				return openLine(c, t, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8027,7 +8382,7 @@ flag23_loop:
 				return openLine(c, t, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8042,7 +8397,7 @@ flag23_loop:
 				requestSimpleCommandUpdate();
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 		},
 		// equivalents to :& (repeat last executed :s)
@@ -8055,7 +8410,7 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8066,7 +8421,7 @@ flag23_loop:
 				return this['c']['@op'].apply(this, arguments);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8078,7 +8433,7 @@ flag23_loop:
 				return startEdit(c, t, false, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8092,7 +8447,7 @@ flag23_loop:
 					requestShowPrefixInput();
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -8101,7 +8456,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape();
+					inputEscape(prefixInput.operation);
 				}
 				return undefined;
 			},
@@ -8143,6 +8498,9 @@ flag23_loop:
 		// backwards lines, to first non-white character
 		'-': function (c, t) {
 			var n = t.selectionStart;
+			if (n.row == 0) {
+				return inputEscape(c);
+			}
 			n.row = Math.max(n.row - prefixInput.count, 0);
 			t.selectionStart = t.getLineTopOffset2(n);
 			isVerticalMotion = true;
@@ -8151,6 +8509,9 @@ flag23_loop:
 		},
 		'+': function (c, t) {
 			var n = t.selectionEnd;
+			if (n.row >= t.rowLength - 1) {
+				return inputEscape(c);
+			}
 			n.row = Math.min(n.row + prefixInput.count, t.rowLength - 1);
 			t.selectionEnd = t.getLineTopOffset2(n);
 			isVerticalMotion = true;
@@ -8166,11 +8527,9 @@ flag23_loop:
 		},
 		// jump to end of line
 		'$': function (c, t) {
-			if (t.selectionStartRow + prefixInput.count - 1 >= t.rowLength) {
-				return inputEscape();
-			}
-			if (prefixInput.count > 1) {
-				motionDown(c, t, prefixInput.count - 1);
+			var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
+			if (count > 1) {
+				motionDown(c, t, count - 1);
 			}
 			return motionLineEnd(c, t);
 		},
@@ -8190,7 +8549,7 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8206,47 +8565,52 @@ flag23_loop:
 		// invert of last find
 		',': function (c, t) {
 			prefixInput.motion = c;
-			lastHorzFindCommand.direction *= -1;
+			var result;
 			switch (lastHorzFindCommand.direction) {
 			case -1:
-				return motionFindBackward(
+				result = motionFindForward(
 					lastHorzFindCommand.letter,
-					t, 1,
+					t, prefixInput.count,
 					lastHorzFindCommand.stopBefore);
+				lastHorzFindCommand.direction *= -1;
+				break;
 			case 1:
-				return motionFindForward(
+				result = motionFindBackward(
 					lastHorzFindCommand.letter,
-					t, 1,
+					t, prefixInput.count,
 					lastHorzFindCommand.stopBefore);
+				lastHorzFindCommand.direction *= -1;
+				break;
 			}
-			return undefined;
+			return result;
 		},
 		// repeat last find
 		';': function (c, t) {
 			prefixInput.motion = c;
+			var result;
 			switch (lastHorzFindCommand.direction) {
 			case -1:
-				return motionFindBackward(
+				result = motionFindBackward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
 					lastHorzFindCommand.stopBefore);
+				break;
 			case 1:
-				return motionFindForward(
+				result = motionFindForward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
 					lastHorzFindCommand.stopBefore);
+				break;
 			}
-			return undefined;
+			return result;
 		},
 		// down, line orient
 		'_': function (c, t) {
-			if (t.selectionStartRow + prefixInput.count - 1 >= t.rowLength) {
-				return inputEscape();
+			var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
+			if (count > 1) {
+				motionDown(c, t, count - 1);
 			}
-			if (prefixInput.count > 1) {
-				motionDown(c, t, prefixInput.count - 1);
-				t.selectionEnd = t.getLineTopOffset2(t.selectionEnd);
-			}
+			t.extendSelectionTo(t.getLineTopOffset2(t.selectionEnd));
 			isVerticalMotion = true;
 			return true;
 		},
@@ -8384,7 +8748,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
 				return undefined;
@@ -8406,7 +8770,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
 				return undefined;
@@ -8468,7 +8832,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape();
+					inputEscape(prefixInput.motion);
 				}
 				return undefined;
 			}
@@ -8491,7 +8855,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape();
+					inputEscape(prefixInput.motion);
 				}
 				return undefined;
 			}
@@ -8596,6 +8960,9 @@ flag23_loop:
 					prefixInput.appendMotion(c);
 					result = true;
 					break;
+				default:
+					requestBell('Unknown g-prefixed command: ' + c);
+					break;
 				}
 				return result;
 			}
@@ -8611,7 +8978,7 @@ flag23_loop:
 		},
 		'M': function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
-			var index = parseInt((v.top + v.bottom) / 2);
+			var index = v.top + parseInt((v.bottom - v.top + 1) / 2);
 			t.extendSelectionTo(t.getLineTopOffset2(index, 0));
 			isVerticalMotion = true;
 			idealWidthPixels = -1;
@@ -8683,8 +9050,8 @@ flag23_loop:
 		},
 		// search next match for current pattern
 		'n': function (c, t) {
-			prefixInput.motion = c;
 			if (registers.exists('/')) {
+				prefixInput.motion = c;
 				isSmoothScrollRequested = true;
 				return motionFindByRegexFacade(
 					registers.get('/').data, t, prefixInput.count,
@@ -8698,8 +9065,8 @@ flag23_loop:
 		},
 		// search previous match for current pattern
 		'N': function (c, t) {
-			prefixInput.motion = c;
 			if (registers.exists('/')) {
+				prefixInput.motion = c;
 				isSmoothScrollRequested = true;
 				return motionFindByRegexFacade(
 					registers.get('/').data, t, prefixInput.count,
@@ -8729,7 +9096,7 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8746,7 +9113,7 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8763,7 +9130,7 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8780,7 +9147,7 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8792,7 +9159,7 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8807,7 +9174,7 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8827,7 +9194,7 @@ flag23_loop:
 					requestShowPrefixInput(keyName(c) + ': screen adjustment');
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -8891,7 +9258,7 @@ flag23_loop:
 				return deleteChars(t, prefixInput.count, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8905,7 +9272,7 @@ flag23_loop:
 				return deleteChars(t, prefixInput.count, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8916,7 +9283,7 @@ flag23_loop:
 				return paste(t, prefixInput.count, true);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8927,7 +9294,7 @@ flag23_loop:
 				return paste(t, prefixInput.count, false);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8938,7 +9305,7 @@ flag23_loop:
 				return joinLines(t, prefixInput.count);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8958,8 +9325,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.undo();
 				if (result === false) {
-					requestBell();
-					requestShowMessage(_('No undo item.'));
+					requestShowMessage(requestBell('No undo item.'));
 				}
 				else {
 					requestShowMessage(
@@ -8968,7 +9334,7 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8976,8 +9342,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.redo();
 				if (result === false) {
-					requestShowMessage('No redo item.');
-					requestBell();
+					requestShowMessage(requestBell('No redo item.'));
 				}
 				else {
 					requestShowMessage(
@@ -8986,7 +9351,7 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -8998,7 +9363,7 @@ flag23_loop:
 				return toggleCase(t, prefixInput.count);
 			}
 			else {
-				inputEscape();
+				inputEscape(c);
 			}
 			return undefined;
 		},
@@ -9020,7 +9385,7 @@ flag23_loop:
 					requestShowPrefixInput(_('{0}: mark', keyName(c)));
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -9040,7 +9405,7 @@ flag23_loop:
 					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', keyName(c)));
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -9132,7 +9497,7 @@ flag23_loop:
 					requestInputMode('line-input', '', config.vars.prompt ? c : '');
 				}
 				else {
-					inputEscape();
+					inputEscape(c);
 				}
 			},
 			'line-input': function (c, t) {
@@ -9274,15 +9639,15 @@ flag23_loop:
 		},
 		'\u000e'/*^N*/: function (c, t) {
 			if (lineInputHistories.isInitial) {
-				requestBell();
+				requestBell('Tail of history');
 			}
 			else {
 				var line = lineInputHistories.next();
 				if (line == undefined) {
-					line = t.dataset.wasaviLineInputCurrent;
+					line = dataset(t, 'wasaviLineInputCurrent');
 				}
 				if (line == undefined) {
-					requestBell();
+					requestBell('Invalid history item');
 				}
 				else {
 					t.value = line;
@@ -9293,11 +9658,11 @@ flag23_loop:
 		},
 		'\u0010'/*^P*/: function (c, t) {
 			if (lineInputHistories.isInitial) {
-				t.dataset.wasaviLineInputCurrent = t.value;
+				dataset(t, 'wasaviLineInputCurrent', t.value);
 			}
 			var line = lineInputHistories.prev();
 			if (line == undefined) {
-				requestBell();
+				requestBell('Top of history');
 			}
 			else {
 				t.value = line;
@@ -9359,8 +9724,7 @@ flag23_loop:
 	// editor (document)
 	function handleDocumentFocus (e) {
 		!$(CONTAINER_ID)
-		&& e.target.dataset
-		&& (e.target.dataset.wasaviEditor || '') == ''
+		&& (dataset(e.target, 'wasaviEditor') || '') == ''
 		&& (isMultilineTextInput(e.target) || isSinglelineTextInput(e.target))
 		&& install(e.target);
 	}
@@ -9372,11 +9736,7 @@ flag23_loop:
 			return;
 		}
 
-		/*logt3(['type', 'charCode', 'keyCode', 'which', 'keyIdentifier', 'ctrlKey'].map(function (i) {
-			return i + ':' + e[i];
-		}).join('\t'));*/
-
-		if (cursor.isInComposition) {
+		if (cursor.inComposition) {
 			return;
 		}
 
@@ -9423,6 +9783,8 @@ flag23_loop:
 			}
 		}
 
+		lastMessage = '';
+		strokeCount++;
 		mapManager.process(keyCode, function (keyCode) {
 			if (processInput(keyCode, e)) {
 				e.preventDefault();
@@ -9491,6 +9853,10 @@ flag23_loop:
 			if (!getRunning()) { throw new Exeception('wasavi is not running'); }
 		}
 		return {
+			/*
+			 * properties
+			 */
+
 			get version () {
 				return VERSION;
 			},
@@ -9505,11 +9871,16 @@ flag23_loop:
 					injectKeyevents = v;
 				}
 			},
+			get vars () {
+				return config.vars;
+			},
 			get state () {
-				return this.running ? state : undefined;
+				ensureRunning();
+				return state;
 			},
 			get inputMode () {
-				return this.running ? inputMode : undefined;
+				ensureRunning();
+				return inputMode;
 			},
 			get scrollTop () {
 				ensureRunning();
@@ -9526,6 +9897,10 @@ flag23_loop:
 			get row () {
 				ensureRunning();
 				return getEditorCore().selectionStartRow;
+			},
+			get position () {
+				ensureRunning();
+				return getEditorCore().selectionStart;
 			},
 			get enableList () {
 				return enableList;
@@ -9554,12 +9929,24 @@ flag23_loop:
 					runType = v;
 				}
 			},
+			get value () {
+				ensureRunning();
+				return getEditorCore().value;
+			},
+			get lastMessage () {
+				ensureRunning();
+				return lastMessage;
+			},
+
+			/*
+			 * methods
+			 */
+
 			run: function (element) {
 				element = $(element);
 				if (!$(CONTAINER_ID)
 				&& element
-				&& element.dataset
-				&& (element.dataset.wasaviEditor || '') == ''
+				&& (dataset(element, 'wasaviEditor') || '') == ''
 				&& (isMultilineTextInput(element) || isSinglelineTextInput(element))) {
 					install(element);
 				}
@@ -9568,7 +9955,18 @@ flag23_loop:
 				ensureRunning();
 				var args = Array.prototype.slice.call(arguments);
 				args.push(true);
-				executeViCommand.apply(window, args);
+				lastMessage = '';
+				strokeCount++;
+				executeViCommand.apply(null, args);
+			},
+			registers: function (name) {
+				if (!registers.isReadable(name)) {
+					return undefined;
+				}
+				if (!registers.exists(name)) {
+					return undefined;
+				}
+				return registers.get(name).data;
 			},
 			kill: function () {
 				ensureRunning();
@@ -9577,28 +9975,39 @@ flag23_loop:
 			notifyKeyevent: function (e) {
 				if (!window.chrome && e.type != 'keypress') return;
 				if (window.chrome && e.type != 'keydown' && e.type != 'keypress') return;
-				if (getRunning() && injectKeyevents) {
-					handleKeydown(e);
-				}
+				if (!getRunning()) return;
+				if (!injectKeyevents) return;
+				handleKeydown(e);
 			},
 			notifyUpdateStorage: function (keys) {
-				if (getRunning()) {
-					keys.forEach(function (key) {
-						switch (key) {
-						case registers.storageKey:
-							storageKey.load();
-							break;
-						case lineInputHistories.storageKey:
-							lineInputHistories.load();
-							break;
-						}
-					});
-				}
+				keys.forEach(function (key) {
+					switch (key) {
+					case registers.storageKey:
+						registers.load();
+						break;
+					case lineInputHistories.storageKey:
+						lineInputHistories.load();
+						break;
+					}
+				});
 			},
+
+			/*
+			 * classes
+			 */
+
+			classes:{
+				Position:Position
+			},
+
+			/*
+			 * constants
+			 */
+
 			SPECIAL_KEYS: new function () {
 				var result = {};
 				for (var i in SPECIAL_KEYS_REVERSED) {
-					result[i.replace(/^<|>$/, '').toUpperCase()] = -SPECIAL_KEYS_REVERSED[i];
+					result[i.replace(/^<|>$/g, '').toUpperCase()] = -SPECIAL_KEYS_REVERSED[i];
 				}
 				result.ENTER = 13;
 				result.ESCAPE = 27;

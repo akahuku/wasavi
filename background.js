@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 102 2012-04-21 04:23:25Z akahuku $
+ * @version $Id: background.js 105 2012-04-23 17:48:43Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -281,17 +281,28 @@ function OperaExtensionWrapper () {
 		return tabId in tabIds;
 	};
 	this.sendRequest = function (tabId, message) {
-		tabIds[tabId].postMessage(message);
+		try {
+			tabIds[tabId].postMessage(message);
+		}
+		catch (e) {}
 	};
 	this.broadcast = function (message, exceptId) {
 		if (exceptId === undefined) {
 			for (var i in tabIds) {
-				tabIds[i].postMessage(message);
+				try {
+					tabIds[i].postMessage(message);
+				}
+				catch (e) {}
 			}
 		}
 		else {
 			for (var i in tabIds) {
-				i - exceptId != 0 && tabIds[i].postMessage(message);
+				if (i - exceptId != 0) {
+					try {
+						tabIds[i].postMessage(message);
+					}
+					catch (e) {}
+				}
 			}
 		}
 	};
@@ -304,13 +315,19 @@ function OperaExtensionWrapper () {
 		opera.extension.onmessage = function (e) {
 			if (e.ports && e.ports.length > 0) {
 				handler(e.data, null, function (data) {
-					e.ports[0].postMessage(data);
+					try {
+						e.ports[0].postMessage(data);
+					}
+					catch (e) {}
 				});
 			}
 			else {
 				var tabId = getTabId(e.source);
 				handler(e.data, tabId, function (data) {
-					e.source.postMessage(data);
+					try {
+						e.source.postMessage(data);
+					}
+					catch (e) {}
 				});
 			}
 		}
