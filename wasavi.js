@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 107 2012-04-28 11:27:26Z akahuku $
+ * @version $Id: wasavi.js 113 2012-05-03 18:33:56Z akahuku $
  * @sourceURL=wasavi.js
  */
 /**
@@ -42,8 +42,8 @@
 	 * ----------------
 	 */
 
-	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 107 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 107 2012-04-28 11:27:26Z akahuku $';
+	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 113 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 113 2012-05-03 18:33:56Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -480,15 +480,17 @@
 			return named[name];
 		}
 		function set (name, data, isLineOrient, isInteractive) {
+			if (data == '') return;
+
 			// unnamed register
 			if (typeof name != 'string' || name == '') {
 				// case of several deletion operation or data of two or more lines,
 				// update "1 too.
-				if (state == 'normal'
-				&& prefixInput.operation == 'd'
-				&& '%`/?()Nn{}'.indexOf(prefixInput.motion) >= 0
-				||	(data.match(/\n/g) || []).length >= 2) {
-					set('1', data, isLineOrient);
+				if (state == 'normal') {
+					if (prefixInput.operation == 'd' && '%`/?()Nn{}'.indexOf(prefixInput.motion) >= 0
+					||	(data.match(/\n/g) || []).length >= 2) {
+						set('1', data, isLineOrient);
+					}
 				}
 				unnamed.set(data, isLineOrient);
 			}
@@ -563,72 +565,191 @@
 		var isEmpty;
 		var isLocked;
 
+		function init () {
+			if (arguments.length && typeof arguments[0] == 'string') {
+				register = '';
+				operation = '';
+				motion = '';
+				count1 = '';
+				count2 = '';
+				trailer = '';
+				isEmpty = true;
+				isLocked = false;
+
+				do {
+					var arg = arguments[0];
+					var re = /^(".)?([1-9][0-9]*)?(.)([1-9][0-9]*)?(.)(.*)$/.exec(arg);
+					if (re) {
+						if (typeof re[1] == 'string' && re[1] != '') {
+							register = re[1];
+						}
+						if (typeof re[2] == 'string' && re[2] != '') {
+							count1 = re[2];
+						}
+						if (typeof re[3] == 'string' && re[3] != '') {
+							operation = re[3];
+						}
+						if (typeof re[4] == 'string' && re[4] != '') {
+							count2 = re[4];
+						}
+						if (typeof re[5] == 'string' && re[5] != '') {
+							motion = re[5];
+						}
+						if (typeof re[6] == 'string' && re[6] != '') {
+							trailer = re[6];
+						}
+						break;
+					}
+
+					var re = /^(".)?([1-9][0-9]*)?(.)(.*)$/.exec(arg);
+					if (re) {
+						if (typeof re[1] == 'string' && re[1] != '') {
+							register = re[1];
+						}
+						if (typeof re[2] == 'string' && re[2] != '') {
+							count2 = re[2];
+						}
+						if (typeof re[3] == 'string' && re[3] != '') {
+							motion = re[3];
+						}
+						if (typeof re[4] == 'string' && re[4] != '') {
+							trailer = re[4];
+						}
+						break;
+					}
+
+					throw new Error('PrefixInput: invalid initializer: ' + arg);
+
+				} while (false);
+			}
+			else {
+				var opts = arguments[0] || {};
+				register = opts.register || '';
+				operation = opts.operation || '';
+				motion = opts.motion || '';
+				count1 = opts.count1 || '';
+				count2 = opts.count2 || '';
+				trailer = opts.trailer || '';
+				isEmpty = !!opts.isEmpty || true;
+				isLocked = !!opts.isLocked || false;
+			}
+		}
 		function reset () {
 			if (isLocked) return;
-			register = '';
-			operation = '';
-			motion = '';
-			count1 = '';
-			count2 = '';
-			trailer = '';
-			isEmpty = true;
-			isLocked = false;
+
+			var list = {
+				register:0,
+				operation:0,
+				motion:0,
+				count1:0,
+				count2:0,
+				trailer:0,
+				isEmpty:0,
+				isLocked:0
+			};
+
+			if (arguments.length) {
+				Array.prototype.forEach.call(arguments, function (a) { (a in list) && list[a]++; });
+			}
+			else {
+				for (var a in list) { list[a]++; }
+			}
+
+			list['register']  && (register = '');
+			list['operation'] && (operation = '');
+			list['motion']    && (motion = '');
+			list['count1']    && (count1 = '');
+			list['count2']    && (count2 = '');
+			list['trailer']   && (trailer = '');
+			list['isEmpty']   && (isEmpty = true);
+			list['isLocked']  && (isLocked = false);
 		}
+		function clone () {
+			return new PrefixInput({
+				register:register,
+				operation:operation,
+				motion:motion,
+				count1:count1,
+				count2:count2,
+				trailer:trailer,
+				isEmpty:isEmpty,
+				isLocked:isLocked
+			});
+		}
+		function assign (pi) {
+			init({
+				register:pi.register,
+				operation:pi.operation,
+				motion:pi.motion,
+				count1:pi.count1,
+				count2:pi.count2,
+				trailer:pi.trailer,
+				isEmpty:pi.isEmpty,
+				isLocked:pi.isLocked
+			});
+		}
+		function toString () {
+			return register + count1 + operation + count2 + motion + trailer;
+		}
+		function _toVisibleString () {
+			return [register, count1, operation, count2, motion, trailer]
+				.map(function (s) { return toVisibleString(s); })
+				.join('');
+		}
+
 		function appendRegister (v) {
-			if (isLocked) return;
+			if (isLocked || v == '') return;
 			register += v;
 			isEmpty = false;
 		}
 		function appendOperation (v) {
-			if (isLocked) return;
+			if (isLocked || v == '') return;
 			operation += v;
 			isEmpty = false;
 		}
 		function appendMotion (v) {
-			if (isLocked) return;
+			if (isLocked || v == '') return;
 			motion += v;
 			isEmpty = false;
 		}
 		function appendTrailer (v) {
-			if (isLocked) return;
+			if (isLocked || v == '') return;
 			trailer += v;
 			isEmpty = false;
 		}
-		function appendCommand (v) {
-			if (isLocked) return;
-			if (operation == '') {
-				operation = v;
-			}
-			else {
-				motion = v;
-			}
-			isEmpty = false;
-		}
 		function appendCount (v) {
-			if (isLocked) return;
+			if (isLocked || v == '') return;
 			if (operation == '') {
-				count1 += v;
+				if (count1 == '' && !/^[1-9]$/.test(v)) return;
+				if (count1 != '' && !/^[0-9]$/.test(v)) return;
+				count1 += (v + '');
 			}
 			else {
-				count2 += v;
+				if (!/^[0-9]$/.test(v)) return;
+				count2 += (v + '');
 			}
 			isEmpty = false;
 		}
+
 		function setRegister (v) {
-			if (isLocked) return;
-			if (register == '') { register = v; isEmpty = false; }
+			if (isLocked || v == '' || register != '') return;
+			register = v;
+			isEmpty = false;
 		}
 		function setOperation (v) {
-			if (isLocked) return;
-			if (operation == '') { operation = v; isEmpty = false; }
+			if (isLocked || v == '' || operation != '') return;
+			operation = v;
+			isEmpty = false;
 		}
 		function setMotion (v) {
-			if (isLocked) return;
-			if (motion == '') { motion = v; isEmpty = false; }
+			if (isLocked || v == '' || motion != '') return;
+			motion = v;
+			isEmpty = false;
 		}
 		function setTrailer (v) {
-			if (isLocked) return;
-			if (trailer == '') { trailer = v; isEmpty = false; }
+			if (isLocked || v == '' || trailer != '') return;
+			trailer = v;
+			isEmpty = false;
 		}
 		function setLocked (v) {
 			isLocked = v;
@@ -652,24 +773,19 @@
 		this.__defineSetter__('trailer', setTrailer);
 		this.__defineSetter__('isLocked', setLocked);
 
-		this.toString = function () {
-			return register + count1 + operation + count2 + motion + trailer;
-		};
-		this.toVisibleString = function () {
-			return [register, count1, operation, count2, motion, trailer]
-				.map(function (s) { return toVisibleString(s); })
-				.join('');
-		};
-
 		this.reset = reset;
-		this.appendCommand = appendCommand;
+		this.clone = clone;
+		this.assign = assign;
+		this.toString = toString;
+		this.toVisibleString = _toVisibleString;
+
 		this.appendCount = appendCount;
 		this.appendRegister = appendRegister;
 		this.appendOperation = appendOperation;
 		this.appendMotion = appendMotion;
 		this.appendTrailer = appendTrailer;
 
-		reset();
+		init.apply(null, arguments);
 	}
 
 	/*constructor*/function CursorUI (editor, comCursor, editCursor) {
@@ -679,6 +795,10 @@
 		var visible = false;
 		var inComposition = false;
 		var wrapper = null;
+		var commandCursorOffsetLeft = false;
+		var commandCursorOffsetTop = false;
+		var fixed = document.defaultView.getComputedStyle($(CONTAINER_ID), '')
+			.position == 'fixed';
 
 		/*constructor*/function CommandWrapper (mode) {
 			var cursorBlinkTimer;
@@ -721,13 +841,13 @@
 				}
 				comCursor.childNodes[0].textContent = c;
 
-				var coord = getCoord();
-				coord.left += editor.elm.clientLeft;
-				coord.top += editor.elm.clientTop;
-				coord.left -= editor.elm.scrollLeft;
-				coord.top -= editor.elm.scrollTop;
-				comCursor.style.left = coord.left + 'px';
-				comCursor.style.top = coord.top + 'px';
+				var coord = getCommandCursorCoord();
+				if (fixed) {
+					coord.left -= docScrollLeft();
+					coord.top -= docScrollTop();
+				}
+				comCursor.style.left = (coord.left - editor.elm.scrollLeft) + 'px';
+				comCursor.style.top = (coord.top - editor.elm.scrollTop) + 'px';
 				comCursor.style.color = 'white';
 				comCursor.style.backgroundColor = 'black';
 				startBlink();
@@ -871,7 +991,7 @@
 		function ensureVisible (smooth) {
 			syncPosition();
 
-			var caret = getCoord();
+			var caret = getCommandCursorCoord();
 			var elm = editor.elm;
 			var viewBottom = elm.scrollTop + elm.clientHeight;
 
@@ -893,29 +1013,25 @@
 			}
 		}
 
-		function fold (s) {
-			var result = [];
-			while (s.length) {
-				result.push(s.substr(0, 80));
-				s = s.substr(80);
-			}
-			return result;
-		}
-
-		function getCoord () {
+		function getCommandCursorCoord () {
 			var div = $('wasavi_multiline_scaler');
-			var caret = $('wasavi_caret');
+			if (commandCursorOffsetTop === false && commandCursorOffsetLeft === false) {
+				var s = document.defaultView.getComputedStyle(div, '');
+				commandCursorOffsetLeft =
+					parseInt(s.borderLeftWidth, 10) + parseInt(s.paddingLeft, 10);
+				commandCursorOffsetTop =
+					parseInt(s.borderTopWidth, 10) + parseInt(s.paddingTop, 10);
+			}
 
-			var s = document.defaultView.getComputedStyle(editor.elm, '');
-			var firstRow = editor.rowNodes(0);
+			var caret = $('wasavi_caret');
 			var currentRow = editor.rowNodes(editor.selectionStartRow);
 			var result2 = {
-				left:currentRow.offsetLeft - firstRow.offsetLeft
+				left:currentRow.offsetLeft
 					+ caret.offsetLeft
-					- parseInt(s.borderLeftWidth, 10),
-				top:currentRow.offsetTop - firstRow.offsetTop
+					- commandCursorOffsetLeft,
+				top:currentRow.offsetTop
 					+ caret.offsetTop
-					- parseInt(s.borderTopWidth, 10)
+					- commandCursorOffsetTop
 			};
 			result2.right = result2.left + caret.offsetWidth;
 			result2.bottom = result2.top + caret.offsetHeight;
@@ -923,15 +1039,15 @@
 			return result2;
 		}
 		function fixPosition () {
-			if (editor.selected) {return;}
+			if (editor.selected) return;
 
 			var needFix1 = !isEditing();
 			var needFix2 = !requestedState.inputMode || !isEditing(requestedState.inputMode.mode);
 			if (needFix1 && needFix2) {
 				var n = editor.selectionStart;
 				var fixed = false;
-				if (n.col > 0 
-				&& n.row == editor.rowLength - 1 
+				if (n.col > 0
+				&& n.row == editor.rowLength - 1
 				&& n.col >= editor.rows(n).length) {
 					n.col = Math.max(0, editor.rows(n).length - 1);
 					fixed = true;
@@ -946,7 +1062,7 @@
 			}
 		}
 		function update (opts) {
-			if (locked) {return;}
+			if (locked) return;
 
 			if (opts) {
 				if ('visible' in opts) {
@@ -1119,14 +1235,21 @@
 		function isValidName (name) {
 			return /^[a-zA-Z']$/.test(name);
 		}
+		function regalizeName (name) {
+			if (name == '`') {
+				name = "'";
+			}
+			return name;
+		}
 		function set (name, pos) {
+			name = regalizeName(name);
 			if (isValidName(name)) {
 				marks[name] = pos;
 			}
-			//dump();
 			save();
 		}
 		function get (name) {
+			name = regalizeName(name);
 			return isValidName(name) && name in marks ? marks[name] : undefined;
 		}
 		function update (pos, func) {
@@ -1267,7 +1390,7 @@
 	/*constructor*/function Editor (element) {
 		this.elm = $(element);
 		if (!this.elm) {
-			console.log('*** wasavi: Editor constructor: invalid element: ' + element);
+			console.error('*** wasavi: Editor constructor: invalid element: ' + element);
 		}
 		this.isLineOrientSelection = false;
 	}
@@ -1525,8 +1648,8 @@
 			},
 			getLineTopOffset2: function () {
 				var a = arg2pos(arguments);
-				var re = /^\s*/.exec(this.elm.childNodes[a.row].textContent);
-				a.col = re ? re[0].length : 0;
+				var re = /^(\s*).*\n$/.exec(this.elm.childNodes[a.row].textContent);
+				a.col = re ? re[1].length : 0;
 				return a;
 			},
 			getIndent: function () {
@@ -1612,22 +1735,17 @@
 				var totalLength = 0;
 				var node;
 				var textOffset = 0;
-				var canOverwrite = false;
 				var rowTextLength = this.rows(arg).length;
 
-				while ((node = iter.nextNode())) {
+				while (textOffset < text.length && (node = iter.nextNode())) {
 					var next = totalLength + node.nodeValue.length;
-					if (totalLength <= arg.col && arg.col < next) {
-						canOverwrite = true;
-					}
-
-					if (!canOverwrite) {
+					if (!(totalLength <= arg.col && arg.col < next)) {
+						totalLength = next;
 						continue;
 					}
 
 					var nodeValueOffset = Math.max(arg.col - totalLength, 0);
 					var overwriteCount = 0;
-
 					if (next >= rowTextLength) {
 						overwriteCount = text.length - textOffset;
 					}
@@ -1640,14 +1758,8 @@
 						node.nodeValue.substring(0, nodeValueOffset) +
 						text.substring(textOffset, overwriteCount) +
 						node.nodeValue.substring(nodeValueOffset + overwriteCount);
-
 					arg.col += overwriteCount;
 					textOffset += overwriteCount;
-
-					if (textOffset >= text.length) {
-						done = true;
-					}
-
 					totalLength = next;
 				}
 
@@ -1980,10 +2092,6 @@
 				}
 			},
 			set scrollTop (v) {
-				if (this.elm.scrollTop == 140 && v == 1
-				||  this.elm.scrollTop == 436 && v == 140) {
-					debugger;
-				}
 				this.elm.removeEventListener('scroll', handleScroll, false);
 				this.elm.scrollTop = v;
 				this.elm.addEventListener('scroll', handleScroll, false);
@@ -2643,7 +2751,7 @@ flag23_loop:
 				a.removeEventListener('load', arguments.callee, false);
 				enabled = true;
 			}, false);
-			
+
 			this.play = function () {
 				if (enabled) {
 					var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
@@ -3104,8 +3212,8 @@ flag23_loop:
 				throw new Error('LineInputHistories: unregistered name: ' + name);
 			}
 		});
-		this.__defineGetter__('storageKey', function () { 
-			return storageKey; 
+		this.__defineGetter__('storageKey', function () {
+			return storageKey;
 		});
 
 		this.push = push;
@@ -3180,7 +3288,7 @@ flag23_loop:
 			},
 			undo: function (t) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.log(this.toString() + ': bad position!');
+					console.error(this.toString() + ': bad position!');
 					return 0;
 				}
 
@@ -3195,7 +3303,7 @@ flag23_loop:
 				}
 
 				if (t.getSelection(ss, se) != this.data) {
-					console.log(this.toString() + ': bad consistency!');
+					console.error(this.toString() + ': bad consistency!');
 					return 0;
 				}
 
@@ -3209,7 +3317,7 @@ flag23_loop:
 			},
 			redo: function (t) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.log(this.toString() + ': bad position!');
+					console.error(this.toString() + ': bad position!');
 					return 0;
 				}
 
@@ -3296,7 +3404,7 @@ flag23_loop:
 			},
 			undo: function (t) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.log(this.toString() + ': bad position!');
+					console.error(this.toString() + ': bad position!');
 					return 0;
 				}
 				var p = this.position;
@@ -3319,7 +3427,7 @@ flag23_loop:
 			},
 			redo: function (t) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.log(this.toString() + ': bad position!');
+					console.error(this.toString() + ': bad position!');
 					return 0;
 				}
 				var p = this.position;
@@ -3475,7 +3583,6 @@ flag23_loop:
 						}
 						this.cluster = null;
 					}
-					//console.log(this.logs.dump());
 				}
 				else {
 					throw new Exeception('edit logger doesn\'t open');
@@ -3668,7 +3775,7 @@ flag23_loop:
 				requestBell('Cannot find pair bracket.');
 			}
 		}
-		return undefined;
+		return null;
 	};
 
 	/*
@@ -4134,14 +4241,14 @@ flag23_loop:
 	function getEditorCore () {
 		var result = new Editor(EDITOR_CORE_ID);
 		if (!result || !result.elm) {
-			console.log('*** getEditorCore: editor object or editor element cannot retrieve');
+			console.error('*** getEditorCore: editor object or editor element cannot retrieve');
 		}
 		return result;
 	}
 	function getLineInput () {
 		var result = $(LINE_INPUT_ID);
 		if (!result) {
-			console.log('*** getLineInput: line input element cannot retrieve');
+			console.error('*** getLineInput: line input element cannot retrieve');
 		}
 		return result;
 	}
@@ -4202,7 +4309,7 @@ flag23_loop:
 
 		// hack for opera: ensure repaint
 		if (window.opera) {
-			window.scrollBy(0, 1); 
+			window.scrollBy(0, 1);
 			window.scrollBy(0, -1);
 		}
 
@@ -4221,7 +4328,7 @@ flag23_loop:
 		 *	 |	 |
 		 *	 |	 + div#wasavi_footer_alter
 		 *	 |		 |
-		 *	 |		 + table
+		 *	 |		 + table#wasavi_footer_alter_table
 		 *	 |			 |
 		 *	 |			 + tbody
 		 *	 |			   |
@@ -4289,7 +4396,7 @@ flag23_loop:
 		styleElement.id = 'wasavi_global_styles';
 		styleElement.appendChild(document.createTextNode([
 			'#wasavi_container {',
-			'  position:absolute;',
+			//'  position:' + s.position + ';',
 			'  background-color:transparent;',
 			'  z-index:' + Math.min(getHighestZindex() + 100, 0x7fffffff) + ';',
 			'  line-height:1;',
@@ -4404,12 +4511,12 @@ flag23_loop:
 			'#wasavi_footer_alter {',
 			'  display:none',
 			'}',
-			'#wasavi_footer_alter>table {',
+			'#wasavi_footer_alter_table {',
 			'  padding:0;',
 			'  margin:0;',
 			'  border-collapse:collapse;',
 			'  border:none;',
-			'  width:' + (target.offsetWidth - 4) + 'px;',
+			//'  width:' + (target.offsetWidth - 4) + 'px;',
 			'  background-color:transparent',
 			'}',
 			'#wasavi_footer_alter>table td {',
@@ -4539,7 +4646,9 @@ flag23_loop:
 		footerAlter.id = 'wasavi_footer_alter';
 
 		// footer alter contents
-		var footerAlterRow = footerAlter.appendChild(document.createElement('table'))
+		var footerAlterTable = document.createElement('table');
+		footerAlterTable.id = 'wasavi_footer_alter_table';
+		var footerAlterRow = footerAlter.appendChild(footerAlterTable)
 			.appendChild(document.createElement('tbody'))
 			.appendChild(document.createElement('tr'));
 
@@ -4593,7 +4702,7 @@ flag23_loop:
 
 		setGeometory(target);
 
-		/* 
+		/*
 		 * initialize variables
 		 */
 
@@ -4609,7 +4718,6 @@ flag23_loop:
 		prefixInput = new PrefixInput;
 		idealWidthPixels = -1;
 		backlog = new Backlog(conwincnt, conwin, conscaler);
-		editedString = '';
 		isTextDirty = false;
 		isEditCompleted = false;
 		isVerticalMotion = false;
@@ -4673,7 +4781,7 @@ flag23_loop:
 
 			footer.style.height = dataset(footer, 'currentHeight') + 'px';
 
-			if (strokeCount 
+			if (strokeCount
 			|| +dataset(footer, 'currentHeight') >= +dataset(footer, 'goalHeight')) {
 				footer.style.height = dataset(footer, 'goalHeight') + 'px';
 				cnt.style.boxShadow = '0 1px 8px 4px #444';
@@ -4792,11 +4900,12 @@ flag23_loop:
 		var con = $('wasavi_console_container');
 		var conScaler = $('wasavi_console_scaler');
 		var mScaler = $('wasavi_multiline_scaler');
+		var faltTable = $('wasavi_footer_alter_table');
 
-		if (!container || !editor || !footer || !con || !conScaler || !mScaler) {
+		if (!container || !editor || !footer || !con || !conScaler || !mScaler || !faltTable) {
 			throw new Error(
 				'setGeometory: invalid element: ' +
-				[container, editor, footer, con, conScaler, mScaler].join(', ')
+				[container, editor, footer, con, conScaler, mScaler, faltTable].join(', ')
 			);
 		}
 
@@ -4815,11 +4924,12 @@ flag23_loop:
 		}
 		else {
 			rect = target.getBoundingClientRect();
-			position = 'absolute';
+			position = document.defaultView.getComputedStyle(target, '').position == 'fixed' ?
+				'fixed' : 'absolute';
 		}
 
-		config.setData('lines', parseInt(rect.height / lineHeight));
-		config.setData('columns', parseInt(rect.width / charWidth));
+		console.log(JSON.stringify(rect));
+		console.log(position);
 
 		style(container, {
 			position:position,
@@ -4855,6 +4965,13 @@ flag23_loop:
 			width:rect.width + 'px',
 			height:rect.height + 'px'
 		});
+
+		style(faltTable, {
+			width:(rect.width - 4) + 'px'
+		});
+
+		config.setData('lines', parseInt(editor.clientHeight / lineHeight));
+		config.setData('columns', parseInt(editor.clientWidth / charWidth));
 	}
 	function setInputMode (newInputMode, newInputModeSub, initial) {
 		var newState;
@@ -5014,7 +5131,12 @@ flag23_loop:
 		var cursorState = {visible:cursor.visible};
 		cursor.update({visible:false});
 		cursor.locked = true;
+
+		var prefixInputSaved = prefixInput.clone();
+		prefixInput.reset();
+
 		!keepRunLevel && runLevel++;
+
 		try {
 			for (var j = 0; j < args.length; j++) {
 				switch (typeof args[j]) {
@@ -5038,6 +5160,11 @@ flag23_loop:
 		}
 		finally {
 			!keepRunLevel && runLevel--;
+
+			if (prefixInput) {
+				prefixInput.assign(prefixInputSaved);
+			}
+
 			if (cursor) {
 				cursor.locked = false;
 				cursor.ensureVisible();
@@ -5181,13 +5308,18 @@ flag23_loop:
 		function logEditing (t) {
 			editedString != '' && editLogger.open(function () {
 				if (inputMode == 'edit') {
-					editLogger.write(EditLogger.ITEM_TYPE.INSERT, editStartPosition, editedString);
+					editLogger.write(
+						EditLogger.ITEM_TYPE.INSERT,
+						editStartPosition, editedString
+					);
 				}
 				else {
 					editLogger.write(
 						EditLogger.ITEM_TYPE.OVERWRITE,
 						editStartPosition, editedString,
-						t.rows(editStartPosition).substr(editStartPosition.col, editedString.length)
+						t.rows(editStartPosition).substr(
+							editStartPosition.col,
+							editedString.length)
 					);
 				}
 			});
@@ -5275,8 +5407,13 @@ flag23_loop:
 			if (subkey == inputMode && code == 0x1b) {
 				processAbbrevs(editor, true);
 
-				for (var i = 1; i < prefixInput.count; i++) {
-					executeViCommand(editedString);
+				var editedStringCurrent = editedString;
+
+				if (editRepeatCount > 1) {
+					var editedStringActual = editedStringSuffix + editedStringCurrent;
+					for (var i = 1; i < editRepeatCount; i++) {
+						executeViCommand(editedStringActual);
+					}
 				}
 
 				logEditing(editor);
@@ -5288,8 +5425,8 @@ flag23_loop:
 
 				popInputMode();
 				prefixInput.isLocked = false;
-				prefixInput.trailer = editedString;
-				registers.set('.', editedString);
+				prefixInput.trailer = editedStringCurrent;
+				registers.set('.', editedStringCurrent);
 
 				cursor.ensureVisible();
 				cursor.update({type:inputMode, visible:true});
@@ -5299,7 +5436,7 @@ flag23_loop:
 					isSimpleCommandUpdateRequested = false;
 				}
 
-				(isEditCompleted || editedString != '') && doEditComplete();
+				(isEditCompleted || editedStringCurrent != '') && doEditComplete();
 				editedString = '';
 				prefixInput.reset();
 				isEditCompleted = isVerticalMotion = isWordMotion = false;
@@ -5307,9 +5444,9 @@ flag23_loop:
 				requestShowPrefixInput();
 			}
 			else {
-				if (runLevel == 0) {
+				//if (runLevel == 0) {
 					editedString += letter;
-				}
+				//}
 				if (config.vars.showmatch) {
 					pairBracketsIndicator && pairBracketsIndicator.clear();
 					pairBracketsIndicator = PairBracketsIndicator.getObject(letter, editor);
@@ -5433,6 +5570,7 @@ flag23_loop:
 				}
 				if (requestedState.bell.message) {
 					lastMessage = requestedState.bell.message;
+					console.log(requestedState.bell.message);
 				}
 				requestedState.bell = null;
 			}
@@ -5558,88 +5696,50 @@ flag23_loop:
 		}
 	}
 	function getCurrentViewPositionIndices (t) {
-		function getNodeIndex (vertOffset) {
-			var a = t.elm.getBoundingClientRect();
-			var result = document.elementFromPoint(
-				a.left + t.elm.clientLeft + parseInt(s.paddingLeft, 10),
-				a.top + t.elm.clientTop + (vertOffset || parseInt(s.paddingTop, 10))
-			);
-
-			if (result && result.parentNode && result.parentNode.id == EDITOR_CORE_ID) {
-				return t.indexOf(result);
-			}
-
-			return -1;
-		}
-
-		function getNodeIndex2 () {
-			log.push('t.elm.scrollTop: ' + t.elm.scrollTop);
-
-			for (var i = 0, goal = t.elm.childNodes.length; i < goal; i++) {
-				var rect = t.elm.childNodes[i].getBoundingClientRect();
-				rect = extend({
-					offsetTop:t.elm.childNodes[i].offsetTop,
-					offsetHeight:t.elm.childNodes[i].offsetHeight,
-				}, rect);
-				log.push(i + ': ' + JSON.stringify(rect));
-			}
-
+		function findLineIndex (line) {
 			var low = 0;
 			var high = t.elm.childNodes.length - 1;
-			var st = t.elm.scrollTop;
+			var result = -1;
 			while (low <= high) {
 				var middle = parseInt((low + high) / 2);
 				var node = t.elm.childNodes[middle];
-				var rect = {
-					top:node.offsetTop,
-					bottom:node.offsetTop + node.offsetHeight
-				};
-				if (rect.top <= st && st < rect.bottom) {
-					log.push('***');
-					log.push(middle + ': ' + JSON.stringify(rect));
+				var top = node.offsetTop;
+				var bottom = node.offsetTop + node.offsetHeight
+				if (top <= line && line < bottom) {
+					result = middle;
 					break;
 				}
-				else if (rect.bottom < st) {
+				else if (bottom <= line) {
 					low = middle + 1;
 				}
 				else {
 					high = middle - 1;
 				}
 			}
-			if (low > high) {
-				log.push('@@@');
-				var node = t.elm.childNodes[0];
-				var rect = {
-					top:node.offsetTop,
-					bottom:node.offsetTop + node.offsetHeight
-				};
-				log.push(middle + ': ' + JSON.stringify(rect));
-			}
-		}
-
-		var cover = $('wasavi_cover');
-		var coverDisplay = cover.style.display;
-		var cursorDisplay = cursor.visible;
-		var s = document.defaultView.getComputedStyle(t.elm, '');
-		var sl = docScrollLeft();
-		var st = docScrollTop();
-		var log = [];
-
-		cover.style.display = 'none';
-		cursor.update({visible:false});
-		try {
-			//getNodeIndex2();
-			var result = {};
-			result.top = getNodeIndex();
-			result.bottom = getNodeIndex(t.elm.clientHeight - t.elm.clientTop - 1);
-			//log.push('result: ' + JSON.stringify(result));
-			//console.log('getCurrentViewPositionIndices:\n' + log.join('\n'));
 			return result;
 		}
-		finally {
-			cover.style.display = coverDisplay;
-			cursor.update({visible:cursorDisplay});
+
+		var result = {};
+
+		var top = findLineIndex(t.elm.scrollTop);
+		if (top >= 0) {
+			result.top = top;
 		}
+		else {
+			result.top = 0;
+		}
+
+		var bottom = findLineIndex(t.elm.scrollTop + t.elm.clientHeight - 1);
+		if (bottom >= 0) {
+			result.bottom = bottom;
+		}
+		else {
+			result.bottom = t.rowLength - 1;
+		}
+
+		result.lines = parseInt(t.elm.clientHeight / lineHeight);
+
+		return result;
 	}
 	function inputEscape () {
 		if (arguments.length) {
@@ -5688,7 +5788,7 @@ flag23_loop:
 	function motionRight (c, t, count) {
 		count || (count = 1);
 		var n = t.selectionEnd;
-		length = t.rows(n).length;
+		var length = t.rows(n).length;
 		n.col >= length - 1 && requestBell('Tail of line');
 		n.col = Math.min(n.col + count, length);
 		t.selectionEnd = n;
@@ -6291,7 +6391,7 @@ flag23_loop:
 		if (!t.selected) {
 			if (count <= t.getLineTailOffset(n).col - n.col) {
 				if (c == '\r' || c == '\n') {
-					t.selectionEnd = new Position(n.row, n.col + 1);
+					t.selectionEnd = new Position(n.row, n.col + count);
 					insert(t, '\n' + t.getIndent(n));
 				}
 				else {
@@ -6299,6 +6399,9 @@ flag23_loop:
 					insert(t, multiply(c, count));
 				}
 				done = true;
+			}
+			else {
+				requestBell('Replace count too large.');
 			}
 		}
 		else {
@@ -6386,12 +6489,7 @@ flag23_loop:
 	function scrollView (c, t, count) {
 		function down (count) {
 			var index = Math.min(v.top + count, t.rowLength - 1);
-			var y = Math.min(
-				t.rowNodes(index).offsetTop - t.elm.clientTop,
-				t.elm.scrollHeight - t.elm.clientHeight
-			);
-
-			scroller.run(y, function () {
+			scroller.run(t.rowNodes(index).offsetTop, function () {
 				var v2 = getCurrentViewPositionIndices(t);
 				if (v2.top >= 0 && v2.top < t.rowLength && v2.top > t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.top, 0));
@@ -6400,9 +6498,7 @@ flag23_loop:
 		}
 		function up (count) {
 			var index = Math.max(v.top - count, 0);
-			var y = Math.max(t.rowNodes(index).offsetTop - t.elm.clientTop, 0);
-
-			scroller.run(y, function () {
+			scroller.run(t.rowNodes(index).offsetTop, function () {
 				var v2 = getCurrentViewPositionIndices(t);
 				if (v2.bottom >= 0 && v2.bottom < t.rowLength && v2.bottom < t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.bottom, 0));
@@ -6413,7 +6509,7 @@ flag23_loop:
 		if (typeof count == 'function') {
 			count = count(v);
 		}
-		if (count != 0) {
+		if (typeof count == 'number' && !isNaN(count) && count != 0) {
 			count > 0 ? down(count) : up(-count);
 		}
 		prefixInput.motion = c;
@@ -6441,21 +6537,26 @@ flag23_loop:
 		});
 		return result;
 	}
-	function insert (t, s, keepPosition) {
+	function insert (t, s, opts) {
 		if (s == '') return;
 
 		deleteSelection(t);
+		opts || (opts = {});
+		var keepPosition = !!opts.keepPosition;
+		var isLineOrientedLast = !!opts.isLineOrientedLast;
 
 		(isEditing() ? $call : editLogger.open).call(editLogger, function () {
 			var startn = t.selectionStart;
 			!isEditing() && editLogger.write(
-				EditLogger.ITEM_TYPE.INSERT, 
+				EditLogger.ITEM_TYPE.INSERT,
 				startn, s, keepPosition
 			);
 			marks.update(startn, function () {
-				if (s.length >= 2
+				if (isLineOrientedLast
+				&& s.length >= 2
 				&& s.substr(-1) == '\n'
-				&& t.selectionStartRow == t.rowLength - 1) {
+				&& t.selectionStartRow == t.rowLength - 1
+				&& t.rowTextNodes(t.selectionStartRow).nodeValue.substring(t.selectionStartCol) == '\n') {
 					s = s.substr(0, s.length - 1);
 				}
 
@@ -6478,14 +6579,17 @@ flag23_loop:
 			keepPosition && t.setSelectionRange(startn);
 		});
 	}
-	function overwrite (t, s, keepPosition) {
+	function overwrite (t, s, opts) {
 		if (s == '') return;
 
 		deleteSelection(t);
+		opts || (opts = {});
+		var keepPosition = !!opts.keepPosition;
+		var isLineOrientedLast = !!opts.isLineOrientedLast;
 
 		(isEditing() ? $call : editLogger.open).call(editLogger, function () {
 			var startn = t.selectionStart;
-			editLogger.write(
+			!isEditing() && editLogger.write(
 				EditLogger.ITEM_TYPE.OVERWRITE,
 				startn, s, t.rows(startn).substr(startn, s.length)
 			);
@@ -6496,6 +6600,7 @@ flag23_loop:
 					switch (re[i]) {
 					case '\n':
 						isMultilineTextInput(targetElement) && t.divideLine();
+						resultValue = t.value;
 						break;
 
 					default:
@@ -6580,7 +6685,7 @@ flag23_loop:
 	function joinLines (t, count, asis) {
 		count || (count = 1);
 		editLogger.open(function () {
-			var asisIndex = {index:0};
+			var asisIndex = [{length:0}];
 			for (var i = 0; i < count; i++) {
 				if (t.selectionStartRow >= t.rowLength - 1) {return}
 
@@ -6589,17 +6694,17 @@ flag23_loop:
 				var re = asis ? asisIndex : /^\s*/.exec(t2);
 
 				t.selectionStart = new Position(t.selectionStartRow, t1.length);
-				t.selectionEnd = new Position(t.selectionStartRow + 1, re.index);
+				t.selectionEnd = new Position(t.selectionStartRow + 1, re[0].length);
 				deleteSelection(t);
 
-				if (asis || /\s+$/.test(t1) || ')]}'.indexOf(t2.charAt(re.index)) >= 0) {
+				if (asis || /\s+$/.test(t1) || ')]}'.indexOf(t2.charAt(re[0].length)) >= 0) {
 					// do nothing
 				}
-				else if (/\.!\?$/.test(t1)) {
-					insert(t, '  ', true);
+				else if (/[.!?]$/.test(t1)) {
+					insert(t, '  ', {keepPosition:true});
 				}
 				else {
-					insert(t, ' ', true);
+					insert(t, ' ', {keepPosition:true});
 				}
 			}
 		});
@@ -6677,9 +6782,10 @@ flag23_loop:
 					}
 				}
 				editLogger.open(function () {
-					for (var i = 0; i < count; i++) {
+					for (var i = 0, goal = count - 1; i < goal; i++) {
 						insert(t, data);
 					}
+					insert(t, data, {isLineOrientedLast:true});
 					t.setSelectionRange(t.getLineTopOffset2(n));
 				});
 			}
@@ -6693,15 +6799,23 @@ flag23_loop:
 						insert(t, data);
 					}
 				});
+				if (!t.selected && isForward) {
+					t.setSelectionRange(t.leftPos(t.selectionStart));
+				}
 			}
 			isEditCompleted = true;
 		}
 		item.isLineOrient = isLineOrient;
 		return true;
 	}
-	function startEdit (c, t, isAppend, isAlter) {
+	function startEdit (c, t, opts, isAppend, isAlter) {
 		if (!t.selected) {
 			requestInputMode('edit');
+
+			opts || (opts = {});
+			var isAppend = !!opts.isAppend;
+			var isAlter = !!opts.isAlter;
+			var opened = !!opts.opened;
 
 			var n;
 			switch ((isAppend ? 2 : 0) + (isAlter ? 1 : 0)) {
@@ -6726,7 +6840,9 @@ flag23_loop:
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
 			editedString = '';
+			editedStringSuffix = opened ? '\n' : '';
 			editStartPosition = t.selectionStart;
+			editRepeatCount = opts.repeatCount || 1;
 			return false;
 		}
 		else {
@@ -6751,7 +6867,7 @@ flag23_loop:
 		}
 		if (isTopOfText) {
 			t.setSelectionRange(new Position(0, 0));
-			insert(t, '\n', true);
+			insert(t, '\n', {keepPosition:true});
 		}
 		else {
 			var indent = config.vars.autoindent ? t.getIndent(t.selectionStart) : '';
@@ -6760,7 +6876,7 @@ flag23_loop:
 			insert(t, '\n' + indent);
 		}
 		isEditCompleted = true;
-		return startEdit(c, t, false, false);
+		return startEdit(c, t, {repeatCount:prefixInput.count, opened:true});
 	}
 
 	/*
@@ -8139,6 +8255,8 @@ flag23_loop:
 	var inputModeSub;
 	var editStartPosition;
 	var editedString;
+	var editedStringSuffix;
+	var editRepeatCount;
 	var requestedState;
 	var lineHeight;
 	var charWidth;
@@ -8211,7 +8329,7 @@ flag23_loop:
 					insert(t, t.getBackIndent(t.selectionStart));
 					t.isLineOrientSelection = false;
 					if (t.rowLength + deleted == rowLength) {
-						insert(t, '\n', true);
+						insert(t, '\n', {keepPosition:true});
 					}
 					prefixInput.motion = c;
 				}
@@ -8221,7 +8339,7 @@ flag23_loop:
 				}
 				isEditCompleted = true;
 				requestSimpleCommandUpdate();
-				return startEdit(c, t, false, false);
+				return startEdit(c, t);
 			}
 		},
 		'd': {
@@ -8255,14 +8373,47 @@ flag23_loop:
 				t.setSelectionRange(n);
 				prefixInput.motion = c;
 				requestSimpleCommandUpdate();
+				return true;
 			}
 		},
+		'<': {
+			'command': operationDefault,
+			'@op': function (c, t) {
+				var count = Math.min(t.selectionEndRow + prefixInput.count, t.rowLength) -
+					t.selectionStartRow;
+				unshift(t, count);
+				t.setSelectionRange(t.selectionStart);
+				isVerticalMotion = true;
+				prefixInput.motion = c;
+				requestSimpleCommandUpdate();
+			}
+		},
+		'>': {
+			'command': operationDefault,
+			'@op': function (c, t) {
+				var count = Math.min(t.selectionEndRow + prefixInput.count, t.rowLength) -
+					t.selectionStartRow;
+				shift(t, count);
+				t.setSelectionRange(t.selectionStart);
+				isVerticalMotion = true;
+				prefixInput.motion = c;
+				requestSimpleCommandUpdate();
+			}
+		},
+
+		/*
+		 * operator shortcuts
+		 */
+
 		'C': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
+				if (prefixInput.count > 1) {
+					motionDown('', t, prefixInput.count - 1);
+				}
 				t.selectionEnd = t.getLineTailOffset(t.selectionEnd);
 				deleteSelection(t);
 				requestSimpleCommandUpdate();
-				return startEdit(c, t, false, false);
+				return startEdit(c, t);
 			}
 			else {
 				inputEscape(c);
@@ -8271,6 +8422,9 @@ flag23_loop:
 		},
 		'D': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
+				if (prefixInput.count > 1) {
+					motionDown('', t, prefixInput.count - 1);
+				}
 				t.selectionEnd = t.getLineTailOffset(t.selectionEnd);
 				deleteSelection(t);
 				if (t.isNewline(t.selectionStart)) {
@@ -8291,204 +8445,14 @@ flag23_loop:
 		},
 		'Y': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
-				var n = t.selectionStart;
-				t.isLineOrientSelection = true;
-				var yanked = yank(t, prefixInput.count);
-				if (yanked >= config.vars.report) {
-					requestShowMessage(_('Yanked {0} {line:0}.', yanked));
-				}
-				t.setSelectionRange(n);
-				prefixInput.motion = c;
-				requestSimpleCommandUpdate();
-				return true;
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'r': {
-			'command': function (c, t) {
-				if (prefixInput.isEmptyOperation) {
-					prefixInput.motion = c;
-					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput(_('{0}: replace a char', keyName(c)));
-					requestSimpleCommandUpdate();
-				}
-				else {
-					inputEscape(c);
-				}
-			},
-			'wait-a-letter': function (c, t) {
-				if (c != '\u001b') {
-					motionReplaceOne(c, t, prefixInput.count);
-				}
-				return true;
-			}
-		},
-		'a': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return startEdit(c, t, true);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'A': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return startEdit(c, t, true, true);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'i': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return startEdit(c, t, false);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'I': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return startEdit(c, t, false, true);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'o': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return openLine(c, t, true);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'O': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return openLine(c, t, false);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		'R': function (c, t) {
-			if (prefixInput.isEmptyOperation && !t.selected) {
-				requestInputMode('edit-overwrite');
-				cursor.update({type:'edit-overwrite'});
-				config.vars.showmode && requestShowMessage(_('--OVERWRITE--'));
 				prefixInput.operation = c;
-				prefixInput.isLocked = true;
-				editedString = '';
-				requestSimpleCommandUpdate();
-			}
-			else {
-				inputEscape(c);
-			}
-		},
-		// equivalents to :& (repeat last executed :s)
-		'&': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				var range = [];
-				range.push(t.selectionStartRow);
-				range.push(range[0] + prefixInput.count - 1);
-				(new SubstituteWorker).run(t, range, '', '~', '');
-				return true;
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		// S: substitute text for whole lines (equivalents to cc)
-		'S': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				prefixInput.operation = c;
-				return this['c']['@op'].apply(this, arguments);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		// s: substitute characters
-		's': function (c, t) {
-			if (prefixInput.isEmptyOperation) {
-				deleteChars(t, prefixInput.count, true);
-				requestSimpleCommandUpdate();
-				return startEdit(c, t, false, false);
-			}
-			else {
-				inputEscape(c);
-			}
-			return undefined;
-		},
-		// equivalents to :x
-		//	 ZZ
-		'Z': {
-			'command': function (c, t) {
-				if (prefixInput.isEmptyOperation) {
-					prefixInput.operation = c;
-					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput();
-				}
-				else {
-					inputEscape(c);
-				}
-			},
-			'wait-a-letter': function (c, t) {
-				if (c == prefixInput.operation) {
-					terminated = true;
-					return true;
-				}
-				else {
-					inputEscape(prefixInput.operation);
-				}
-				return undefined;
-			},
-			'@op': function (c, t) {
-				prefixInput.appendOperation(c);
-			}
-		},
-		// unshift
-		'<': {
-			'command': operationDefault,
-			'@op': function (c, t) {
-				var count = Math.min(t.selectionEndRow + prefixInput.count, t.rowLength) -
-					t.selectionStartRow;
-				unshift(t, count);
-				t.setSelectionRange(t.selectionStart);
 				isVerticalMotion = true;
-				prefixInput.motion = c;
-				requestSimpleCommandUpdate();
+				return this['y']['@op'].call(this, '', t);
 			}
-		},
-		// shift
-		'>': {
-			'command': operationDefault,
-			'@op': function (c, t) {
-				var count = Math.min(t.selectionEndRow + prefixInput.count, t.rowLength) -
-					t.selectionStartRow;
-				shift(t, count);
-				t.setSelectionRange(t.selectionStart);
-				isVerticalMotion = true;
-				prefixInput.motion = c;
-				requestSimpleCommandUpdate();
+			else {
+				inputEscape(c);
 			}
+			return undefined;
 		},
 
 		/*
@@ -8540,6 +8504,7 @@ flag23_loop:
 		'%': function (c, t) {
 			var result = motionFindMatchedBracket(c, t, prefixInput.count);
 			if (result) {
+				marks.set('\'', t.selectionStart);
 				t.extendSelectionTo(result);
 				idealWidthPixels = -1;
 				isSmoothScrollRequested = true;
@@ -8741,6 +8706,9 @@ flag23_loop:
 				prefixInput.appendMotion(c);
 				var offset = marks.get(c);
 				if (offset != undefined) {
+					if ('\'`[]'.indexOf(c) >= 0) {
+						marks.set('\'', t.selectionStart);
+					}
 					t.extendSelectionTo(t.getLineTopOffset2(offset));
 					isVerticalMotion = true;
 					isSmoothScrollRequested = true;
@@ -8765,6 +8733,9 @@ flag23_loop:
 				prefixInput.appendMotion(c);
 				var offset = marks.get(c);
 				if (offset != undefined) {
+					if ('\'`[]'.indexOf(c) >= 0) {
+						marks.set('\'', t.selectionStart);
+					}
 					t.extendSelectionTo(offset);
 					isSmoothScrollRequested = true;
 					return true;
@@ -8779,6 +8750,7 @@ flag23_loop:
 		// back an sentence
 		'(': function (c, t) {
 			prefixInput.motion = c;
+			marks.set('\'', t.selectionStart);
 			motionBackwardBlock(
 				c, t, prefixInput.count,
 				textBlockRegex.sentenceBackward
@@ -8788,6 +8760,7 @@ flag23_loop:
 		// forward an sentence
 		')': function (c, t) {
 			prefixInput.motion = c;
+			marks.set('\'', t.selectionStart);
 			motionForwardBlock(
 				c, t, prefixInput.count,
 				textBlockRegex.sentenceForward
@@ -8807,6 +8780,7 @@ flag23_loop:
 		// forward an paragraph
 		'}': function (c, t) {
 			prefixInput.motion = c;
+			marks.set('\'', t.selectionStart);
 			motionForwardBlock(
 				c, t, prefixInput.count,
 				textBlockRegex.paragraphForward,
@@ -8824,6 +8798,7 @@ flag23_loop:
 			'wait-a-letter': function (c, t) {
 				if (c == prefixInput.motion) {
 					prefixInput.appendMotion(c);
+					marks.set('\'', t.selectionStart);
 					motionBackwardBlock(
 						c, t, prefixInput.count,
 						textBlockRegex.sectionBackward,
@@ -8847,6 +8822,7 @@ flag23_loop:
 			'wait-a-letter': function (c, t) {
 				if (c == prefixInput.motion) {
 					prefixInput.appendMotion(c);
+					marks.set('\'', t.selectionStart);
 					motionForwardBlock(
 						c, t, prefixInput.count,
 						textBlockRegex.sectionForward,
@@ -8949,6 +8925,7 @@ flag23_loop:
 				case 'g':
 					var count = prefixInput.count;
 					var n = new Position(count - 1, 0);
+					marks.set('\'', t.selectionStart);
 					t.setSelectionRange(t.getLineTopOffset2(n));
 
 					var node = t.rowNodes(n);
@@ -8969,7 +8946,8 @@ flag23_loop:
 		},
 		'H': function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
-			var index = Math.min(v.top + prefixInput.count - 1, v.bottom);
+			var index = Math.min(v.top + prefixInput.count - 1, v.bottom, t.rowLength - 1);
+			marks.set('\'', t.selectionStart);
 			t.extendSelectionTo(t.getLineTopOffset2(index, 0));
 			isVerticalMotion = true;
 			idealWidthPixels = -1;
@@ -8978,7 +8956,8 @@ flag23_loop:
 		},
 		'M': function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
-			var index = v.top + parseInt((v.bottom - v.top + 1) / 2);
+			var index = v.top + parseInt(v.lines / 2);
+			marks.set('\'', t.selectionStart);
 			t.extendSelectionTo(t.getLineTopOffset2(index, 0));
 			isVerticalMotion = true;
 			idealWidthPixels = -1;
@@ -8987,7 +8966,8 @@ flag23_loop:
 		},
 		'L': function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
-			var index = Math.max(v.bottom - prefixInput.count + 1, v.top);
+			var index = Math.max(v.bottom - prefixInput.count + 1, v.top, 0);
+			marks.set('\'', t.selectionStart);
 			t.extendSelectionTo(t.getLineTopOffset2(index, 0));
 			isVerticalMotion = true;
 			idealWidthPixels = -1;
@@ -8997,6 +8977,7 @@ flag23_loop:
 		'G': function (c, t) {
 			var index = prefixInput.isCountSpecified ?
 				Math.max(Math.min(prefixInput.count, t.rowLength), 1) : t.rowLength;
+			marks.set('\'', t.selectionStart);
 			t.extendSelectionTo(t.getLineTopOffset2(index - 1, 0));
 			isVerticalMotion = true;
 			isSmoothScrollRequested = true;
@@ -9091,7 +9072,7 @@ flag23_loop:
 						return -config.vars.scroll * prefixInput.count;
 					}
 					else {
-						return -parseInt((v.bottom - v.top + 1) / 2) * prefixInput.count;
+						return -parseInt(v.lines / 2) * prefixInput.count;
 					}
 				});
 			}
@@ -9108,7 +9089,7 @@ flag23_loop:
 						return config.vars.scroll * prefixInput.count;
 					}
 					else {
-						return parseInt((v.bottom - v.top + 1) / 2) * prefixInput.count;
+						return parseInt(v.lines / 2) * prefixInput.count;
 					}
 				});
 			}
@@ -9155,7 +9136,7 @@ flag23_loop:
 		'\u0002'/*^B*/: function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
-					return -(Math.max(parseInt((v.bottom - v.top + 1) - 2), 1)) * prefixInput.count;
+					return -Math.max(v.lines - 2, 1) * prefixInput.count;
 				});
 			}
 			else {
@@ -9170,7 +9151,7 @@ flag23_loop:
 		'\u0006'/*^F*/: function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
-					return Math.max(parseInt((v.bottom - v.top + 1) - 2), 1) * prefixInput.count;
+					return Math.max(parseInt(v.lines - 2), 1) * prefixInput.count;
 				});
 			}
 			else {
@@ -9206,9 +9187,12 @@ flag23_loop:
 				var line = prefixInput.isCountSpecified ?
 					Math.max(Math.min(prefixInput.count, t.rowLength), 1) - 1 :
 					t.selectionStartRow;
-				var current = t.rowNodes(line).offsetTop - t.elm.clientTop;
+				var current = t.rowNodes(line).offsetTop;
 				var n = new Position(line, 0);
 
+				if (prefixInput.isCountSpecified) {
+					marks.set('\'', t.selectionStart);
+				}
 				if (motion == prefixInput.operation) {
 					motion = '.';
 				}
@@ -9242,6 +9226,10 @@ flag23_loop:
 							idealWidthPixels = -1;
 						}
 					);
+					break;
+
+				default:
+					requestBell('Unknown adjust command.');
 					break;
 				}
 			}
@@ -9310,16 +9298,27 @@ flag23_loop:
 			return undefined;
 		},
 		'.': function (c, t) {
-			if (lastSimpleCommand.length) {
-				if (prefixInput.isCountSpecified) {
+			if (prefixInput.isEmptyOperation) {
+				if (lastSimpleCommand.length) {
+					if (prefixInput.isCountSpecified) {
+						var p = new PrefixInput(lastSimpleCommand);
+						lastSimpleCommand =
+							p.register +
+							prefixInput.count +
+							p.operation +
+							p.motion +
+							p.trailer;
+					}
+					executeViCommand(lastSimpleCommand);
 					lastSimpleCommand = lastSimpleCommand.replace(
-						/^(".)?(\d+)?/, function ($0, $1) { return $1 + prefixInput.count; });
+						/^(")([1-8])/, function ($0, $1, $2) { return ($1 || '') + (parseInt($2, 10) + 1); });
 				}
-				executeViCommand(lastSimpleCommand);
-				lastSimpleCommand = lastSimpleCommand.replace(
-					/^(")([1-8])/, function ($0, $1, $2) { return $1 + (parseInt($2, 10) + 1); });
+				return true;
 			}
-			return true;
+			else {
+				inputEscape(c);
+			}
+			return undefined;
 		},
 		'u': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
@@ -9369,12 +9368,22 @@ flag23_loop:
 		},
 		// clear screen
 		'\u000c'/*^L*/: function (c, t) {
-			$(CONTAINER_ID).style.display = 'none';
-			setTimeout(function () { $(CONTAINER_ID).style.display = ''; }, 100);
+			if (prefixInput.isEmptyOperation) {
+				$(CONTAINER_ID).style.display = 'none';
+				setTimeout(function () { $(CONTAINER_ID).style.display = ''; }, 100);
+			}
+			else {
+				inputEscape(c);
+			}
 		},
 		// display file information
 		'\u0007'/*^G*/: function (c, t) {
-			requestShowMessage(getFileInfo(t));
+			if (prefixInput.isEmptyOperation) {
+				requestShowMessage(getFileInfo(t));
+			}
+			else {
+				inputEscape(c);
+			}
 		},
 		// marks
 		'm': {
@@ -9389,11 +9398,9 @@ flag23_loop:
 				}
 			},
 			'wait-a-letter': function (c, t) {
+				prefixInput.trailer = c;
 				marks.set(c, t.selectionStart);
 				return true;
-			},
-			'@op': function (c, t) {
-				prefixInput.appendOperation(c);
 			}
 		},
 		// execute register contents as vi command
@@ -9401,7 +9408,7 @@ flag23_loop:
 			'command': function (c, t) {
 				if (prefixInput.isEmptyOperation) {
 					inputModeSub = 'wait-a-letter';
-					prefixInput.register = c;
+					prefixInput.operation = c;
 					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', keyName(c)));
 				}
 				else {
@@ -9411,23 +9418,196 @@ flag23_loop:
 			'wait-a-letter': function (c, t) {
 				if (!registers.isReadable(c)) {
 					requestShowMessage(_('Invalid register name: {0}', c), true);
-					return;
+					return inputEscape();
 				}
 				if (!registers.exists(c)) {
+					requestShowMessage(_('Register {0} is not exist.', c), true);
+					return inputEscape();
+				}
+				var command = registers.get(c).data;
+				command = command.replace(/^\n+|\n+$/g, '');
+				if (command == '') {
 					requestShowMessage(_('Register {0} is empty.', c), true);
-					return;
+					return inputEscape();
 				}
-				var command = register.get(c).data;
+				prefixInput.trailer = c;
 				if (prefixInput.isCountSpecified) {
-					command = command.replace(
-						/^(".)?(\d+)?/, function ($0, $1) { return $1 + prefixInput.count; });
+					var p = new PrefixInput(command);
+					command =
+						p.register +
+						prefixInput.count +
+						p.operation +
+						p.motion +
+						p.trailer;
 				}
-				var result = executeViCommand(command);
+				executeViCommand(command);
 				registers.set('@', command);
+				return true;
 			}
 		},
+		'r': {
+			'command': function (c, t) {
+				if (prefixInput.isEmptyOperation) {
+					prefixInput.operation = c;
+					inputModeSub = 'wait-a-letter';
+					requestShowPrefixInput(_('{0}: replace a char', keyName(c)));
+				}
+				else {
+					inputEscape(c);
+				}
+			},
+			'wait-a-letter': function (c, t) {
+				if (c != '\u001b') {
+					motionReplaceOne(c, t, prefixInput.count);
+					requestSimpleCommandUpdate();
+				}
+				return true;
+			}
+		},
+		'a': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return startEdit(c, t, {isAppend:true, repeatCount:prefixInput.count});
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'A': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return startEdit(c, t, {isAppend:true, isAlter:true, repeatCount:prefixInput.count});
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'i': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return startEdit(c, t, {repeatCount:prefixInput.count});
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'I': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return startEdit(c, t, {isAlter:true, repeatCount:prefixInput.count});
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'o': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return openLine(c, t, true);
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'O': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				requestSimpleCommandUpdate();
+				return openLine(c, t, false);
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		'R': function (c, t) {
+			if (prefixInput.isEmptyOperation && !t.selected) {
+				requestInputMode('edit-overwrite');
+				cursor.update({type:'edit-overwrite'});
+				config.vars.showmode && requestShowMessage(_('--OVERWRITE--'));
+				prefixInput.operation = c;
+				prefixInput.isLocked = true;
+				editedString = '';
+				editedStringSuffix = '';
+				editStartPosition = t.selectionStart;
+				editRepeatCount = prefixInput.count;
+				requestSimpleCommandUpdate();
+			}
+			else {
+				inputEscape(c);
+			}
+		},
+		// equivalents to :& (repeat last executed :s)
+		'&': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				var range = [];
+				range.push(t.selectionStartRow);
+				range.push(range[0] + prefixInput.count - 1);
+				(new SubstituteWorker).run(t, range, '', '~', '');
+				return true;
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		// S: substitute text for whole lines (equivalents to cc)
+		'S': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				prefixInput.operation = c;
+				isVerticalMotion = true;
+				return this['c']['@op'].call(this, '', t);
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		// s: substitute characters
+		's': function (c, t) {
+			if (prefixInput.isEmptyOperation) {
+				deleteChars(t, prefixInput.count, true);
+				requestSimpleCommandUpdate();
+				return startEdit(c, t);
+			}
+			else {
+				inputEscape(c);
+			}
+			return undefined;
+		},
+		// equivalents to :x
+		//	 ZZ
+		'Z': {
+			'command': function (c, t) {
+				if (prefixInput.isEmptyOperation) {
+					prefixInput.operation = c;
+					inputModeSub = 'wait-a-letter';
+					requestShowPrefixInput();
+				}
+				else {
+					inputEscape(c);
+				}
+			},
+			'wait-a-letter': function (c, t) {
+				if (c == prefixInput.operation) {
+					terminated = true;
+					return true;
+				}
+				else {
+					return inputEscape(prefixInput.operation);
+				}
+			},
+			'@op': function (c, t) {
+				prefixInput.appendOperation(c);
+			}
+		},
+
 		/*
-		 * available ex commands:
+		 * ex commands prefix
 		 *
 		 * adopted
 		 * for wasavi  full spell        syntax
@@ -9597,13 +9777,13 @@ flag23_loop:
 		'<pageup>': function (c, t) {
 			requestLogEditing();
 			scrollView(c, t, function (v) {
-				return -(Math.max(parseInt((v.bottom - v.top + 1) - 2), 1));
+				return -(Math.max(parseInt(v.lines - 2), 1));
 			});
 		},
 		'<pagedown>': function (c, t) {
 			requestLogEditing();
 			return scrollView(c, t, function (v) {
-				return Math.max(parseInt((v.bottom - v.top + 1) - 2), 1);
+				return Math.max(parseInt(v.lines - 2), 1);
 			});
 		}
 	};
@@ -9902,6 +10082,10 @@ flag23_loop:
 				ensureRunning();
 				return getEditorCore().selectionStart;
 			},
+			get positionTop () {
+				ensureRunning();
+				return new Position(getCurrentViewPositionIndices(getEditorCore()).top, 0);
+			},
 			get enableList () {
 				return enableList;
 			},
@@ -9960,13 +10144,18 @@ flag23_loop:
 				executeViCommand.apply(null, args);
 			},
 			registers: function (name) {
-				if (!registers.isReadable(name)) {
-					return undefined;
+				if (arguments.length) {
+					if (!registers.isReadable(name)) {
+						return undefined;
+					}
+					if (!registers.exists(name)) {
+						return undefined;
+					}
+					return registers.get(name).data;
 				}
-				if (!registers.exists(name)) {
-					return undefined;
+				else {
+					return registers.dump();
 				}
-				return registers.get(name).data;
 			},
 			kill: function () {
 				ensureRunning();
