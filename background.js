@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 105 2012-04-23 17:48:43Z akahuku $
+ * @version $Id: background.js 115 2012-05-12 02:04:45Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -33,6 +33,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  * global variables
  */
@@ -40,6 +41,7 @@
 typeof window == 'undefined' && eval('var window = this; window.jetpack = {};');
 var extension;
 var resourceLoader;
+var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 
 /**
  * storage classes
@@ -143,7 +145,7 @@ function JetpackResourceLoader () {
 			}
 			catch (e) {
 				content = '';
-				console.log(
+				console.error(
 					'wasavi background: exception ocuured during' +
 					' self.data.load("' + resourcePath + '")');
 			}
@@ -167,6 +169,7 @@ function ExtensionWrapper () {
 	this.openPage = function (file) {};
 	this.storage = new StorageWrapper;
 	this.extensionId = '';
+	this.lastRegisteredTab;
 }
 ExtensionWrapper.create = function () {
 	if (window.chrome) {
@@ -187,6 +190,7 @@ ExtensionWrapper.create = function () {
 
 function ChromeExtensionWrapper () {
 	var tabIds = {};
+	var lastRegisteredTab;
 
 	chrome.tabs.onRemoved.addListener(function (tabId) {
 		delete tabIds[tabId];
@@ -196,6 +200,7 @@ function ChromeExtensionWrapper () {
 
 	this.registerTabId = function (tabId) {
 		tabIds[tabId] = 1;
+		lastRegisteredTab = tabId;
 	};
 	this.isExistsTabId = function (tabId) {
 		return tabId in tabIds;
@@ -220,7 +225,7 @@ function ChromeExtensionWrapper () {
 	};
 	this.addRequestListener = function (handler) {
 		typeof handler == 'function' && chrome.self.onRequest.addListener(function (req, sender, res) {
-			if (req && req.type == 'init') {
+			if (req && (req.type == 'init' || req.type == 'init-agent')) {
 				handler(req, sender.tab.id, function (reply) {
 					chrome.tabs.sendRequest(sender.tab.id, reply);
 				});
@@ -235,6 +240,11 @@ function ChromeExtensionWrapper () {
 	};
 	this.storage = new WebStorageWrapper;
 	this.extensionId = location.hostname;
+	this.__defineGetter__('lastRegisteredTab', function () {
+		var result = lastRegisteredTab;
+		lastRegisteredTab = undefined;
+		return result;
+	});
 }
 
 /**
@@ -243,6 +253,7 @@ function ChromeExtensionWrapper () {
 
 function OperaExtensionWrapper () {
 	var tabIds = {};
+	var lastRegisteredTab;
 
 	function getNewTabId () {
 		var result = 0;
@@ -264,6 +275,7 @@ function OperaExtensionWrapper () {
 	opera.extension.onconnect = function (e) {
 		var tabId = getNewTabId();
 		tabIds[tabId] = e.source;
+		lastRegisteredTab = tabId;
 	};
 
 	opera.extension.ondisconnect = function (e) {
@@ -340,6 +352,11 @@ function OperaExtensionWrapper () {
 	};
 	this.storage = new WebStorageWrapper;
 	this.extensionId = location.hostname;
+	this.__defineGetter__('lastRegisteredTab', function () {
+		var result = lastRegisteredTab;
+		lastRegisteredTab = undefined;
+		return result;
+	});
 }
 
 /**
@@ -348,8 +365,10 @@ function OperaExtensionWrapper () {
 
 function FirefoxJetpackExtensionWrapper () {
 	var self = require('self');
+	var pagemod = require('page-mod');
 
 	var tabIds = {};
+	var lastRegisteredTab;
 	var onMessageHandler;
 
 	function getNewTabId () {
@@ -388,12 +407,45 @@ function FirefoxJetpackExtensionWrapper () {
 		});
 	}
 
-	require('page-mod').PageMod({
-		include:['*', self.data.url('options.html')],
+	pagemod.PageMod({
+		include:{
+			test:function (url) {
+				if (url.substring(0, 5) != 'http:'
+				&&  url.substring(0, 6) != 'https:') {
+					return false;
+				}
+				if (url == 'http://appsweets.net/wasavi/wasavi_frame.html'
+				||  url == 'https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html') {
+					return false;
+				}
+				return true;
+			},
+			exec:function (url) {
+				return this.test(url) ? [url] : null;
+			}
+		},
 		contentScriptWhen:'start',
-		contentScriptFile:self.data.url('agent.js'),
+		contentScriptFile:[self.data.url('extension_wrapper.js'), self.data.url('agent.js')],
 		onAttach:function (worker) {
-			tabIds[getNewTabId()] = worker;
+			var tabId = getNewTabId();
+			tabIds[tabId] = worker;
+			lastRegisteredTab = tabId;
+			worker.on('detach', handleWorkerDetach);
+			worker.on('message', handleWorkerMessage);
+		}
+	});
+
+	pagemod.PageMod({
+		include:[
+			'http://appsweets.net/wasavi/wasavi_frame.html',
+			'https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html'
+		],
+		contentScriptWhen:'start',
+		contentScriptFile:[self.data.url('extension_wrapper.js'), self.data.url('wasavi.js')],
+		onAttach:function (worker) {
+			var tabId = getNewTabId();
+			tabIds[tabId] = worker;
+			lastRegisteredTab = tabId;
 			worker.on('detach', handleWorkerDetach);
 			worker.on('message', handleWorkerMessage);
 		}
@@ -444,6 +496,11 @@ function FirefoxJetpackExtensionWrapper () {
 	};
 	this.storage = new JetpackStorageWrapper;
 	this.extensionId = self.id;
+	this.__defineGetter__('lastRegisteredTab', function () {
+		var result = lastRegisteredTab;
+		lastRegisteredTab = undefined;
+		return result;
+	});
 }
 
 /*
@@ -456,8 +513,8 @@ function initStorage () {
 		(new Date).toLocaleDateString() + ' ' + (new Date).toLocaleTimeString()
 	);
 
-	if (extension.storage.getItem('targets') === null) {
-		extension.storage.setItem('targets', JSON.stringify({
+	[
+		['targets', JSON.stringify({
 			enableTextArea: true,
 			enableText: false,
 			enableSearch: false,
@@ -466,12 +523,18 @@ function initStorage () {
 			enableEmail: false,
 			enablePassword: false,
 			enableNumber: false
-		}));
-	}
-
-	if (extension.storage.getItem('exrc') === null) {
-		extension.storage.setItem('exrc', '" exrc for wasavi');
-	}
+		})],
+		['exrc', '" exrc for wasavi'],
+		['shortcut', '<c-enter>, <insert>'],
+		['shortcutCode', function () {
+			return getShortcutCode(extension.storage.getItem('shortcut'));
+		}],
+		['fontFamily', defaultFont]
+	].forEach(function (item) {
+		if (extension.storage.getItem(item[0]) === null) {
+			extension.storage.setItem(item[0], typeof item[1] == 'function' ? item[1]() : item[1]);
+		}
+	});
 }
 
 /**
@@ -479,8 +542,13 @@ function initStorage () {
  */
 
 function broadcastStorageUpdate (keys, originTabId) {
-	var obj = {type:'update-storage', keys:keys};
-	extension.broadcast(obj, originTabId);
+	var items = [];
+
+	keys.forEach(function (key) {
+		items.push({key:key, value:extension.storage.getItem(key)});
+	});
+
+	extension.broadcast({type:'update-storage', items:items}, originTabId);
 }
 
 /**
@@ -494,20 +562,18 @@ function handleRequest (req, tabId, res) {
 
 	switch (req.type) {
 	case 'init':
-		extension.registerTabId(tabId);
+	case 'init-agent':
+		req.type == 'init' && extension.registerTabId(tabId);
 		res({
 			type:'init-response',
 			extensionId:extension.extensionId,
 			tabId:tabId,
-			targets:JSON.parse(extension.storage.getItem('targets')),
-			exrc:extension.storage.getItem('exrc') || ''
+			targets:extension.storage.getItem('targets'),
+			exrc:extension.storage.getItem('exrc'),
+			shortcut:extension.storage.getItem('shortcut'),
+			shortcutCode:extension.storage.getItem('shortcutCode'),
+			fontFamily:extension.storage.getItem('fontFamily')
 		});
-		break;
-
-	case 'load':
-		if ('tabId' in req) {
-			extension.executeScript(tabId, {file:'wasavi.js'}, res);
-		}
 		break;
 
 	case 'get-storage':
@@ -520,21 +586,35 @@ function handleRequest (req, tabId, res) {
 		break;
 
 	case 'set-storage':
-		if ('tabId' in req && extension.isExistsTabId(req.tabId)) {
-			if ('key' in req && 'value' in req) {
-				extension.storage.setItem(req.key, req.value);
-				broadcastStorageUpdate([req.key], req.tabId);
-			}
-			else if ('items' in req) {
-				var keys = [];
-				req.items.forEach(function (item) {
+		var items;
+		if ('key' in req && 'value' in req) {
+			items = [{key:req.key, value:req.value}];
+		}
+		else if ('items' in req) {
+			items = req.items;
+		}
+		if (items) {
+			var keys = [];
+			items.forEach(function (item) {
+				if ('key' in item && 'value' in item) {
+					if (item.key == 'font-family') {
+						if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
+							item.value = defaultFont;
+						}
+					}
+
 					keys.push(item.key);
 					extension.storage.setItem(item.key, item.value);
-				});
-				broadcastStorageUpdate(keys, req.tabId);
-			}
-			res();
+
+					if (item.key == 'shortcut') {
+						keys.push('shortcutCode');
+						extension.storage.setItem('shortcutCode', getShortcutCode(item.value));
+					}
+				}
+			});
+			broadcastStorageUpdate(keys);
 		}
+		res();
 		break;
 	
 	case 'bell':
@@ -543,12 +623,101 @@ function handleRequest (req, tabId, res) {
 				res({data:data});
 			});
 		}
+		else {
+			res();
+		}
 		break;
 
 	case 'open-options-page':
 		extension.openPage('options.html');
+		res();
 		break;
+
+	case 'notify-to-child':
+		var childTabId = 'childTabId' in req ? req.childTabId : extension.lastRegisteredTab;
+		if (childTabId !== undefined && extension.isExistsTabId(childTabId)) {
+			extension.sendRequest(childTabId, req.payload);
+		}
+		res();
+		break;
+
+	case 'notify-to-parent':
+		if ('parentTabId' in req) {
+			extension.sendRequest(req.parentTabId, req.payload);
+		}
+		res();
 	}
+}
+
+/**
+ * shortcut code generator
+ */
+
+var KEY_TABLE = {
+	'backspace':8, 'bs':8,
+	'tab':9,
+	'enter':13, 'return':13, 'ret':13,
+	'pageup':33,
+	'pagedown':34,
+	'end':35,
+	'home':36,
+	'left':37,
+	'up':38,
+	'right':39,
+	'down':40,
+	'insert':45, 'ins':45,
+	'delete':46, 'del':46,
+	'f1':112, 'f2':113, 'f3':114, 'f4':115,
+	'f5':116, 'f6':117, 'f7':118, 'f8':119,
+	'f9':120, 'f10':121, 'f11':122, 'f12':123
+};
+(function () {
+	for (var i = '0'.charCodeAt(0), goal = '9'.charCodeAt(0); i <= goal; i++) {
+		KEY_TABLE[i] = String.fromCharCode(i);
+	}
+	for (var i = 'a'.charCodeAt(0), goal = 'z'.charCodeAt(0); i <= goal; i++) {
+		KEY_TABLE[i] = String.fromCharCode(i);
+	}
+})();
+function getShortcutCode (shortcuts) {
+	shortcuts = shortcuts.replace(/^\s+|\s+$/g, '');
+	if (shortcuts == '') {
+		shortcuts = '<insert>,<c-enter>';
+	}
+
+	var result = [];
+
+	shortcuts.toLowerCase().split(/\s*,\s*/).forEach(function (sc) {
+		var re = /^<([^>]+)>$/.exec(sc);
+		if (!re) return;
+
+		var modifiers = re[1].split('-');
+		var key = modifiers.pop();
+		if (!(key in KEY_TABLE)) return;
+
+		var code = [];
+		modifiers.forEach(function (m) {
+			switch (m) {
+			case 's':
+				code.push('e.shiftKey');
+				break;
+			case 'c':
+				code.push('e.ctrlKey');
+				break;
+			}
+		});
+		code.push('e.keyCode==' + KEY_TABLE[key]);
+
+		result.push(code.join('&&'));
+	});
+
+	result = result.join('||');
+
+	if (result == '') {
+		result = arguments.callee('<c-enter>,<insert>');
+	}
+
+	return 'return ' + result + ';';
 }
 
 /**

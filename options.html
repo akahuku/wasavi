@@ -2,7 +2,7 @@
 <!--
 	options page of wasavi for google chrome/opera extension
 
-	@version $Id: options.html 102 2012-04-21 04:23:25Z akahuku $
+	@version $Id: options.html 115 2012-05-12 02:04:45Z akahuku $
 	@author akahuku@gmail.com
  -->
 <html>
@@ -81,6 +81,11 @@
 				height:320px;
 				background-color:#f0f0f0;
 				border:1px solid #808080;
+				font-family:inherit;
+			}
+			input#shortcut, input#font-family {
+				width:640px;
+				font-family:inherit;
 			}
 			button#save {
 				font-size:18pt;
@@ -92,15 +97,12 @@
 		</style>
 		<script>
 			if (window.chrome) {
+				document.write('<script src="extension_wrapper.js"></scr' + 'ipt>');
 				document.write('<script src="agent.js"></scr' + 'ipt>');
-				document.write('<script src="wasavi.js"></scr' + 'ipt>');
 			}
 			else if (window.opera) {
+				document.write('<script src="includes/001_extension_wrapper.js"></scr' + 'ipt>');
 				document.write('<script src="includes/agent.js"></scr' + 'ipt>');
-				document.write('<script src="wasavi.js"></scr' + 'ipt>');
-			}
-			else if (window.navigator.product == 'Gecko') {
-				//do nothing
 			}
 		</script>
 	</head>
@@ -133,6 +135,35 @@
 			<label><input type="checkbox" id="enableEmail"   >input[type=email]</label>
 			<label><input type="checkbox" id="enablePassword">input[type=password]</label>
 			<label><input type="checkbox" id="enableNumber"  >input[type=number]</label>
+		</div>
+		<hr>
+		<h2>
+			shortcut key
+		</h2>
+		<div class="opt-unit">
+			<label><input type="text" id="shortcut"></label>
+			<div class="tips">
+				<ul>
+					<li>Shortcut format is &lt;(<i>modifier</i>-)*<i>key</i>&gt;,...
+					<br>For example, &lt;c-enter&gt;, &lt;insert&gt; means
+					"If ctrl+enter or insert is pressed, then invoke wasavi."</li>
+					<li>Following keys can be used as shortcut: 
+					backspace, bs, tab, enter, return, ret, pageup, pagedown, 
+					end, home, left, up, right, down, insert, ins, delete, del, 
+					f1 to f12, a to z, and 0 to 9.</li>
+					<li> Following keys can be used as modifier:
+					s (means SHIFT), c (means CTRL).</li>
+					<li>Leaving the text field empty, default shortcut 
+					&lt;c-enter&gt;, &lt;insert&gt; will be used.</li>
+				</ul>
+			</div>
+		</div>
+		<hr>
+		<h2>
+			font family
+		</h2>
+		<div class="opt-unit">
+			<label><input type="text" id="font-family"></label>
 		</div>
 		<div class="bottom">
 		</div>

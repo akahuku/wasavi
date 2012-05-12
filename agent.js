@@ -1,6 +1,8 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
+// @exclude http://appsweets.net/wasavi/wasavi_frame.html
+// @exclude https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html
 // ==/UserScript==
 //
 /**
@@ -9,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 103 2012-04-21 09:29:45Z akahuku $
+ * @version $Id: agent.js 115 2012-05-12 02:04:45Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -39,278 +41,220 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-function evalEx (code) {
-	eval(code);
-}
+typeof WasaviExtensionWrapper != 'undefined'
+&& window.location.href != WasaviExtensionWrapper.framePageUrl.external
+&& window.location.href != WasaviExtensionWrapper.framePageUrl.externalSecure
+&& (function (global) {
 
-(function (global) {
-	var IS_FX_JETPACK = window.navigator.product == 'Gecko'
-		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	var extensionId;
-	var tabId;
-	var enableList;
-	var exrc;
+	/*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
+	/*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
+	/*const*/var ACCEPTABLE_TYPES = {
+		textarea: 'enableTextArea',
+		text:     'enableText',
+		search:   'enableSearch',
+		tel:      'enableTel',
+		url:      'enableUrl',
+		email:    'enableEmail',
+		password: 'enablePassword',
+		number:   'enableNumber'
+	};
+
 	var extension;
 
-	/**
-	 * extension wrapper base class
-	 */
+	var enableList;
+	var exrc;
+	var shortcut;
+	var shortcutTester;
+	var fontFamily;
 
-	function ExtensionWrapper () {
-		this.sendRequest = function (data, callback) {};
-		this.addMessageListener = function (handler) {};
-		this.isOptionsPage = false;
-	}
-	ExtensionWrapper.prototype = {
-		getOrigin: function () {
-			var result = window.location.protocol + '//' + window.location.hostname;
-			if (window.location.port != '') {
-				result += ':' + window.location.port;
-			}
-			return result;
-		}
-	};
-	ExtensionWrapper.create = function () {
-		if (window.chrome) {
-			return new ChromeExtensionWrapper;
-		}
-		else if (window.opera) {
-			return new OperaExtensionWrapper;
-		}
-		else if (IS_FX_JETPACK) {
-			return new FirefoxJetpackExtensionWrapper;
-		}
-		return new ExtensionWrapper;
-	};
-
-	/**
-	 * extension wrapper class for chrome
-	 */
-
-	function ChromeExtensionWrapper () {
-		this.runType = 'chrome-extension';
-		this.sendRequest = function (data, callback) {
-			if (callback) {
-				chrome.extension.sendRequest(data, callback);
-			}
-			else {
-				chrome.extension.sendRequest(data);
-			}
-		};
-		this.addMessageListener = function (handler) {
-			chrome.extension.onRequest.addListener(function (req, sender, res) {
-				handler(req);
-			});
-		};
-		this.__defineGetter__('isOptionsPage', function () {
-			return location.hostname == extensionId
-				&& location.pathname == '/options.html';
-		});
-	}
-
-	/**
-	 * extension wrapper class for opera
-	 */
-
-	function OperaExtensionWrapper () {
-		this.runType = 'opera-extension';
-		this.sendRequest = function (data, callback) {
-			if (callback) {
-				var ch = new MessageChannel;
-				ch.port1.onmessage = function (e) {
-					callback && callback(e.data);
-					ch.port1.close();
-					ch = null;
-				};
-				ch.port1.start();
-				opera.extension.postMessage(data, [ch.port2]);
-			}
-			else {
-				opera.extension.postMessage(data);
-			}
-		};
-		this.addMessageListener = function (handler) {
-			opera.extension.onmessage = function (e) {
-				handler(e.data);
-			};
-		};
-		this.__defineGetter__('isOptionsPage', function () {
-			return window.location.hostname == extensionId
-				&& window.location.pathname == '/options.html';
-		});
-	}
-
-	/**
-	 * extension wrapper class for firefox (Add-on SDK)
-	 */
-
-	function MessageCallbackQueueItem (callback) {
-		this.callback = callback;
-		this.time = +new Date;
-	}
-	MessageCallbackQueueItem.prototype = {
-		toString:function () {
-			return '[object MessageCallbackQueueItem(' +
-				this.time + ': ' +
-				this.callback.toString().replace(/[\s\r\n\t]+/g, ' ').substring(0, 100) +
-				')]';
-		},
-		run:function () {
-			typeof this.callback == 'function' && this.callback.apply(null, arguments);
-		}
-	};
-	function FirefoxJetpackExtensionWrapper () {
-		var messageId = 0;
-		var callbacks = {};
-		var onMessageHandler;
-
-		function getNewMessageId () {
-			messageId = (messageId + 1) & 0xffff;
-			return messageId;
-		}
-
-		function handleMessage (data) {
-			var now = +new Date;
-			var callbacksCurrent = callbacks;
-			var callbacksNext = {};
-
-			callbacks = {};
-
-			for (var i in callbacksCurrent) {
-				if (data && data.__messageId - i == 0) {
-					callbacksCurrent[i].run(data);
-				}
-				else if (now - callbacksCurrent[i].time < 60 * 1000) {
-					callbacksNext[i] = callbacksCurrent[i];
-				}
-			}
-			for (var i in callbacksNext) {
-				callbacks[i] = callbacksNext[i];
-			}
-		}
-
-		self.on('message', function (data) {
-			handleMessage(data);
-			delete data.__messageId;
-			onMessageHandler && onMessageHandler(data);
-		});
-		setInterval(handleMessage, 1000 * 60 * 2);
-
-		this.runType = 'firefox-jetpack-extension';
-		this.sendRequest = function (data, callback) {
-			if (callback) {
-				var id = getNewMessageId();
-				callbacks[id] = new MessageCallbackQueueItem(callback);
-				data.__messageId = id;
-			}
-			self.postMessage(data);
-		};
-		this.addMessageListener = function (handler) {
-			onMessageHandler = handler;
-		};
-		this.__defineGetter__('isOptionsPage', function () {
-			return location.hostname == extensionId
-										.toLowerCase()
-										.replace(/@/g, '-at-')
-										.replace(/\./g, '-dot-')
-				&& location.pathname == '/wasavi/data/options.html';
-		});
-	}
-
-	/**
-	 * request sender
-	 */
-
-	function sendReq (data, callback) {
-		data || (data = {});
-		if (tabId != undefined) {
-			data.tabId = tabId;
-		}
-		extension.sendRequest(data, callback);
-	}
+	var targetElement;
+	var wasaviFrame;
+	var keyStroked;
 
 	/**
 	 * wasavi runner
+	 * ----------------
 	 */
 
-	function run (element, res) {
-		if (!global.Wasavi && res) {
-			if (res.source) {
-				evalEx(res.source);
-			}
-			else if (res.error) {
-				console.log('Wasavi agent: loading failed: ' + res.error);
-			}
+	function run (element) {
+		function getFontStyle (s, fontFamilyOverride) {
+			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
+				'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
 		}
-		if (global.Wasavi && !global.Wasavi.running) {
-			if (enableList) {
-				global.Wasavi.enableList = enableList;
-				enableList = null;
+		function getBorderStyle (s) {
+			var result = [];
+			var r1 = /^\d+$/;
+			var r2 = /([a-z])([A-Z])/g;
+			var r3 = /([a-z])-([a-z])/g;
+			var r4 = /^border[\-A-Z]/;
+			for (var i in s) {
+				var name = i;
+				if (r1.test(name)) {
+					name = s[i];
+				}
+				if (r4.test(name)) {
+					var nameHyphened = name.replace(r2, function ($0, $1, $2) {
+						return $1 + '-' + $2.toLowerCase();
+					});
+					var nameCameled = name.replace(r3, function ($0, $1, $2) {
+						return $1 + $2.toUpperCase();
+					});
+					s[nameCameled] != '' && result.push('  ' + nameHyphened + ':' + s[nameCameled]);
+				}
 			}
-			if (exrc) {
-				global.Wasavi.exrc = exrc;
-				exrc = null;
-			}
-			global.Wasavi.injectKeyevents = true;
-			global.Wasavi.runType = extension.runType;
-			global.Wasavi.run(element);
-			return true;
+			return '  ' + result.join(';') + ';';
 		}
-		return false;
+		function getPaddingStyle (s) {
+			return [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' ') || '0';
+		}
+		function getHighestZindex () {
+			var iter = document.createNodeIterator(
+				document.body, window.NodeFilter.SHOW_ELEMENT, null, false);
+			var node;
+			var result = 0;
+			var view = document.defaultView;
+			while ((node = iter.nextNode())) {
+				var z = (node.style.zIndex || view.getComputedStyle(node, '').zIndex) - 0;
+				if (z > result) {
+					result = z;
+				}
+			}
+			return result;
+		}
+		function isFixedPosition (element) {
+			var isFixed = false;
+			for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
+				var s = document.defaultView.getComputedStyle(tmp, '');
+				if (s && s.position == 'fixed') {
+					isFixed = true;
+					break;
+				}
+			}
+			return isFixed;
+		}
+
+		targetElement = element;
+
+		var rect = element.getBoundingClientRect();
+		var isFixed = isFixedPosition(element);
+		wasaviFrame = document.createElement('iframe');
+		wasaviFrame.style.position = isFixed ? 'fixed' : 'absolute';
+		wasaviFrame.style.left = (
+			rect.left + 
+			(isFixed ? 0 : Math.max(document.documentElement.scrollLeft, document.body.scrollLeft))
+		) + 'px';
+		wasaviFrame.style.top = (
+			rect.top + 
+			(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
+		) + 'px';
+		wasaviFrame.style.width = rect.width + 'px';
+		wasaviFrame.style.height = rect.height + 'px';
+		wasaviFrame.style.border = 'none';
+		wasaviFrame.style.overflow = 'hidden';
+		wasaviFrame.style.visibility = 'hidden';
+		wasaviFrame.style.zIndex = Math.min(getHighestZindex() + 100.0, 0x7fffffff);
+
+		if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
+			wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
+		}
+		else if (window.location.protocol == 'https:') {
+			wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.externalSecure;
+		}
+		else {
+			wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.external;
+		}
+
+		wasaviFrame.onload = function handleIframeLoaded (e) {
+			var s = document.defaultView.getComputedStyle(element, '');
+			var payload = {
+				type:'run',
+				parentTabId:extension.tabId,
+				id:element.id,
+				nodeName:element.nodeName,
+				elementType:element.type,
+				selectionStart:element.selectionStart,
+				selectionEnd:element.selectionEnd,
+				scrollTop:element.scrollTop,
+				scrollLeft:element.scrollLeft,
+				readOnly:element.readOnly,
+				value:element.value,
+				rect:{width:rect.width, height:rect.height},
+				fontStyle:getFontStyle(s, fontFamily),
+				borderStyles:getBorderStyle(s),
+				paddingStyle:getPaddingStyle(s)
+			};
+			extension.postMessage({type:'notify-to-child', payload:payload});
+		};
+
+		document.body.appendChild(wasaviFrame);
+	}
+
+	function cleanup (value) {
+		if (targetElement) {
+			if (value !== undefined) {
+				targetElement.value = value;
+			}
+			targetElement.removeAttribute(EXTENSION_CURRENT);
+			targetElement = null;
+		}
+		if (wasaviFrame) {
+			wasaviFrame.parentNode.removeChild(wasaviFrame);
+			wasaviFrame = null;
+		}
+	}
+
+	function focusToFrame () {
+		if (wasaviFrame) {
+			try {
+				wasaviFrame.focus
+				&& wasaviFrame.focus();
+			} catch (e) {}
+			try {
+				wasaviFrame.contentWindow
+				&& wasaviFrame.contentWindow.focus
+				&& wasaviFrame.contentWindow.focus();
+			} catch (e) {}
+		}
 	}
 
 	/**
 	 * keydown handler
+	 * ----------------
 	 */
 
 	function handleKeydown (e) {
-		if (global.Wasavi && global.Wasavi.running) {
-			global.Wasavi.notifyKeyevent(e);
-			return;
-		}
-
-		if (!e || !e.target) return;
+		if (targetElement || !e || !e.target) return;
 		if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
+		if (!(e.target.type in ACCEPTABLE_TYPES) 
+		||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
 
-		var key, isCtrl;
+		/*
+		 * <textarea>
+		 * <textarea data-texteditor-extension="auto">
+		 *     one of extensions installed into browser is executed.
+		 *
+		 * <textarea data-texteditor-extension="none">
+		 *     no extension is executed.
+		 *
+		 * <textarea data-texteditor-extension="wasavi">
+		 *     wasavi extension is executed.
+		 */
 
-		if      ('key' in e)           { key = e.key; }
-		else if ('keyIdentifier' in e) { key = e.keyIdentifier; }
-		else if (e.keyCode == e.which) { key = e.keyCode; }
-		else                           { key = 0; }
+		var current = e.target.getAttribute(EXTENSION_CURRENT);
+		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
+		if (current !== null) return;
+		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
 
-		if      ('ctrlKey' in e)     { isCtrl = e.ctrlKey; }
-		else if (e.getModifierState) { isCtrl = e.getModifierState('Control'); }
-		else                         { isCtrl = false; }
-
-		if (isCtrl && key == 'Enter' || isCtrl && key === 13 
-		|| key == 'Insert' || key === 45) {
+	    if (shortcutTester(e)) {
+			e.target.setAttribute(EXTENSION_CURRENT, 'wasavi');
 			e.preventDefault();
-
-			if (global.Wasavi) {
-				run(e.target);
-			}
-			else {
-				sendReq({type:'load'}, function (res) {
-					run(e.target, res) || console.log(
-						'Wasavi: internal error: Wasavi loading failed.');
-				});
-			}
-		}
-	}
-
-	/**
-	 * keypress handler
-	 */
-
-	function handleKeypress (e) {
-		if (global.Wasavi && global.Wasavi.running) {
-			global.Wasavi.notifyKeyevent(e);
+			run(e.target);
 		}
 	}
 
 	/**
 	 * DOMContentLoaded on options page handler
+	 * ----------------
 	 */
 
 	function handleOptionsPageLoaded () {
@@ -326,270 +270,209 @@ function evalEx (code) {
 			el.value = exrc;
 		}
 
+		var el = document.getElementById('shortcut');
+		if (el && el.nodeName == 'INPUT') {
+			el.value = shortcut;
+		}
+
+		var el = document.getElementById('font-family');
+		if (el && el.nodeName == 'INPUT') {
+			el.value = fontFamily;
+		}
+
 		var el = document.getElementById('save');
 		if (el) {
-			el.addEventListener('click', function (e) {
-				for (var i in enableList) {
-					var el = document.getElementById(i);
-					if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-						enableList[i] = el.checked;
-					}
-				}
-
-				var el = document.getElementById('exrc');
-				if (el && el.nodeName == 'TEXTAREA') {
-					exrc = el.value;
-				}
-
-				sendReq(
-					{
-						type:'set-storage', 
-						items: [
-							{key:'targets', value:JSON.stringify(enableList)},
-							{key:'exrc', value:exrc}
-						]
-					},
-					function () {
-						var saveResult = document.getElementById('save-result');
-						if (saveResult) {
-							saveResult.textContent = 'saved.';
-							setTimeout(function () {
-								saveResult.textContent = '';
-							}, 1000 * 2);
-						}
-					}
-				);
-			}, false);
+			el.addEventListener('click', handleOptionsSave, false);
 		}
 	}
 
 	/**
-	 * extension initializer handler
+	 * save button handler
+	 * ----------------
 	 */
 
-	function handleInitializedMessage (req) {
-		var needFireEvent = tabId == undefined && req && 'tabId' in req && req.tabId != undefined;
-		extensionId = req.extensionId;
-		tabId = req.tabId;
-		enableList = req.targets;
-		exrc = req.exrc;
-		needFireEvent && handleAgentInitialized();
+	function handleOptionsSave () {
+		var items = [];
+		var tmpEnableList = {};
+		var count = 0;
+
+		for (var i in enableList) {
+			var el = document.getElementById(i);
+			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+				tmpEnableList[i] = el.checked;
+				count++;
+			}
+		}
+		if (count) {
+			items.push({key:'targets', value:JSON.stringify(tmpEnableList)});
+		}
+		
+		var el = document.getElementById('exrc');
+		if (el && el.nodeName == 'TEXTAREA') {
+			items.push({key:'exrc', value:el.value});
+		}
+
+		var el = document.getElementById('shortcut');
+		if (el && el.nodeName == 'INPUT') {
+			items.push({key:'shortcut', value:el.value});
+		}
+
+		var el = document.getElementById('font-family');
+		if (el && el.nodeName == 'INPUT') {
+			items.push({key:'font-family', value:el.value});
+		}
+
+		items.length && extension.postMessage(
+			{type:'set-storage', items:items},
+			function () {
+				var saveResult = document.getElementById('save-result');
+				if (saveResult) {
+					saveResult.textContent = 'saved.';
+					setTimeout(function () {
+						saveResult.textContent = '';
+					}, 1000 * 2);
+				}
+			}
+		);
+	}
+
+	/**
+	 * shortcut key testing function factory
+	 * ----------------
+	 */
+
+	function createShortcutTester (code) {
+		var result;
+		try {
+			result = new Function('e', code);
+		}
+		catch (e) {
+			result = new Function('return false;');
+		}
+		return result;
 	}
 
 	/**
 	 * agent initializer handler
+	 * ----------------
 	 */
 
 	function handleAgentInitialized () {
-		var result = true;
-
-		//
-		window.addEventListener('keydown', handleKeydown, true);
-		window.addEventListener('keypress', handleKeypress, true);
-
-		//
-		if (extension.isOptionsPage) {
-			if (document.readyState == 'complete' || document.readyState == 'interactive') {
-				handleOptionsPageLoaded();
-			}
-			else {
-				document.addEventListener('DOMContentLoaded', handleOptionsPageLoaded, false);
-			}
+		if (window.location.href == WasaviExtensionWrapper.optionsPageUrl) {
+			handleOptionsPageLoaded();
 		}
-		else {
-			if (!createPageAgent()) {
-				window.removeEventListener('keydown', handleKeydown, true);
-				window.removeEventListener('keypress', handleKeypress, true);
-				result = false;
-			}
-		}
+		//else {
+			window.addEventListener('keydown', handleKeydown, true);
+		//}
 
-		//
-		if (result) {
-			window.self == window.top && console.log(
-				'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
-		}
-
-		return result;
-	}
-
-	/**
-	 * extension message handler
-	 */
-
-	function handleMessage (req) {
-		if (!req) return;
-		if (!req.type) return;
-
-		switch (req.type) {
-		case 'init-response':
-			handleInitializedMessage(req);
-			break;
-
-		case 'update-storage':
-			if (global.Wasavi && global.Wasavi.running) {
-				global.Wasavi.notifyUpdateStorage(req.keys);
-			}
-			break;
-		}
-	}
-
-	/**
-	 * page agent. this function is executed in page script context.
-	 */
-
-	function pageAgent () {
-		var wasaviRunning = false;
-
-		function removeSelf () {
-			var ss = document.getElementsByTagName('script');
-			if (ss.length) {
-				ss = ss[ss.length - 1];
-				ss.parentNode.removeChild(ss);
-			}
-		}
-
-		function hookEventListener (host) {
-			var addOriginal = host.addEventListener;
-			var removeOriginal = host.removeEventListener;
-			var listeners = [];
-
-			function isHookEvent (eventName) {
-				return eventName == 'keydown' || eventName == 'keypress';
-			}
-
-			host.addEventListener = function (eventName, listener, useCapture) {
-				if (!isHookEvent(eventName)) {
-					addOriginal.call(this, eventName, listener, useCapture);
-					return;
-				}
-
-				var key = eventName + '_' + !!useCapture;
-				if (!listeners[key]) {
-					listeners[key] = [];
-				}
-				if (!listeners[key].some(function (o) { return o[0] == listener; })) {
-					var wrappedListener = function (e) {
-						!wasaviRunning && listener && listener(e);
-					};
-					listeners[key].push([listener, wrappedListener]);
-					addOriginal.call(this, eventName, wrappedListener, useCapture);
-				}
-			};
-			host.removeEventListener = function (eventName, listener, useCapture) {
-				if (!isHookEvent(eventName)) {
-					removeOriginal.call(this, eventName, listener, useCapture);
-					return;
-				}
-
-				var key = eventName + '_' + !!useCapture;
-				if (!listeners[key]) {
-					return;
-				}
-				listeners[key] = listeners[key].filter(function (o) {
-					if (o[0] == listener) {
-						removeOriginal.call(this, eventName, o[1], useCapture);
-						return false;
-					}
-					return true;
-				}, this);
-			};
-		}
-
-		document.addEventListener('wasavi_start', function (e) {
-			wasaviRunning = true;
-			console.log('wasavi agent: wasavi started');
-		}, false);
-
-		document.addEventListener('wasavi_terminate', function (e) {
-			wasaviRunning = false;
-			console.log('wasavi agent: wasavi terminated');
-		}, false);
-
-		hookEventListener(window);
-		hookEventListener(document);
-		removeSelf();
-	}
-
-	function createPageAgent () {
-		var result = false;
-
-		var s = document.createElement('script');
-		s.type = 'text/javascript';
-		s.text = '(' + pageAgent.toString().replace(/^\s*(function)[^(]*/, '$1') + ')();';
-
-		var head = document.getElementsByTagName('head')[0];
-		if (head) {
-			var metas = head.getElementsByTagName('meta');
-			var titles = head.getElementsByTagName('title');
-			if (metas.length || titles.length) {
-				head.appendChild(s);
-				result = true;
-			}
-		}
-		else {
-			document.documentElement.appendChild(s);
-			result = true;
-		}
-
-		//console.log('page agent created. injected script location: ' + window.location.href);
-		return result;
+		var isTopFrame;
+		try { isTopFrame = !window.frameElement; } catch (e) {} 
+		isTopFrame && console.log(
+			'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
 	}
 
 	/**
 	 * bootstrap
+	 * ----------------
 	 */
 
-	function dumpObject (obj) {
-		var a = [];
-		var ss = '';
-		switch (typeof obj) {
-		case 'number':
-		case 'boolean':
-		case 'string':
-			ss = obj.toString();
-			break;
-		default:
-			if (obj == null) {
-				ss = '(null)';
+	extension = WasaviExtensionWrapper.create();
+	extension.setMessageListener(function (req) {
+		if (!req || !req.type) return;
+
+		switch (req.type) {
+		case 'init-response':
+			enableList = JSON.parse(req.targets);
+			exrc = req.exrc;
+			shortcut = req.shortcut;
+			shortcutTester = createShortcutTester(req.shortcutCode);
+			fontFamily = req.fontFamily;
+
+			if (window.chrome) {
+				WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
 			}
-			else if (obj == undefined) {
-				ss = '(undefined)';
+			if (document.readyState == 'interactive' || document.readyState == 'complete') {
+				handleAgentInitialized();
 			}
 			else {
-				for (var i in obj) {
-					var s;
-					try {
-						s = i + ': ' + (obj[i] || '')
-							.toString()
-							.replace(/[\s\r\n\t]+/g, ' ')
-							.substring(0, 100);
-					}
-					catch (e) {
-						if (obj[i] == null) {
-							s = '(null)';
-						}
-						else if (obj[i] == undefined) {
-							s = '(undefined)';
-						}
-					}
-					a.push(s);
-				}
-				ss = obj.toString();
+				document.addEventListener('DOMContentLoaded', function () {
+					document.removeEventListener('DOMContentLoaded', arguments.callee, false);
+					handleAgentInitialized()
+				}, false);
 			}
+			break;
+
+		case 'update-storage':
+			req.items.forEach(function (item) {
+				switch (item.key) {
+				case 'targets':
+					enableList = JSON.parse(item.value);
+					break;
+
+				case 'exrc':
+					exrc = item.value;
+					break;
+
+				case 'shortcut':
+					shortcut = item.value;
+					break;
+
+				case 'shortcutCode':
+					shortcutTester = createShortcutTester(item.value);
+					break;
+				}
+			});
+			break;
+
+		case 'wasavi-initialized':
+			if (!wasaviFrame) break;
+			wasaviFrame.style.visibility = 'visible';
+			focusToFrame();
+
+			var animationHeight = targetElement.offsetHeight;
+			var goalHeight = req.height || targetElement.offsetHeight;
+
+			(function () {
+				if (!targetElement || !wasaviFrame) return;
+
+				wasaviFrame.style.height = animationHeight + 'px';
+
+				if (keyStroked
+				|| animationHeight >= goalHeight) {
+					wasaviFrame.style.height = goalHeight + 'px';
+					wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
+					console.info('wasavi started');
+				}
+				else {
+					animationHeight++;
+					setTimeout(arguments.callee, 10);
+				}
+			})();
+			break;
+
+		case 'wasavi-stroked':
+			if (!wasaviFrame) break;
+			keyStroked = true;
+			break;
+
+		case 'wasavi-window-state':
+			if (!wasaviFrame) break;
+			console.log('window-state: ' + req.state);
+			break;
+
+		case 'wasavi-focus-me':
+			if (!wasaviFrame) break;
+			focusToFrame();
+			break;
+
+		case 'wasavi-terminated':
+			if (!wasaviFrame) break;
+			cleanup(req.value);
+			console.info('wasavi terminated');
+			break;
 		}
-		console.log('*** agent.js dump Object: ' + ss + ' ***\n\t' + a.join('\n\t'));
-	}
-
-	extension = ExtensionWrapper.create();
-	extension.addMessageListener(handleMessage);
-
-	sendReq({type:'init'});
-
-	global.WasaviAgent = {
-		sendRequest:sendReq
-	};
-
+	});
+	extension.sendRequest({type:'init-agent'});
 })(this);
 
 // vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :

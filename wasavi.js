@@ -1,10 +1,15 @@
+// ==UserScript==
+// @include http://appsweets.net/wasavi/wasavi_frame.html
+// @include https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html
+// ==/UserScript==
+//
 /**
  * wasavi: vi clone implemented in javascript
  * =============================================================================
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 113 2012-05-03 18:33:56Z akahuku $
+ * @version $Id: wasavi.js 115 2012-05-12 02:04:45Z akahuku $
  * @sourceURL=wasavi.js
  */
 /**
@@ -35,43 +40,75 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-(document.readyState != 'complete' || document.querySelectorAll('textarea,input').length > 0) &&
 (function (global) {
 	/*
-	 * constants
+	 * extension interface
 	 * ----------------
 	 */
 
-	/*const*/var VERSION = '0.1.' + (/\d+/.exec('$Revision: 113 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 113 2012-05-03 18:33:56Z akahuku $';
-	/*const*/var CONTAINER_ID = 'wasavi_container';
-	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
-	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
 	/*const*/var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	/*const*/var IS_JETPACK_CONTENT_SCRIPT =
-		typeof global.getInterface == 'function'
-		&& /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
-			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' ')
-		);
-	/*const*/var CAN_COMMUNICATE_WITH_EXTENSION =
-		global.WasaviAgent
-		&& (
-			window.chrome && chrome.extension
-			|| global.opera && global.opera.extension
-			|| IS_GECKO && IS_JETPACK_CONTENT_SCRIPT
-		);
-	/*const*/var MONOSPACE_FONT_FAMILY = '"Consolas","Monaco","Courier New","Courier",monospace';
+
+	var extensionChannel;
+
+	if (global.WasaviExtensionWrapper
+	&&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
+	&&  (window.location.href == WasaviExtensionWrapper.framePageUrl.internal
+	  || window.location.href == WasaviExtensionWrapper.framePageUrl.external
+	  || window.location.href == WasaviExtensionWrapper.framePageUrl.externalSecure)
+	) {
+		extensionChannel = WasaviExtensionWrapper.create();
+		extensionChannel.setMessageListener(function (req) {
+			if (!req) return;
+			switch (req.type) {
+			case 'init-response':
+				exrc = req.exrc;
+				fontFamily = req.fontFamily;
+				break;
+			case 'run':
+				var x = req;
+				x.dataset = {};
+				x.getAttribute = function (name) { return this.dataset[name]; };
+				x.setAttribute = function (name, value) { this.dataset[name] = value; };
+
+				if (document.readyState == 'interactive'
+				||  document.readyState == 'complete') {
+					install(x);
+				}
+				else {
+					document.addEventListener('DOMContentLoaded', function () {
+						document.removeEventListener('DOMContentLoaded', arguments.callee, false);
+						install(x)
+					}, false);
+				}
+			}
+		});
+		extensionChannel.connect();
+	}
+
+
+
+	/*
+	 * application constants
+	 * ---------------------
+	 */
+
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 115 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 115 2012-05-12 02:04:45Z akahuku $';
+	/*const*/var CONTAINER_ID = 'wasavi_container';
+	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
+	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
 	/*const*/var BRACKETS = '[{(<>)}]';
 	/*const*/var ACCEPTABLE_TYPES = {
-		text:     'enableText',
-		search:   'enableSearch',
-		tel:      'enableTel',
-		url:      'enableUrl',
-		email:    'enableEmail',
-		password: 'enablePassword',
-		number:   'enableNumber'
+		textarea: true,
+		text:     true,
+		search:   true,
+		tel:      true,
+		url:      true,
+		email:    true,
+		password: true,
+		number:   true
 	};
 	/*const*/var SPECIAL_KEYS = {
 		'-127':  '<delete>',
@@ -406,7 +443,7 @@
 		}
 	};
 
-	/*constructor*/function Registers () {
+	/*constructor*/function Registers (loadCallback) {
 		/*
 		 * available registers:
 		 *
@@ -454,11 +491,13 @@
 		function save () {
 			setLocalStorage(storageKey, serialize());
 		}
-		function load () {
+		function load (callback) {
 			unnamed = new RegisterItem();
 			named = {};
 			getLocalStorage(storageKey, function (value) {
 				restore(value || '');
+				callback && callback();
+				callback = null;
 			});
 		}
 		function isWritable (name) {
@@ -552,7 +591,8 @@
 		this.save = save;
 		this.load = load;
 
-		load();
+		load(loadCallback);
+		loadCallback = null;
 	}
 
 	/*constructor*/function PrefixInput () {
@@ -851,8 +891,6 @@
 				comCursor.style.color = 'white';
 				comCursor.style.backgroundColor = 'black';
 				startBlink();
-
-				document.activeElement.blur();
 			};
 			this.lostFocus = function () {
 				stopBlink();
@@ -1707,7 +1745,8 @@
 
 			// method
 			focus: function () {
-				return this.elm.focus();
+				//return this.elm.focus();
+				return $('wasavi_focus_holder').focus();
 			},
 			insertChars: function (arg, text) {
 				var iter = document.createNodeIterator(
@@ -2715,59 +2754,71 @@ flag23_loop:
 		});
 	}
 
-	/*constructor*/function Bell () {
+	/*constructor*/function Bell (loadCallback) {
 		var a = new window.Audio();
 		var src = '';
 		var prefix = '';
 		var enabled = false;
 
-		if (a.canPlayType('audio/ogg')) {
-			src = 'beep.ogg';
-			prefix = 'data:audio/ogg;base64,';
-		}
-		else if (a.canPlayType('audio/mpeg')) {
-			src = 'beep.mp3';
-			prefix = 'data:audio/mpeg;base64,';
-		}
+		function load (callback) {
+			if (a.canPlayType('audio/ogg')) {
+				src = 'beep.ogg';
+				prefix = 'data:audio/ogg;base64,';
+			}
+			else if (a.canPlayType('audio/mpeg')) {
+				src = 'beep.mp3';
+				prefix = 'data:audio/mpeg;base64,';
+			}
+			else {
+				src = prefix = '';
+			}
 
-		if (src == '') {
-			this.play = function () {};
-		}
-		else {
-			if (CAN_COMMUNICATE_WITH_EXTENSION) {
-				global.WasaviAgent.sendRequest({type:'bell', file:src + '.txt'}, function (res) {
+			if (src == '') {
+				enabled = false;
+				return;
+			}
+
+			if (extensionChannel) {
+				extensionChannel.postMessage({type:'bell', file:src + '.txt'}, function (res) {
 					if (res && res.data != '') {
 						a.src = prefix + res.data;
 						enabled = true;
+						callback && callback();
+						callback = null;
 					}
 				});
 			}
 			else {
 				a.src = src;
 				enabled = true;
+				callback && callback();
+				callback = null;
 			}
-
-			a.addEventListener('load', function () {
-				a.removeEventListener('load', arguments.callee, false);
-				enabled = true;
-			}, false);
-
-			this.play = function () {
-				if (enabled) {
-					var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
-					if (vol > 0) {
-						try {
-							!a.ended && a.pause();
-							a.loop = false;
-							a.volume = vol / 100;
-							a.currentTime = 0;
-							a.play();
-						}
-						catch (e) {}
-					}
-				}
-			};
 		}
+
+		a.addEventListener('load', function () {
+			a.removeEventListener('load', arguments.callee, false);
+			enabled = true;
+		}, false);
+
+		this.play = function () {
+			if (src == '' || !enabled) return;
+			var vol = Math.max(0, Math.min(config.vars.bellvolume, 100));
+			if (vol > 0) {
+				try {
+					!a.ended && a.pause();
+					a.loop = false;
+					a.volume = vol / 100;
+					a.currentTime = 0;
+					a.play();
+				}
+				catch (e) {}
+			}
+		};
+		this.load = load;
+
+		load(loadCallback);
+		loadCallback = null;
 	}
 
 	/*constructor*/function SubstituteWorker () {
@@ -3126,7 +3177,7 @@ flag23_loop:
 		}
 	};
 
-	/*constructor*/function LineInputHistories (maxSize, names) {
+	/*constructor*/function LineInputHistories (maxSize, names, loadCallback) {
 		var s;
 		var name;
 		var storageKey = 'wasavi_lineinput_histories';
@@ -3155,13 +3206,15 @@ flag23_loop:
 		function save () {
 			setLocalStorage(storageKey, serialize());
 		}
-		function load () {
+		function load (callback) {
 			s = {};
 			names.forEach(function (na) {
 				s[na] = {lines:[], current:-1};
 			});
 			getLocalStorage(storageKey, function (value) {
 				restore(value || '');
+				callback && callback();
+				callback = null;
 			});
 		}
 		function push (line) {
@@ -3222,7 +3275,8 @@ flag23_loop:
 		this.save = save;
 		this.load = load;
 
-		load();
+		load(loadCallback);
+		loadCallback = null;
 	}
 
 	/*constructor*/function EditLogger (editor, max) {
@@ -3873,8 +3927,7 @@ flag23_loop:
 	}
 	function isSinglelineTextInput (target) {
 		return target.nodeName.toLowerCase() == 'input'
-			&& target.type in ACCEPTABLE_TYPES
-			&& enableList[ACCEPTABLE_TYPES[target.type]];
+			&& target.elementType in ACCEPTABLE_TYPES;
 	}
 	function reverseObject (o) {
 		var result = {};
@@ -4152,20 +4205,6 @@ flag23_loop:
 	function docClientHeight () {
 		return Math.min(document.documentElement.clientHeight, document.body.clientHeight)
 	}
-	function getHighestZindex () {
-		var iter = document.createNodeIterator(
-			document.body, window.NodeFilter.SHOW_ELEMENT, null, false);
-		var node;
-		var result = 0;
-		var view = document.defaultView;
-		while ((node = iter.nextNode())) {
-			var z = (node.style.zIndex || view.getComputedStyle(node, '').zIndex) - 0;
-			if (z > result) {
-				result = z;
-			}
-		}
-		return result;
-	}
 	var dataset = (function () {
 		var datasetNameCache = {};
 		var nameRegex = /^[a-zA-Z]+$/;
@@ -4193,7 +4232,7 @@ flag23_loop:
 				throw new Error('dataset: too few arguments.');
 			}
 			if (!elm) {
-				throw new Error('dataset: invalid elment.');
+				throw new Error('dataset: invalid element.');
 			}
 			if (!nameRegex.test(name)) {
 				throw new Error('dataset: invalid name.');
@@ -4221,8 +4260,8 @@ flag23_loop:
 	 */
 
 	function getLocalStorage (keyName, callback) {
-		if (CAN_COMMUNICATE_WITH_EXTENSION) {
-			global.WasaviAgent.sendRequest({type:'get-storage', key:keyName}, function (res) {
+		if (extensionChannel) {
+			extensionChannel.postMessage({type:'get-storage', key:keyName}, function (res) {
 				callback && callback(res.value);
 			});
 		}
@@ -4231,8 +4270,8 @@ flag23_loop:
 		}
 	}
 	function setLocalStorage (keyName, value) {
-		if (CAN_COMMUNICATE_WITH_EXTENSION) {
-			global.WasaviAgent.sendRequest({type:'set-storage', key:keyName, value:value});
+		if (extensionChannel) {
+			extensionChannel.postMessage({type:'set-storage', key:keyName, value:value});
 		}
 		else if (window.localStorage) {
 			localStorage.setItem(keyName, value);
@@ -4245,46 +4284,44 @@ flag23_loop:
 		}
 		return result;
 	}
-	function getLineInput () {
-		var result = $(LINE_INPUT_ID);
-		if (!result) {
-			console.error('*** getLineInput: line input element cannot retrieve');
-		}
-		return result;
-	}
 	function isEditing (mode) {
 		mode || (mode = inputMode);
 		return mode == 'edit' || mode == 'edit-overwrite';
 	}
-	function install (target) {
-
-		function getFontStyle (s, fontFamilyOverride) {
-			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
-				'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
+	function install (x) {
+		var count = 0;
+		function load (loader) {
+			loader();
+			loader = null;
+			++count;
 		}
-		function getBorderStyle (s) {
-			var result = [];
-			var r1 = /^\d+$/;
-			var r2 = /([a-z])([A-Z])/g;
-			var r3 = /([a-z])-([a-z])/g;
-			var r4 = /^border[\-A-Z]/;
-			for (var i in s) {
-				var name = i;
-				if (r1.test(name)) {
-					name = s[i];
-				}
-				if (r4.test(name)) {
-					var nameHyphened = name.replace(r2, function ($0, $1, $2) {
-						return $1 + '-' + $2.toLowerCase();
-					});
-					var nameCameled = name.replace(r3, function ($0, $1, $2) {
-						return $1 + $2.toUpperCase();
-					});
-					s[nameCameled] != '' && result.push('  ' + nameHyphened + ':' + s[nameCameled]);
-				}
-			}
-			return result.join(';') + ';';
+		function handleLoaded () {
+			--count;
+			count == 0 && installCore(x);
 		}
+		if (extensionChannel) {
+			load(function () { 
+				registers = new Registers(
+					handleLoaded
+				); 
+			});
+			load(function () { 
+				lineInputHistories = new LineInputHistories(
+					config.vars.history, ['/', ':'], handleLoaded
+				); 
+			});
+			load(function () {
+				bell = new Bell(handleLoaded); 
+			});
+		}
+		else {
+			registers = new Registers;
+			lineInputHistories = new LineInputHistories(config.vars.history, ['/', ':']);
+			bell = new Bell;
+			installCore(x);
+		}
+	}
+	function installCore (x) {
 		function getOverTextMarker (cnt, font, forecolor, backcolor) {
 			var result = '';
 			var canvas = cnt.appendChild(document.createElement('canvas'));
@@ -4361,26 +4398,26 @@ flag23_loop:
 		 */
 
 		// container
-		var cnt = document.body.appendChild(document.createElement('div'));
-		cnt.id = CONTAINER_ID;
+		var cnt = $(CONTAINER_ID);
+		if (!cnt) throw new Error('wasavi container not found');
 
 		//
-		var s = document.defaultView.getComputedStyle(target, '');
-		var hue = config.vars.modelinehue < 0 ? Math.floor(Math.random() * 360) : config.vars.modelinehue;
+		var hue = config.vars.modelinehue < 0 ?
+			Math.floor(Math.random() * 360) : config.vars.modelinehue;
 		var hsl = 'hsl(' + [hue, '100%', '33%'].join(',') + ')';
 		var modeLineGradient = 'linear-gradient(top, ' + hsl + ' 0%,#000 100%);';
-		var fontFamily = config.vars.monospace ? MONOSPACE_FONT_FAMILY : s.fontFamily;
-		var borderStyles = getBorderStyle(s);
-		var paddingStyle = [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' ') || '0';
+		var borderStyles = x.borderStyles + ';';
+		var paddingStyle = 'padding:' + x.paddingStyle + ';';
+		var fontStyle = 'font:' + x.fontStyle + ';';
 		var boxSizingPrefix = IS_GECKO ? '-moz-' : '';
 
 		// scale line height
 		var scaler = document.body.appendChild(document.createElement('span'));
 		style(scaler, {
-			font: getFontStyle(s, fontFamily),
+			font: x.fontStyle,
 			textDecoration:'none',
 			textShadow:'none',
-			letterSpacing: s.letterSpacing
+			letterSpacing: '100%'
 		});
 		scaler.textContent = '0';
 		lineHeight = scaler.offsetHeight;
@@ -4388,17 +4425,13 @@ flag23_loop:
 		scaler.parentNode.removeChild(scaler);
 
 		// over text marker
-		var otm = getOverTextMarker(cnt, getFontStyle(s, fontFamily), '#000', '#fff');
+		var otm = getOverTextMarker(cnt, x.fontStyle, '#000', '#fff');
 
 		// style
-		var styleElement = cnt.appendChild(document.createElement('style'));
-		styleElement.type = 'text/css';
-		styleElement.id = 'wasavi_global_styles';
+		var styleElement = $('wasavi_global_styles');
 		styleElement.appendChild(document.createTextNode([
 			'#wasavi_container {',
-			//'  position:' + s.position + ';',
 			'  background-color:transparent;',
-			'  z-index:' + Math.min(getHighestZindex() + 100, 0x7fffffff) + ';',
 			'  line-height:1;',
 			'  text-align:left;',
 			'  text-indent:0;',
@@ -4408,14 +4441,13 @@ flag23_loop:
 			'#wasavi_editor {',
 			'  display:block;',
 			'  margin:0;',
-			'  padding:' + paddingStyle + ';',
+			paddingStyle,
 			borderStyles,
 			'  border-color:silver;',
 			'  border-style:solid;',
 			'  border-radius:0;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'  font:' + getFontStyle(s, MONOSPACE_FONT_FAMILY) + ';',
-			'  letter-spacing:' + s.letterSpacing + ';',
+			fontStyle,
 			'  background:#fff url(' + otm + ') left top repeat-y;',
 			'  background-origin:content-box;',
 			'  overflow-x:hidden;',
@@ -4424,15 +4456,14 @@ flag23_loop:
 			'#wasavi_multiline_scaler {',
 			'  position:fixed;',
 			'  overflow:scroll;',
-			'  padding:' + paddingStyle + ';',
+			paddingStyle,
 			borderStyles,
 			'  border-color:silver;',
 			'  border-style:solid;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'  font:' + getFontStyle(s, fontFamily) + ';',
+			fontStyle,
 			'  text-decoration:none;',
 			'  text-shadow:none;',
-			'  letter-spacing:' + s.letterSpacing + ';',
 			'  right:8px;',
 			'  bottom:8px;',
 			'  white-space:pre-wrap;',
@@ -4445,10 +4476,9 @@ flag23_loop:
 			'  position:fixed;',
 			'  margin:0;',
 			'  padding:0;',
-			'  font:' + getFontStyle(s, fontFamily) + ';',
+			fontStyle,
 			'  text-decoration:none;',
 			'  text-shadow:none;',
-			'  letter-spacing:' + s.letterSpacing + ';',
 			'  white-space:pre;',
 			'  color:#fff;',
 			'  background-color:#000;',
@@ -4497,8 +4527,9 @@ flag23_loop:
 			IS_GECKO	  ? '  background:-moz-'	+ modeLineGradient : '',
 			//'  background:'						  + modeLineGradient,
 			'  padding:2px 2px 1px 2px;',
-			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
+			'  font-family:' + fontFamily + ';',
 			'  font-size:10pt;',
+			'  line-height:1;',
 			'  overflow:hidden;',
 			'  ' + boxSizingPrefix + 'box-sizing:content-box;',
 			'}',
@@ -4506,17 +4537,18 @@ flag23_loop:
 			'  text-align:right;',
 			'  padding:0 8px 1px 0;',
 			'  font-size:10pt;',
+			'  line-height:1;',
 			'  white-space:pre;',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'}',
 			'#wasavi_footer_alter {',
-			'  display:none',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'}',
 			'#wasavi_footer_alter_table {',
 			'  padding:0;',
 			'  margin:0;',
 			'  border-collapse:collapse;',
 			'  border:none;',
-			//'  width:' + (target.offsetWidth - 4) + 'px;',
 			'  background-color:transparent',
 			'}',
 			'#wasavi_footer_alter>table td {',
@@ -4527,6 +4559,7 @@ flag23_loop:
 			'#wasavi_footer_input_indicator {',
 			'  width:1%;',
 			'  padding:0;',
+			'  line-height:1;',
 			'  background-color:rgba(0,0,0,0.5)',
 			'}',
 			'#wasavi_footer_input_container {',
@@ -4541,8 +4574,9 @@ flag23_loop:
 			'  outline:none;',
 			'  color:#fff;',
 			'  background-color:rgba(0,0,0,0.5);',
-			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
+			'  font-family:' + fontFamily + ';',
 			'  font-size:10pt;',
+			'  line-height:1;',
 			'  width:100%',
 			'}',
 			'#wasavi_console_container {',
@@ -4563,8 +4597,7 @@ flag23_loop:
 			'  color:#fff;',
 			'  background-color:transparent;',
 			'  width:100%;',
-			'  height:' + (target.offsetHeight - (16 + 12)) + 'px;',
-			'  font-family:' + MONOSPACE_FONT_FAMILY + ';',
+			'  font-family:' + fontFamily + ';',
 			'  font-size:10pt;',
 			'  overflow-y:hidden;',
 			'  white-space:pre-wrap;',
@@ -4575,10 +4608,9 @@ flag23_loop:
 			'  position:absolute;',
 			'  margin:0;',
 			'  padding:0;',
-			'  font:' + getFontStyle(s, fontFamily) + ';',
+			fontStyle,
 			'  text-decoration:none;',
 			'  text-shadow:none;',
-			'  letter-spacing:' + s.letterSpacing + ';',
 			'  color:#fff;',
 			'  background-color:#000;',
 			'  left:0px;',
@@ -4597,10 +4629,9 @@ flag23_loop:
 			'  padding:0;',
 			'  border:none;',
 			'  background-color:transparent;',
-			'  font:' + getFontStyle(s, fontFamily) + ';',
+			fontStyle,
 			'  text-decoration:none;',
 			'  text-shadow:none;',
-			'  letter-spacing:' + s.letterSpacing + ';',
 			'  overflow-y:hidden;',
 			'  resize:none;',
 			'  outline:none;',
@@ -4609,104 +4640,94 @@ flag23_loop:
 			'  position:fixed;',
 			'  left:0; top:0; right:0; bottom:0;',
 			'  background-color:rgba(0,0,0,0.0)',
+			'}',
+			'#wasavi_focus_holder {',
+			'  position:fixed;',
+			'  border:none;',
+			'  padding:0;',
+			'  left:0px;',
+			'  top:-32px;',
+			'  width:32px;',
+			'  height:32px;',
 			'}'
 		].join('')));
 
+		// focus holder
+		var focusHolder = document.createElement('textarea');
+		document.body.insertBefore(focusHolder, document.body.firstChild);
+		focusHolder.id = 'wasavi_focus_holder';
+
 		// editor
-		var editorElement = cnt.appendChild(document.createElement('div'));
-		editorElement.id = EDITOR_CORE_ID;
-		dataset(editorElement, 'wasaviEditor', 1);
+		var editorElement = $(EDITOR_CORE_ID);
 		var editor = new Editor(editorElement);
 
 		// caret position scaler
-		var caretdiv = cnt.appendChild(document.createElement('div'));
-		caretdiv.id = 'wasavi_multiline_scaler';
+		var caretdiv = $('wasavi_multiline_scaler');
 
 		// text length scaler
-		var textspan = cnt.appendChild(document.createElement('span'));
-		textspan.id = 'wasavi_singleline_scaler';
+		var textspan = $('wasavi_singleline_scaler');
 		textspan.textContent = '#';
 
 		// console scaler
-		var conscaler = cnt.appendChild(document.createElement('div'));
-		conscaler.id = 'wasavi_console_scaler';
+		var conscaler = $('wasavi_console_scaler');
 		conscaler.textContent = '#';
 
 		// footer container
-		var footer = cnt.appendChild(document.createElement('div'));
-		footer.id = 'wasavi_footer';
+		var footer = $('wasavi_footer');
 
 		// footer (default indicator)
-		var footerDefault = footer.appendChild(document.createElement('div'));
-		footerDefault.id = 'wasavi_footer_modeline';
+		var footerDefault = $('wasavi_footer_modeline');
 		footerDefault.textContent = '#';
 
 		// footer (alter: line input)
-		var footerAlter = footer.appendChild(document.createElement('div'));
-		footerAlter.id = 'wasavi_footer_alter';
+		var footerAlter = $('wasavi_footer_alter');
 
 		// footer alter contents
-		var footerAlterTable = document.createElement('table');
-		footerAlterTable.id = 'wasavi_footer_alter_table';
-		var footerAlterRow = footerAlter.appendChild(footerAlterTable)
-			.appendChild(document.createElement('tbody'))
-			.appendChild(document.createElement('tr'));
+		var footerAlterTable = $('wasavi_footer_alter_table');
+		var footerAlterRow = footerAlterTable.getElementsByTagName('tr')[0];
 
 		// footer alter contents: indicator
-		var footerIndicator = footerAlterRow.appendChild(document.createElement('td'));
-		footerIndicator.id = 'wasavi_footer_input_indicator';
+		var footerIndicator = $('wasavi_footer_input_indicator');
 		footerIndicator.textContent = '/';
 
 		// footer alter contents: line input container
-		var footerLineInputContainer = footerAlterRow.appendChild(document.createElement('td'));
-		footerLineInputContainer.id = 'wasavi_footer_input_container';
+		var footerLineInputContainer = $('wasavi_footer_input_container');
 
 		// footer alter contents: line input
-		var footerInput = footerLineInputContainer.appendChild(document.createElement('input'));
-		footerInput.type = 'text';
-		footerInput.id = 'wasavi_footer_input';
-		footerInput.spellcheck = false;
-
-		// footer background
-		dataset(footer, 'goalHeight', footer.offsetHeight);
-		dataset(footer, 'currentHeight', 1);
-		footer.style.height = '0';
+		var footerInput = $('wasavi_footer_input');
 
 		// console window
-		var conwincnt = cnt.appendChild(document.createElement('div'));
-		conwincnt.id = 'wasavi_console_container';
-		var conwin = conwincnt.appendChild(document.createElement('textarea'));
-		conwin.id = 'wasavi_console';
-		conwin.spellcheck = false;
+		var conwincnt = $('wasavi_console_container');
+		var conwin = $('wasavi_console');
 		conscaler.style.width = conwin.offsetWidth + 'px';
 
 		// command cursor
-		var cc = cnt.appendChild(document.createElement('div'));
-		cc.id = 'wasavi_command_cursor';
-
-		var ccInner = cc.appendChild(document.createElement('span'));
-		ccInner.id = 'wasavi_command_cursor_inner';
+		var cc = $('wasavi_command_cursor');
+		var ccInner = $('wasavi_command_cursor_inner');
 
 		// textarea for insert mode
-		var ec = cnt.appendChild(document.createElement('textarea'));
-		ec.id = 'wasavi_edit_cursor';
-		ec.spellcheck = false;
+		var ec = $('wasavi_edit_cursor');
 
-		// screen cover
-		var cover = cnt.appendChild(document.createElement('div'));
-		cover.id = 'wasavi_cover';
+		// fix height
+		if (footerDefault.offsetHeight < footerAlter.offsetHeight) {
+			footerDefault.style.height = footerAlter.offsetHeight + 'px';
+		}
+		else if (footerAlter.offsetHeight < footerDefault.offsetHeight ) {
+			footerAlter.style.height = footerDefault.offsetHeight + 'px';
+		}
+		footerAlter.style.display = 'none';
 
 		/*
 		 * positioning
 		 */
 
-		setGeometory(target);
+		setGeometory(x);
 
 		/*
 		 * initialize variables
 		 */
 
-		targetElement = target;
+		targetElement = x;
 		terminated = false;
 		writeOnTermination = true;
 		state = 'normal';
@@ -4732,31 +4753,26 @@ flag23_loop:
 		lastMessage = '';
 		requestedState = {};
 
-		editor.value = target.value;
-		editor.selectionStart = target.value
-			.substring(0, target.selectionStart)
-			.replace(/\r\n/g, '\n')
-			.length;
-		editor.selectionEnd = editor.selectionStart;
-		editor.scrollTop = target.scrollTop;
-		editor.scrollLeft = target.scrollLeft;
+		editor.value = x.value;
+		editor.selectionStart = x.selectionStart;
+		editor.selectionEnd = x.selectionEnd;
 
 		marks = new Marks(editor);
 		cursor = new CursorUI(editor, cc, ec);
 		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
-		target.readOnly && config.setData('readonly');
+		x.readOnly && config.setData('readonly');
 
 		refreshIdealWidthPixels(editor);
 		showMessage(
 			_('"{0}" {1}{2} {line:2}, {3} {character:3}.',
-			targetElement.nodeName + (targetElement.id != '' ? '#' + targetElement.id : ''),
-			target.readOnly ? _('[readonly] ') : '',
+			x.nodeName + (x.id != '' ? '#' + x.id : ''),
+			x.readOnly ? _('[readonly] ') : '',
 			editor.rowLength,
-			target.value.length));
+			x.value.length));
 
 		/*
-		 * start
+		 * execute exrc
 		 */
 
 		exGlobalSpecified = false;
@@ -4766,32 +4782,37 @@ flag23_loop:
 				showMessage(result, true);
 			}
 		});
-
 		cursor.ensureVisible();
 		cursor.update({type:inputMode, focused:true, visible:true});
 
+		/*
+		 * set up channels
+		 */
+
+		if (extensionChannel) {
+			extensionChannel.postMessage({
+				type:'notify-to-parent',
+				parentTabId:x.parentTabId,
+				payload:{type:'wasavi-initialized', height:cnt.offsetHeight}
+			});
+			extensionChannel.setMessageListener(handleExtensionChannelMessage);
+		}
+
+		/*
+		 * set up event handlers
+		 */
+
+		setupEventHandlers(true);
+
+		/*
+		 * notify wasavi started to document
+		 */
+
 		var ev = document.createEvent('Event');
-		ev.initEvent('wasavi_start', true, false);
+		ev.initEvent(
+			'wasavi' + (extensionChannel ? '_extension' : '') + '_start', 
+			true, false);
 		document.dispatchEvent(ev);
-
-		(function () {
-			if (!targetElement) {
-				return;
-			}
-
-			footer.style.height = dataset(footer, 'currentHeight') + 'px';
-
-			if (strokeCount
-			|| +dataset(footer, 'currentHeight') >= +dataset(footer, 'goalHeight')) {
-				footer.style.height = dataset(footer, 'goalHeight') + 'px';
-				cnt.style.boxShadow = '0 1px 8px 4px #444';
-				setupEventHandlers(true);
-			}
-			else {
-				dataset(footer, 'currentHeight', +dataset(footer, 'currentHeight') + 1);
-				setTimeout(arguments.callee, 10);
-			}
-		})();
 	}
 	function uninstall (editor, save) {
 		var cnt = $(CONTAINER_ID);
@@ -4800,10 +4821,6 @@ flag23_loop:
 		// apply the edited content to target textarea
 		if (save && isTextDirty) {
 			targetElement.value = editor.value;
-			targetElement.selectionStart = editor.selectionStart;
-			targetElement.selectionEnd = editor.selectionEnd;
-			targetElement.scrollTop = editor.scrollTop;
-			targetElement.scrollLeft = editor.scrollLeft;
 		}
 
 		// remove all event handlers
@@ -4836,15 +4853,30 @@ flag23_loop:
 		editLogger.dispose();
 		editLogger = null;
 
-		removeChild(cnt);
+		var globalStyles = $('wasavi_global_styles');
+		if (globalStyles) {
+			globalStyles.innerHTML = '';
+		}
 
 		//
-		targetElement.focus();
+		if (extensionChannel) {
+			delete targetElement.getAttribute;
+			delete targetElement.setAttribute;
+			targetElement.type = 'wasavi-terminated';
+			extensionChannel.postMessage({
+				type:'notify-to-parent',
+				parentTabId:targetElement.parentTabId,
+				payload:targetElement
+			});
+			extensionChannel = null;
+		}
 		targetElement = null;
 
 		// fire terminate event
 		var ev = document.createEvent('Event');
-		ev.initEvent('wasavi_terminate', true, false);
+		ev.initEvent(
+			'wasavi' + (extensionChannel ? '_extension' : '') + '_terminate', 
+			true, false);
 		document.dispatchEvent(ev);
 	}
 	function setupEventHandlers (install) {
@@ -4855,10 +4887,8 @@ flag23_loop:
 		window[method]('blur', handleWindowBlur, false);
 
 		// document
-		if (!injectKeyevents) {
-			window.chrome && document[method]('keydown', handleKeydown, true);
-			                 document[method]('keypress', handleKeydown, true);
-		}
+		window.chrome && document[method]('keydown', handleKeydown, true);
+						 document[method]('keypress', handleKeydown, true);
 
 		var editor = $(EDITOR_CORE_ID);
 		if (editor) {
@@ -4874,21 +4904,16 @@ flag23_loop:
 			cover[method]('mousewheel', handleCoverMousewheel, false);
 		}
 
-		var input = getLineInput();
+		var input = $(LINE_INPUT_ID);
 		if (input) {
 			input[method]('input', handleInput, false);
 		}
 
 		cursor.setupEventHandlers(method);
 	}
-	function setGeometory (target, fullscreen) {
-		var FULLSCREEN_MARGIN = 8;
-
+	function setGeometory (target) {
 		if (target == undefined) {
 			target = targetElement;
-		}
-		if (fullscreen == undefined) {
-			fullscreen =  config.vars.fullscreen;
 		}
 		if (!target) {
 			return;
@@ -4897,51 +4922,28 @@ flag23_loop:
 		var container = $(CONTAINER_ID);
 		var editor = $(EDITOR_CORE_ID);
 		var footer = $('wasavi_footer');
-		var con = $('wasavi_console_container');
+		var conCon = $('wasavi_console_container');
+		var con = $('wasavi_console');
 		var conScaler = $('wasavi_console_scaler');
 		var mScaler = $('wasavi_multiline_scaler');
 		var faltTable = $('wasavi_footer_alter_table');
 
-		if (!container || !editor || !footer || !con || !conScaler || !mScaler || !faltTable) {
+		if (!container || !editor || !footer || !conCon || !con || !conScaler 
+		||  !mScaler || !faltTable) {
 			throw new Error(
 				'setGeometory: invalid element: ' +
 				[container, editor, footer, con, conScaler, mScaler, faltTable].join(', ')
 			);
 		}
 
-		var rect;
-		var position = '';
-		var footerHeight = +dataset(footer, 'goalHeight');
-
-		if (fullscreen || !target) {
-			rect = {
-				left:FULLSCREEN_MARGIN,
-				top:FULLSCREEN_MARGIN,
-				width:docClientWidth() - (FULLSCREEN_MARGIN * 2),
-				height:docClientHeight() - footerHeight - (FULLSCREEN_MARGIN * 2)
-			};
-			position = 'fixed';
-		}
-		else {
-			rect = target.getBoundingClientRect();
-			position = document.defaultView.getComputedStyle(target, '').position == 'fixed' ?
-				'fixed' : 'absolute';
-		}
-
-		console.log(JSON.stringify(rect));
-		console.log(position);
+		var rect = target.rect;
 
 		style(container, {
-			position:position,
-			left:rect.left + 'px',
-			top:rect.top + 'px',
-			width:rect.width + 'px',
-			height:(rect.height + footerHeight) + 'px'
+			//width:rect.width + 'px',
+			height:(rect.height + footer.offsetHeight) + 'px'
 		});
 
 		style(editor, {
-			left:0,
-			top:0,
 			width:rect.width + 'px',
 			height:rect.height + 'px'
 		});
@@ -4950,11 +4952,15 @@ flag23_loop:
 			width:(rect.width - 4) + 'px'
 		});
 
-		style(con, {
+		style(conCon, {
 			left:'8px',
 			top:'8px',
 			width:(rect.width - 16) + 'px',
 			height:(rect.height - 16) + 'px'
+		});
+
+		style(con, {
+			height:(rect.height - (16 + 12)) + 'px'
 		});
 
 		style(conScaler, {
@@ -5071,7 +5077,7 @@ flag23_loop:
 		if (state != 'line-input') {return;}
 		var line = $('wasavi_footer_alter');
 		var alter = $('wasavi_footer_modeline');
-		var input = getLineInput();
+		var input = $(LINE_INPUT_ID);
 		line.style.display = 'block';
 		alter.style.display = 'none';
 		$('wasavi_footer_input_indicator').textContent = initial;
@@ -5119,7 +5125,7 @@ flag23_loop:
 	}
 	function executeViCommand (/*, keepRunLevel*/) {
 		var editor = getEditorCore();
-		var input = getLineInput();
+		var input = $(LINE_INPUT_ID);
 		var e = document.createEvent('UIEvent');
 		var args = Array.prototype.slice.call(arguments);
 		var keepRunLevel = false;
@@ -5326,7 +5332,7 @@ flag23_loop:
 		}
 
 		var editor = getEditorCore();
-		var input = getLineInput();
+		var input = $(LINE_INPUT_ID);
 		var letter = chr(code);
 		var mapkey = chr(code, true);
 		var subkey = inputMode;
@@ -5499,7 +5505,7 @@ flag23_loop:
 			}
 			else if (execLineInputEditMap(input, mapkey, subkey, code)) {
 				setTimeout(function () {
-					var input = getLineInput();
+					var input = $(LINE_INPUT_ID);
 					if (input.value != dataset(input, 'current')) {
 						var e = document.createEvent('Event');
 						e.initEvent('input', false, false);
@@ -5586,7 +5592,7 @@ flag23_loop:
 		switch (inputMode) {
 		case 'line-input':
 			var editor = getEditorCore();
-			var input = getLineInput();
+			var input = $(LINE_INPUT_ID);
 			var key = prefixInput.motion || prefixInput.operation;
 			execMap(editor, e, commandMap, key, '@' + inputMode + '-reset', input.value);
 			execMap(editor, e, commandMap, key, '@' + inputMode + '-notify', input.value);
@@ -7731,6 +7737,7 @@ flag23_loop:
 
 	var runType;
 	var exrc = '';
+	var fontFamily = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var exGlobalSpecified = false;
 	var substituteWorker;
 	var exCommandDefault = new ExCommand('$default', '$default', 'ca1', 2, function (t, a) {
@@ -7893,8 +7900,8 @@ flag23_loop:
 			return undefined;
 		}),
 		new ExCommand('options', 'opt', '', 0, function (t, a) {
-			if (CAN_COMMUNICATE_WITH_EXTENSION) {
-				global.WasaviAgent.sendRequest({type:'open-options-page'});
+			if (extensionChannel) {
+				extensionChannel.postMessage({type:'open-options-page'});
 			}
 			else {
 				return requestBell('Don\'t know how to open options page.');
@@ -8086,11 +8093,8 @@ flag23_loop:
 		})
 	].sort(function (a, b) { return a.name.length - b.name.length; });
 
-	var injectKeyevents = false;
-	var registers = new Registers;
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
-	var bell = new Bell;
 	var textBlockRegex = new TextBlockRegex();
 	var abbrevs = {};
 	var config = new Configurator(
@@ -8146,7 +8150,11 @@ flag23_loop:
 			new VariableItem('history', 'i', 20),         // O
 			new VariableItem('monospace', 'i', 20),       // O
 			new VariableItem('fullscreen', 'b', false, function (v) {
-				setGeometory(targetElement, v);
+				targetElement && extensionChannel && extensionChannel.postMessage({
+					type:'notify-to-parent',
+					parentTabId:targetElement.parentTabId,
+					payload:{type:'wasavi-window-state', state:v ? 'maximized' : 'normal'}
+				});
 				return v;
 			}),   // O
 
@@ -8226,17 +8234,11 @@ flag23_loop:
 			'fs':   'fullscreen'
 		}
 	);
-	var enableList = {
-		enableTextArea: true,
-		enableText: false,
-		enableSearch: false,
-		enableTel: false,
-		enableUrl: false,
-		enableEmail: false,
-		enablePassword: false,
-		enableNumber: false
-	};
-	var lineInputHistories = new LineInputHistories(config.vars.history, ['/', ':']);
+
+	// extension depend objects
+	var registers;
+	var lineInputHistories;
+	var bell;
 
 	// instance variables
 	var targetElement;
@@ -9902,12 +9904,6 @@ flag23_loop:
 	}
 
 	// editor (document)
-	function handleDocumentFocus (e) {
-		!$(CONTAINER_ID)
-		&& (dataset(e.target, 'wasaviEditor') || '') == ''
-		&& (isMultilineTextInput(e.target) || isSinglelineTextInput(e.target))
-		&& install(e.target);
-	}
 	function handleKeydown (e) {
 		if (scroller.running) {
 			e.preventDefault();
@@ -9917,6 +9913,11 @@ flag23_loop:
 		}
 
 		if (cursor.inComposition) {
+			return;
+		}
+
+		// quick hack for firefox: ignore phantom key
+		if (e.charCode === 255 || e.keyCode === 255) {
 			return;
 		}
 
@@ -9963,8 +9964,13 @@ flag23_loop:
 			}
 		}
 
-		lastMessage = '';
-		strokeCount++;
+		if (++strokeCount == 1 && extensionChannel) {
+			extensionChannel.postMessage({
+				type:'notify-to-parent',
+				parentTabId:targetElement.parentTabId,
+				payload:{type:'wasavi-stroked'}
+			});
+		}
 		mapManager.process(keyCode, function (keyCode) {
 			if (processInput(keyCode, e)) {
 				e.preventDefault();
@@ -9976,12 +9982,9 @@ flag23_loop:
 	function handleInput (e) {
 		processInputSupplement(e);
 	}
-	function handleMousedown (e) {
-	}
-	function handleMouseup (e) {
-	}
-	function handleScroll (e) {
-	}
+	function handleMousedown (e) { }
+	function handleMouseup (e) { }
+	function handleScroll (e) { }
 
 	// cover
 	function handleCoverMousedown (e) {
@@ -9993,11 +9996,19 @@ flag23_loop:
 		switch (state) {
 		case 'normal':
 			cursor.update({focused:!isEditing(), visible:!backlog.visible});
+			$('wasavi_focus_holder').focus();
 			break;
 		case 'line-input':
 			cursor.update({focused:false, visible:!backlog.visible});
-			getLineInput().focus();
+			$(LINE_INPUT_ID).focus();
 			break;
+		}
+		if (extensionChannel) {
+			extensionChannel.postMessage({
+				type:'notify-to-parent',
+				parentTabId:targetElement.parentTabId,
+				payload:{type:'wasavi-focus-me'}
+			});
 		}
 	}
 	function handleCoverMousewheel (e) {
@@ -10020,6 +10031,11 @@ flag23_loop:
 		}
 	}
 
+	// frame channel
+	function handleExtensionChannelMessage (req) {
+		;
+	}
+
 	/*
 	 * external interface
 	 * ----------------
@@ -10027,7 +10043,7 @@ flag23_loop:
 
 	global.Wasavi = new function () {
 		function getRunning () {
-			return !!$(CONTAINER_ID);
+			return !!targetElement;
 		}
 		function ensureRunning () {
 			if (!getRunning()) { throw new Exeception('wasavi is not running'); }
@@ -10042,14 +10058,6 @@ flag23_loop:
 			},
 			get running () {
 				return getRunning();
-			},
-			get injectKeyevents () {
-				return injectKeyevents;
-			},
-			set injectKeyevents (v) {
-				if (!getRunning()) {
-					injectKeyevents = v;
-				}
 			},
 			get vars () {
 				return config.vars;
@@ -10086,19 +10094,6 @@ flag23_loop:
 				ensureRunning();
 				return new Position(getCurrentViewPositionIndices(getEditorCore()).top, 0);
 			},
-			get enableList () {
-				return enableList;
-			},
-			set enableList (v) {
-				if (!v || typeof v != 'object') {
-					return;
-				}
-				for (var i in enableList) {
-					if (i in v) {
-						enableList[i] = !!v[i];
-					}
-				}
-			},
 			get exrc () {
 				return exrc;
 			},
@@ -10126,21 +10121,41 @@ flag23_loop:
 			 * methods
 			 */
 
-			run: function (element) {
-				element = $(element);
-				if (!$(CONTAINER_ID)
-				&& element
-				&& (dataset(element, 'wasaviEditor') || '') == ''
-				&& (isMultilineTextInput(element) || isSinglelineTextInput(element))) {
-					install(element);
-				}
+			run: function (width, height) {
+				!getRunning() && install({
+					id:'demo',
+					nodeName:'textarea',
+					value:'',
+					selectionStart:0,
+					selectionEnd:0,
+					scrollTop:0,
+					scrollLeft:0,
+					readOnly:false,
+					type:'textarea',
+					rect:{
+						width:width || document.documentElement.clientWidth,
+						height:height || document.documentElement.clientHeight
+					},
+					fontStyle:'normal normal normal medium/1 "Consolas"',
+					borderStyle:'',
+					paddingStyle:'0',
+					dataset:{},
+					getAttribute: function (name) { return this.dataset[name]; },
+					setAttribute: function (name, value) { this.dataset[name] = value; }
+				});
 			},
 			send: function () {
 				ensureRunning();
 				var args = Array.prototype.slice.call(arguments);
 				args.push(true);
 				lastMessage = '';
-				strokeCount++;
+				if (++strokeCount == 1 && extensionChannel) {
+					extensionChannel.postMessage({
+						type:'notify-to-parent',
+						parentTabId:targetElement.parentTabId,
+						payload:{type:'stroked'}
+					});
+				}
 				executeViCommand.apply(null, args);
 			},
 			registers: function (name) {
@@ -10165,7 +10180,6 @@ flag23_loop:
 				if (!window.chrome && e.type != 'keypress') return;
 				if (window.chrome && e.type != 'keydown' && e.type != 'keypress') return;
 				if (!getRunning()) return;
-				if (!injectKeyevents) return;
 				handleKeydown(e);
 			},
 			notifyUpdateStorage: function (keys) {
@@ -10210,27 +10224,9 @@ flag23_loop:
 	 * ----------------
 	 */
 
-	(function () {
-		function dumpObject (obj) {
-			var a = [];
-			for (var i in obj) {
-				var s = i;
-				try {
-					s += ': ' + (global[i].toString().replace(/[\s\r\n\t]+/g, ' ').substring(0, 100));
-				}
-				catch (e) {
-					;
-				}
-				a.push(s);
-			}
-			console.log('*** wasavi.js dump Object ' + obj.toString() + ' ***\n\t' + a.join('\n\t'));
-		}
-		//dumpObject(global);
-
-		console.log(
-			'wasavi.js (' + VERSION_DESC + '):' +
-			'\n\trunning on ' + window.location.href.replace(/[?#].*$/, ''));
-	})();
+	console.log(
+		'wasavi.js (' + VERSION_DESC + '):' +
+		'\n\trunning on ' + window.location.href.replace(/[?#].*$/, ''));
 
 })(this);
 

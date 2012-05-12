@@ -1,0 +1,7 @@
+*.swp
+*~
+Thumbs.db
+desktop.ini
+.svn/
+opera/
+firefox/
