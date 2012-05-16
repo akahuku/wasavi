@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>wasavi frame for unittest</title>
+		<style>body{margin:0;padding:0;overflow:hidden;}</style>
+		<style id="wasavi_global_styles"></style>
+		<script src="../jsunit/app/jsUnitCore.js"></script>
+		<script src="../wasavi.js"></script>
+		<script src="utils.js"></script>
+		<script>
+			var re = /^\?test=([^&]+)/.exec(location.search);
+			if (re) {
+			    document.write('<script src="' + re[1] + '.js"></scr' + 'ipt>');
+			}
+		</script>
+	</head>
+	<body>
+		<div id="wasavi_container">
+			<div id="wasavi_editor"></div>
+			<div id="wasavi_footer">
+				<div id="wasavi_footer_modeline"></div>
+				<div id="wasavi_footer_alter">
+					<table id="wasavi_footer_alter_table">
+						<tr>
+							<td id="wasavi_footer_input_indicator"></td>
+							<td><input id="wasavi_footer_input" type="text" spellcheck="false"></td>
+						</tr>
+					</table>
+				</div>
+			</div>
+			<div id="wasavi_console_container">
+				<textarea id="wasavi_console" spellcheck="false"></textarea>
+			</div>
+			<div id="wasavi_multiline_scaler"></div>
+			<span id="wasavi_singleline_scaler"></div>
+			<div id="wasavi_console_scaler"></div>
+			<div id="wasavi_command_cursor"><span id="wasavi_command_cursor_inner"></span></div>
+			<textarea id="wasavi_edit_cursor" spellcheck="false"></textarea>
+			<div id="wasavi_cover" tabindex="0"></div>
+		</div>
+	</body>
+</html>

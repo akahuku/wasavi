@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 115 2012-05-12 02:04:45Z akahuku $
+ * @version $Id: background.js 117 2012-05-12 13:13:35Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -363,6 +363,12 @@ function OperaExtensionWrapper () {
  * extension wrapper class for firefox (Add-on SDK)
  */
 
+function dummyRequire () {
+	require('self');
+	require('page-mod');
+	require('tabs');
+	require('widget');
+}
 function FirefoxJetpackExtensionWrapper () {
 	var self = require('self');
 	var pagemod = require('page-mod');

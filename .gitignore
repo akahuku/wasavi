@@ -1,7 +1,11 @@
 *.swp
 *~
+specs/
+.svn/
+firefox/
+opera/
+jsunit/
+!firefox/package.json
+!opera/config.xml
 Thumbs.db
 desktop.ini
-.svn/
-opera/
-firefox/

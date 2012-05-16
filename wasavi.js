@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 115 2012-05-12 02:04:45Z akahuku $
+ * @version $Id: wasavi.js 121 2012-05-16 19:30:10Z akahuku $
  * @sourceURL=wasavi.js
  */
 /**
@@ -94,8 +94,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 115 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 115 2012-05-12 02:04:45Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 121 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 121 2012-05-16 19:30:10Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -1323,9 +1323,10 @@
 					delete usedMarks[index];
 				}
 
-				var ss = editor.selectionStart;
+				//var ss = editor.selectionStart;
 				for (var i in usedMarks) {
-					marks[i] = ss;
+					delete marks[i];
+					//marks[i] = ss;
 				}
 			}
 			function calcColumn (span) {
@@ -1531,7 +1532,7 @@
 			isEndOfText: function () {
 				var a = arg2pos(arguments);
 				if (a.row < 0 || a.row >= this.elm.childNodes.length) {
-					throw new Error('isEndOfText: argument row (' + row + ') out of range.');
+					throw new Error('isEndOfText: argument row (' + a.row + ') out of range.');
 				}
 				if (a.row < this.elm.childNodes.length - 1) {
 					return false;
@@ -1545,7 +1546,7 @@
 			isNewline: function () {
 				var a = arg2pos(arguments);
 				if (a.row < 0 || a.row >= this.elm.childNodes.length) {
-					throw new Error('isNewline: argument row (' + row + ') out of range.');
+					throw new Error('isNewline: argument row (' + a.row + ') out of range.');
 				}
 				var node = this.elm.childNodes[a.row].textContent;
 				if (a.col < node.length - 1 || a.row == this.elm.childNodes.length - 1) {
@@ -1758,8 +1759,19 @@
 				while ((node = iter.nextNode())) {
 					var next = totalLength + node.nodeValue.length;
 					if (totalLength <= arg.col && arg.col < next) {
-						var li = arg.col - totalLength;
-						node.insertData(li, text);
+						var pnode = node.previousSibling;
+						var index = arg.col - totalLength;
+
+						if (index == 0
+						&&  pnode
+						&&  pnode.nodeName == 'SPAN'
+						&&  pnode.className == 'wasavi_mark') {
+							pnode.parentNode.insertBefore(document.createTextNode(text), pnode);
+						}
+						else {
+							node.insertData(index, text);
+						}
+
 						arg.col += text.length;
 						break;
 					}
@@ -3826,7 +3838,7 @@ flag23_loop:
 				return new PairBracketsIndicator(c, t, result);
 			}
 			else {
-				requestBell('Cannot find pair bracket.');
+				requestRegisterNotice('Cannot find pair bracket.');
 			}
 		}
 		return null;
@@ -5100,12 +5112,12 @@ flag23_loop:
 			};
 		}
 	}
-	function requestBell () {
+	function requestRegisterNotice () {
 		var result;
-		if (!requestedState.bell) {
-			requestedState.bell = {play:true};
+		if (!requestedState.notice) {
+			requestedState.notice = {play:true};
 			if (arguments.length) {
-				result = requestedState.bell.message = _.apply(null, arguments);
+				result = requestedState.notice.message = _.apply(null, arguments);
 			}
 		}
 		return result;
@@ -5563,22 +5575,22 @@ flag23_loop:
 					break;
 				}
 				requestedState.modeline = null;
-				config.vars.errorbells && requestBell();
+				config.vars.errorbells && requestRegisterNotice();
 			}
 			if (requestedState.logEditing) {
 				logEditing(editor);
 				editedString = '';
 				requestedState.logEditing = false;
 			}
-			if (requestedState.bell) {
-				if (requestedState.bell.play) {
+			if (requestedState.notice) {
+				if (requestedState.notice.play) {
 					bell.play();
 				}
-				if (requestedState.bell.message) {
-					lastMessage = requestedState.bell.message;
-					console.log(requestedState.bell.message);
+				if (requestedState.notice.message) {
+					lastMessage = requestedState.notice.message;
+					console.log(requestedState.notice.message);
 				}
-				requestedState.bell = null;
+				requestedState.notice = null;
 			}
 			if (runLevel == 0 && state == 'normal' && (backlog.queued || backlog.visible)) {
 				backlog.write(false, messageUpdated);
@@ -5749,10 +5761,10 @@ flag23_loop:
 	}
 	function inputEscape () {
 		if (arguments.length) {
-			requestBell('{0} canceled.', toVisibleString(arguments[0]));
+			requestRegisterNotice('{0} canceled.', toVisibleString(arguments[0]));
 		}
 		else {
-			inputMode == 'command' && requestBell('In command mode.');
+			inputMode == 'command' && requestRegisterNotice('In command mode.');
 		}
 
 		prefixInput.reset();
@@ -5784,7 +5796,7 @@ flag23_loop:
 	function motionLeft (c, t, count) {
 		count || (count = 1);
 		var n = t.selectionStart;
-		n.col <= 0 && requestBell('Top of line.');
+		n.col <= 0 && requestRegisterNotice('Top of line.');
 		n.col = Math.max(n.col - count, 0);
 		t.selectionStart = n;
 		prefixInput.motion = c;
@@ -5795,7 +5807,7 @@ flag23_loop:
 		count || (count = 1);
 		var n = t.selectionEnd;
 		var length = t.rows(n).length;
-		n.col >= length - 1 && requestBell('Tail of line');
+		n.col >= length - 1 && requestRegisterNotice('Tail of line');
 		n.col = Math.min(n.col + count, length);
 		t.selectionEnd = n;
 		prefixInput.motion = c;
@@ -5819,7 +5831,7 @@ flag23_loop:
 	function motionNextWord (c, t, count, bigWord, wordEnd) {
 		var n = t.selectionEnd;
 		count || (count = 1);
-		n.col >= t.rows(n).length - 1 && n.row >= t.rowLength - 1 && requestBell('Tail of text.');
+		n.col >= t.rows(n).length - 1 && n.row >= t.rowLength - 1 && requestRegisterNotice('Tail of text.');
 
 		function doBigWord () {
 			for (var i = 0; i < count; i++) {
@@ -5958,7 +5970,7 @@ flag23_loop:
 	function motionPrevWord (c, t, count, bigWord) {
 		var n = t.selectionStart;
 		count || (count = 1);
-		n.col <= 0 && n.row <= 0 && requestBell('Top of text.');
+		n.col <= 0 && n.row <= 0 && requestRegisterNotice('Top of text.');
 
 		if (bigWord) {
 			for (var i = 0; i < count; i++) {
@@ -6017,16 +6029,23 @@ flag23_loop:
 		isWordMotion = true;
 		return true;
 	}
-	function motionFindForward (c, t, count, stopBefore) {
+	function motionFindForward (c, t, count, stopBefore, continuous) {
 		var n = t.selectionEnd;
 		count || (count = 1);
 
 		var startn = n.clone();
 		var found = true;
+		var line = t.rows(n);
 		for (var i = 0; i < count; i++) {
-			var index = t.rows(n).indexOf(c, n.col + 1);
+			var index = line.indexOf(c, n.col + 1);
 			if (index >= 0) {
 				n.col = index;
+				if (stopBefore 
+				&&  continuous 
+				&&  i == count - 1 
+				&&  startn.eq(new Position(n.row, n.col - 1))) {
+					count++;
+				}
 			}
 			else {
 				found = false;
@@ -6040,7 +6059,7 @@ flag23_loop:
 			t.selectionEnd = n;
 		}
 		else {
-			requestBell('Next search target not found.');
+			requestRegisterNotice('Next search target not found.');
 		}
 		lastHorzFindCommand.direction = 1;
 		lastHorzFindCommand.letter = c;
@@ -6048,16 +6067,23 @@ flag23_loop:
 		idealWidthPixels = -1;
 		return true;
 	}
-	function motionFindBackward (c, t, count, stopBefore) {
+	function motionFindBackward (c, t, count, stopBefore, continuous) {
 		var n = t.selectionStart;
 		count || (count = 1);
 
 		var startn = n.clone();
 		var found = true;
+		var line = t.rows(n);
 		for (var i = 0; i < count; i++) {
-			var index = t.rows(n).lastIndexOf(c, n.col - 1);
+			var index = line.lastIndexOf(c, n.col - 1);
 			if (index >= 0) {
 				n.col = index;
+				if (stopBefore 
+				&&  continuous 
+				&&  i == count - 1 
+				&&  startn.eq(new Position(n.row, n.col + 1))) {
+					count++;
+				}
 			}
 			else {
 				found = false;
@@ -6071,7 +6097,7 @@ flag23_loop:
 			t.selectionStart = n;
 		}
 		else {
-			requestBell('Previous search target not found.');
+			requestRegisterNotice('Previous search target not found.');
 		}
 		lastHorzFindCommand.direction = -1;
 		lastHorzFindCommand.letter = c;
@@ -6407,7 +6433,7 @@ flag23_loop:
 				done = true;
 			}
 			else {
-				requestBell('Replace count too large.');
+				requestRegisterNotice('Replace count too large.');
 			}
 		}
 		else {
@@ -6432,7 +6458,7 @@ flag23_loop:
 
 		count || (count = 1);
 		refreshIdealWidthPixels(t);
-		n.row <= 0 && requestBell('Top of text');
+		n.row <= 0 && requestRegisterNotice('Top of text');
 		n.row = Math.max(n.row - count, 0);
 
 		var width = 0;
@@ -6465,7 +6491,7 @@ flag23_loop:
 
 		count || (count = 1);
 		refreshIdealWidthPixels(t);
-		n.row >= t.rowLength - 1 && requestBell('Tail of text.');
+		n.row >= t.rowLength - 1 && requestRegisterNotice('Tail of text.');
 		n.row = Math.min(n.row + count, t.rowLength - 1);
 
 		var width = 0;
@@ -7904,7 +7930,7 @@ flag23_loop:
 				extensionChannel.postMessage({type:'open-options-page'});
 			}
 			else {
-				return requestBell('Don\'t know how to open options page.');
+				return requestRegisterNotice('Don\'t know how to open options page.');
 			}
 			return undefined;
 		}),
@@ -7924,7 +7950,7 @@ flag23_loop:
 		new ExCommand('redo', 'r', '', 0, function (t, a) {
 			var result = editLogger.redo();
 			if (result === false) {
-				return requestBell('No redo item.');
+				return requestRegisterNotice('No redo item.');
 			}
 			else {
 				requestShowMessage(
@@ -8019,7 +8045,7 @@ flag23_loop:
 		new ExCommand('undo', 'u', '', 0, function (t, a) {
 			var result = editLogger.undo();
 			if (result === false) {
-				return requestBell('No undo item.');
+				return requestRegisterNotice('No undo item.');
 			}
 			else {
 				requestShowMessage(
@@ -8347,16 +8373,49 @@ flag23_loop:
 		'd': {
 			'command': operationDefault,
 			'@op': function (c, t) {
-				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
-				t.isLineOrientSelection = isLineOrient;
-				yank(t, prefixInput.count);
-				var deleted = deleteSelection(t);
-				if (isLineOrient) {
-					t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
-					if (deleted >= config.vars.report) {
-						requestShowMessage(_('Deleted {0} {line:0}.', deleted));
+				if (!requestedState.notice) {
+					var origin = t.selectionStart;
+					var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+					var actualCount = Math.abs(t.selectionEndRow - t.selectionStartRow) + 1;
+					var deleted = 0;
+
+					t.isLineOrientSelection = isLineOrient;
+					if (isLineOrient) {
+						t.selectionEnd = t.selectionStart;
+					}
+					else {
+						// inclusive motions
+						if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
+						||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
+						||  /^[eEft%]$/.test(prefixInput.motion)) {
+							if (!t.isNewline(t.selectionEnd)) {
+								t.selectionEnd = t.rightPos(t.selectionEnd);
+							}
+						}
+					}
+
+					if (false) {
+						console.log([
+							'*** d ***',
+							'selectionStart: ' + t.selectionStart,
+							'  selectionEnd: ' + t.selectionEnd,
+							'         value: ' + t.value
+						].join('\n'));
+					}
+
+					yank(t, actualCount);
+					deleted = deleteSelection(t);
+
+					if (isLineOrient) {
+						origin.row = Math.min(origin.row, t.rowLength - 1);
+						t.setSelectionRange(t.getLineTopOffset2(origin));
+
+						if (deleted >= config.vars.report) {
+							requestShowMessage(_('Deleted {0} {line:0}.', deleted));
+						}
 					}
 				}
+
 				isEditCompleted = true;
 				prefixInput.motion = c;
 				requestSimpleCommandUpdate();
@@ -8510,9 +8569,6 @@ flag23_loop:
 				t.extendSelectionTo(result);
 				idealWidthPixels = -1;
 				isSmoothScrollRequested = true;
-				if (!prefixInput.isEmptyOperation) {
-					t.selectionEnd = t.rightPos(t.selectionEnd);
-				}
 				return true;
 			}
 			else {
@@ -8538,14 +8594,16 @@ flag23_loop:
 				result = motionFindForward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
-					lastHorzFindCommand.stopBefore);
+					lastHorzFindCommand.stopBefore,
+					true);
 				lastHorzFindCommand.direction *= -1;
 				break;
 			case 1:
 				result = motionFindBackward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
-					lastHorzFindCommand.stopBefore);
+					lastHorzFindCommand.stopBefore,
+					true);
 				lastHorzFindCommand.direction *= -1;
 				break;
 			}
@@ -8560,13 +8618,15 @@ flag23_loop:
 				result = motionFindBackward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
-					lastHorzFindCommand.stopBefore);
+					lastHorzFindCommand.stopBefore,
+					true);
 				break;
 			case 1:
 				result = motionFindForward(
 					lastHorzFindCommand.letter,
 					t, prefixInput.count,
-					lastHorzFindCommand.stopBefore);
+					lastHorzFindCommand.stopBefore,
+					true);
 				break;
 			}
 			return result;
@@ -8940,7 +9000,7 @@ flag23_loop:
 					result = true;
 					break;
 				default:
-					requestBell('Unknown g-prefixed command: ' + c);
+					requestRegisterNotice('Unknown g-prefixed command: ' + c);
 					break;
 				}
 				return result;
@@ -8994,7 +9054,7 @@ flag23_loop:
 				requestShowPrefixInput(_('{0}: find forward', keyName(c)));
 			},
 			'wait-a-letter': function (c, t) {
-				prefixInput.appendMotion(c);
+				prefixInput.trailer = c;
 				return motionFindForward(c, t, prefixInput.count);
 			}
 		},
@@ -9005,7 +9065,7 @@ flag23_loop:
 				requestShowPrefixInput(_('{0}: find backward', keyName(c)));
 			},
 			'wait-a-letter': function (c, t) {
-				prefixInput.appendMotion(c);
+				prefixInput.trailer = c;
 				return motionFindBackward(c, t, prefixInput.count);
 			}
 		},
@@ -9016,7 +9076,7 @@ flag23_loop:
 				requestShowPrefixInput(_('{0}: find forward', keyName(c)));
 			},
 			'wait-a-letter': function (c, t) {
-				prefixInput.appendMotion(c);
+				prefixInput.trailer = c;
 				return motionFindForward(c, t, prefixInput.count, true);
 			}
 		},
@@ -9027,7 +9087,7 @@ flag23_loop:
 				requestShowPrefixInput(_('{0}: find backward', keyName(c)));
 			},
 			'wait-a-letter': function (c, t) {
-				prefixInput.appendMotion(c);
+				prefixInput.trailer = c;
 				return motionFindBackward(c, t, prefixInput.count, true);
 			}
 		},
@@ -9231,7 +9291,7 @@ flag23_loop:
 					break;
 
 				default:
-					requestBell('Unknown adjust command.');
+					requestRegisterNotice('Unknown adjust command.');
 					break;
 				}
 			}
@@ -9326,7 +9386,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.undo();
 				if (result === false) {
-					requestShowMessage(requestBell('No undo item.'));
+					requestShowMessage(requestRegisterNotice('No undo item.'));
 				}
 				else {
 					requestShowMessage(
@@ -9343,7 +9403,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.redo();
 				if (result === false) {
-					requestShowMessage(requestBell('No redo item.'));
+					requestShowMessage(requestRegisterNotice('No redo item.'));
 				}
 				else {
 					requestShowMessage(
@@ -9821,7 +9881,7 @@ flag23_loop:
 		},
 		'\u000e'/*^N*/: function (c, t) {
 			if (lineInputHistories.isInitial) {
-				requestBell('Tail of history');
+				requestRegisterNotice('Tail of history');
 			}
 			else {
 				var line = lineInputHistories.next();
@@ -9829,7 +9889,7 @@ flag23_loop:
 					line = dataset(t, 'wasaviLineInputCurrent');
 				}
 				if (line == undefined) {
-					requestBell('Invalid history item');
+					requestRegisterNotice('Invalid history item');
 				}
 				else {
 					t.value = line;
@@ -9844,7 +9904,7 @@ flag23_loop:
 			}
 			var line = lineInputHistories.prev();
 			if (line == undefined) {
-				requestBell('Top of history');
+				requestRegisterNotice('Top of history');
 			}
 			else {
 				t.value = line;
@@ -10112,6 +10172,10 @@ flag23_loop:
 				ensureRunning();
 				return getEditorCore().value;
 			},
+			get rowLength () {
+				ensureRunning();
+				return getEditorCore().elm.childNodes.length;
+			},
 			get lastMessage () {
 				ensureRunning();
 				return lastMessage;
@@ -10186,10 +10250,10 @@ flag23_loop:
 				keys.forEach(function (key) {
 					switch (key) {
 					case registers.storageKey:
-						registers.load();
+						registers && registers.load();
 						break;
 					case lineInputHistories.storageKey:
-						lineInputHistories.load();
+						lineInputHistories && lineInputHistories.load();
 						break;
 					}
 				});

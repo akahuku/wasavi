@@ -1,0 +1,513 @@
+/**
+ * wasavi: vi clone implemented in javascript
+ * =============================================================================
+ *
+ *
+ * @author akahuku@gmail.com
+ * @version $Id: operations.js 121 2012-05-16 19:30:10Z akahuku $
+ */
+/**
+ * Copyright (c) 2012 akahuku@gmail.com
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *     1. Redistributions of source code must retain the above copyright
+ *        notice, this list of conditions and the following disclaimer.
+ *     2. Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials
+ *        provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * tests
+ */
+
+function _testDeleteFirstNonWhiteCharOfLine () {
+	Wasavi.send('i', '\tfoobar', '\u001b');
+	Wasavi.send('d^');
+
+	assertEquals('\tr', Wasavi.value);
+	assertPos([0, 1]);
+}
+
+function _testDeleteTopOfLine () {
+	Wasavi.send('i', '\tfoobar', '\u001b');
+	Wasavi.send('d0');
+
+	assertEquals('r', Wasavi.value);
+	assertPos([0, 0]);
+}
+
+function _testDeleteTailOfLine () {
+	Wasavi.send('i', '\tfoobar', '\u001b1|');
+	Wasavi.send('d$');
+
+	assertEquals('', Wasavi.value);
+	assertPos([0, 0]);
+}
+
+function _testDeleteDirectColumn () {
+	Wasavi.send('i', '0123456789\n0123456789', '\u001b1G1|');
+
+	Wasavi.send('d5|');
+	assertEquals('#1-1', '456789\n0123456789', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('$d3|');
+	assertEquals('#2-1', '459\n0123456789', Wasavi.value);
+	assertPos('#2-2', [0, 2]);
+
+	Wasavi.send('2G1|d100|');
+	assertEquals('#3-1', '459\n', Wasavi.value);
+	assertPos('#3-1', [1, 0]);
+}
+
+function _testDeleteJumpToMatchedParenthes () {
+	Wasavi.send('i', 'this is (first) line.\nthis is (second) line)', '\u001b');
+
+	Wasavi.send('1G1|f(d%');
+	assertEquals('#1-1', 'this is  line.\nthis is (second) line)', Wasavi.value);
+	assertPos('#1-2', [0, 8]);
+
+	Wasavi.send('2G1|f)d%');
+	assertEquals('#2-1', 'this is  line.\nthis is  line)', Wasavi.value);
+	assertPos('#2-2', [1, 8]);
+
+	Wasavi.send('G$d%');
+	assertEquals('#3-1', 'this is  line.\nthis is  line)', Wasavi.value);
+	assertPos('#3-2', [1, 13]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteSearchForward () {
+	Wasavi.send('i', 'find the\nchar4cter in cu4rent 4line', '\u001b1G1|');
+
+	Wasavi.send('d/4\n');
+	assertEquals('#1-1', '4cter in cu4rent 4line', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('2d/4\n');
+	assertEquals('#2-1', '4line', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('2d/X\n');
+	assertEquals('#3-1', '4line', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteSearchBackward () {
+	Wasavi.send('i', 'find the char4cter in cu4rent\n4line', '\u001b');
+
+	Wasavi.send('d?4\n');
+	assertEquals('#1-1', 'find the char4cter in cu4rent\ne', Wasavi.value);
+	assertPos('#1-2', [1, 0]);
+
+	Wasavi.send('2d?4\n');
+	assertEquals('#2-1', 'find the chare', Wasavi.value);
+	assertPos('#2-2', [0, 13]);
+
+	Wasavi.send('2d?X\n');
+	assertEquals('#3-1', 'find the chare', Wasavi.value);
+	assertPos('#3-2', [0, 13]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteFindForward () {
+	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b1G1|');
+
+	Wasavi.send('df4');
+	assertEquals('#1-1', 'cter in cu4rent 4line', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('2df4');
+	assertEquals('#2-1', 'line', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('df4');
+	assertEquals('#3-1', 'line', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteFindBackward () {
+	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b');
+
+	Wasavi.send('dF4');
+	assertEquals('#1-1', 'find the char4cter in cu4rent e', Wasavi.value);
+	assertPos('#1-2', [0, 30]);
+
+	Wasavi.send('2dF4');
+	assertEquals('#2-1', 'find the chare', Wasavi.value);
+	assertPos('#2-2', [0, 13]);
+
+	Wasavi.send('dF4');
+	assertEquals('#3-1', 'find the chare', Wasavi.value);
+	assertPos('#3-2', [0, 13]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteFindFowardBeforeStop () {
+	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b1G1|');
+
+	Wasavi.send('dt4');
+	assertEquals('#1-1', '4cter in cu4rent 4line', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('2dt4');
+	assertEquals('#2-1', '4line', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('dt4');
+	assertEquals('#3-1', '4line', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+	assert('#3-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteFindBackwardBeforeStop () {
+	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b');
+
+	Wasavi.send('dT4');
+	assertEquals('#1-1', 'find the char4cter in cu4rent 4e', Wasavi.value);
+	assertPos('#1-2', [0, 31]);
+
+	Wasavi.send('dT4');
+	assertEquals('#2-1', 'find the char4cter in cu4rent 4e', Wasavi.value);
+	assertPos('#2-2', [0, 31]);
+
+	Wasavi.send('d2T4');
+	assertEquals('#3-1', 'find the char4cter in cu4e', Wasavi.value);
+	assertPos('#3-2', [0, 25]);
+
+	Wasavi.send('d3T4');
+	assertEquals('#4-1', 'find the char4cter in cu4e', Wasavi.value);
+	assertPos('#4-2', [0, 25]);
+	assert('#4-3', Wasavi.lastMessage != '');
+}
+
+function _testDeleteFindInvert () {
+	Wasavi.send('4i', 'fi4st s4cond th4rd fou4th\n', '\u001b');
+
+	Wasavi.send('1G1|df4$d,');
+	assertEquals('#1-1', 'st s4cond th4rd fouh', Wasavi.value.split('\n')[0]);
+	assertPos('#1-2', [0, 19]);
+
+	Wasavi.send('2G1|dt4$d,');
+	assertEquals('#2-1', '4st s4cond th4rd fou4h', Wasavi.value.split('\n')[1]);
+	assertPos('#2-2', [1, 21]);
+
+	Wasavi.send('3G$dF40d,');
+	assertEquals('#3-1', 'st s4cond th4rd fouh', Wasavi.value.split('\n')[2]);
+	assertPos('#3-2', [2, 0]);
+
+	Wasavi.send('4G$dT40d,');
+	assertEquals('#4-1', '4st s4cond th4rd fou4h', Wasavi.value.split('\n')[3]);
+	assertPos('#4-2', [3, 0]);
+}
+
+function _testDeleteFindRepeat () {
+	Wasavi.send('4i', 'fi4st s4cond th4rd fou4th\n', '\u001b');
+
+	Wasavi.send('1G1|df4d;');
+	assertEquals('#1-1', 'cond th4rd fou4th', Wasavi.value.split('\n')[0]);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('2G1|dt4d;');
+	assertEquals('#2-1', '4cond th4rd fou4th', Wasavi.value.split('\n')[1]);
+	assertPos('#2-2', [1, 0]);
+
+	Wasavi.send('3G$dF4d;');
+	assertEquals('#3-1', 'fi4st s4cond thh', Wasavi.value.split('\n')[2]);
+	assertPos('#3-2', [2, 15]);
+
+	Wasavi.send('4G$dT4d;');
+	assertEquals('#4-1', 'fi4st s4cond th4h', Wasavi.value.split('\n')[3]);
+	assertPos('#4-2', [3, 16]);
+}
+
+function _testDeleteDownLineOrient () {
+	Wasavi.send('i', '\tfoobar\n\tfoobar\n\tfoobar\n\tfoobar\n\tfoobar', '\u001bgg');
+
+	Wasavi.send('d_');
+	assertEquals('#1-1', 4, Wasavi.value.split('\n').length);
+	assertPos('#3-2', [0, 1]);
+
+	Wasavi.send('d2_');
+	assertEquals('#2-1', 2, Wasavi.value.split('\n').length);
+	assertPos('#3-2', [0, 1]);
+
+	Wasavi.send('d3_');
+	assertEquals('#3-1', '', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+}
+
+function _testDeleteMark () {
+	Wasavi.send('i', 'foo1bar\nbaz3bax', '\u001b');
+
+	Wasavi.send('1G0f1ma0d`a');
+	assertEquals('#1-1', '1bar\nbaz3bax', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('2G$F3ma$d`a');
+	assertEquals('#2-1', '1bar\nbazx', Wasavi.value);
+	assertPos('#2-2', [1, 3]);
+}
+
+function _testDeleteMarkLineOrient () {
+	Wasavi.send('i', '1\n2\n3\n4\n5\n6\n7', '\u001b');
+
+	Wasavi.send('3Gma1Gd`a');
+	assertEquals('#1-1', '3\n4\n5\n6\n7', Wasavi.value);
+
+	Wasavi.send('2GmaGd`a');
+	assertEquals('#2-1', '3\n7', Wasavi.value);
+}
+
+function _testDeleteSectionForward () {
+	// TBD
+}
+
+function _testDeleteSectionBackward () {
+	// TBD
+}
+
+function _testDeleteParagraphForward () {
+	// TBD
+}
+
+function _testDeleteParagraphBackward () {
+	// TBD
+}
+
+function _testDeleteSentenceForward () {
+	// TBD
+}
+
+function _testDeleteSentenceBackward () {
+	// TBD
+}
+
+function _testDeleteDownLine () {
+	/*
+	 * first            fi_st
+	 * se_ond
+	 * third     -->
+	 * f
+	 * fifth
+	 */
+	Wasavi.send('i', 'first\nsecond\nthird\nf\nfifth', '\u001b');
+	Wasavi.send('2G3|d10j');
+	assertEquals('#1-1', 'first', Wasavi.value);
+	assertPos('#1-2', [0, 2]);
+	assert('#1-3', Wasavi.lastMessage == '');
+	assertEquals('#1-4', 'second\nthird\nf\nfifth\n', Wasavi.registers('1'));
+
+	/*
+	 * first            first
+	 * se_ond           _
+	 * third     -->    fifth
+	 * f
+	 * fifth
+	 */
+	Wasavi.send('ggdGi', 'first\nsecond\nthird\nf\nfifth', '\u001b');
+	Wasavi.send('2G3|dj');
+	assertEquals('#2-1', 'first\nf\nfifth', Wasavi.value);
+	assertEquals('#2-2', 'second\nthird\n', Wasavi.registers('"'));
+	assertEquals('#2-3', 'second\nthird\n', Wasavi.registers('1'));
+	assertEquals('#2-4', 'second\nthird\nf\nfifth\n', Wasavi.registers('2'));
+	assertPos([1, 0]);
+
+	/*
+	 * fir_t            fif_h
+	 * f         -->
+	 * fifth
+	 */
+	Wasavi.send('gg3ldj');
+	assertEquals('#3-1', 'fifth', Wasavi.value);
+	assertEquals('#3-2', 'first\nf\n', Wasavi.registers('"'));
+	assertEquals('#3-3', 'first\nf\n', Wasavi.registers('1'));
+	assertEquals('#3-4', 'second\nthird\n', Wasavi.registers('2'));
+	assertPos([0, 3]);
+}
+
+function _testDeleteUpLine () {
+	Wasavi.send('i', 'first\nsecond\nt', '\u001b');
+	Wasavi.send('2G3|');
+
+	/*
+	 * POSIX defines that moving beyond top or tail of buffer causes an error,
+	 * But vim does not.  We follow vim.
+	 */
+	Wasavi.send('2G3|d10k');
+	assertEquals('#1-1', 't', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+	assert('#1-3', Wasavi.lastMessage == '');
+
+	Wasavi.send('ggdGi', 'first\nsecond\nt', '\u001b');
+	Wasavi.send('2G3|dk');
+	assertEquals('#2-1', 't', Wasavi.value);
+	assertEquals('#2-2', 'first\nsecond\n', Wasavi.registers('"'));
+	assertEquals('#2-3', 'first\nsecond\n', Wasavi.registers('1'));
+	assertPos([0, 0]);
+}
+
+function _testDeleteLeft () {
+	Wasavi.send('i', 'foo bar baz', '\u001b');
+	assertPos('#1-1', [0, 10]);
+
+	Wasavi.send('dh');
+	assertEquals('#2-1', 'foo bar bz', Wasavi.value);
+	assertPos('#2-2', [0, 9]);
+
+	Wasavi.send('d2h');
+	assertEquals('#3-1', 'foo barz', Wasavi.value);
+	assertPos('#3-2', [0, 7]);
+
+	Wasavi.send('d4|');
+	assertEquals('#4-1', 'fooz', Wasavi.value);
+	assertPos('#4-2', [0, 3]);
+}
+
+function _testDeleteRight () {
+	Wasavi.send('i', 'foo bar baz', '\u001b1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send('dl');
+	assertEquals('#2-1', 'oo bar baz', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('d2l');
+	assertEquals('#3-1', ' bar baz', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+
+	Wasavi.send('d5|');
+	assertEquals('#4-1', ' baz', Wasavi.value);
+	assertPos('#4-2', [0, 0]);
+
+	Wasavi.send('d100|');
+	assertEquals('#5-1', '', Wasavi.value);
+	assertPos('#5-2', [0, 0]);
+}
+
+function _testDeleteLeftWord () {
+	Wasavi.send('i', 'foo bar baz bax', '\u001b');
+
+	Wasavi.send('db');
+	assertEquals('#1-1', 'foo bar baz x', Wasavi.value);
+	assertPos('#1-2', [0, 12]);
+
+	Wasavi.send('d2b');
+	assertEquals('#2-1', 'foo x', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function _testDeleteRightWord () {
+	Wasavi.send('i', 'foo bar baz bax', '\u001b1|');
+
+	Wasavi.send('dw');
+	assertEquals('#1-1', 'bar baz bax', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('d2w');
+	assertEquals('#2-1', 'bax', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+}
+
+function _testDeleteRightWordBeforeStop () {
+	Wasavi.send('i', 'foo bar baz bax', '\u001b1|');
+
+	Wasavi.send('de');
+	assertEquals('#1-1', ' bar baz bax', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('d2e');
+	assertEquals('#2-1', ' bax', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('xde');
+	assertEquals('#3-1', '', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+}
+
+function _testDeleteGotoPrefix () {
+	Wasavi.send('i', '\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\t7', '\u001b');
+
+	Wasavi.send('ggd3G');
+	assertEquals('#1-1', '\t4\n\t5\n\t6\n\t7', Wasavi.value);
+	assertPos('#1-2', [0, 1]);
+
+	Wasavi.send('Gd3G');
+	assertEquals('#2-1', '\t4\n\t5', Wasavi.value);
+	assertPos('#2-2', [1, 1]);
+}
+
+function _testDeleteTopOfView () {
+	makeScrollableBuffer(2);
+
+	var rowLength = Wasavi.rowLength;
+	Wasavi.send('GH');
+	var viewLines = Wasavi.rowLength - Wasavi.row;
+
+	Wasavi.send('GdH');
+	assertEquals(Wasavi.rowLength, rowLength - viewLines);
+}
+
+function testDeleteMiddleOfView () {
+	makeScrollableBuffer(2);
+
+	var rowLength = Wasavi.rowLength;
+	Wasavi.send('ggM');
+	var viewLines = Wasavi.row + 1;
+
+	Wasavi.send('ggdM');
+	assertEquals('#1', Wasavi.rowLength, rowLength - viewLines);
+
+	var rowLength = Wasavi.rowLength;
+	Wasavi.send('GM');
+	var viewLines = Wasavi.rowLength - Wasavi.row;
+
+	Wasavi.send('GdM');
+	assertEquals('#2', Wasavi.rowLength, rowLength - viewLines);
+}
+
+function testDeleteBottomOfView () {
+	makeScrollableBuffer(2);
+
+	var rowLength = Wasavi.rowLength;
+	Wasavi.send('ggL');
+	var viewLines = Wasavi.row + 1;
+
+	Wasavi.send('ggdL');
+	assertEquals(Wasavi.rowLength, rowLength - viewLines);
+}
+
+function testDeleteGoto () {
+	Wasavi.send('i', '1\n2\n3\n\t4\n5\n6', '\u001b');
+
+	Wasavi.send('ggd3G');
+	assertEquals('#1-1', '\t4\n5\n6', Wasavi.value);
+	assertPos('#1-2', [0, 1]);
+
+	Wasavi.send('Gd2G');
+	assertEquals('#2-1', '\t4', Wasavi.value);
+	assertPos('#2-2', [0, 1]);
+}
+
+
+/* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */
