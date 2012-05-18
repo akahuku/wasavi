@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: operations.js 121 2012-05-16 19:30:10Z akahuku $
+ * @version $Id: operations.js 122 2012-05-18 03:08:21Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -38,7 +38,19 @@
  * tests
  */
 
-function _testDeleteFirstNonWhiteCharOfLine () {
+function testDeleteUpLine () {
+	// TBD
+}
+
+function testDeleteDownLine () {
+	// TBD
+}
+
+function testDeleteDownEnter () {
+	// TBD
+}
+
+function testDeleteFirstNonWhiteCharOfLine () {
 	Wasavi.send('i', '\tfoobar', '\u001b');
 	Wasavi.send('d^');
 
@@ -46,7 +58,11 @@ function _testDeleteFirstNonWhiteCharOfLine () {
 	assertPos([0, 1]);
 }
 
-function _testDeleteTopOfLine () {
+function testDeleteHome () {
+	// TBD
+}
+
+function testDeleteTopOfLine () {
 	Wasavi.send('i', '\tfoobar', '\u001b');
 	Wasavi.send('d0');
 
@@ -54,7 +70,7 @@ function _testDeleteTopOfLine () {
 	assertPos([0, 0]);
 }
 
-function _testDeleteTailOfLine () {
+function testDeleteTailOfLine () {
 	Wasavi.send('i', '\tfoobar', '\u001b1|');
 	Wasavi.send('d$');
 
@@ -62,7 +78,11 @@ function _testDeleteTailOfLine () {
 	assertPos([0, 0]);
 }
 
-function _testDeleteDirectColumn () {
+function testDeleteEnd () {
+	// TBD
+}
+
+function testDeleteDirectColumn () {
 	Wasavi.send('i', '0123456789\n0123456789', '\u001b1G1|');
 
 	Wasavi.send('d5|');
@@ -78,7 +98,7 @@ function _testDeleteDirectColumn () {
 	assertPos('#3-1', [1, 0]);
 }
 
-function _testDeleteJumpToMatchedParenthes () {
+function testDeleteJumpToMatchedParenthes () {
 	Wasavi.send('i', 'this is (first) line.\nthis is (second) line)', '\u001b');
 
 	Wasavi.send('1G1|f(d%');
@@ -95,7 +115,7 @@ function _testDeleteJumpToMatchedParenthes () {
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteSearchForward () {
+function testDeleteSearchForward () {
 	Wasavi.send('i', 'find the\nchar4cter in cu4rent 4line', '\u001b1G1|');
 
 	Wasavi.send('d/4\n');
@@ -112,7 +132,7 @@ function _testDeleteSearchForward () {
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteSearchBackward () {
+function testDeleteSearchBackward () {
 	Wasavi.send('i', 'find the char4cter in cu4rent\n4line', '\u001b');
 
 	Wasavi.send('d?4\n');
@@ -120,16 +140,16 @@ function _testDeleteSearchBackward () {
 	assertPos('#1-2', [1, 0]);
 
 	Wasavi.send('2d?4\n');
-	assertEquals('#2-1', 'find the chare', Wasavi.value);
-	assertPos('#2-2', [0, 13]);
+	assertEquals('#2-1', 'find the char\ne', Wasavi.value);
+	assertPos('#2-2', [0, 12]);
 
 	Wasavi.send('2d?X\n');
-	assertEquals('#3-1', 'find the chare', Wasavi.value);
-	assertPos('#3-2', [0, 13]);
+	assertEquals('#3-1', 'find the char\ne', Wasavi.value);
+	assertPos('#3-2', [0, 12]);
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteFindForward () {
+function testDeleteFindForward () {
 	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b1G1|');
 
 	Wasavi.send('df4');
@@ -146,7 +166,7 @@ function _testDeleteFindForward () {
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteFindBackward () {
+function testDeleteFindBackward () {
 	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b');
 
 	Wasavi.send('dF4');
@@ -163,7 +183,7 @@ function _testDeleteFindBackward () {
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteFindFowardBeforeStop () {
+function testDeleteFindFowardBeforeStop () {
 	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b1G1|');
 
 	Wasavi.send('dt4');
@@ -180,7 +200,7 @@ function _testDeleteFindFowardBeforeStop () {
 	assert('#3-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteFindBackwardBeforeStop () {
+function testDeleteFindBackwardBeforeStop () {
 	Wasavi.send('i', 'find the char4cter in cu4rent 4line', '\u001b');
 
 	Wasavi.send('dT4');
@@ -201,7 +221,7 @@ function _testDeleteFindBackwardBeforeStop () {
 	assert('#4-3', Wasavi.lastMessage != '');
 }
 
-function _testDeleteFindInvert () {
+function testDeleteFindInvert () {
 	Wasavi.send('4i', 'fi4st s4cond th4rd fou4th\n', '\u001b');
 
 	Wasavi.send('1G1|df4$d,');
@@ -221,7 +241,7 @@ function _testDeleteFindInvert () {
 	assertPos('#4-2', [3, 0]);
 }
 
-function _testDeleteFindRepeat () {
+function testDeleteFindRepeat () {
 	Wasavi.send('4i', 'fi4st s4cond th4rd fou4th\n', '\u001b');
 
 	Wasavi.send('1G1|df4d;');
@@ -241,7 +261,7 @@ function _testDeleteFindRepeat () {
 	assertPos('#4-2', [3, 16]);
 }
 
-function _testDeleteDownLineOrient () {
+function testDeleteDownLineOrient () {
 	Wasavi.send('i', '\tfoobar\n\tfoobar\n\tfoobar\n\tfoobar\n\tfoobar', '\u001bgg');
 
 	Wasavi.send('d_');
@@ -257,7 +277,7 @@ function _testDeleteDownLineOrient () {
 	assertPos('#3-2', [0, 0]);
 }
 
-function _testDeleteMark () {
+function testDeleteMark () {
 	Wasavi.send('i', 'foo1bar\nbaz3bax', '\u001b');
 
 	Wasavi.send('1G0f1ma0d`a');
@@ -269,7 +289,7 @@ function _testDeleteMark () {
 	assertPos('#2-2', [1, 3]);
 }
 
-function _testDeleteMarkLineOrient () {
+function testDeleteMarkLineOrient () {
 	Wasavi.send('i', '1\n2\n3\n4\n5\n6\n7', '\u001b');
 
 	Wasavi.send('3Gma1Gd`a');
@@ -279,33 +299,33 @@ function _testDeleteMarkLineOrient () {
 	assertEquals('#2-1', '3\n7', Wasavi.value);
 }
 
-function _testDeleteSectionForward () {
+function testDeleteSectionForward () {
 	// TBD
 }
 
-function _testDeleteSectionBackward () {
+function testDeleteSectionBackward () {
 	// TBD
 }
 
-function _testDeleteParagraphForward () {
+function testDeleteParagraphForward () {
 	// TBD
 }
 
-function _testDeleteParagraphBackward () {
+function testDeleteParagraphBackward () {
 	// TBD
 }
 
-function _testDeleteSentenceForward () {
+function testDeleteSentenceForward () {
 	// TBD
 }
 
-function _testDeleteSentenceBackward () {
+function testDeleteSentenceBackward () {
 	// TBD
 }
 
-function _testDeleteDownLine () {
+function testDeleteDown () {
 	/*
-	 * first            fi_st
+	 * first            _irst
 	 * se_ond
 	 * third     -->
 	 * f
@@ -314,7 +334,7 @@ function _testDeleteDownLine () {
 	Wasavi.send('i', 'first\nsecond\nthird\nf\nfifth', '\u001b');
 	Wasavi.send('2G3|d10j');
 	assertEquals('#1-1', 'first', Wasavi.value);
-	assertPos('#1-2', [0, 2]);
+	assertPos('#1-2', [0, 0]);
 	assert('#1-3', Wasavi.lastMessage == '');
 	assertEquals('#1-4', 'second\nthird\nf\nfifth\n', Wasavi.registers('1'));
 
@@ -334,7 +354,7 @@ function _testDeleteDownLine () {
 	assertPos([1, 0]);
 
 	/*
-	 * fir_t            fif_h
+	 * fir_t            _ifth
 	 * f         -->
 	 * fifth
 	 */
@@ -343,10 +363,18 @@ function _testDeleteDownLine () {
 	assertEquals('#3-2', 'first\nf\n', Wasavi.registers('"'));
 	assertEquals('#3-3', 'first\nf\n', Wasavi.registers('1'));
 	assertEquals('#3-4', 'second\nthird\n', Wasavi.registers('2'));
-	assertPos([0, 3]);
+	assertPos([0, 0]);
 }
 
-function _testDeleteUpLine () {
+function testDeleteDownCtrlN () {
+	// TBD
+}
+
+function testDeleteDownDown () {
+	// TBD
+}
+
+function testDeleteUp () {
 	Wasavi.send('i', 'first\nsecond\nt', '\u001b');
 	Wasavi.send('2G3|');
 
@@ -367,7 +395,15 @@ function _testDeleteUpLine () {
 	assertPos([0, 0]);
 }
 
-function _testDeleteLeft () {
+function testDeleteUpCtrlP () {
+	// TBD
+}
+
+function testDeleteUpUp () {
+	// TBD
+}
+
+function testDeleteLeft () {
 	Wasavi.send('i', 'foo bar baz', '\u001b');
 	assertPos('#1-1', [0, 10]);
 
@@ -384,7 +420,15 @@ function _testDeleteLeft () {
 	assertPos('#4-2', [0, 3]);
 }
 
-function _testDeleteRight () {
+function testDeleteLeftCtrlH () {
+	// TBD
+}
+
+function testDeleteLeftLeft () {
+	// TBD
+}
+
+function testDeleteRight () {
 	Wasavi.send('i', 'foo bar baz', '\u001b1|');
 	assertPos('#1-1', [0, 0]);
 
@@ -405,19 +449,15 @@ function _testDeleteRight () {
 	assertPos('#5-2', [0, 0]);
 }
 
-function _testDeleteLeftWord () {
-	Wasavi.send('i', 'foo bar baz bax', '\u001b');
-
-	Wasavi.send('db');
-	assertEquals('#1-1', 'foo bar baz x', Wasavi.value);
-	assertPos('#1-2', [0, 12]);
-
-	Wasavi.send('d2b');
-	assertEquals('#2-1', 'foo x', Wasavi.value);
-	assertPos('#2-2', [0, 4]);
+function testDeleteRightSpace () {
+	// TBD
 }
 
-function _testDeleteRightWord () {
+function testDeleteRightRight () {
+	// TBD
+}
+
+function testDeleteWordForward () {
 	Wasavi.send('i', 'foo bar baz bax', '\u001b1|');
 
 	Wasavi.send('dw');
@@ -429,7 +469,27 @@ function _testDeleteRightWord () {
 	assertPos('#2-2', [0, 0]);
 }
 
-function _testDeleteRightWordBeforeStop () {
+function testDeleteWordBackward () {
+	Wasavi.send('i', 'foo bar baz bax', '\u001b');
+
+	Wasavi.send('db');
+	assertEquals('#1-1', 'foo bar baz x', Wasavi.value);
+	assertPos('#1-2', [0, 12]);
+
+	Wasavi.send('d2b');
+	assertEquals('#2-1', 'foo x', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteBigwordForward () {
+	// TBD
+}
+
+function testDeleteBigwordBackward () {
+	// TBD
+}
+
+function testDeleteWordEnd () {
 	Wasavi.send('i', 'foo bar baz bax', '\u001b1|');
 
 	Wasavi.send('de');
@@ -445,7 +505,11 @@ function _testDeleteRightWordBeforeStop () {
 	assertPos('#3-2', [0, 0]);
 }
 
-function _testDeleteGotoPrefix () {
+function testDeleteBigwordEnd () {
+	// TBD
+}
+
+function testDeleteGotoPrefix () {
 	Wasavi.send('i', '\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\t7', '\u001b');
 
 	Wasavi.send('ggd3G');
@@ -457,7 +521,7 @@ function _testDeleteGotoPrefix () {
 	assertPos('#2-2', [1, 1]);
 }
 
-function _testDeleteTopOfView () {
+function testDeleteTopOfView () {
 	makeScrollableBuffer(2);
 
 	var rowLength = Wasavi.rowLength;
@@ -509,5 +573,244 @@ function testDeleteGoto () {
 	assertPos('#2-2', [0, 1]);
 }
 
+function testDeleteSearchForwardNext_1 () {
+	Wasavi.send('i', [
+		'    def',		// foo
+		'foo',          // baz
+		'baz'			//
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/foo\n');
+	assertPos('#1-1', [1, 0]);
+
+	Wasavi.send('1G5|dn');
+	assertEquals('#2-1', 'foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+}
+
+function testDeleteSearchForwardNext_2 () {
+	Wasavi.send('i', [
+		'abc def',		// abc
+		'foo',			// foo
+		'baz'			// baz
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/foo\n');
+	assertPos('#1-1', [1, 0]);
+
+	Wasavi.send('1G5|dn');
+	assertEquals('#2-1', 'abc \nfoo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 3]);
+}
+
+function testDeleteSearchForwardNext_3 () {
+	Wasavi.send('i', [
+		'    def',		//    foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/foo\n');
+	assertPos('#1-1', [1, 4]);
+
+	Wasavi.send('1G5|dn');
+	assertEquals('#2-1', '    foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchForwardNext_4 () {
+	Wasavi.send('i', [
+		'abc def',		// abc foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/foo\n');
+	assertPos('#1-1', [1, 4]);
+
+	Wasavi.send('1G5|dn');
+	assertEquals('#2-1', 'abc foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchForwardPrev_1 () {
+	Wasavi.send('i', [
+		'    def',		// foo
+		'foo',          // baz
+		'baz'			//
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G1|dN');
+	assertEquals('#2-1', 'foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+}
+
+function testDeleteSearchForwardPrev_2 () {
+	Wasavi.send('i', [
+		'abc def',		// abc
+		'foo',			// foo
+		'baz'			// baz
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G1|dN');
+	assertEquals('#2-1', 'abc \nfoo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 3]);
+}
+
+function testDeleteSearchForwardPrev_3 () {
+	Wasavi.send('i', [
+		'    def',		//    foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('1G1|/def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G5|dN');
+	assertEquals('#2-1', '    foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchForwardPrev_4 () {
+	Wasavi.send('i', [
+		'abc def',		// abc foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G5|dn');
+	assertEquals('#2-1', 'abc foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchBackwardNext_1 () {
+	Wasavi.send('i', [
+		'    def',		// foo
+		'foo',          // baz
+		'baz'			//
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G1|dn');
+	assertEquals('#2-1', 'foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+}
+
+function testDeleteSearchBackwardNext_2 () {
+	Wasavi.send('i', [
+		'abc def',		// abc
+		'foo',			// foo
+		'baz'			// baz
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G1|dn');
+	assertEquals('#2-1', 'abc \nfoo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 3]);
+}
+
+function testDeleteSearchBackwardNext_3 () {
+	Wasavi.send('i', [
+		'    def',		//    foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G5|dn');
+	assertEquals('#2-1', '    foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchBackwardNext_4 () {
+	Wasavi.send('i', [
+		'abc def',		// abc foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?def\n');
+	assertPos('#1-1', [0, 4]);
+
+	Wasavi.send('2G5|dn');
+	assertEquals('#2-1', 'abc foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchBackwardPrev_1 () {
+	Wasavi.send('i', [
+		'    def',		// foo
+		'foo',          // baz
+		'baz'			//
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?foo\n');
+	assertPos('#1-1', [1, 0]);
+
+	Wasavi.send('1G5|dN');
+	assertEquals('#2-1', 'foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+}
+
+function testDeleteSearchBackwardPrev_2 () {
+	Wasavi.send('i', [
+		'abc def',		// abc
+		'foo',			// foo
+		'baz'			// baz
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?foo\n');
+	assertPos('#1-1', [1, 0]);
+
+	Wasavi.send('1G5|dN');
+	assertEquals('#2-1', 'abc \nfoo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 3]);
+}
+
+function testDeleteSearchBackwardPrev_3 () {
+	Wasavi.send('i', [
+		'    def',		//    foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?foo\n');
+	assertPos('#1-1', [1, 4]);
+
+	Wasavi.send('1G5|dN');
+	assertEquals('#2-1', '    foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
+
+function testDeleteSearchBackwardPrev_4 () {
+	Wasavi.send('i', [
+		'abc def',		// abc foo
+		'ghi foo',		// baz
+		'baz'
+	].join('\n'), '\u001b');
+
+	Wasavi.send('G?foo\n');
+	assertPos('#1-1', [1, 4]);
+
+	Wasavi.send('1G5|dN');
+	assertEquals('#2-1', 'abc foo\nbaz', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
+}
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

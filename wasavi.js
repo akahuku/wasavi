@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 121 2012-05-16 19:30:10Z akahuku $
+ * @version $Id: wasavi.js 122 2012-05-18 03:08:21Z akahuku $
  * @sourceURL=wasavi.js
  */
 /**
@@ -94,8 +94,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 121 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 121 2012-05-16 19:30:10Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 122 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 122 2012-05-18 03:08:21Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -2064,6 +2064,14 @@
 					}
 				}
 				return new Position(row5, col);
+			},
+			regalizeSelectionRelation: function () {
+				var s = this.selectionStart;
+				var e = this.selectionEnd;
+				if (s.row > e.row || s.row == e.row && s.col > e.col) {
+					this.selectionStart = e;
+					this.selectionEnd = s;
+				}
 			},
 
 			// getter properties
@@ -8374,10 +8382,29 @@ flag23_loop:
 			'command': operationDefault,
 			'@op': function (c, t) {
 				if (!requestedState.notice) {
+					t.regalizeSelectionRelation();
+
 					var origin = t.selectionStart;
 					var isLineOrient = c == prefixInput.operation || isVerticalMotion;
-					var actualCount = Math.abs(t.selectionEndRow - t.selectionStartRow) + 1;
+					var actualCount = t.selectionEndRow - t.selectionStartRow + 1;
 					var deleted = 0;
+
+					// 
+					if (!isLineOrient
+					&&  t.selectionEndCol == 0
+					&&  actualCount > 1) {
+						var leading = t.rows(t.selectionStartRow)
+							.substring(0, t.selectionStartCol);
+						if (!/\S/.test(leading)) {
+							isLineOrient = true;
+						}
+
+						actualCount--;
+						t.selectionEnd = new Position(
+							t.selectionEndRow - 1,
+							t.rows(t.selectionEndRow - 1).length
+						);
+					}
 
 					t.isLineOrientSelection = isLineOrient;
 					if (isLineOrient) {
@@ -8397,9 +8424,10 @@ flag23_loop:
 					if (false) {
 						console.log([
 							'*** d ***',
+							'   actualCount: ' + actualCount,
 							'selectionStart: ' + t.selectionStart,
 							'  selectionEnd: ' + t.selectionEnd,
-							'         value: ' + t.value
+							'         value:', t.value
 						].join('\n'));
 					}
 

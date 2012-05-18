@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: motions.js 121 2012-05-16 19:30:10Z akahuku $
+ * @version $Id: motions.js 122 2012-05-18 03:08:21Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -853,7 +853,7 @@ function testSearchForwardNext () {
 	assertPos('#6', [2, 0]);
 }
 
-function testSearchForwardPrev () {
+function testSearchFowardPrev () {
 	Wasavi.send('ifirst\n\tsecond\nthird\nthird', Wasavi.SPECIAL_KEYS.ESCAPE);
 
 	Wasavi.send('N');
