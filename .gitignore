@@ -9,3 +9,4 @@ jsunit/
 !opera/config.xml
 Thumbs.db
 desktop.ini
+.svnignore

@@ -67,10 +67,10 @@ function tearDown () {
 	}
 }
 
-function makeScrollableBuffer (factor) {
+function makeScrollableBuffer (factor, origin) {
 	var lines = Wasavi.vars.lines, a = [];
 	assertEquals('should type be a number', 'number', typeof lines);
-	console.log('lines: ' + lines);
+	//console.log('lines: ' + lines + (origin ? (' at ' + origin) : ''));
 	assert('should be a natural number', lines > 0);
 	var actualLines = parseInt(lines * (factor || 1));
 	for (var i = 1; i <= actualLines; i++) {

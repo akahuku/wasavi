@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: scrollers.js 114 2012-05-08 10:54:20Z akahuku $
+ * @version $Id: scrollers.js 126 2012-05-20 04:58:15Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -39,13 +39,13 @@
  */
 
 function testScrollUpHalfOfView () {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollUpHalfOfView');
 
 	Wasavi.send('GH');
 	var rowTopBefore = Wasavi.position.row;
 	Wasavi.send(':set scroll=0\n\u0015H');
 	var rowTopAfter = Wasavi.position.row;
-	assertEquals('#1', -parseInt(lines / 2), rowTopAfter - rowTopBefore);
+	assert('#1', Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2)) < 1);
 
 	Wasavi.send('GH');
 	var rowTopBefore = Wasavi.position.row;
@@ -60,13 +60,13 @@ function testScrollUpHalfOfView () {
 }
 
 function testScrollDownHalfOfView () {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollDownHalfOfView');
 
 	Wasavi.send('gg');
 	var rowTopBefore = Wasavi.position.row;
 	Wasavi.send(':set scroll=0\n\u0004');
 	var rowTopAfter = Wasavi.position.row;
-	assertEquals('#1', parseInt(lines / 2), rowTopAfter - rowTopBefore);
+	assert('#1', Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2)) < 1);
 
 	Wasavi.send('gg');
 	var rowTopBefore = Wasavi.position.row;
@@ -81,7 +81,7 @@ function testScrollDownHalfOfView () {
 }
 
 function testScrollUp1Line () {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollUp1Line');
 
 	Wasavi.send('GH');
 	var rowTopBefore = Wasavi.position.row;
@@ -96,7 +96,7 @@ function testScrollUp1Line () {
 }
 
 function testScrollDown1Line () {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollDown1Line');
 
 	Wasavi.send('gg');
 	var rowTopBefore = Wasavi.position.row;
@@ -111,7 +111,7 @@ function testScrollDown1Line () {
 }
 
 function testScrollUpAlmostView (a) {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollUpAlmostView');
 
 	a || (a = '\u0002');
 
@@ -132,7 +132,7 @@ function testScrollUpAlmostViewPageup () {
 }
 
 function testScrollDownAlmostView (a) {
-	var lines = makeScrollableBuffer(2.5);
+	var lines = makeScrollableBuffer(2.5, 'testScrollDownAlmostView');
 
 	a || (a = '\u0006');
 
@@ -153,7 +153,8 @@ function testScrollDownAlmostViewPagedown () {
 }
 
 function testScreenAdjustTop () {
-	var lines = makeScrollableBuffer(1.5);
+	var lines = makeScrollableBuffer(2, 'testScreenAdjustTop');
+	console.log('lines: ' + lines);
 	Wasavi.send('gg10G');
 
 	Wasavi.send('z\u000d');
@@ -162,7 +163,7 @@ function testScreenAdjustTop () {
 }
 
 function testScreenAdjustCenter (a) {
-	var lines = makeScrollableBuffer(1.5);
+	var lines = makeScrollableBuffer(2, 'testScreenAdjustCenter');
 	Wasavi.send('gg', parseInt(lines * .75) + '', 'G');
 
 	a || (a = '.');
@@ -177,7 +178,7 @@ function testScreenAdjustCenterZ () {
 }
 
 function testScreenAdjustBottom () {
-	var lines = makeScrollableBuffer(1.5);
+	var lines = makeScrollableBuffer(2, 'testScreenAdjustBottom');
 	Wasavi.send('gg20G');
 
 	Wasavi.send('z-');
@@ -186,7 +187,7 @@ function testScreenAdjustBottom () {
 }
 
 function testScreenAdjustOther () {
-	var lines = makeScrollableBuffer();
+	var lines = makeScrollableBuffer(null, 'testScreenAdjustOther');
 	var p = Wasavi.position.clone();
 	Wasavi.send('zX');
 	assert('#1', Wasavi.lastMessage != '');

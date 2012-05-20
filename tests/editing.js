@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: editing.js 114 2012-05-08 10:54:20Z akahuku $
+ * @version $Id: editing.js 126 2012-05-20 04:58:15Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -748,7 +748,6 @@ function testZZ () {
 	Wasavi.send('i', 'foobar', Wasavi.SPECIAL_KEYS.ESCAPE);
 	Wasavi.send('ZZ');
 	assertFalse(Wasavi.running);
-	assertEquals('foobar', document.getElementById('t1').value);
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

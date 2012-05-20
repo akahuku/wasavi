@@ -1323,10 +1323,14 @@
 					delete usedMarks[index];
 				}
 
-				//var ss = editor.selectionStart;
+				var ss = editor.selectionStart;
 				for (var i in usedMarks) {
-					delete marks[i];
-					//marks[i] = ss;
+					if (i in foldedMarks) {
+						marks[i] = ss;
+					}
+					else {
+						delete marks[i];
+					}
 				}
 			}
 			function calcColumn (span) {
@@ -1340,10 +1344,18 @@
 				}
 				return result;
 			}
+			function registerFoldedMark (fragment) {
+				var marks = fragment.querySelectorAll('span.wasavi_mark');
+				for (var i = 0, goal = marks.length; i < goal; i++) {
+					var index = dataset(marks[i], 'index');
+					foldedMarks[index] = true;
+				}
+			}
 			var usedMarks;
+			var foldedMarks = {};
 			try {
 				usedMarks = setMarks();
-				func && func();
+				func && func(registerFoldedMark);
 			}
 			finally {
 				releaseMarks(usedMarks);
@@ -1746,7 +1758,6 @@
 
 			// method
 			focus: function () {
-				//return this.elm.focus();
 				return $('wasavi_focus_holder').focus();
 			},
 			insertChars: function (arg, text) {
@@ -1827,7 +1838,7 @@
 				var r = select.apply(this, args);
 				var content = r.r.toString();
 				var result = content.length;
-				func && func(content);
+				func && func(content, r.r.cloneContents());
 
 				if (r.s.row == r.e.row) {
 					r.r.deleteContents();
@@ -1866,7 +1877,7 @@
 				var r = selectRows.apply(this, args);
 				var content = r.r.toString();
 				var result = r.e.row - r.s.row + 1;
-				func && func(content);
+				func && func(content, r.r.cloneContents());
 				r.r.deleteContents();
 				r.r.detach();
 				if (this.elm.childNodes.length == 0) {
@@ -2153,6 +2164,16 @@
 			set scrollTop (v) {
 				this.elm.removeEventListener('scroll', handleScroll, false);
 				this.elm.scrollTop = v;
+				/*if (this.elm.scrollTop != v) {
+					console.log([
+						'*** set scrollTop: value unmatch ***',
+						'       value: ' + v,
+						'   scrollTop: ' + this.elm.scrollTop,
+						'   available: ' + (this.elm.scrollHeight - this.elm.clientHeight),
+						'scrollHeight: ' + this.elm.scrollHeight,
+						'clientHeight: ' + this.elm.clientHeight
+					].join('\n'));
+				}*/
 				this.elm.addEventListener('scroll', handleScroll, false);
 			},
 			set scrollLeft (v) {
@@ -4426,8 +4447,10 @@ flag23_loop:
 			Math.floor(Math.random() * 360) : config.vars.modelinehue;
 		var hsl = 'hsl(' + [hue, '100%', '33%'].join(',') + ')';
 		var modeLineGradient = 'linear-gradient(top, ' + hsl + ' 0%,#000 100%);';
-		var borderStyles = x.borderStyles + ';';
-		var paddingStyle = 'padding:' + x.paddingStyle + ';';
+		//var borderStyles = x.borderStyles + ';';
+		//var paddingStyle = 'padding:' + x.paddingStyle + ';';
+		var borderStyles = 'border:none;';
+		var paddingStyle = 'padding:0;';
 		var fontStyle = 'font:' + x.fontStyle + ';';
 		var boxSizingPrefix = IS_GECKO ? '-moz-' : '';
 
@@ -4463,9 +4486,6 @@ flag23_loop:
 			'  margin:0;',
 			paddingStyle,
 			borderStyles,
-			'  border-color:silver;',
-			'  border-style:solid;',
-			'  border-radius:0;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			fontStyle,
 			'  background:#fff url(' + otm + ') left top repeat-y;',
@@ -4478,8 +4498,6 @@ flag23_loop:
 			'  overflow:scroll;',
 			paddingStyle,
 			borderStyles,
-			'  border-color:silver;',
-			'  border-style:solid;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			fontStyle,
 			'  text-decoration:none;',
@@ -4773,9 +4791,9 @@ flag23_loop:
 		lastMessage = '';
 		requestedState = {};
 
-		editor.value = x.value;
-		editor.selectionStart = x.selectionStart;
-		editor.selectionEnd = x.selectionEnd;
+		editor.value = x.value || '';
+		editor.selectionStart = x.selectionStart || 0;
+		editor.selectionEnd = x.selectionEnd || 0;
 
 		marks = new Marks(editor);
 		cursor = new CursorUI(editor, cc, ec);
@@ -5470,9 +5488,8 @@ flag23_loop:
 				requestShowPrefixInput();
 			}
 			else {
-				//if (runLevel == 0) {
-					editedString += letter;
-				//}
+				editedString += letter;
+
 				if (config.vars.showmatch) {
 					pairBracketsIndicator && pairBracketsIndicator.clear();
 					pairBracketsIndicator = PairBracketsIndicator.getObject(letter, editor);
@@ -5721,8 +5738,8 @@ flag23_loop:
 			idealWidthPixels = textspan.offsetWidth;
 		}
 	}
-	function getCurrentViewPositionIndices (t) {
-		function findLineIndex (line) {
+	function getCurrentViewPositionIndices (t, debug) {
+		function findTopLineIndex (line) {
 			var low = 0;
 			var high = t.elm.childNodes.length - 1;
 			var result = -1;
@@ -5731,8 +5748,54 @@ flag23_loop:
 				var node = t.elm.childNodes[middle];
 				var top = node.offsetTop;
 				var bottom = node.offsetTop + node.offsetHeight
-				if (top <= line && line < bottom) {
+				log.push([
+					'middle:' + middle,
+					'top:' + top,
+					'bottom:' + bottom,
+					'line:' + line
+				].join(', '));
+				if (top == line && line < bottom) {
 					result = middle;
+					log.push('exit(1):' + result);
+					break;
+				}
+				else if (top < line && line < bottom) {
+					result = middle + 1;
+					log.push('exit(2):' + result);
+					break;
+				}
+				else if (bottom <= line) {
+					low = middle + 1;
+				}
+				else {
+					high = middle - 1;
+				}
+			}
+			return result;
+		}
+		function findBottomLineIndex (line) {
+			var low = 0;
+			var high = t.elm.childNodes.length - 1;
+			var result = -1;
+			while (low <= high) {
+				var middle = parseInt((low + high) / 2);
+				var node = t.elm.childNodes[middle];
+				var top = node.offsetTop;
+				var bottom = node.offsetTop + node.offsetHeight
+				log.push([
+					'middle:' + middle,
+					'top:' + top,
+					'bottom:' + bottom,
+					'line:' + line
+				].join(', '));
+				if (top < line && line == bottom) {
+					result = middle;
+					log.push('exit(1):' + result);
+					break;
+				}
+				else if (top < line && line < bottom) {
+					result = middle - 1;
+					log.push('exit(2):' + result);
 					break;
 				}
 				else if (bottom <= line) {
@@ -5746,8 +5809,9 @@ flag23_loop:
 		}
 
 		var result = {};
+		var log = [];
 
-		var top = findLineIndex(t.elm.scrollTop);
+		var top = findTopLineIndex(t.elm.scrollTop);
 		if (top >= 0) {
 			result.top = top;
 		}
@@ -5755,7 +5819,7 @@ flag23_loop:
 			result.top = 0;
 		}
 
-		var bottom = findLineIndex(t.elm.scrollTop + t.elm.clientHeight - 1);
+		var bottom = findBottomLineIndex(t.elm.scrollTop + t.elm.clientHeight - 1);
 		if (bottom >= 0) {
 			result.bottom = bottom;
 		}
@@ -5765,6 +5829,7 @@ flag23_loop:
 
 		result.lines = parseInt(t.elm.clientHeight / lineHeight);
 
+		debug && console.log(log.join('\n'));
 		return result;
 	}
 	function inputEscape () {
@@ -6529,7 +6594,8 @@ flag23_loop:
 	function scrollView (c, t, count) {
 		function down (count) {
 			var index = Math.min(v.top + count, t.rowLength - 1);
-			scroller.run(t.rowNodes(index).offsetTop, function () {
+			var dest = index == 0 ? 0 : t.rowNodes(index).offsetTop;
+			scroller.run(dest, function () {
 				var v2 = getCurrentViewPositionIndices(t);
 				if (v2.top >= 0 && v2.top < t.rowLength && v2.top > t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.top, 0));
@@ -6538,7 +6604,8 @@ flag23_loop:
 		}
 		function up (count) {
 			var index = Math.max(v.top - count, 0);
-			scroller.run(t.rowNodes(index).offsetTop, function () {
+			var dest = index == 0 ? 0 : t.rowNodes(index).offsetTop;
+			scroller.run(dest, function () {
 				var v2 = getCurrentViewPositionIndices(t);
 				if (v2.bottom >= 0 && v2.bottom < t.rowLength && v2.bottom < t.selectionStartRow) {
 					t.setSelectionRange(t.getLineTopOffset2(v2.bottom, 0));
@@ -6566,8 +6633,9 @@ flag23_loop:
 
 		var result = 0;
 		(isEditing() ? $call : editLogger.open).call(editLogger, function () {
-			marks.update(t.selectionStart, function () {
-				result = t.deleteRange(function (content) {
+			marks.update(t.selectionStart, function (foldedMarkRegisterer) {
+				result = t.deleteRange(function (content, fragment) {
+					!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
 					!isEditing() && editLogger.write(
 						EditLogger.ITEM_TYPE.DELETE,
 						t.selectionStart, content, t.selectionEnd, t.isLineOrientSelection

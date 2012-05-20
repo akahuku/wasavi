@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: operations.js 122 2012-05-18 03:08:21Z akahuku $
+ * @version $Id: op_delete.js 126 2012-05-20 04:58:15Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -39,27 +39,29 @@
  */
 
 function testDeleteUpLine () {
-	// TBD
+	testDeleteUp('-');
 }
 
-function testDeleteDownLine () {
-	// TBD
+function testDeleteDownLine (a) {
+	testDeleteDown('+');
 }
 
 function testDeleteDownEnter () {
-	// TBD
+	testDeleteDownLine(Wasavi.SPECIAL_KEYS.ENTER);
 }
 
-function testDeleteFirstNonWhiteCharOfLine () {
+function testDeleteFirstNonWhiteCharOfLine (a) {
+	a || (a = '^');
+
 	Wasavi.send('i', '\tfoobar', '\u001b');
-	Wasavi.send('d^');
+	Wasavi.send('d', a);
 
 	assertEquals('\tr', Wasavi.value);
 	assertPos([0, 1]);
 }
 
 function testDeleteHome () {
-	// TBD
+	testDeleteFirstNonWhiteCharOfLine(Wasavi.SPECIAL_KEYS.HOME);
 }
 
 function testDeleteTopOfLine () {
@@ -70,16 +72,18 @@ function testDeleteTopOfLine () {
 	assertPos([0, 0]);
 }
 
-function testDeleteTailOfLine () {
+function testDeleteTailOfLine (a) {
+	a || (a = '$');
+
 	Wasavi.send('i', '\tfoobar', '\u001b1|');
-	Wasavi.send('d$');
+	Wasavi.send('d', a);
 
 	assertEquals('', Wasavi.value);
 	assertPos([0, 0]);
 }
 
 function testDeleteEnd () {
-	// TBD
+	testDeleteTailOfLine(Wasavi.SPECIAL_KEYS.END);
 }
 
 function testDeleteDirectColumn () {
@@ -323,7 +327,9 @@ function testDeleteSentenceBackward () {
 	// TBD
 }
 
-function testDeleteDown () {
+function testDeleteDown (a) {
+	a || (a = 'j');
+
 	/*
 	 * first            _irst
 	 * se_ond
@@ -332,7 +338,7 @@ function testDeleteDown () {
 	 * fifth
 	 */
 	Wasavi.send('i', 'first\nsecond\nthird\nf\nfifth', '\u001b');
-	Wasavi.send('2G3|d10j');
+	Wasavi.send('2G3|d10', a);
 	assertEquals('#1-1', 'first', Wasavi.value);
 	assertPos('#1-2', [0, 0]);
 	assert('#1-3', Wasavi.lastMessage == '');
@@ -346,7 +352,7 @@ function testDeleteDown () {
 	 * fifth
 	 */
 	Wasavi.send('ggdGi', 'first\nsecond\nthird\nf\nfifth', '\u001b');
-	Wasavi.send('2G3|dj');
+	Wasavi.send('2G3|d', a);
 	assertEquals('#2-1', 'first\nf\nfifth', Wasavi.value);
 	assertEquals('#2-2', 'second\nthird\n', Wasavi.registers('"'));
 	assertEquals('#2-3', 'second\nthird\n', Wasavi.registers('1'));
@@ -358,7 +364,7 @@ function testDeleteDown () {
 	 * f         -->
 	 * fifth
 	 */
-	Wasavi.send('gg3ldj');
+	Wasavi.send('gg3ld', a);
 	assertEquals('#3-1', 'fifth', Wasavi.value);
 	assertEquals('#3-2', 'first\nf\n', Wasavi.registers('"'));
 	assertEquals('#3-3', 'first\nf\n', Wasavi.registers('1'));
@@ -367,14 +373,16 @@ function testDeleteDown () {
 }
 
 function testDeleteDownCtrlN () {
-	// TBD
+	testDeleteDown('\u000e');
 }
 
 function testDeleteDownDown () {
-	// TBD
+	testDeleteDown(Wasavi.SPECIAL_KEYS.DOWN);
 }
 
-function testDeleteUp () {
+function testDeleteUp (a) {
+	a || (a = 'k');
+
 	Wasavi.send('i', 'first\nsecond\nt', '\u001b');
 	Wasavi.send('2G3|');
 
@@ -382,13 +390,13 @@ function testDeleteUp () {
 	 * POSIX defines that moving beyond top or tail of buffer causes an error,
 	 * But vim does not.  We follow vim.
 	 */
-	Wasavi.send('2G3|d10k');
+	Wasavi.send('2G3|d10', a);
 	assertEquals('#1-1', 't', Wasavi.value);
 	assertPos('#1-2', [0, 0]);
 	assert('#1-3', Wasavi.lastMessage == '');
 
 	Wasavi.send('ggdGi', 'first\nsecond\nt', '\u001b');
-	Wasavi.send('2G3|dk');
+	Wasavi.send('2G3|d', a);
 	assertEquals('#2-1', 't', Wasavi.value);
 	assertEquals('#2-2', 'first\nsecond\n', Wasavi.registers('"'));
 	assertEquals('#2-3', 'first\nsecond\n', Wasavi.registers('1'));
@@ -396,65 +404,72 @@ function testDeleteUp () {
 }
 
 function testDeleteUpCtrlP () {
-	// TBD
+	testDeleteUp('\u0010');
 }
 
 function testDeleteUpUp () {
-	// TBD
+	testDeleteUp(Wasavi.SPECIAL_KEYS.UP);
 }
 
-function testDeleteLeft () {
+function testDeleteLeft (a) {
+	a || (a = 'h');
+
 	Wasavi.send('i', 'foo bar baz', '\u001b');
 	assertPos('#1-1', [0, 10]);
 
-	Wasavi.send('dh');
+	Wasavi.send('d', a);
 	assertEquals('#2-1', 'foo bar bz', Wasavi.value);
 	assertPos('#2-2', [0, 9]);
 
-	Wasavi.send('d2h');
+	Wasavi.send('d2', a);
 	assertEquals('#3-1', 'foo barz', Wasavi.value);
 	assertPos('#3-2', [0, 7]);
 
-	Wasavi.send('d4|');
-	assertEquals('#4-1', 'fooz', Wasavi.value);
-	assertPos('#4-2', [0, 3]);
+	Wasavi.send('d100', a);
+	assertEquals('#4-1', 'z', Wasavi.value);
+	assertPos('#4-2', [0, 0]);
 }
 
 function testDeleteLeftCtrlH () {
-	// TBD
+	testDeleteLeft('\u0008');
 }
 
 function testDeleteLeftLeft () {
-	// TBD
+	testDeleteLeft(Wasavi.SPECIAL_KEYS.LEFT);
 }
 
-function testDeleteRight () {
+function testDeleteRight (a) {
+	a || (a = 'l');
+
 	Wasavi.send('i', 'foo bar baz', '\u001b1|');
 	assertPos('#1-1', [0, 0]);
 
-	Wasavi.send('dl');
+	Wasavi.send('d', a);
 	assertEquals('#2-1', 'oo bar baz', Wasavi.value);
 	assertPos('#2-2', [0, 0]);
+	assertEquals('#2-3', 'f', Wasavi.registers('"'));
 
-	Wasavi.send('d2l');
+	Wasavi.send('"ad2', a);
 	assertEquals('#3-1', ' bar baz', Wasavi.value);
 	assertPos('#3-2', [0, 0]);
+	assertEquals('#3-3', 'oo', Wasavi.registers('a'));
+	assertEquals('#3-4', 'oo', Wasavi.registers('"'));
 
-	Wasavi.send('d5|');
-	assertEquals('#4-1', ' baz', Wasavi.value);
+	Wasavi.send('d5', a);
+	assertEquals('#4-1', 'baz', Wasavi.value);
 	assertPos('#4-2', [0, 0]);
 
-	Wasavi.send('d100|');
+	Wasavi.send('d100', a);
 	assertEquals('#5-1', '', Wasavi.value);
 	assertPos('#5-2', [0, 0]);
 }
 
 function testDeleteRightSpace () {
-	// TBD
+	testDeleteRight(' ');
 }
 
 function testDeleteRightRight () {
-	// TBD
+	testDeleteRight(Wasavi.SPECIAL_KEYS.RIGHT);
 }
 
 function testDeleteWordForward () {
@@ -482,11 +497,27 @@ function testDeleteWordBackward () {
 }
 
 function testDeleteBigwordForward () {
-	// TBD
+	Wasavi.send('i', 'f$o b!r b@z b#x', '\u001b1|');
+
+	Wasavi.send('dW');
+	assertEquals('#1-1', 'b!r b@z b#x', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('d2W');
+	assertEquals('#2-1', 'b#x', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
 }
 
 function testDeleteBigwordBackward () {
-	// TBD
+	Wasavi.send('i', 'f$o b!r b@z b#x', '\u001b');
+
+	Wasavi.send('dB');
+	assertEquals('#1-1', 'f$o b!r b@z x', Wasavi.value);
+	assertPos('#1-2', [0, 12]);
+
+	Wasavi.send('d2B');
+	assertEquals('#2-1', 'f$o x', Wasavi.value);
+	assertPos('#2-2', [0, 4]);
 }
 
 function testDeleteWordEnd () {
@@ -506,7 +537,19 @@ function testDeleteWordEnd () {
 }
 
 function testDeleteBigwordEnd () {
-	// TBD
+	Wasavi.send('i', 'f$o b!r b@z b#x', '\u001b1|');
+
+	Wasavi.send('dE');
+	assertEquals('#1-1', ' b!r b@z b#x', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('d2E');
+	assertEquals('#2-1', ' b#x', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('xdE');
+	assertEquals('#3-1', '', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
 }
 
 function testDeleteGotoPrefix () {

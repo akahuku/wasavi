@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: motions.js 122 2012-05-18 03:08:21Z akahuku $
+ * @version $Id: motions.js 126 2012-05-20 04:58:15Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -492,7 +492,6 @@ function testMarkTracksItsPositionLineOrient () {
 	 * foo *       foo *
 	 * foo
 	 */
-	foobar
 	Wasavi.send('2G0madd');
 	assertEquals('#3-1', 'foo\nfoo\n', Wasavi.value);
 	Wasavi.send('`a');
