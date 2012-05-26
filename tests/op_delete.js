@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: op_delete.js 126 2012-05-20 04:58:15Z akahuku $
+ * @version $Id: op_delete.js 128 2012-05-26 09:15:39Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -38,12 +38,64 @@
  * tests
  */
 
-function testDeleteUpLine () {
-	testDeleteUp('-');
+function testDelete () {
+	Wasavi.send('i', '1\n2\n3\n4\n5\n6', '\u001bgg');
+
+	Wasavi.send('dd');
+	assertEquals('#1-1', '2\n3\n4\n5\n6', Wasavi.value);
+	assertPos('#1-2', [0, 0]);
+
+	Wasavi.send('d2d');
+	assertEquals('#2-1', '4\n5\n6', Wasavi.value);
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('2dd');
+	assertEquals('#3-1', '6', Wasavi.value);
+	assertPos('#3-2', [0, 0]);
+
+	Wasavi.send('2dd');
+	assertEquals('#4-1', '', Wasavi.value);
+	assertPos('#4-2', [0, 0]);
+}
+
+function testDeleteUpLine (a) {
+	a || (a = '-');
+
+	Wasavi.send('iline1\n\tline2\n\t\tline3\u001b');
+	assertEquals('line1\n\tline2\n\t\tline3', Wasavi.value);
+
+	Wasavi.send('3G');
+	assertPos('#1-1', [2, 2]);
+
+	Wasavi.send('d', a);
+	assertPos('#2-1', [0, 0]);
+	assertEquals('#2-2', '\tline2\n\t\tline3\n', Wasavi.registers('"'));
+	assertEquals('#2-3', '\tline2\n\t\tline3\n', Wasavi.registers('1'));
+	assertEquals('#2-4', 'line1', Wasavi.value);
+
+	Wasavi.send('d', a);
+	assertEquals('#3-1', '\tline2\n\t\tline3\n', Wasavi.registers('"'));
+	assert('#3-2', Wasavi.lastMessage != '');
 }
 
 function testDeleteDownLine (a) {
-	testDeleteDown('+');
+	a || (a = '+');
+
+	Wasavi.send('iline1\n\tline2\n\t\tline3\u001b');
+	assertEquals('line1\n\tline2\n\t\tline3', Wasavi.value);
+
+	Wasavi.send('1G');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send('d', a);
+	assertPos('#2-1', [0, 2]);
+	assertEquals('#2-2', 'line1\n\tline2\n', Wasavi.registers('"'));
+	assertEquals('#2-3', 'line1\n\tline2\n', Wasavi.registers('1'));
+	assertEquals('#2-4', '\t\tline3', Wasavi.value);
+
+	Wasavi.send('d', a);
+	assertEquals('#3-1', 'line1\n\tline2\n', Wasavi.registers('"'));
+	assert('#3-2', Wasavi.lastMessage != '');
 }
 
 function testDeleteDownEnter () {
@@ -99,7 +151,7 @@ function testDeleteDirectColumn () {
 
 	Wasavi.send('2G1|d100|');
 	assertEquals('#3-1', '459\n', Wasavi.value);
-	assertPos('#3-1', [1, 0]);
+	assertPos('#3-2', [1, 0]);
 }
 
 function testDeleteJumpToMatchedParenthes () {
@@ -270,11 +322,11 @@ function testDeleteDownLineOrient () {
 
 	Wasavi.send('d_');
 	assertEquals('#1-1', 4, Wasavi.value.split('\n').length);
-	assertPos('#3-2', [0, 1]);
+	assertPos('#1-2', [0, 1]);
 
 	Wasavi.send('d2_');
 	assertEquals('#2-1', 2, Wasavi.value.split('\n').length);
-	assertPos('#3-2', [0, 1]);
+	assertPos('#2-2', [0, 1]);
 
 	Wasavi.send('d3_');
 	assertEquals('#3-1', '', Wasavi.value);
@@ -296,11 +348,11 @@ function testDeleteMark () {
 function testDeleteMarkLineOrient () {
 	Wasavi.send('i', '1\n2\n3\n4\n5\n6\n7', '\u001b');
 
-	Wasavi.send('3Gma1Gd`a');
-	assertEquals('#1-1', '3\n4\n5\n6\n7', Wasavi.value);
+	Wasavi.send('3Gma1Gd\'a');
+	assertEquals('#1-1', '4\n5\n6\n7', Wasavi.value);
 
-	Wasavi.send('2GmaGd`a');
-	assertEquals('#2-1', '3\n7', Wasavi.value);
+	Wasavi.send('2GmaGd\'a');
+	assertEquals('#2-1', '4', Wasavi.value);
 }
 
 function testDeleteSectionForward () {
@@ -357,7 +409,7 @@ function testDeleteDown (a) {
 	assertEquals('#2-2', 'second\nthird\n', Wasavi.registers('"'));
 	assertEquals('#2-3', 'second\nthird\n', Wasavi.registers('1'));
 	assertEquals('#2-4', 'second\nthird\nf\nfifth\n', Wasavi.registers('2'));
-	assertPos([1, 0]);
+	assertPos('#2-5', [1, 0]);
 
 	/*
 	 * fir_t            _ifth
@@ -369,7 +421,7 @@ function testDeleteDown (a) {
 	assertEquals('#3-2', 'first\nf\n', Wasavi.registers('"'));
 	assertEquals('#3-3', 'first\nf\n', Wasavi.registers('1'));
 	assertEquals('#3-4', 'second\nthird\n', Wasavi.registers('2'));
-	assertPos([0, 0]);
+	assertPos('#3-5', [0, 0]);
 }
 
 function testDeleteDownCtrlN () {
@@ -384,7 +436,6 @@ function testDeleteUp (a) {
 	a || (a = 'k');
 
 	Wasavi.send('i', 'first\nsecond\nt', '\u001b');
-	Wasavi.send('2G3|');
 
 	/*
 	 * POSIX defines that moving beyond top or tail of buffer causes an error,
@@ -400,7 +451,7 @@ function testDeleteUp (a) {
 	assertEquals('#2-1', 't', Wasavi.value);
 	assertEquals('#2-2', 'first\nsecond\n', Wasavi.registers('"'));
 	assertEquals('#2-3', 'first\nsecond\n', Wasavi.registers('1'));
-	assertPos([0, 0]);
+	assertPos('#2-4', [0, 0]);
 }
 
 function testDeleteUpCtrlP () {

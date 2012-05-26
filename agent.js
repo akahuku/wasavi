@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 116 2012-05-12 12:43:53Z akahuku $
+ * @version $Id: agent.js 128 2012-05-26 09:15:39Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -81,46 +81,6 @@ typeof WasaviExtensionWrapper != 'undefined'
 			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
 				'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
 		}
-		function getBorderStyle (s) {
-			var result = [];
-			var r1 = /^\d+$/;
-			var r2 = /([a-z])([A-Z])/g;
-			var r3 = /([a-z])-([a-z])/g;
-			var r4 = /^border[\-A-Z]/;
-			for (var i in s) {
-				var name = i;
-				if (r1.test(name)) {
-					name = s[i];
-				}
-				if (r4.test(name)) {
-					var nameHyphened = name.replace(r2, function ($0, $1, $2) {
-						return $1 + '-' + $2.toLowerCase();
-					});
-					var nameCameled = name.replace(r3, function ($0, $1, $2) {
-						return $1 + $2.toUpperCase();
-					});
-					s[nameCameled] != '' && result.push('  ' + nameHyphened + ':' + s[nameCameled]);
-				}
-			}
-			return '  ' + result.join(';') + ';';
-		}
-		function getPaddingStyle (s) {
-			return [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' ') || '0';
-		}
-		function getHighestZindex () {
-			var iter = document.createNodeIterator(
-				document.body, window.NodeFilter.SHOW_ELEMENT, null, false);
-			var node;
-			var result = 0;
-			var view = document.defaultView;
-			while ((node = iter.nextNode())) {
-				var z = (node.style.zIndex || view.getComputedStyle(node, '').zIndex) - 0;
-				if (z > result) {
-					result = z;
-				}
-			}
-			return result;
-		}
 		function isFixedPosition (element) {
 			var isFixed = false;
 			for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
@@ -152,7 +112,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 		wasaviFrame.style.border = 'none';
 		wasaviFrame.style.overflow = 'hidden';
 		wasaviFrame.style.visibility = 'hidden';
-		wasaviFrame.style.zIndex = Math.min(getHighestZindex() + 100.0, 0x7fffffff);
+		wasaviFrame.style.zIndex = 0x00ffffff;
 
 		if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
 			wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
@@ -179,9 +139,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 				readOnly:element.readOnly,
 				value:element.value,
 				rect:{width:rect.width, height:rect.height},
-				fontStyle:getFontStyle(s, fontFamily),
-				borderStyles:getBorderStyle(s),
-				paddingStyle:getPaddingStyle(s)
+				fontStyle:getFontStyle(s, fontFamily)
 			};
 			extension.postMessage({type:'notify-to-child', payload:payload});
 		};
@@ -367,7 +325,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 		var isTopFrame;
 		try { isTopFrame = !window.frameElement; } catch (e) {} 
-		isTopFrame && console.log(
+		isTopFrame && document.querySelectorAll('textarea').length && console.log(
 			'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
 	}
 

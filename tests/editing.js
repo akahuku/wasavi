@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: editing.js 126 2012-05-20 04:58:15Z akahuku $
+ * @version $Id: editing.js 128 2012-05-26 09:15:39Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -736,7 +736,7 @@ function testOverwrite () {
 function testSubstituteWholeLines () {
 	Wasavi.send('i', '\tfoobar', Wasavi.SPECIAL_KEYS.ESCAPE);
 
-	Wasavi.send('Sreplaced', Wasavi.SPECIAL_KEYS.ESCAPE);
+	Wasavi.send(':set noai\nSreplaced', Wasavi.SPECIAL_KEYS.ESCAPE);
 	assertPos('#1-1', [0, 7]);
 	assertEquals('#1-2', 'replaced', Wasavi.value);
 

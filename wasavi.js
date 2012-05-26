@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 122 2012-05-18 03:08:21Z akahuku $
+ * @version $Id: wasavi.js 128 2012-05-26 09:15:39Z akahuku $
  * @sourceURL=wasavi.js
  */
 /**
@@ -94,8 +94,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 122 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 122 2012-05-18 03:08:21Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 128 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 128 2012-05-26 09:15:39Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -399,16 +399,16 @@
 			return this.isp(o) && (this.row != o.row || this.col != o.col);
 		},
 		gt: function (o) {
-			return this.isp(o) && (this.row > o.row || this.col > o.col);
+			return this.isp(o) && (this.row > o.row || this.row == o.row && this.col > o.col);
 		},
 		lt: function (o) {
-			return this.isp(o) && (this.row < o.row || this.col < o.col);
+			return this.isp(o) && (this.row < o.row || this.row == o.row && this.col < o.col);
 		},
 		ge: function (o) {
-			return this.isp(o) && (this.row >= o.row || this.col >= o.col);
+			return this.isp(o) && (this.row > o.row || this.row == o.row && this.col >= o.col);
 		},
 		le: function (o) {
-			return this.isp(o) && (this.row <= o.row || this.col <= o.col);
+			return this.isp(o) && (this.row < o.row || this.row == o.row && this.col <= o.col);
 		}
 	};
 
@@ -1298,13 +1298,26 @@
 					var m = marks[i];
 					if (m.row > pos.row || m.row == pos.row && m.col >= pos.col) {
 						usedMarks[i] = true;
-						var node = editor.rowTextNodes(m);
-						r.setStart(node, m.col);
-						r.setEnd(node, m.col);
-						var span = document.createElement('span');
-						span.className = 'wasavi_mark';
-						dataset(span, 'index', i);
-						r.insertNode(span);
+
+						var iter = document.createNodeIterator(
+							editor.elm.childNodes[m.row],
+							window.NodeFilter.SHOW_TEXT, null, false);
+						var totalLength = 0;
+						var node;
+
+						while ((node = iter.nextNode())) {
+							var next = totalLength + node.nodeValue.length;
+							if (totalLength <= m.col && m.col < next) {
+								r.setStart(node, m.col - totalLength);
+								r.setEnd(node, m.col - totalLength);
+								var span = document.createElement('span');
+								span.className = 'wasavi_mark';
+								dataset(span, 'index', i);
+								r.insertNode(span);
+								break;
+							}
+							totalLength = next;
+						}
 					}
 				}
 				return usedMarks;
@@ -2164,16 +2177,6 @@
 			set scrollTop (v) {
 				this.elm.removeEventListener('scroll', handleScroll, false);
 				this.elm.scrollTop = v;
-				/*if (this.elm.scrollTop != v) {
-					console.log([
-						'*** set scrollTop: value unmatch ***',
-						'       value: ' + v,
-						'   scrollTop: ' + this.elm.scrollTop,
-						'   available: ' + (this.elm.scrollHeight - this.elm.clientHeight),
-						'scrollHeight: ' + this.elm.scrollHeight,
-						'clientHeight: ' + this.elm.clientHeight
-					].join('\n'));
-				}*/
 				this.elm.addEventListener('scroll', handleScroll, false);
 			},
 			set scrollLeft (v) {
@@ -5485,6 +5488,7 @@ flag23_loop:
 				prefixInput.reset();
 				isEditCompleted = isVerticalMotion = isWordMotion = false;
 				isSmoothScrollRequested = false;
+				showMessage('');
 				requestShowPrefixInput();
 			}
 			else {
@@ -5642,12 +5646,12 @@ flag23_loop:
 			switch (typeof map[key]) {
 			case 'function':
 				if (subkey == '' || subkey == inputMode) {
-					return map[key](chr(code) || code, t, e);
+					return map[key].call(map, chr(code) || code, t, e);
 				}
 				break;
 			case 'object':
 				if (subkey != '' && subkey in map[key]) {
-					return map[key][subkey](chr(code) || code, t, e);
+					return map[key][subkey].call(map, chr(code) || code, t, e);
 				}
 				break;
 			}
@@ -5738,7 +5742,7 @@ flag23_loop:
 			idealWidthPixels = textspan.offsetWidth;
 		}
 	}
-	function getCurrentViewPositionIndices (t, debug) {
+	function getCurrentViewPositionIndices (t) {
 		function findTopLineIndex (line) {
 			var low = 0;
 			var high = t.elm.childNodes.length - 1;
@@ -5748,20 +5752,12 @@ flag23_loop:
 				var node = t.elm.childNodes[middle];
 				var top = node.offsetTop;
 				var bottom = node.offsetTop + node.offsetHeight
-				log.push([
-					'middle:' + middle,
-					'top:' + top,
-					'bottom:' + bottom,
-					'line:' + line
-				].join(', '));
 				if (top == line && line < bottom) {
 					result = middle;
-					log.push('exit(1):' + result);
 					break;
 				}
 				else if (top < line && line < bottom) {
 					result = middle + 1;
-					log.push('exit(2):' + result);
 					break;
 				}
 				else if (bottom <= line) {
@@ -5782,20 +5778,12 @@ flag23_loop:
 				var node = t.elm.childNodes[middle];
 				var top = node.offsetTop;
 				var bottom = node.offsetTop + node.offsetHeight
-				log.push([
-					'middle:' + middle,
-					'top:' + top,
-					'bottom:' + bottom,
-					'line:' + line
-				].join(', '));
 				if (top < line && line == bottom) {
 					result = middle;
-					log.push('exit(1):' + result);
 					break;
 				}
 				else if (top < line && line < bottom) {
 					result = middle - 1;
-					log.push('exit(2):' + result);
 					break;
 				}
 				else if (bottom <= line) {
@@ -5809,7 +5797,6 @@ flag23_loop:
 		}
 
 		var result = {};
-		var log = [];
 
 		var top = findTopLineIndex(t.elm.scrollTop);
 		if (top >= 0) {
@@ -5829,7 +5816,6 @@ flag23_loop:
 
 		result.lines = parseInt(t.elm.clientHeight / lineHeight);
 
-		debug && console.log(log.join('\n'));
 		return result;
 	}
 	function inputEscape () {
@@ -5880,7 +5866,7 @@ flag23_loop:
 		count || (count = 1);
 		var n = t.selectionEnd;
 		var length = t.rows(n).length;
-		n.col >= length - 1 && requestRegisterNotice('Tail of line');
+		n.col >= length - 1 && requestRegisterNotice('Tail of line.');
 		n.col = Math.min(n.col + count, length);
 		t.selectionEnd = n;
 		prefixInput.motion = c;
@@ -5913,7 +5899,7 @@ flag23_loop:
 
 				while (!t.isEndOfText(n)) {
 					if (t.isNewline(n)) {
-						if (!prefixInput.isEmptyOperation) {
+						if (!prefixInput.isEmptyOperation && i + 1 == count) {
 							break;
 						}
 						var tmp = t.rightPos(n);
@@ -5942,7 +5928,7 @@ flag23_loop:
 
 				while (!t.isEndOfText(n)) {
 					if (t.isNewline(n)) {
-						if (!prefixInput.isEmptyOperation) {
+						if (!prefixInput.isEmptyOperation && i + 1 == count) {
 							break;
 						}
 						var tmp = t.rightPos(n);
@@ -5979,9 +5965,6 @@ flag23_loop:
 					}
 
 					if (t.isNewline(n)) {
-						if (!prefixInput.isEmptyOperation) {
-							break;
-						}
 						var tmp = t.rightPos(n);
 						if (t.isNewline(tmp)) {
 							n = tmp;
@@ -6010,9 +5993,6 @@ flag23_loop:
 					}
 
 					if (t.isNewline(n)) {
-						if (!prefixInput.isEmptyOperation) {
-							break;
-						}
 						var tmp = t.rightPos(n);
 						if (t.isNewline(tmp)) {
 							n = tmp;
@@ -6622,6 +6602,15 @@ flag23_loop:
 		prefixInput.motion = c;
 		return true;
 	}
+	function extendRightIfInclusiveMotion (t) {
+		if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
+		||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
+		||  'eEft%'.indexOf(prefixInput.motion) >= 0) {
+			if (!t.isNewline(t.selectionEnd)) {
+				t.selectionEnd = t.rightPos(t.selectionEnd);
+			}
+		}
+	}
 
 	/*
 	 * low-level functions for text modification
@@ -6708,7 +6697,6 @@ flag23_loop:
 					switch (re[i]) {
 					case '\n':
 						isMultilineTextInput(targetElement) && t.divideLine();
-						resultValue = t.value;
 						break;
 
 					default:
@@ -8421,26 +8409,70 @@ flag23_loop:
 		'c': {
 			'command': operationDefault,
 			'@op': function (c, t) {
-				if (c == prefixInput.operation || isVerticalMotion) {
+				if (c == prefixInput.operation) {
+					this['_'].apply(this, arguments);
+				}
+				if (requestedState.notice) {
+					return;
+				}
+
+				t.regalizeSelectionRelation();
+				var origin = t.selectionStart;
+				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+				var actualCount = t.selectionEndRow - t.selectionStartRow + 1;
+				var deleted = 0;
+
+				// special change behavior followed vim.
+				if (!isLineOrient &&  t.selectionEndCol == 0 &&  actualCount > 1) {
+					var leading = t.rows(t.selectionStartRow)
+						.substring(0, t.selectionStartCol);
+					if (!/\S/.test(leading)) {
+						isLineOrient = true;
+					}
+
+					actualCount--;
+					t.selectionEnd = new Position(
+						t.selectionEndRow - 1,
+						t.rows(t.selectionEndRow - 1).length
+					);
+				}
+
+				t.isLineOrientSelection = isLineOrient;
+				if (isLineOrient) {
+					var selfIndent = t.getIndent(origin);
+					t.selectionEnd = t.selectionStart;
 					t.isLineOrientSelection = true;
-					yank(t, prefixInput.count);
+					yank(t, actualCount);
 					editLogger.open();
-					var rowLength = t.rowLength;
-					var deleted = deleteSelection(t);
+					deleted = deleteSelection(t);
 					if (deleted >= config.vars.report) {
 						requestShowMessage(_('Changing {0} {line:0}.', deleted));
 					}
-					insert(t, t.getBackIndent(t.selectionStart));
 					t.isLineOrientSelection = false;
-					if (t.rowLength + deleted == rowLength) {
+
+					if (t.rowLength == 1 && t.rows(0) == '') {
+						var indent = config.vars.autoindent ? selfIndent : '';
+						insert(t, indent);
+					}
+					else if (origin.row >= t.rowLength) {
+						var n = t.selectionStart;
+						var indent = config.vars.autoindent ? t.getIndent(n) : '';
+						n = t.getLineTailOffset(n);
+						t.setSelectionRange(n);
+						insert(t, '\n' + indent);
+					}
+					else {
+						var indent = config.vars.autoindent ? t.getBackIndent(t.selectionStart) : '';
+						insert(t, indent);
 						insert(t, '\n', {keepPosition:true});
 					}
-					prefixInput.motion = c;
 				}
 				else {
-					yank(t, prefixInput.count);
+					extendRightIfInclusiveMotion(t);
+					yank(t, actualCount);
 					deleteSelection(t);
 				}
+
 				isEditCompleted = true;
 				requestSimpleCommandUpdate();
 				return startEdit(c, t);
@@ -8449,86 +8481,93 @@ flag23_loop:
 		'd': {
 			'command': operationDefault,
 			'@op': function (c, t) {
-				if (!requestedState.notice) {
-					t.regalizeSelectionRelation();
+				if (c == prefixInput.operation) {
+					this['_'].apply(this, arguments);
+				}
+				if (requestedState.notice) {
+					return;
+				}
 
-					var origin = t.selectionStart;
-					var isLineOrient = c == prefixInput.operation || isVerticalMotion;
-					var actualCount = t.selectionEndRow - t.selectionStartRow + 1;
-					var deleted = 0;
+				t.regalizeSelectionRelation();
+				var origin = t.selectionStart;
+				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+				var actualCount = t.selectionEndRow - t.selectionStartRow + 1;
+				var deleted = 0;
 
-					// 
-					if (!isLineOrient
-					&&  t.selectionEndCol == 0
-					&&  actualCount > 1) {
-						var leading = t.rows(t.selectionStartRow)
-							.substring(0, t.selectionStartCol);
-						if (!/\S/.test(leading)) {
-							isLineOrient = true;
-						}
-
-						actualCount--;
-						t.selectionEnd = new Position(
-							t.selectionEndRow - 1,
-							t.rows(t.selectionEndRow - 1).length
-						);
+				// special delete behavior followed vim.
+				if (!isLineOrient &&  t.selectionEndCol == 0 &&  actualCount > 1) {
+					var leading = t.rows(t.selectionStartRow)
+						.substring(0, t.selectionStartCol);
+					if (!/\S/.test(leading)) {
+						isLineOrient = true;
 					}
 
-					t.isLineOrientSelection = isLineOrient;
-					if (isLineOrient) {
-						t.selectionEnd = t.selectionStart;
-					}
-					else {
-						// inclusive motions
-						if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
-						||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
-						||  /^[eEft%]$/.test(prefixInput.motion)) {
-							if (!t.isNewline(t.selectionEnd)) {
-								t.selectionEnd = t.rightPos(t.selectionEnd);
-							}
-						}
-					}
+					actualCount--;
+					t.selectionEnd = new Position(
+						t.selectionEndRow - 1,
+						t.rows(t.selectionEndRow - 1).length
+					);
+				}
 
-					if (false) {
-						console.log([
-							'*** d ***',
-							'   actualCount: ' + actualCount,
-							'selectionStart: ' + t.selectionStart,
-							'  selectionEnd: ' + t.selectionEnd,
-							'         value:', t.value
-						].join('\n'));
-					}
+				t.isLineOrientSelection = isLineOrient;
+				if (isLineOrient) {
+					t.selectionEnd = t.selectionStart;
+				}
+				else {
+					extendRightIfInclusiveMotion(t);
+				}
 
-					yank(t, actualCount);
-					deleted = deleteSelection(t);
+				yank(t, actualCount);
+				deleted = deleteSelection(t);
 
-					if (isLineOrient) {
-						origin.row = Math.min(origin.row, t.rowLength - 1);
-						t.setSelectionRange(t.getLineTopOffset2(origin));
+				if (isLineOrient) {
+					origin.row = Math.min(origin.row, t.rowLength - 1);
+					t.setSelectionRange(t.getLineTopOffset2(origin));
 
-						if (deleted >= config.vars.report) {
-							requestShowMessage(_('Deleted {0} {line:0}.', deleted));
-						}
+					if (deleted >= config.vars.report) {
+						requestShowMessage(_('Deleted {0} {line:0}.', deleted));
 					}
 				}
 
 				isEditCompleted = true;
-				prefixInput.motion = c;
 				requestSimpleCommandUpdate();
+				return true;
 			}
 		},
 		'y': {
 			'command': operationDefault,
 			'@op': function (c, t) {
-				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
-				var n = t.selectionStart;
-				t.isLineOrientSelection = isLineOrient;
-				var yanked = yank(t, prefixInput.count);
-				if (isLineOrient && yanked >= config.vars.report) {
-					requestShowMessage(_('Yanked {0} {line:0}.', yanked));
+				if (c == prefixInput.operation) {
+					this['_'].apply(this, arguments);
 				}
-				t.setSelectionRange(n);
-				prefixInput.motion = c;
+				if (requestedState.notice) {
+					return;
+				}
+
+				var ss = t.selectionStart;
+				var se = t.selectionEnd;
+				var origin = ss.lt(se) ? ss : se;
+				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+				var actualCount = Math.abs(t.selectionEndRow - t.selectionStartRow) + 1;
+				var yanked = 0;
+
+				t.isLineOrientSelection = isLineOrient;
+				if (isLineOrient) {
+					// do nothing
+				}
+				else {
+					extendRightIfInclusiveMotion(t);
+				}
+
+				yanked = yank(t);
+
+				if (isLineOrient) {
+					if (yanked >= config.vars.report) {
+						requestShowMessage(_('Yanked {0} {line:0}.', yanked));
+					}
+				}
+
+				t.setSelectionRange(origin);
 				requestSimpleCommandUpdate();
 				return true;
 			}
@@ -8604,7 +8643,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
-				return this['y']['@op'].call(this, '', t);
+				return this['y']['@op'].call(this, c, t);
 			}
 			else {
 				inputEscape(c);
@@ -8730,9 +8769,7 @@ flag23_loop:
 		// down, line orient
 		'_': function (c, t) {
 			var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
-			if (count > 1) {
-				motionDown(c, t, count - 1);
-			}
+			count > 1 && motionDown(c, t, count - 1);
 			t.extendSelectionTo(t.getLineTopOffset2(t.selectionEnd));
 			isVerticalMotion = true;
 			return true;
@@ -9044,7 +9081,10 @@ flag23_loop:
 		'w': function (c, t) {
 			if (prefixInput.operation == 'c') {
 				motionNextWord(c, t, prefixInput.count, false, true);
-				return t.isNewline(t.selectionEnd) ? true : motionRight('', t);
+				if (!t.isNewline(t.selectionEnd)) {
+					t.selectionEnd = t.rightPos(t.selectionEnd);
+				}
+				return true;
 			}
 			else {
 				return motionNextWord(c, t, prefixInput.count, false);
@@ -9053,17 +9093,28 @@ flag23_loop:
 		'W': function (c, t) {
 			if (prefixInput.operation == 'c') {
 				motionNextWord(c, t, prefixInput.count, true, true);
-				return motionRight('', t);
+				if (!t.isNewline(t.selectionEnd)) {
+					t.selectionEnd = t.rightPos(t.selectionEnd);
+				}
+				return true;
 			}
 			else {
 				return motionNextWord(c, t, prefixInput.count, true);
 			}
 		},
 		'b': function (c, t) {
-			return motionPrevWord(c, t, prefixInput.count, false);
+			motionPrevWord(c, t, prefixInput.count, false);
+			if (prefixInput.operation == 'c' && t.selectionEndCol == 0) {
+				t.selectionEnd = t.leftPos(t.selectionEnd);
+			}
+			return true;
 		},
 		'B': function (c, t) {
-			return motionPrevWord(c, t, prefixInput.count, true);
+			motionPrevWord(c, t, prefixInput.count, true);
+			if (prefixInput.operation == 'c' && t.selectionEndCol == 0) {
+				t.selectionEnd = t.leftPos(t.selectionEnd);
+			}
+			return true;
 		},
 		'e': function (c, t) {
 			return motionNextWord(c, t, prefixInput.count, false, true);
@@ -9081,18 +9132,21 @@ flag23_loop:
 				var result = false;
 				switch (c) {
 				case 'g':
-					var count = prefixInput.count;
-					var n = new Position(count - 1, 0);
+					var index = prefixInput.count;
+					var n = new Position(index - 1, 0);
 					marks.set('\'', t.selectionStart);
-					t.setSelectionRange(t.getLineTopOffset2(n));
-
-					var node = t.rowNodes(n);
-					var viewHeightHalf = parseInt((t.elm.clientHeight - lineHeight) / 2)
-					scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
-
+					if (prefixInput.isEmptyOperation) {
+						t.setSelectionRange(t.getLineTopOffset2(n));
+						var node = t.rowNodes(n);
+						var viewHeightHalf = parseInt((t.elm.clientHeight - lineHeight) / 2)
+						scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
+					}
+					else {
+						t.extendSelectionTo(t.getLineTopOffset2(n));
+					}
 					isVerticalMotion = true;
 					idealWidthPixels = -1;
-					prefixInput.appendMotion(c);
+					prefixInput.trailer = c;
 					result = true;
 					break;
 				default:
@@ -9135,8 +9189,17 @@ flag23_loop:
 		'G': function (c, t) {
 			var index = prefixInput.isCountSpecified ?
 				Math.max(Math.min(prefixInput.count, t.rowLength), 1) : t.rowLength;
+			var n = new Position(index - 1, 0);
 			marks.set('\'', t.selectionStart);
-			t.extendSelectionTo(t.getLineTopOffset2(index - 1, 0));
+			if (prefixInput.isEmptyOperation) {
+				t.setSelectionRange(t.getLineTopOffset2(n));
+				var node = t.rowNodes(n);
+				var viewHeightHalf = parseInt((t.elm.clientHeight - lineHeight) / 2)
+				scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
+			}
+			else {
+				t.extendSelectionTo(t.getLineTopOffset2(n));
+			}
 			isVerticalMotion = true;
 			isSmoothScrollRequested = true;
 			idealWidthPixels = -1;
@@ -9456,6 +9519,10 @@ flag23_loop:
 			return undefined;
 		},
 		'.': function (c, t) {
+			// . command repeats the last
+			// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
+			//          a, c, d, i, o, p, r, s,    x, y,
+			// or ˜ command.
 			if (prefixInput.isEmptyOperation) {
 				if (lastSimpleCommand.length) {
 					if (prefixInput.isCountSpecified) {
@@ -9718,7 +9785,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
-				return this['c']['@op'].call(this, '', t);
+				return this['c']['@op'].call(this, c, t);
 			}
 			else {
 				inputEscape(c);
@@ -10276,6 +10343,10 @@ flag23_loop:
 				ensureRunning();
 				return lastMessage;
 			},
+			get lastSimpleCommand () {
+				ensureRunning();
+				return lastSimpleCommand;
+			},
 
 			/*
 			 * methods
@@ -10318,6 +10389,10 @@ flag23_loop:
 				}
 				executeViCommand.apply(null, args);
 			},
+			marks: function (name) {
+				ensureRunning();
+				return marks.get(name);
+			},
 			registers: function (name) {
 				if (arguments.length) {
 					if (!registers.isReadable(name)) {
@@ -10353,6 +10428,10 @@ flag23_loop:
 						break;
 					}
 				});
+			},
+			dumpDom: function () {
+				ensureRunning();
+				return getEditorCore().elm.innerHTML;
 			},
 
 			/*
