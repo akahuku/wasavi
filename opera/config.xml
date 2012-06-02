@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" version="0.2.126">
+<widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" version="0.2.128">
     <name xml:lang="en" short="wasavi">wasavi</name>
     <author href="http://appsweets.net" email="akahuku@gmail.com">akahuku@gmail.com</author>
     <description>VI editor for any web page.</description>

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: editing.js 128 2012-05-26 09:15:39Z akahuku $
+ * @version $Id: editing.js 130 2012-06-02 05:52:45Z akahuku $
  */
 /**
  * Copyright (c) 2012 akahuku@gmail.com
@@ -177,6 +177,7 @@ function testJoin () {
 //            a, c, d, i,    o, p, r, s, x, y, ˜
 
 function testRepetitionShiftLeft () {
+	Wasavi.send(':set sw=8\n');
 	Wasavi.send('i', '\t\t\t\t\tfoo\n\tbar', Wasavi.SPECIAL_KEYS.ESCAPE, '1G');
 
 	Wasavi.send('<<');
@@ -189,6 +190,7 @@ function testRepetitionShiftLeft () {
 }
 
 function testRepetitionShiftRight () {
+	Wasavi.send(':set sw=8\n');
 	Wasavi.send('i', 'foo\nbar', Wasavi.SPECIAL_KEYS.ESCAPE, '1G');
 
 	Wasavi.send('>>');

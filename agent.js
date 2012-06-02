@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 128 2012-05-26 09:15:39Z akahuku $
+ * @version $Id: agent.js 130 2012-06-02 05:52:45Z akahuku $
  *
  *
  * Copyright (c) 2012 akahuku@gmail.com
@@ -48,6 +48,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 	/*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 	/*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
+	/*const*/var FULLSCREEN_MARGIN = 8;
 	/*const*/var ACCEPTABLE_TYPES = {
 		textarea: 'enableTextArea',
 		text:     'enableText',
@@ -76,11 +77,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	 * ----------------
 	 */
 
-	function run (element) {
-		function getFontStyle (s, fontFamilyOverride) {
-			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
-				'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
-		}
+	function locate (iframe, target, isFullscreen) {
 		function isFixedPosition (element) {
 			var isFixed = false;
 			for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
@@ -92,23 +89,46 @@ typeof WasaviExtensionWrapper != 'undefined'
 			}
 			return isFixed;
 		}
+		if (isFullscreen) {
+			var rect = {
+				left:FULLSCREEN_MARGIN,
+				top:FULLSCREEN_MARGIN,
+				width:document.documentElement.clientWidth - FULLSCREEN_MARGIN * 2,
+				height:document.documentElement.clientHeight - FULLSCREEN_MARGIN * 2
+			};
+			iframe.style.position = 'fixed';
+			iframe.style.left = rect.left + 'px';
+			iframe.style.top = rect.top + 'px';
+			iframe.style.width = rect.width + 'px';
+			iframe.style.height = rect.height + 'px';
+		}
+		else {
+			var rect = target.getBoundingClientRect();
+			var isFixed = isFixedPosition(target);
+			iframe.style.position = isFixed ? 'fixed' : 'absolute';
+			iframe.style.left = (
+				rect.left + 
+				(isFixed ? 0 : document.documentElement.scrollLeft)
+			) + 'px';
+			iframe.style.top = (
+				rect.top + 
+				(isFixed ? 0 : document.documentElement.scrollTop)
+			) + 'px';
+			iframe.style.width = rect.width + 'px';
+			iframe.style.height = rect.height + 'px';
+		}
+		return rect;
+	}
+
+	function run (element) {
+		function getFontStyle (s, fontFamilyOverride) {
+			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
+				'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
+		}
 
 		targetElement = element;
-
-		var rect = element.getBoundingClientRect();
-		var isFixed = isFixedPosition(element);
 		wasaviFrame = document.createElement('iframe');
-		wasaviFrame.style.position = isFixed ? 'fixed' : 'absolute';
-		wasaviFrame.style.left = (
-			rect.left + 
-			(isFixed ? 0 : Math.max(document.documentElement.scrollLeft, document.body.scrollLeft))
-		) + 'px';
-		wasaviFrame.style.top = (
-			rect.top + 
-			(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
-		) + 'px';
-		wasaviFrame.style.width = rect.width + 'px';
-		wasaviFrame.style.height = rect.height + 'px';
+		var rect = locate(wasaviFrame, element);
 		wasaviFrame.style.border = 'none';
 		wasaviFrame.style.overflow = 'hidden';
 		wasaviFrame.style.visibility = 'hidden';
@@ -386,7 +406,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 			if (!wasaviFrame) break;
 			wasaviFrame.style.visibility = 'visible';
 			focusToFrame();
+			wasaviFrame.style.height = (req.height || targetElement.offsetHeight) + 'px';
+			wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
+			console.info('wasavi started');
 
+			/*
 			var animationHeight = targetElement.offsetHeight;
 			var goalHeight = req.height || targetElement.offsetHeight;
 
@@ -402,10 +426,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 					console.info('wasavi started');
 				}
 				else {
-					animationHeight++;
+					animationHeight += 2;
 					setTimeout(arguments.callee, 10);
 				}
 			})();
+			*/
 			break;
 
 		case 'wasavi-stroked':
@@ -415,7 +440,16 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 		case 'wasavi-window-state':
 			if (!wasaviFrame) break;
-			console.log('window-state: ' + req.state);
+			switch (req.state) {
+			case 'maximized':
+			case 'normal':
+				var rect = locate(wasaviFrame, targetElement, req.state == 'maximized');
+				extension.postMessage({type:'notify-to-child', childTabId:req.tabId, payload:{
+					type:'relocate',
+					rect:{width:rect.width, height:rect.height - req.modelineHeight}
+				}});
+				break;
+			}
 			break;
 
 		case 'wasavi-focus-me':
