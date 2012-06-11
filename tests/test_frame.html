@@ -5,14 +5,25 @@
 		<title>wasavi frame for unittest</title>
 		<style>body{margin:0;padding:0;overflow:hidden;}</style>
 		<style id="wasavi_global_styles"></style>
-		<script src="../jsunit/app/jsUnitCore.js"></script>
-		<script src="../wasavi.js"></script>
-		<script src="utils.js"></script>
 		<script>
-			var re = /^\?test=([^&]+)/.exec(location.search);
-			if (re) {
-			    document.write('<script src="' + re[1] + '.js"></scr' + 'ipt>');
-			}
+			(function () {
+				var scripts = [
+					'../jsunit/app/jsUnitCore.js',
+					'../wasavi.js',
+					'utils.js'
+				];
+				var re = /^\?test=([^&]+)/.exec(location.search);
+				re && scripts.push(re[1] + '.js');
+				scripts.forEach(function (file) {
+					if (location.protocol == 'file:') {
+						document.write('<script src="' + file + '"></scr' + 'ipt>');
+					}
+					else {
+						document.write(
+							'<script src="' + file + '?cacheBuster=' + (+new Date()) + '"></scr' + 'ipt>');
+					}
+				});
+			})();
 		</script>
 	</head>
 	<body>

@@ -4,34 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: undo.js 130 2012-06-02 05:52:45Z akahuku $
- */
-/**
- * Copyright (c) 2012 akahuku@gmail.com
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     1. Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *     2. Redistributions in binary form must reproduce the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and/or other materials
- *        provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * @version $Id: undo.js 134 2012-06-11 20:44:34Z akahuku $
  */
 
 /**
@@ -304,6 +277,23 @@ function testDeleteLinesLast () {
 	assertEquals('#3-1', '1', Wasavi.value);
 }
 
+function testDeleteLineWithMark () {
+	Wasavi.send('i1\n2\n3\u001b');
+
+	Wasavi.send('2Gmadd');
+	assertEquals('#1-1', '1\n3', Wasavi.value);
+
+	Wasavi.send('1G`a');
+	assertUndefined('#2-1', Wasavi.marks('a'));
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send('u');
+	assertEquals('#3-1', '1\n2\n3', Wasavi.value);
+	Wasavi.send('1G`a');
+	assertNotUndefined('#3-2', Wasavi.marks('a'));
+	assertPos('#3-3', [1, 0]);
+}
+
 function testChange () {
 	Wasavi.send('i1\n2\n3\u001b');
 
@@ -369,6 +359,152 @@ function testUnshift () {
 
 	Wasavi.send('\u0012');
 	assertEquals('#3-1', '1\n2\n3', Wasavi.value);
+}
+
+function testPasteCharsForward () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1G1|y3l');
+	Wasavi.send('1G1|p');
+	assertEquals('#1-1', 'ffoooo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'ffoooo\nbar', Wasavi.value);
+}
+
+function testPasteCharsCurrent () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1G1|y3l');
+	Wasavi.send('1G1|P');
+	assertEquals('#1-1', 'foofoo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foofoo\nbar', Wasavi.value);
+}
+
+function testPastCharsForwardToTailOfBuffer () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1G1|y3l');
+	Wasavi.send('2G$p');
+	assertEquals('#1-1', 'foo\nbarfoo', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foo\nbarfoo', Wasavi.value);
+}
+
+function testPasteCharsCurrentToTailOfBuffer () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1G1|y3l');
+	Wasavi.send('2G$P');
+	assertEquals('#1-1', 'foo\nbafoor', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foo\nbafoor', Wasavi.value);
+}
+
+function testPasteLineForward () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1Gyy');
+	Wasavi.send('1Gp');
+	assertEquals('#1-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('Gyy');
+	Wasavi.send('1Gp');
+	assertEquals('#4-1', 'foo\nbar\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#5-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#6-1', 'foo\nbar\nfoo\nbar', Wasavi.value);
+}
+
+function testPasteLineCurrent () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1Gyy');
+	Wasavi.send('1GP');
+	assertEquals('#1-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('Gyy');
+	Wasavi.send('1GP');
+	assertEquals('#4-1', 'bar\nfoo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#5-1', 'foo\nfoo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#4-1', 'bar\nfoo\nfoo\nbar', Wasavi.value);
+}
+
+function testPasteLineForwardToTailOfBuffer () {
+	Wasavi.send('ifoo\nbar\u001b');
+
+	Wasavi.send('1Gyy');
+	Wasavi.send('2Gp');
+	assertEquals('#1-1', 'foo\nbar\nfoo', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#3-1', 'foo\nbar\nfoo', Wasavi.value);
+}
+
+function testToggleCase () {
+	Wasavi.send('ifoo12#$bar\u001b');
+
+	Wasavi.send('1|~');
+	assertEquals('#1-1', 'Foo12#$bar', Wasavi.value);
+	assertPos('#1-2', [0, 1]);
+	Wasavi.send('u');
+	assertEquals('#1-3', 'foo12#$bar', Wasavi.value);
+	Wasavi.send('\u0012');
+	assertEquals('#1-4', 'Foo12#$bar', Wasavi.value);
+
+	Wasavi.send('2|2~');
+	assertEquals('#2-1', 'FOO12#$bar', Wasavi.value);
+	assertPos('#2-2', [0, 3]);
+	Wasavi.send('u');
+	assertEquals('#2-3', 'Foo12#$bar', Wasavi.value);
+	Wasavi.send('\u0012');
+	assertEquals('#2-4', 'FOO12#$bar', Wasavi.value);
+
+	Wasavi.send('1|10~');
+	assertEquals('#3-1', 'foo12#$BAR', Wasavi.value);
+	assertPos('#3-2', [0, 9]);
+	Wasavi.send('u');
+	assertEquals('#3-3', 'FOO12#$bar', Wasavi.value);
+	Wasavi.send('\u0012');
+	assertEquals('#3-4', 'foo12#$BAR', Wasavi.value);
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

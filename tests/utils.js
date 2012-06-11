@@ -1,4 +1,13 @@
 /**
+ * wasavi: vi clone implemented in javascript
+ * =============================================================================
+ *
+ *
+ * @author akahuku@gmail.com
+ * @version $Id: utils.js 134 2012-06-11 20:44:34Z akahuku $
+ */
+
+/**
  * dedicated assert functions
  */
 
@@ -55,7 +64,15 @@ var sectionTestText = [
 
 ].join('\n');
 
+var originalFrame;
+
 function setUp () {
+	if (originalFrame === undefined) {
+	    originalFrame = document.body.innerHTML;
+	}
+	else {
+	    document.body.innerHTML = originalFrame;
+	}
 	localStorage.clear();
 	//Wasavi.notifyUpdateStorage(['wasavi_registers']);
 	Wasavi.run(400, 300);
@@ -80,3 +97,19 @@ function makeScrollableBuffer (factor, origin) {
 	return lines;
 }
 
+function syncWait (secs) {
+	if (location.protocol == 'file:') {
+		var start = +new Date();
+		var goal = start + 1000 * secs;
+		while (+new Date() < goal) {
+			;
+		}
+	}
+	else if (/^https?:$/.test(location.protocol)) {
+		var xhr = new XMLHttpRequest;
+		xhr.open('GET', 'sync-wait.php?secs=' + secs, false);
+		xhr.send(null);
+	}
+}
+
+/* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

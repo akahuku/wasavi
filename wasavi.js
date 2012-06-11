@@ -9,34 +9,22 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 130 2012-06-02 05:52:45Z akahuku $
+ * @version $Id: wasavi.js 135 2012-06-11 20:45:00Z akahuku $
  */
 /**
- * Copyright (c) 2012 akahuku@gmail.com
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     1. Redistributions of source code must retain the above copyright
- *        notice, this list of conditions and the following disclaimer.
- *     2. Redistributions in binary form must reproduce the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and/or other materials
- *        provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright 2012 akahuku, akahuku@gmail.com
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 (function (global) {
@@ -93,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 130 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 130 2012-06-02 05:52:45Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 135 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 135 2012-06-11 20:45:00Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -110,7 +98,11 @@
 		number:   true
 	};
 	/*const*/var SPECIAL_KEYS = {
-		'-127':  '<delete>',
+		'-8': '<bs>',
+		'-9': '<tab>',
+		'-13': '<enter>',
+		'-27': '<esc>',
+		'-127': '<delete>',
 		33:  '<pageup>',
 		34:  '<pagedown>',
 		35:  '<end>',
@@ -128,6 +120,7 @@
 	/*const*/var WEBKIT_KEY_IDENTIFIERS_REVERSED = {
 		'U+0008':  -8,
 		'U+0009':  -9,
+		'U+000D':  -13,
 		'U+001B':  -27,
 		'Delete':  -127,
 		'PageUp':  33,
@@ -167,15 +160,15 @@
 		0x0078:'Ll', 0x0079:'Ll', 0x007A:'Ll', 0x007B:'Ps', 0x007C:'Sm', 0x007D:'Pe', 0x007E:'Sm', 0x007F:'Cc'
 	};
 	/*const*/var EXFLAGS = {
-		addr1: 1,
-		addr2: 2,
 		addr2All: 4,
 		addr2None: 8,
 		addrZero: 16,
 		addrZeroDef: 32,
 		printDefault: 64,
 		clearFlag: 128,
-		newScreen: 256
+		newScreen: 256,
+		roundMax: 512,
+		updateJump: 1024,
 	};
 
 	/*
@@ -1279,8 +1272,8 @@
 			name = regalizeName(name);
 			if (isValidName(name)) {
 				marks[name] = pos;
+				save();
 			}
-			save();
 		}
 		function get (name) {
 			name = regalizeName(name);
@@ -1396,6 +1389,7 @@
 		this.update = update;
 		this.dump = dump;
 		this.save = save;
+		this.isValidName = isValidName;
 		this.dispose = dispose;
 
 		restore(dataset(targetElement, 'wasaviMarks') || '');
@@ -1475,20 +1469,19 @@
 			var iter = document.createNodeIterator(
 				this.elm.childNodes[pos.row], window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
-			var node;
+			var node, prevNode;
 			while ((node = iter.nextNode())) {
 				var next = totalLength + node.nodeValue.length;
 				if (totalLength <= pos.col && pos.col < next) {
-					if (isEnd) {
-						r.setEnd(node, pos.col - totalLength);
-					}
-					else {
-						r.setStart(node, pos.col - totalLength);
-					}
+					isEnd ? r.setEnd(node, pos.col - totalLength) :
+					        r.setStart(node, pos.col - totalLength);
+					prevNode = null;
 					break;
 				}
 				totalLength = next;
+				prevNode = node;
 			}
+			//isEnd && prevNode && r.setEndAfter(prevNode);
 		}
 		function select (s, e) {
 			if (arguments.length == 0) {
@@ -2194,13 +2187,13 @@
 					r.detach();
 				}
 			},
-			offsetBy: function (s, offset) {
+			offsetBy: function (s, offset, treatLastLineAsNormal) {
 				var row5 = s.row;
 				var col = s.col;
 				var last = this.elm.childNodes.length - 1;
 				while (offset > 0) {
 					var node = this.elm.childNodes[row5].textContent;
-					if (row5 == last && node.substr(-1) == '\n') {
+					if (!treatLastLineAsNormal && row5 == last && node.substr(-1) == '\n') {
 						node = node.substring(0, node.length - 1);
 					}
 					var rest = node.length - col;
@@ -2391,14 +2384,16 @@
 		this.shortName = shortName;
 		this.handler = handler;
 		this.syntax = syntax;
-		this.rangeCount = flags & 0x00000003;
+		this.rangeCount = flags & 3;
 		this.flags = {
 			addr2All:     !!(flags & EXFLAGS.addr2All),
 			addr2None:    !!(flags & EXFLAGS.addr2None),
 			addrZero:     !!(flags & EXFLAGS.addrZero),
 			addrZeroDef:  !!(flags & EXFLAGS.addrZeroDef),
 			printDefault: !!(flags & EXFLAGS.printDefault),
-			clearFlag:    !!(flags & EXFLAGS.clearFlag)
+			clearFlag:    !!(flags & EXFLAGS.clearFlag),
+			roundMax:     !!(flags & EXFLAGS.roundMax),
+			updateJump:   !!(flags & EXFLAGS.updateJump)
 		};
 	}
 	ExCommand.prototype = {
@@ -2581,16 +2576,21 @@ flag23_loop:
 					break syntax_expansion_loop;
 
 				case 'W':
-					var re = /(?:\u0016.|\S)*/.exec(line);
-					argv_exp0(re[0]);
-					line = line.substring(re[0].length);
-					line = line.replace(/^[ \t]+/, '');
-					if (line == '') {
-						return _('Missing 2nd word.');
+					var re;
+					while (line != '' && (re = /(?:\u0016.|\S)*/.exec(line))) {
+						argv_exp0(re[0]);
+						line = line.substring(re[0].length).replace(/^[ \t]+/, '');
 					}
-					var re = /(?:\u0016.|\S)*/.exec(line);
-					argv_exp0(re[0]);
-					line = line.substring(re[0].length);
+					//var re = /(?:\u0016.|\S)*/.exec(line);
+					//argv_exp0(re[0]);
+					//line = line.substring(re[0].length);
+					//line = line.replace(/^[ \t]+/, '');
+					//if (line == '') {
+						//return _('Missing 2nd word.');
+					//}
+					//var re = /(?:\u0016.|\S)*/.exec(line);
+					//argv_exp0(re[0]);
+					//line = line.substring(re[0].length);
 					needCheckRest = false;
 					break syntax_expansion_loop;
 
@@ -2615,7 +2615,7 @@ flag23_loop:
 			if (needCheckRest) {
 				line = line.replace(/^\s+/, '');
 				if (line != '' || /[lr]/.test(syntax.substring(i))) {
-					return _('Invalid argument');
+					return _('Invalid argument.');
 				}
 			}
 
@@ -2630,6 +2630,21 @@ flag23_loop:
 				sups.push.apply(sups, args.argv);
 				args.argv = sups;
 			}
+
+			for (var i = 0, goal = args.range.length; i < goal; i++) {
+				if (!this.flags.addrZero) {
+					args.range[i] = Math.max(0, args.range[i]);
+				}
+				if (this.flags.roundMax) {
+					args.range[i] = Math.min(t.rowLength - 1, args.range[i]);
+				}
+				else {
+					if (args.range[i] >= t.rowLength) {
+						return {error:this.name + ': ' + _('Out of range.')};
+					}
+				}
+			}
+
 			var result;
 			try {
 				result = this.handler.call(this, t, args);
@@ -2646,48 +2661,63 @@ flag23_loop:
 
 	/*constructor*/function MapManager () {
 
-		/*constructor*/function MapItem (name, rules, sequences) {
-			this.register = function () {
-				for (var i = 0; i < arguments.length; i += 2) {
-					var lhs = arguments[i + 0];
-					var rhs = arguments[i + 1];
-					rules[lhs] = rhs;
-					sequences[lhs] = createSequences(lhs);
-				}
-				function createSequences (lhs) {
-					var result = [];
-					for (var i = 0; i < lhs.length; i++) {
-						if (lhs.charAt(i) == '<') {
-							var re = /<[^>]+>/.exec(lhs.substring(i));
-							if (re) {
-								var key = re[0].toLowerCase()
-								if (key in SPECIAL_KEYS_REVERSED) {
-									result.push(-SPECIAL_KEYS_REVERSED[key]);
-									i += re[0].length - 1;
-									continue;
-								}
-							}
+		/*constructor*/function MapItem (name, rules, sequences, sequencesExpanded, options) {
+			this.register = function (lhs, rhs, remap) {
+				rules[lhs] = rhs;
+				sequences[lhs] = this.createSequences(lhs);
+				sequencesExpanded[lhs] = this.createSequences(rhs);
+				options[lhs] = {remap:!!remap};
+			};
+			this.createSequences = function (s) {
+				var result = [];
+				for (var i = 0; i < s.length; i++) {
+					// ^V
+					if (s.charAt(i) == '\u0016') {
+						if (i < s.length - 1) {
+							result.push(s.charCodeAt(i + 1));
+							i++;
+							continue;
 						}
-						else if (lhs.charAt(i) == '#') {
-							var re = /#(\d{1,2})/.exec(lhs.substring(i));
-							if (re) {
-								var key = '<f' + re[1] + '>';
-								if (key in SPECIAL_KEYS_REVERSED) {
-									result.push(-SPECIAL_KEYS_REVERSED[key]);
-									i += re[0].length - 1;
-									continue;
-								}
-							}
-						}
-						result.push(lhs.charAt(i));
 					}
-					return result;
+					// key name
+					else if (s.charAt(i) == '<') {
+						var re = /<[^>]+>/.exec(s.substring(i));
+						if (re) {
+							var key = re[0].toLowerCase()
+							if (key in SPECIAL_KEYS_REVERSED) {
+								result.push(-SPECIAL_KEYS_REVERSED[key]);
+								i += re[0].length - 1;
+								continue;
+							}
+						}
+					}
+					else if (s.charAt(i) == '#') {
+						var re = /#(\d{1,2})/.exec(s.substring(i));
+						if (re) {
+							var key = '<f' + re[1] + '>';
+							if (key in SPECIAL_KEYS_REVERSED) {
+								result.push(-SPECIAL_KEYS_REVERSED[key]);
+								i += re[0].length - 1;
+								continue;
+							}
+						}
+					}
+					result.push(s.charCodeAt(i));
 				}
+				return result;
 			};
 			this.remove = function () {
 				for (var i = 0; i < arguments.length; i++) {
 					var lhs = arguments[i];
 					delete rules[lhs];
+					delete sequences[lhs];
+					delete sequencesExpanded[lhs];
+					delete options[lhs];
+				}
+			};
+			this.removeAll = function () {
+				for (var i in rules) {
+					this.remove(i);
 				}
 			};
 			this.isMapped = function (key) {
@@ -2704,37 +2734,33 @@ flag23_loop:
 		}
 
 		/*const*/var NEST_MAX = 100;
+		/*const*/var DELAY_TIMEOUT = 1000;
 		/*const*/var MAP_INDICES = {
 			 'command':0,
 			 'edit':1,
 			 'edit-overwrite':1
-		 };
+		};
 
 		var rules = [{}, {}];
 		var sequences = [{}, {}];
+		var sequencesExpanded = [{}, {}];
+		var options = [{}, {}];
 		var maps = [
-			new MapItem('command', rules[0], sequences[0]),
-			new MapItem('edit', rules[1], sequences[1])
+			new MapItem('command', rules[0], sequences[0], sequencesExpanded[0], options[0]),
+			new MapItem('edit', rules[1], sequences[1], sequencesExpanded[1], options[1])
 		];
 		var depth = 0;
 		var stack = [];
-		var timer;
+		var delayedInfo = {
+			timer:null,
+			mapIndex: null,
+			rule:null,
+			handler:null
+		};
+		var lastMapIndex = null;
 		var currentMap = null;
 		var index = 0;
 
-		maps[0].register(
-			'<f1>', '\u001biF1 key pressed.',
-			'#2', '\u001biF2 key pressed.',
-			'Q', ':q!'
-		);
-		maps[1].register(
-			'Q', 'hello, world'
-		);
-
-		function reset () {
-			timer = currentMap = null;
-			depth = index = 0;
-		}
 		function getMap (arg) {
 			if (arg === 'command') {
 				return maps[0];
@@ -2743,60 +2769,112 @@ flag23_loop:
 				return maps[1];
 			}
 		}
-		function process (keyCode, handler) {
-			function firstPropName (obj) {
-				if (obj instanceof Object) {
-					for (var i in obj) {
-						return i;
-					}
-				}
+		function resetDelayed () {
+			var result;
+			if (delayedInfo.timer) {
+				clearTimeout(delayedInfo.timer);
+				result = {
+					index:delayedInfo.mapIndex,
+					rule:delayedInfo.rule,
+					handler:delayedInfo.handler
+				};
+				delayedInfo.timer = delayedInfo.mapIndex =
+				delayedInfo.rule = delayedInfo.handler = null;
 			}
-			function expandDelayed (lhs, rhs) {
-				timer = setTimeout(function () {
-					expand(rhs);
-					reset();
-				}, 1000);
+			return result;
+		}
+		function reset () {
+			resetDelayed();
+			currentMap = null;
+			index = 0;
+		}
+		function registerExpandDelayed (mapIndex, lhs, handler) {
+			delayedInfo.mapIndex = mapIndex;
+			delayedInfo.rule = lhs;
+			delayedInfo.handler = handler;
+			delayedInfo.timer = setTimeout(function () {
+				reset();
+				expandDelayed(mapIndex, lhs, handler);
+			}, DELAY_TIMEOUT);
+		}
+		function expandDelayed () {
+			var mapIndex, lhs, handler, context;
+			if (typeof arguments[0] == 'object') {
+				mapIndex = arguments[0].index;
+				lhs = arguments[0].rule;
+				handler = arguments[0].handler;
+				context = arguments[1];
 			}
-			function expand (rhs) {
-				if (depth < NEST_MAX) {
-					depth++;
-					stack.push([currentMap, index]);
-					currentMap = null;
-					index = 0;
-					try {
+			else {
+				mapIndex = arguments[0];
+				lhs = arguments[1];
+				handler = arguments[2];
+				context = arguments[3];
+			}
+			expand(
+				sequencesExpanded[mapIndex][lhs],
+				options[mapIndex][lhs].remap,
+				handler, context || 'expand delayed'
+			);
+		}
+		function expand (rhs, remap, handler, context) {
+			if (!handler) return;
+			if (depth < NEST_MAX) {
+				depth++;
+				stack.push([currentMap, index]);
+				currentMap = null;
+				index = 0;
+				try {
+					if (config.vars.remap && remap) {
 						for (var i = 0; i < rhs.length; i++) {
-							process(rhs.charCodeAt(i), handler);
+							process(rhs[i], handler);
 						}
 					}
-					finally {
-						var o = stack.pop();
-						currentMap = o[0];
-						index = o[1];
-						depth--;
+					else {
+						for (var i = 0; i < rhs.length; i++) {
+							handler(rhs[i]);
+						}
 					}
 				}
-				else {
-					requestShowMessage(_('Map expansion reached maximum recursion limit.'), true);
+				finally {
+					var o = stack.pop();
+					currentMap = o[0];
+					index = o[1];
+					depth--;
 				}
 			}
-
-			timer && clearTimeout(timer);
-			timer = null;
-
+			else {
+				requestShowMessage(_('Map expansion reached maximum recursion limit.'), true);
+			}
+		}
+		function firstPropName (obj) {
+			if (obj instanceof Object) {
+				for (var i in obj) {
+					return i;
+				}
+			}
+		}
+		function process (keyCode, handler) {
+			var delayed = resetDelayed();
 			var mapIndex;
 			if (inputMode in MAP_INDICES) {
 				mapIndex = MAP_INDICES[inputMode];
 			}
-			else {
+			if (mapIndex == undefined || keyCode == false) {
+				delayed && expandDelayed(delayed, 'delayed #1');
 				handler && handler(keyCode);
 				return;
 			}
+			if (mapIndex != lastMapIndex) {
+				delayed && expandDelayed(delayed, 'delayed #2');
+				reset();
+			}
+			lastMapIndex = mapIndex;
 
 			var srcmap = currentMap || rules[mapIndex];
 			var dstmap = {};
 			var found = 0;
 			var propCompleted;
-			var propOvered;
 
 			for (var i in srcmap) {
 				var seq = sequences[mapIndex][i];
@@ -2807,29 +2885,28 @@ flag23_loop:
 						propCompleted = i;
 					}
 				}
-				if (index == seq.length && propOvered == undefined) {
-					propOvered = i;
-				}
 			}
-
-			var firstprop = firstPropName(dstmap);
 
 			if (found) {
 				currentMap = dstmap;
 				index++;
-
-				if (found == 1 && index == sequences[mapIndex][firstprop].length) {
-					expand(dstmap[firstprop]);
-					reset();
-				}
-				else if (propCompleted != undefined && found > 1) {
-					expandDelayed(propCompleted, dstmap[propCompleted]);
+				if (propCompleted != undefined) {
+					// unique match
+					if (found == 1) {
+						reset();
+						expand(
+							sequencesExpanded[mapIndex][propCompleted],
+							options[mapIndex][propCompleted].remap,
+							handler, 'unique');
+					}
+					// ambiguous match
+					else {
+						registerExpandDelayed(mapIndex, propCompleted, handler);
+					}
 				}
 			}
 			else {
-				if (propOvered != undefined) {
-					expand(srcmap[propOvered]);
-				}
+				delayed && expandDelayed(delayed, 'delayed #3');
 				handler && handler(keyCode);
 				reset();
 			}
@@ -2870,6 +2947,9 @@ flag23_loop:
 				if (con.value.length && con.value.substr(-1) != '\n') {
 					con.value += '\n';
 				}
+				if (lastMessage.length && lastMessage.substr(-1) != '\n') {
+					lastMessage += '\n';
+				}
 				var line = buffer.shift();
 				scaler.textContent = line;
 				if (totalHeight + scaler.offsetHeight > goalHeight || byLine) {
@@ -2877,6 +2957,7 @@ flag23_loop:
 						con.value += line;
 						con.setSelectionRange(con.value.length, con.value.length);
 						con.scrollTop = con.scrollHeight - con.clientHeight;
+						lastMessage += line;
 					}
 					else {
 						buffer.unshift(line);
@@ -2888,6 +2969,7 @@ flag23_loop:
 					con.setSelectionRange(con.value.length, con.value.length);
 					con.scrollTop = con.scrollHeight - con.clientHeight;
 					totalHeight += scaler.offsetHeight;
+					lastMessage += line;
 				}
 			}
 
@@ -2895,14 +2977,10 @@ flag23_loop:
 				pushInputMode('console-wait', 'backlog');
 			}
 			if (!preserveMessage) {
-				if (buffer.length) {
-					showMessage(_('More...'), false, true);
-				}
-				else {
-					showMessage(
-						_('Press any key to continue, or enter more ex command:'),
-						false, true);
-				}
+				showMessage(
+					buffer.length ? _('More...') :
+					                _('Press any key to continue, or enter more ex command:'),
+					false, true, true);
 			}
 		};
 		this.dispose = function () {
@@ -3133,7 +3211,7 @@ flag23_loop:
 					cursor.ensureVisible();
 					t.emphasis(pos, this.re[0].length);
 					requestInputMode('console-wait', 'ex-s');
-					requestShowMessage(_('Substitute? ([y]es, [n]o, [q]uit)'), false, true);
+					requestShowMessage(_('Substitute? ([y]es, [n]o, [q]uit)'), false, true, true);
 				}
 				else {
 					this.showNotFound();
@@ -3533,9 +3611,10 @@ flag23_loop:
 
 				if (t.getSelection(ss, se) != this.data) {
 					console.error([
-						this.toString() + ': bad consistency!',
+						this.toString() + '#undo: bad consistency!',
 						' position: ' + this.position,
 						'position2: ' + (this.position2 || '(N/A)'),
+						'       LO: ' + this.isLineOrient,
 						'       ss: ' + ss,
 						'       se: ' + se,
 						'selection: ' + toVisibleString(t.getSelection(ss, se)),
@@ -3590,6 +3669,11 @@ flag23_loop:
 							t.setSelectionRange(t[self.inputMethod](t.selectionStart, re[i]));
 					}
 				});
+				if (this.marks) {
+					for (var i in this.marks) {
+						!marks.get(i) && marks.set(i, this.marks[i]);
+					}
+				}
 				t.setSelectionRange(this.position);
 
 				return 1;
@@ -3650,11 +3734,12 @@ flag23_loop:
 		/*constructor*/function EditLogItemDelete () {}
 		EditLogItemDelete.prototype = extend(new EditLogItemBase, {
 			type: 'Delete',
-			init: function (p, d, p2, lo, ll) {
+			init: function (p, d, p2, lo, ll, ms) {
 				this._init.apply(this, arguments);
 				this.position2 = p2.clone();
 				this.isLineOrient = !!lo;
 				this.isLastLine = !!ll;
+				this.marks = ms;
 			},
 			undo: function (t) {
 				return EditLogItemInsert.prototype.redo.apply(this, arguments);
@@ -3855,6 +3940,7 @@ flag23_loop:
 							this.currentPosition = this.logs.length - 1;
 						}
 						this.cluster = null;
+						//console.log('*** editLogger dump ***\n' + this.logs.dump());
 					}
 				}
 				else {
@@ -4184,10 +4270,7 @@ flag23_loop:
 		if (c >= 0 && c <= 0x1f) {
 			return '^' + String.fromCharCode('@'.charCodeAt(0) + c);
 		}
-		if (c == 0x7f) {
-			return '<delete>';
-		}
-		if (c < 0 && SPECIAL_KEYS[-c]) {
+		if (SPECIAL_KEYS[-c]) {
 			return SPECIAL_KEYS[-c];
 		}
 		return String.fromCharCode(c);
@@ -4962,10 +5045,10 @@ flag23_loop:
 		isTextDirty = false;
 		isEditCompleted = false;
 		isVerticalMotion = false;
-		isWordMotion = false;
-		isSmoothScrollRequested = false;
 		isReadonlyWarned = false;
+		isSmoothScrollRequested = false;
 		isSimpleCommandUpdateRequested = false;
+		isJumpBaseUpdateRequested = false;
 		lastSimpleCommand = '';
 		lastHorzFindCommand = {direction:0, letter:'', stopBefore:false};
 		lastRegexFindCommand = new RegexFinderInfo;
@@ -5268,7 +5351,7 @@ flag23_loop:
 		}
 	}
 	function showPrefixInput (t, message) {
-		if (state != 'normal') {return;}
+		if (state != 'normal') return;
 		var line = $('wasavi_footer_modeline');
 		var alter = $('wasavi_footer_alter');
 		line.style.display = '';
@@ -5283,8 +5366,8 @@ flag23_loop:
 			 ',' + ((getLogicalColumn(t) + 1) + '   ').substr(0, 4) +
 			 '   ' + (t.elm.scrollHeight <= t.elm.clientHeight ? 'All' : ('  ' + Math.floor((t.selectionStartRow + 1) / t.rowLength * 100.)).substr(-3) + '%'));
 	}
-	function showMessage (message, emphasis, pseudoCursor) {
-		if (state != 'normal' && state != 'console-wait') {return;}
+	function showMessage (message, emphasis, pseudoCursor, volatile_) {
+		if (state != 'normal' && state != 'console-wait') return;
 		var line = $('wasavi_footer_modeline');
 		var alter = $('wasavi_footer_alter');
 		line.style.display = '';
@@ -5308,10 +5391,12 @@ flag23_loop:
 			var blink = pa.appendChild(document.createElement('blink'));
 			blink.textContent = '\u2588';
 		}
-		lastMessage = message;
+		if (message != '' && !volatile_) {
+			lastMessage = message;
+		}
 	}
 	function showLineInput (initial) {
-		if (state != 'line-input') {return;}
+		if (state != 'line-input') return;
 		var line = $('wasavi_footer_alter');
 		var alter = $('wasavi_footer_modeline');
 		var input = $(LINE_INPUT_ID);
@@ -5328,13 +5413,14 @@ flag23_loop:
 		}
 		return message;
 	}
-	function requestShowMessage (message, emphasis, pseudoCursor) {
+	function requestShowMessage (message, emphasis, pseudoCursor, volatile_) {
 		if (!requestedState.modeline) {
 			requestedState.modeline = {
 				type:'message',
 				message:message,
 				emphasis:!!emphasis,
-				pseudoCursor:!!pseudoCursor
+				pseudoCursor:!!pseudoCursor,
+				volatile_:!!volatile_
 			};
 		}
 		return message;
@@ -5401,6 +5487,7 @@ flag23_loop:
 					break;
 				}
 			}
+			mapManager.process(false);
 		}
 		finally {
 			!keepRunLevel && runLevel--;
@@ -5464,7 +5551,6 @@ flag23_loop:
 					t.isLineOrientSelection =
 					isEditCompleted =
 					isVerticalMotion =
-					isWordMotion =
 					isSmoothScrollRequested = false;
 
 					if (isSimpleCommandUpdateRequested) {
@@ -5498,8 +5584,6 @@ flag23_loop:
 			return false;
 		}
 		function processAbbrevs (t, force) {
-			if (!('keyCode' in e)) return;
-
 			var regex = config.vars.iskeyword;
 			var target, last;
 
@@ -5546,7 +5630,7 @@ flag23_loop:
 				if (!canTransit) continue;
 
 				editedString = target + multiply('\u0008', i.length) + abbrevs[i] + last;
-				deleteChars(t, i.length + 1);
+				deleteChars(t, i.length + last.length);
 				(inputMode == 'edit' ? insert : overwrite)(t, abbrevs[i] + last);
 				break;
 			}
@@ -5683,7 +5767,7 @@ flag23_loop:
 				editedString = '';
 				overwroteString = false;
 				prefixInput.reset();
-				isEditCompleted = isVerticalMotion = isWordMotion = false;
+				isEditCompleted = isVerticalMotion = false;
 				isSmoothScrollRequested = false;
 				showMessage('');
 				requestShowPrefixInput();
@@ -5796,7 +5880,8 @@ flag23_loop:
 					showMessage(
 						requestedState.modeline.message,
 						requestedState.modeline.emphasis,
-						requestedState.modeline.pseudoCursor
+						requestedState.modeline.pseudoCursor,
+						requestedState.modeline.volatile_
 					);
 					break;
 				}
@@ -6231,7 +6316,6 @@ flag23_loop:
 		t.selectionEnd = n;
 		prefixInput.motion = c;
 		idealWidthPixels = -1;
-		isWordMotion = true;
 		return true;
 	}
 	function motionPrevWord (c, t, count, bigWord) {
@@ -6293,7 +6377,6 @@ flag23_loop:
 		t.selectionStart = n;
 		prefixInput.motion = c;
 		idealWidthPixels = -1;
-		isWordMotion = true;
 		return true;
 	}
 	function motionFindForward (c, t, count, stopBefore, continuous) {
@@ -6535,7 +6618,7 @@ flag23_loop:
 			}
 		}
 		idealWidthPixels = -1;
-		wrapped && requestShowMessage(_('Search wrapped'));
+		wrapped && requestShowMessage(_('Search wrapped'), false, false, true);
 		return {offset:n, matchLength:len};
 	}
 	function motionFindByRegexBackward (c, t, count, opts) {
@@ -6616,7 +6699,7 @@ flag23_loop:
 			}
 		}
 		idealWidthPixels = -1;
-		wrapped && requestShowMessage(_('Search wrapped'));
+		wrapped && requestShowMessage(_('Search wrapped'), false, false, true);
 		return {offset:n, matchLength:len};
 	}
 	function motionForwardBlock (c, t, count, regex, isLineOrient) {
@@ -6834,12 +6917,20 @@ flag23_loop:
 		(isEditing() ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
 			marks.update(t.selectionStart, function (foldedMarkRegisterer) {
 				result = t.deleteRange(function (content, fragment) {
+					var deleteMarks = fragment.querySelectorAll('span.wasavi_mark');
+					var deleteMarksDest = {};
+					for (var i = 0; i < deleteMarks.length; i++) {
+						var name = deleteMarks[i].getAttribute('data-index');
+						var position = marks.get(name);
+						position && (deleteMarksDest[name] = position.clone());
+					}
 					!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
 					!isEditing() && editLogger.write(
 						EditLogger.ITEM_TYPE.DELETE,
 						t.selectionStart, content, 
 						t.selectionEnd, t.isLineOrientSelection,
-						t.selectionEndRow == t.rowLength - 1
+						t.selectionEndRow == t.rowLength - 1,
+						deleteMarksDest
 					);
 				});
 			});
@@ -6856,19 +6947,18 @@ flag23_loop:
 
 		(isEditing() ? $call : editLogger.open).call(editLogger, 'insert', function () {
 			var startn = t.selectionStart;
+			if (isLineOrientedLast
+			&& s.length >= 2
+			&& s.substr(-1) == '\n'
+			&& t.selectionStartRow == t.rowLength - 1
+			&& t.rowTextNodes(t.selectionStartRow).nodeValue.substring(t.selectionStartCol) == '\n') {
+				s = s.substr(0, s.length - 1);
+			}
 			!isEditing() && editLogger.write(
 				EditLogger.ITEM_TYPE.INSERT,
 				startn, s, keepPosition
 			);
 			marks.update(startn, function () {
-				if (isLineOrientedLast
-				&& s.length >= 2
-				&& s.substr(-1) == '\n'
-				&& t.selectionStartRow == t.rowLength - 1
-				&& t.rowTextNodes(t.selectionStartRow).nodeValue.substring(t.selectionStartCol) == '\n') {
-					s = s.substr(0, s.length - 1);
-				}
-
 				var re = s.match(/\n|[^\n]+/g);
 				if (!re) return;
 
@@ -6904,7 +6994,7 @@ flag23_loop:
 			var startn = t.selectionStart;
 			!isEditing() && editLogger.write(
 				EditLogger.ITEM_TYPE.OVERWRITE,
-				startn, s, t.rows(startn)//.substr(startn, s.length)
+				startn, s, t.rows(startn)
 			);
 			marks.update(startn, function () {
 				var re = s.match(/\n|[^\n]+/g);
@@ -6996,7 +7086,7 @@ flag23_loop:
 		editLogger.open('joinLines', function () {
 			var asisIndex = [{length:0}];
 			for (var i = 0; i < count; i++) {
-				if (t.selectionStartRow >= t.rowLength - 1) {return}
+				if (t.selectionStartRow >= t.rowLength - 1) return;
 
 				var t1 = t.rows(t.selectionStartRow);
 				var t2 = t.rows(t.selectionStartRow + 1);
@@ -7021,62 +7111,67 @@ flag23_loop:
 		return true;
 	}
 	function toggleCase (t, count) {
-		count || (count = 1);
-
 		var n = t.selectionStart;
 		var text = t.rows(n);
-		var smalla = 'a'.charCodeAt(0);
-
+		count || (count = 1);
 		count = Math.min(count, text.length - n.col);
-		text = text.substring(0, n.col) +
-			text.substring(n.col, n.col + count).replace(/[a-z]/ig, function (a) {
+		editLogger.open('toggleCase', function () {
+			var smalla = 'a'.charCodeAt(0);
+			var replacedText = text.substr(n.col, count).replace(/[a-z]/ig, function (a) {
 				return a.charCodeAt(0) >= smalla ? a.toUpperCase() : a.toLowerCase();
-			}) +
-			text.substring(n.col + count);
-		t.setRow(n, text);
-		n.col += count;
-		t.setSelectionRange(n);
-
+			});
+			deleteChars(t, count, true);
+			insert(t, replacedText);
+		});
 		isEditCompleted = true;
 		return true;
 	}
-	function yank (t, count, isLineOrient, isWordMotion) {
+	function yank (t, count, isLineOrient, register) {
 		var result = 0;
 		if (isLineOrient || t.isLineOrientSelection) {
 			count || (count = 1);
 			result = t.selectRows(count);
 			var content = t.getSelectionRows();
-			registers.set(prefixInput.register, content, true, true);
+			registers.set(
+				register == undefined ? prefixInput.register : register,
+				content, true, true);
 		}
 		else {
 			var content = t.getSelection();
 			result = content.length;
-			if (isWordMotion) {
-				content = content.replace(/^\s+|\s+$/, '');
-			}
-			registers.set(prefixInput.register, content, false, true);
+			registers.set(
+				register == undefined ? prefixInput.register : register,
+				content, false, true);
 		}
 		return result;
 	}
-	function paste (t, count, isForward, isForceLineOrient, register) {
-		var item = registers.get(register || prefixInput.register);
-		var data = item.data;
-		var isLineOrient = item.isLineOrient;
-		var n = t.selectionStart;
+	function paste (t, count, opts) {
 		count || (count = 1);
-		item.isLineOrient = isForceLineOrient || item.isLineOrient;
+		opts || (opts = {});
 
-		if (data != '') {
+		var item, data = '';
+		if ('register' in opts) {
+			item = registers.get(opts.register);
+			data = item.data;
+		}
+		else if ('content' in opts) {
+			item = {};
+			data = opts.content;
+		}
+
+		var isForward = !!opts.isForward;
+		var isForceLineOrient = !!opts.isForceLineOrient;
+		var n = t.selectionStart;
+
+		if (!t.selected && data != '') {
+			var originalLineOrient = item.isLineOrient;
+			item.isLineOrient = isForceLineOrient || item.isLineOrient;
 			if (item.isLineOrient) {
-				if (t.selected) {
-					t.deleteRange();
-					t.divideLine();
-				}
-				else {
+				editLogger.open('paste#1', function () {
 					if (isForward) {
 						if (n.row >= t.rowLength - 1) {
 							t.setSelectionRange(t.getLineTailOffset(n));
-							t.divideLine();
+							insert(t, '\n', {isLineOrientLast:true});
 							n = t.selectionStart;
 						}
 						else {
@@ -7089,8 +7184,6 @@ flag23_loop:
 						n.col = 0;
 						t.setSelectionRange(n);
 					}
-				}
-				editLogger.open('paste#1', function () {
 					for (var i = 0, goal = count - 1; i < goal; i++) {
 						insert(t, data);
 					}
@@ -7099,7 +7192,7 @@ flag23_loop:
 				});
 			}
 			else {
-				if (!t.selected && isForward) {
+				if (isForward) {
 					n = t.rightPos(n);
 					t.setSelectionRange(n);
 				}
@@ -7108,13 +7201,13 @@ flag23_loop:
 						insert(t, data);
 					}
 				});
-				if (!t.selected && isForward) {
+				if (isForward) {
 					t.setSelectionRange(t.leftPos(t.selectionStart));
 				}
 			}
 			isEditCompleted = true;
+			item.isLineOrient = originalLineOrient;
 		}
-		item.isLineOrient = isLineOrient;
 		return true;
 	}
 	function startEdit (c, t, opts, isAppend, isAlter) {
@@ -7145,7 +7238,7 @@ flag23_loop:
 			t.setSelectionRange(n);
 			cursor.ensureVisible();
 			cursor.update({type:'edit'});
-			config.vars.showmode && requestShowMessage(_('--INSERT--'));
+			config.vars.showmode && requestShowMessage(_('--INSERT--'), false, false, true);
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
 			editedString = '';
@@ -7219,6 +7312,7 @@ flag23_loop:
 				else if (s.charAt(0) == '$') {
 					rows.push(t.rowLength - 1);
 					s = s.substring(1);
+					isJumpBaseUpdateRequested = true;
 					found = true;
 				}
 				else if ((re = /^\d+/.exec(s))) {
@@ -7228,6 +7322,7 @@ flag23_loop:
 					}
 					rows.push(n);
 					s = s.substring(re[0].length);
+					isJumpBaseUpdateRequested = true;
 					found = true;
 				}
 				else if ((re = /^'([a-z`'])/.exec(s))) {
@@ -7239,64 +7334,86 @@ flag23_loop:
 					else {
 						rows.push(mark.row);
 						s = s.substring(re[0].length);
+						isJumpBaseUpdateRequested = true;
 						found = true;
 					}
 				}
-				else if ((re = /^\/((?:\\\/|[^\/])*)\//.exec(s))) {
-					var regex = getFindRegex(re[1]);
+				else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
+					var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
+					var regex = pattern == '' ? null : getFindRegex(pattern);
 					if (!regex) {
-						error = _('Invalid regex pattern.');
+						if (re[1] == '' && pattern == '') {
+							error = _('No previous search pattern.');
+						}
+						else {
+							error = _('Invalid regex pattern.');
+						}
 						break;
 					}
 					else {
 						regexSpecified = true;
 						lastRegexFindCommand.push({direction:1});
-						lastRegexFindCommand.setPattern(re[1]);
+						pattern != '' && lastRegexFindCommand.setPattern(pattern);
 
+						motionLineEnd('', t);
 						var result = motionFindByRegexForward(regex, t, 1);
 						if (result) {
 							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
 							s = s.substring(re[0].length);
+							isJumpBaseUpdateRequested = true;
 							found = true;
 						}
 						else {
-							error = _('Pattern not found: {0}', re[1]);
+							error = _('Pattern not found: {0}', pattern);
 							break;
 						}
 					}
 				}
-				else if ((re = /^\?((?:\\\?|[^?])*)\?/.exec(s))) {
-					var regex = getFindRegex(re[1]);
+				else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
+					var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
+					var regex = pattern == '' ? null : getFindRegex(pattern);
 					if (!regex) {
-						error = _('Invalid regex pattern.');
+						if (re[1] == '' && pattern == '') {
+							error = _('No previous search pattern.');
+						}
+						else {
+							error = _('Invalid regex pattern.');
+						}
 						break;
 					}
 					else {
 						regexSpecified = true;
 						lastRegexFindCommand.push({direction:-1});
-						lastRegexFindCommand.setPattern(re[1]);
+						pattern != '' && lastRegexFindCommand.setPattern(pattern);
 
+						motionLineStart('', t, true);
 						var result = motionFindByRegexBackward(regex, t, 1);
 						if (result) {
-							rows.push(t.linearPositionToBinaryPosition(result.offset));
+							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
 							s = s.substring(re[0].length);
+							isJumpBaseUpdateRequested = true;
 							found = true;
 						}
 						else {
-							error = _('Pattern not found: {0}', re[1]);
+							error = _('Pattern not found: {0}', pattern);
 							break;
 						}
 					}
 				}
-				else if ((re = /^[\+\-]\d+/.exec(s))) {
-					rows.push(t.selectionStartRow + parseInt(re[0], 10));
+				else if ((re = /^[\+\-](\d*)/.exec(s))) {
+					var offset = re[1] == '' ?
+						(re[0].charAt(0) == '+' ? 1 : -1) :
+						parseInt(re[0], 10);
+					rows.push(t.selectionStartRow + offset);
 					s = s.substring(re[0].length);
 					found = true;
 				}
 
 				if (found) {
-					if ((re = /^[\+\-]\d*/.exec(s))) {
-						var offset = parseInt(re[0], 10) || (/^\+/.test(re[0]) ? 1 : -1);
+					if ((re = /^\s*[\+\-](\d*)/.exec(s))) {
+						var offset = re[1] == '' ?
+							(re[0].charAt(0) == '+' ? 1 : -1) :
+							parseInt(re[0], 10);
 						rows[rows.length - 1] += offset;
 						if (regexSpecified) {
 							lastRegexFindCommand.verticalOffset = offset;
@@ -7307,9 +7424,6 @@ flag23_loop:
 					if (rows[rows.length - 1] < 0) {
 						rows[rows.length - 1] = allowZeroAddress ? -1 : 0;
 					}
-					if (rows[rows.length - 1] >= t.rowLength) {
-						rows[rows.length - 1] = t.rowLength - 1;
-					}
 
 					s = s.replace(/^[ \t]+/, '');
 				}
@@ -7319,6 +7433,10 @@ flag23_loop:
 					!found && rows.push(t.selectionStartRow);
 				}
 				else if (s.charAt(0) == ';') {
+					if (rows[rows.length - 1] >= t.rowLength) {
+						error = _('Out of range.');
+						break;
+					}
 					t.setSelectionRange(new Position(rows[rows.length - 1], 0));
 					s = s.substring(1);
 					!found && rows.push(t.selectionStartRow);
@@ -7424,6 +7542,15 @@ flag23_loop:
 				prevRow = row;
 
 				while ((re = pattern.exec(text))) {
+					if (pattern.lastIndex == prevOffset) {
+						if (pattern.lastIndex < text.length) {
+							pattern.lastIndex++;
+							continue;
+						}
+						else {
+							break;
+						}
+					}
 					pos = pattern.lastIndex - re[0].length;
 					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
 					row = prevRow + delta;
@@ -7433,7 +7560,7 @@ flag23_loop:
 				}
 
 				var tmp = [];
-				for (var i = r[0]; i < r[1]; i++) {
+				for (var i = r[0]; i <= r[1]; i++) {
 					tmp.push(t.rowNodes(i));
 				}
 				for (var i = items.length - 1; i >= 0; i--) {
@@ -7453,6 +7580,15 @@ flag23_loop:
 				prevRow = row;
 
 				while ((re = pattern.exec(text))) {
+					if (pattern.lastIndex == prevOffset) {
+						if (pattern.lastIndex < text.length) {
+							pattern.lastIndex++;
+							continue;
+						}
+						else {
+							break;
+						}
+					}
 					pos = pattern.lastIndex - re[0].length;
 					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
 					row = prevRow + delta;
@@ -7463,25 +7599,42 @@ flag23_loop:
 			}
 		}
 
+		function dumpItems (title) {
+			var result = [];
+			for (var i = 0, goal = items.length; i < goal; i++) {
+				if (items[i]) {
+					result.push(i + ': "' + toVisibleString(items[i].innerHTML) + '"');
+				}
+				else {
+					result.push(i + ': null');
+				}
+			}
+			console.log('*** marked items dump ***\n' + (title || '') + '\n' + result.join('\n'));
+		}
+
 		// pass 2
+		editLogger.open('global');
+		console.log('command: "' + toVisibleString(command) + '"');
+		dumpItems('initial');
 		try {
 			for (var i = 0, goal = items.length; i < goal; i++) {
+				dumpItems('loop ' + i + ' start');
 				if (items[i].parentNode) {
-					t.setSelectionRange(new Position(t.indexOf(items[i]), 0));
+					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
 					var result = executeExCommand(t, command);
 					if (typeof result == 'string') {
 						return result;
 					}
 				}
 				else {
-					delete items[i];
-					i--;
-					goal--;
+					items[i] = null;
 				}
+				dumpItems('loop ' + i + ' finish');
 			}
 		}
 		finally {
-			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
+			dumpItems('finish');
+			editLogger.close();
 		}
 	}
 	function exSetMark (t, a) {
@@ -7489,22 +7642,28 @@ flag23_loop:
 		if (name.length > 1) {
 			return _('Mark names must be a single character.');
 		}
+		if (!marks.isValidName(name)) {
+			return _('Invalid mark name.');
+		}
 		marks.set(name, new Position(a.range[0], 0));
 	}
 	function exCopy (t, a) {
 		var rg = document.createRange();
 		rg.setStartBefore(t.rowNodes(a.range[0]));
 		rg.setEndAfter(t.rowNodes(a.range[1]));
-		var f = rg.cloneContents();
-		var dest = a.lineNumber;
-		marks.update(new Position(dest, 0), function () {
-			dest < 0 ?
-				rg.setStartBefore(t.rowNodes(0)) :
-				rg.setStartAfter(t.rowNodes(dest));
-			rg.insertNode(f);
-		});
+		var content = rg.toString();
 		rg.detach();
-		t.setSelectionRange(t.getLineTopOffset2(dest + (r[1] - r[0]) + 1, 0));
+		t.setSelectionRange(new Position(a.lineNumber, 0));
+		paste(t, 1, {
+			isForward:true,
+			isForceLineOrient:true,
+			content:content
+		});
+		var copied = a.range[1] - a.range[0] + 1;
+		if (copied >= config.vars.report) {
+			requestShowMessage(_('Copied {0} {line:0}.', copied));
+		}
+		t.setSelectionRange(t.getLineTopOffset2(a.lineNumber + 1 + copied - 1, 0));
 		isEditCompleted = true;
 	}
 	function exQuit (isForce) {
@@ -7689,24 +7848,25 @@ flag23_loop:
 					resultMessage = r;
 					return false;
 				}
-				if (!commandObj.flags.addrZero) {
-					r = r.map(function (o) {
-						return Math.max(0, o);
-					});
-				}
 			}
 
+			var ss = t.selectionStart;
 			var result = commandObj.run(t, r, commandArg, commandArgSups);
 			if (result.error) {
 				resultMessage = result.error || _('{0}: unknown error.', commandObj.name);
 				return false;
 			}
-			else if (result.flags.hash || result.flags.list || result.flags.print) {
+			if ((isJumpBaseUpdateRequested || commandObj.flags.updateJump) && t.selectionStart.ne(ss)) {
+				marks.set('\'', ss);
+				isJumpBaseUpdateRequested = false;
+			}
+			if (result.flags.hash || result.flags.list || result.flags.print) {
 				var n = Math.max(0, Math.min(t.selectionStartRow + result.flagoff, t.rowLength - 1));
 				t.setSelectionRange(t.getLineTopOffset2(n, 0));
 				exPrintRow(t, n.row, n.row, result.flags);
 			}
 
+			resultMessage = true;
 			return true;
 		}
 
@@ -7778,16 +7938,19 @@ flag23_loop:
 			if (source.charAt(0) == '|' || source.charAt(0) == '\n') {
 				switch (source.charAt(0)) {
 				case '\n':
+					isJumpBaseUpdateRequested = false;
 					if (range && range.rows.length) {
 						commandObj = exCommandDefault;
-					}
-					else if (lastTerminator == undefined || lastTerminator == '|') {
 						break;
 					}
-					/* FALLTHRU */
+					if (lastTerminator == undefined || lastTerminator == '|') {
+						break;
+					}
+					/*FALLTHRU*/
 
 				case '|':
 					commandObj = exCommandDefault;
+					commandArg = 'p';
 					break;
 				}
 
@@ -8039,11 +8202,14 @@ flag23_loop:
 	var fontFamily = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var exGlobalSpecified = false;
 	var substituteWorker;
-	var exCommandDefault = new ExCommand('$default', '$default', 'ca1', 2, function (t, a) {
-		exPrintRow(t, a.range[0], a.range[1], a.flags);
-		t.setSelectionRange(t.getLineTopOffset2(new Position(a.range[1], 0)));
-		a.flags.hash = a.flags.list = a.flags.print = false;
-	});
+	var exCommandDefault = new ExCommand(
+		'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax, 
+		function (t, a) {
+			exPrintRow(t, a.range[0], a.range[1], a.flags);
+			t.setSelectionRange(t.getLineTopOffset2(new Position(a.range[1], 0)));
+			a.flags.hash = a.flags.list = a.flags.print = false;
+		}
+	);
 	var exCommands = [
 		new ExCommand('abbreviate', 'ab', 'W', 0, function (t, a) {
 			switch (a.argv.length) {
@@ -8073,50 +8239,40 @@ flag23_loop:
 				break;
 
 			case 2:
-				var rhs = a.argv[0];
-				var lhs = a.argv[1];
-				if (!config.vars.iskeyword.test(rhs.substr(-1))) {
+				var lhs = a.argv[0];
+				var rhs = a.argv[1];
+				if (!config.vars.iskeyword.test(lhs.substr(-1))) {
 					return _('The keyword of abbreviation must end with a word character.');
 				}
-				abbrevs[rhs] = lhs;
+				abbrevs[lhs] = rhs;
 				break;
 			}
 		}),
 		new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
-			return exCopy.apply(this, arguments);
+			return exCopy(t, a);
 		}),
 		new ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (t, a) {
-			var r = a.range;
-			var rg = document.createRange();
-			rg.setStartBefore(t.rowNodes(r[0]));
-			rg.setEndAfter(t.rowNodes(r[1]));
-			registers.set(a.flags.register ? a.register : '', rg.toString(), true, true);
-			marks.update(new Position(r[0], 0), function () {
-				rg.deleteContents();
-			});
-			rg.detach();
-			if (t.rowLength == 0) {
-				var div = t.elm.appendChild(document.createElement('div'));
-				div.appendChild(document.createTextNode('\n'));
-			}
-			var deleted = r[1] - r[0] + 1;
+			t.setSelectionRange(new Position(a.range[0], 0));
+			t.isLineOrientSelection = true;
+			var deleted = a.range[1] - a.range[0] + 1;
+			yank(t, deleted, true, a.flags.register ? a.register : '');
+			deleteSelection(t);
 			if (deleted >= config.vars.report) {
 				requestShowMessage(_('Deleted {0} {line:0}.', deleted));
 			}
-			var n = new Position(Math.min(r[0], t.rowLength - 1), 0);
+			var n = new Position(Math.min(a.range[0], t.rowLength - 1), 0);
 			t.setSelectionRange(t.getLineTopOffset2(n));
 			isEditCompleted = true;
 		}),
-		new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All, function (t, a) {
+		new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
 			return exGlobal(t, a);
 		}),
-		new ExCommand('join', 'j', '!ca1', 2 | EXFLAGS.printDefault, function (t, a) {
-			var r = a.range;
-			r[1] += r[0] == r[1] ? 1 : 0;
-			r[1] = Math.min(r[1], t.rowLength - 1);
-			t.setSelectionRange(new Position(r[0], 0));
-			joinLines(t, r[1] - r[0] + 1, a.flags.force);
-			t.setSelectionRange(t.getLineTopOffset2(r[0], 0));
+		new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (t, a) {
+			var head = a.range[0];
+			var tail = Math.min(t.rowLength - 1, a.range[1] + (a.flags.count ? a.count - 1 : 0));
+			t.setSelectionRange(new Position(head, 0));
+			joinLines(t, tail - head, a.flags.force);
+			t.setSelectionRange(t.getLineTopOffset2(head, 0));
 			isEditCompleted = true;
 		}),
 		new ExCommand('k', 'k', 'w1r', 1, function (t, a) {
@@ -8124,8 +8280,8 @@ flag23_loop:
 		}),
 		new ExCommand('map', 'map', '!W', 0, function (t, a) {
 			var mapName = a.flags.force ? _('edit') : _('command');
-			if (a.argv.length != 2) {
-				var map = mapManager.getMap(mapName).toArray();
+			var map = mapManager.getMap(mapName);
+			function dispMap (map) {
 				var maxWidth = 0;
 				if (map.length) {
 					map.map(function (o) {
@@ -8145,16 +8301,41 @@ flag23_loop:
 					backlog.push(_('No mappings for {0} mode are defined.', mapName));
 				}
 			}
+			if (a.argv.length == 0) {
+				dispMap(map.toArray());
+			}
 			else {
-				var lhs = a.argv[0];
-				var rhs = a.argv[1];
-
-				// reject some mappings: :, <escape>, <nl>
-				if (!a.flags.force && /^[:\u001b\u000a]$/.test(lhs)) {
-					return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+				var lhs = a.argv[0] || '';
+				var rhs = a.argv[1] || '';
+				var remap = true;
+				switch (lhs) {
+				case '[clear]':
+					map.removeAll();
+					break;
+				case '[noremap]':
+					lhs = rhs;
+					rhs = a.argv[2] || '';
+					remap = false;
+					/*FALLTHRU*/
+				default:
+					if (rhs == '') {
+						dispMap(map.toArray().filter(function (o) {
+							return o[0].indexOf(lhs) >= 0;
+						}));
+					}
+					else {
+						// reject some mappings for text input mode: <escape>, <nl>
+						if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
+							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+						}
+						// reject some mappings for command mode: :, <escape>
+						if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
+							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+						}
+						map.register(lhs, rhs, remap);
+					}
+					break;
 				}
-
-				mapManager.getMap(mapName).register(lhs, rhs);
 			}
 		}),
 		new ExCommand('mark', 'ma', 'w1r', 1, function (t, a) {
@@ -8208,8 +8389,11 @@ flag23_loop:
 		}),
 		new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (t, a) {
 			t.setSelectionRange(new Position(Math.max(0, a.range[0]), 0));
-			paste( t, 1, a.range[0] >= 0, true,
-				a.flags.register ? a.register : null);
+			paste(t, 1, {
+				isForward: a.range[0] >= 0,
+				isForceLineOrient: true,
+				register: a.flags.register
+			});
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
 			isEditCompleted = true;
 		}),
@@ -8310,7 +8494,7 @@ flag23_loop:
 			}
 			delete abbrevs[lhs];
 		}),
-		new ExCommand('undo', 'u', '', 0, function (t, a) {
+		new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (t, a) {
 			var result = editLogger.undo();
 			if (result === false) {
 				return requestRegisterNotice(_('No undo item.'));
@@ -8333,7 +8517,7 @@ flag23_loop:
 		new ExCommand('version', 'ver', '', 0, function (t, a) {
 			requestShowMessage('wasavi/' + VERSION + ' ' + VERSION_DESC);
 		}),
-		new ExCommand('vglobal', 'v', 's', 2 | EXFLAGS.addr2All, function (t, a) {
+		new ExCommand('vglobal', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
 			a.flags.force = true;
 			return exGlobal(t, a);
 		}),
@@ -8356,7 +8540,7 @@ flag23_loop:
 				return exQuit(!!a.flags.force);
 			}
 		}),
-		new ExCommand('yank', 'ya', 'bca', 2 | EXFLAGS.addr2, function (t, a) {
+		new ExCommand('yank', 'ya', 'bca', 2, function (t, a) {
 			var r = a.range;
 			var rg = document.createRange();
 			rg.setStartBefore(t.rowNodes(r[0]));
@@ -8413,7 +8597,7 @@ flag23_loop:
 			new VariableItem('prompt', 'b', true),        // O
 			new VariableItem('readonly', 'b', false),     // O
 			new VariableItem('redraw', 'b', true),        // not used
-			new VariableItem('remap', 'b', true),         // not used
+			new VariableItem('remap', 'b', true),         // O
 			new VariableItem('report', 'i', 5),           // O
 			new VariableItem('scroll', 'i', 0),           // O
 			new VariableItem('sections', 's', 'NHSHH HUnhsh', function (v) {
@@ -8460,7 +8644,7 @@ flag23_loop:
 			}),   // O
 
 			/* defined by vim */
-			new VariableItem('iskeyword', 'r', '^[a-zA-Z0-9_]+$'), // O
+			new VariableItem('iskeyword', 'r', '^[a-zA-Z0-9_]\\+$'),// O
 			new VariableItem('searchincr', 'b', true),             // O
 			new VariableItem('smartcase', 'b', true),              // O
 			new VariableItem('undolevels', 'i', 20, function (v) {
@@ -8571,10 +8755,10 @@ flag23_loop:
 	var isTextDirty;
 	var isEditCompleted;
 	var isVerticalMotion;
-	var isWordMotion;
-	var isSmoothScrollRequested;
 	var isReadonlyWarned;
+	var isSmoothScrollRequested;
 	var isSimpleCommandUpdateRequested;
+	var isJumpBaseUpdateRequested;
 
 	var lastKeyCode;
 	var lastSimpleCommand;
@@ -9700,7 +9884,10 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
-				return paste(t, prefixInput.count, true);
+				return paste(t, prefixInput.count, {
+					isForward:true,
+					register:prefixInput.register
+				});
 			}
 			else {
 				inputEscape(c);
@@ -9710,7 +9897,9 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
-				return paste(t, prefixInput.count, false);
+				return paste(t, prefixInput.count, {
+					register:prefixInput.register
+				});
 			}
 			else {
 				inputEscape(c);
@@ -9828,6 +10017,9 @@ flag23_loop:
 			},
 			'wait-a-letter': function (c, t) {
 				prefixInput.trailer = c;
+				if (!marks.isValidName(c)) {
+					requestRegisterNotice(_('Invalid mark name.'));
+				}
 				marks.set(c, t.selectionStart);
 				return true;
 			}
@@ -9951,7 +10143,7 @@ flag23_loop:
 			if (prefixInput.isEmptyOperation && !t.selected) {
 				requestInputMode('edit-overwrite');
 				cursor.update({type:'edit-overwrite'});
-				config.vars.showmode && requestShowMessage(_('--OVERWRITE--'));
+				config.vars.showmode && requestShowMessage(_('--OVERWRITE--'), false, false, true);
 				prefixInput.operation = c;
 				prefixInput.isLocked = true;
 				editedString = '';
@@ -10614,12 +10806,14 @@ flag23_loop:
 				ensureRunning();
 				uninstall(getEditorCore(), false);
 			},
+			/*
 			notifyKeyevent: function (e) {
 				if (!window.chrome && e.type != 'keypress') return;
 				if (window.chrome && e.type != 'keydown' && e.type != 'keypress') return;
 				if (!getRunning()) return;
 				handleKeydown(e);
 			},
+			*/
 			notifyUpdateStorage: function (keys) {
 				keys.forEach(function (key) {
 					switch (key) {

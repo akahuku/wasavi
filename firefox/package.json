@@ -1,8 +1,8 @@
 {
     "name": "wasavi", 
-    "license": "BSD License", 
+    "license": "Apache License, Version 2.0", 
     "author": "akahuku@gmail.com", 
-    "version": "0.2.128", 
+    "version": "0.2.131", 
     "fullName": "wasavi", 
     "icon": "data/icon128.png", 
     "homepage": "http://appsweets.net/", 

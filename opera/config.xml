@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" version="0.2.128">
+<widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" version="0.2.131">
     <name xml:lang="en" short="wasavi">wasavi</name>
     <author href="http://appsweets.net" email="akahuku@gmail.com">akahuku@gmail.com</author>
     <description>VI editor for any web page.</description>
-    <license href="http://www.opensource.org/licenses/bsd-license.php">Licensed under the New BSD License</license>
+    <license href="http://www.apache.org/licenses/LICENSE-2.0.html">Licensed under the Apache License, Version 2.0</license>
     <icon src="icon016.png" width="16" height="16" />
     <icon src="icon048.png" width="48" height="48" />
     <icon src="icon128.png" width="128" height="128" />
