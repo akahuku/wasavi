@@ -9,17 +9,17 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 135 2012-06-11 20:45:00Z akahuku $
+ * @version $Id: wasavi.js 136 2012-06-15 17:54:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 135 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 135 2012-06-11 20:45:00Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 136 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 136 2012-06-15 17:54:45Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -1285,6 +1285,10 @@
 				var r = document.createRange();
 				for (var i in marks) {
 					var m = marks[i];
+					if (m.row >= editor.rowLength
+					||  m.row == editor.rowLength - 1 && m.col > editor.rows(m.row)) {
+						m.row = m.col = 0;
+					}
 					if (m.row > pos.row || m.row == pos.row && m.col >= pos.col) {
 						usedMarks[i] = true;
 
@@ -1481,7 +1485,6 @@
 				totalLength = next;
 				prevNode = node;
 			}
-			//isEnd && prevNode && r.setEndAfter(prevNode);
 		}
 		function select (s, e) {
 			if (arguments.length == 0) {
@@ -2226,10 +2229,7 @@
 				return this.elm.childNodes.length;
 			},
 			get value () {
-				var result = this.elm.textContent
-					.replace(/[\u2400-\u243f]/g, function (a) {
-						return String.fromCharCode(a.charCodeAt(0) & 0xff);
-					});
+				var result = toNativeControl(this.elm.textContent);
 				if (result.length && result.substr(-1) == '\n') {
 					result = result.substring(0, result.length - 1);
 				}
@@ -2581,16 +2581,6 @@ flag23_loop:
 						argv_exp0(re[0]);
 						line = line.substring(re[0].length).replace(/^[ \t]+/, '');
 					}
-					//var re = /(?:\u0016.|\S)*/.exec(line);
-					//argv_exp0(re[0]);
-					//line = line.substring(re[0].length);
-					//line = line.replace(/^[ \t]+/, '');
-					//if (line == '') {
-						//return _('Missing 2nd word.');
-					//}
-					//var re = /(?:\u0016.|\S)*/.exec(line);
-					//argv_exp0(re[0]);
-					//line = line.substring(re[0].length);
 					needCheckRest = false;
 					break syntax_expansion_loop;
 
@@ -2957,7 +2947,7 @@ flag23_loop:
 						con.value += line;
 						con.setSelectionRange(con.value.length, con.value.length);
 						con.scrollTop = con.scrollHeight - con.clientHeight;
-						lastMessage += line;
+						lastMessage += toNativeControl(line);
 					}
 					else {
 						buffer.unshift(line);
@@ -2969,7 +2959,7 @@ flag23_loop:
 					con.setSelectionRange(con.value.length, con.value.length);
 					con.scrollTop = con.scrollHeight - con.clientHeight;
 					totalHeight += scaler.offsetHeight;
-					lastMessage += line;
+					lastMessage += toNativeControl(line);
 				}
 			}
 
@@ -3092,44 +3082,59 @@ flag23_loop:
 			pattern || (pattern = '');
 			repl || (repl = '');
 			options || (options = '');
-			var count, re, replFn;
+			var count, re, tildeUsed, replFn;
 
 			// pattern and replacemnt
 			if (pattern == '' && repl == '') {
-				repl = '~';
-			}
-			if (pattern == '') {
 				if ((pattern = lastSubstituteInfo.pattern || '') == '') {
 					return _('No previous substitution.');
 				}
+				repl = config.vars.magic ? '~' : '\\~';
 			}
-			if (repl == '%' || repl == '~') {
-				if ((repl = lastSubstituteInfo.replacement) == undefined) {
+			else if (pattern == '' && repl != '') {
+				if ((pattern = lastRegexFindCommand.pattern || '') == '') {
+					return _('No previous search pattern.');
+				}
+			}
+			if (repl == '%') {
+				if (lastSubstituteInfo.replacement == undefined) {
 					return _('No previous substitution.');
 				}
+				repl = lastSubstituteInfo.replacement;
+			}
+			repl.replace(/\\.|./g, function (a) {
+				if (a == '\\~' && !config.vars.magic
+				||  a == '~' && config.vars.magic) {
+					tildeUsed = true;
+				}
+			});
+			if (tildeUsed) {
+				if (lastSubstituteInfo.replacement == undefined) {
+					return _('No previous substitution.');
+				}
+				var tildeRegex = config.vars.magic ? /(?!\\)~/g : /\\~/g;
+				repl = repl.replace(tildeRegex, lastSubstituteInfo.replacement);
 			}
 
-			// options and count
-			while ((options = options.replace(/^\s+/, '')).length) {
-				switch (options.charAt(0)) {
-				case 'g':
+			// options
+			re = /^\s*([gc]+)/.exec(options);
+			if (re) {
+				if (re[1].indexOf('g') >= 0) {
 					this.isGlobal = true;
-					options = options.substring(1);
-					break;
-				case 'c':
-					this.isConfirm = true;
-					options = options.substring(1);
-					break;
-				default:
-					if ((re = /^\d+/.exec(options))) {
-						count = parseInt(re[0], 10);
-						options = options.substring(re[0].length);
-					}
 				}
+				if (re[1].indexOf('c') >= 0) {
+					this.isConfirm = true;
+				}
+				options = options.substring(re[0].length);
 			}
-			if (count != undefined) {
-				a.range[0] = a.range[1];
-				a.range[1] = Math.max(0, Math.min(a.range[0] + count - 1, t.rowLength - 1));
+
+			// count
+			re = /^\s*(\d+)/.exec(options);
+			if (re) {
+				count = parseInt(re[1], 10);
+				range[0] = range[1];
+				range[1] = Math.max(0, Math.min(range[0] + count - 1, t.rowLength - 1));
+				options = options.substring(re[0].length);
 			}
 
 			lastRegexFindCommand.push({direction:1});
@@ -3161,7 +3166,13 @@ flag23_loop:
 
 			this.substCount = 0;
 			this.foundCount = 0;
-			this.isConfirm ? this.kontinue(t) : this.burst(t);
+			if (this.isConfirm) {
+				substituteWorker = this;
+				this.kontinue(t);
+			}
+			else {
+				this.burst(t);
+			}
 		},
 		burst: function (t) {
 			var prevOffset, prevRow, re;
@@ -3332,70 +3343,66 @@ flag23_loop:
 				var operator = '';
 				for (var i = start; i < repl.length; i++) {
 					var ch = repl.charAt(i);
-					switch (ch) {
-					case '&':
-						codes.push(operator);
-						codes.push('_[0]');
-						operator = '+';
-						break;
-					case '\\':
-						var fallthru = false;
+					var ate = false;
+					if (ch == '\\') {
 						if (++i >= repl.length) {
 							return i;
 						}
-						ch = repl.charAt(i);
-						if (/^[0-9]$/.test(ch)) {
-							codes.push(operator);
-							codes.push('_[' + ch + ']');
+						ch += repl.charAt(i);
+					}
+					switch (ch) {
+					case '&': case '\\&':
+						if (ch == '&'   && config.vars.magic
+						||  ch == '\\&' && !config.vars.magic) {
+							codes.push(operator, '_[0]');
 							operator = '+';
+							ate = true;
 						}
-						else {
-							switch (ch) {
-							case 'u':
-								codes.push(operator);
-								codes.push('String.prototype.toUpperCase.call(');
-								i = loop(callDepth + 1, 1, i + 1);
-								codes.push(')');
-								operator = '+';
-								break;
-							case 'l':
-								codes.push(operator);
-								codes.push('String.prototype.toLowerCase.call(');
-								i = loop(callDepth + 1, 1, i + 1);
-								codes.push(')');
-								operator = '+';
-								break;
-							case 'U':
-								codes.push(operator);
-								codes.push('String.prototype.toUpperCase.call(');
-								i = loop(callDepth + 1, 2, i + 1);
-								codes.push(')');
-								operator = '+';
-								break;
-							case 'L':
-								codes.push(operator);
-								codes.push('String.prototype.toUpperCase.call(');
-								i = loop(callDepth + 1, 2, i + 1);
-								codes.push(')');
-								operator = '+';
-								break;
-							case 'e': case 'E':
-								if (callDepth && interruptMode == 2) {
-									return i;
-								}
-								break;
-							default:
-								if (specialEscapes[ch]) {
-									ch = specialEscapes[ch];
-								}
-								fallthru = true;
-							}
+						break;
+					case '\\0': case '\\1': case '\\2': case '\\3': case '\\4':
+					case '\\5': case '\\6': case '\\7': case '\\8': case '\\9':
+						codes.push(operator, '_[' + ch + ']');
+						operator = '+';
+						ate = newOperand = true;
+						break;
+					case '\\u':
+						codes.push(operator, 'String.prototype.toUpperCase.call(');
+						i = loop(callDepth + 1, 1, i + 1);
+						codes.push(')');
+						operator = '+';
+						ate = newOperand = true;
+						break;
+					case '\\l':
+						codes.push(operator, 'String.prototype.toLowerCase.call(');
+						i = loop(callDepth + 1, 1, i + 1);
+						codes.push(')');
+						operator = '+';
+						ate = newOperand = true;
+						break;
+					case '\\U':
+						codes.push(operator, 'String.prototype.toUpperCase.call(');
+						i = loop(callDepth + 1, 2, i + 1);
+						codes.push(')');
+						operator = '+';
+						ate = newOperand = true;
+						break;
+					case '\\L':
+						codes.push(operator, 'String.prototype.toUpperCase.call(');
+						i = loop(callDepth + 1, 2, i + 1);
+						codes.push(')');
+						operator = '+';
+						ate = newOperand = true;
+						break;
+					case '\\e': case '\\E':
+						if (callDepth && interruptMode == 2) return i;
+						ate = newOperand = true;
+						break;
+					}
+					if (!ate) {
+						if (ch.length >= 2 && ch.charAt(0) == '\\') {
+							ch = ch.charAt(1);
+							ch = specialEscapes[ch] || ch;
 						}
-						if (!fallthru) {
-							newOperand = true;
-							break;
-						}
-					default:
 						var code = ch.charCodeAt(0);
 						if (specialLetters[ch]) {
 							ch = specialLetters[ch];
@@ -3404,8 +3411,7 @@ flag23_loop:
 							ch = toVisibleControl(code);
 						}
 						if (newOperand || codes.length == 0) {
-							codes.push(operator);
-							codes.push('"' + ch + '"');
+							codes.push(operator, '"' + ch + '"');
 							newOperand = false;
 							operator = '+';
 						}
@@ -3529,11 +3535,12 @@ flag23_loop:
 		this.init(editor, max);
 	}
 	EditLogger.ITEM_TYPE = {
-		INSERT: 0,
-		OVERWRITE: 1,
-		DELETE: 2,
-		SHIFT: 3,
-		UNSHIFT: 4
+		NOP: 0,
+		INSERT: 1,
+		OVERWRITE: 2,
+		DELETE: 3,
+		SHIFT: 4,
+		UNSHIFT: 5
 	};
 	EditLogger.prototype = new function () {
 		/*constructor*/function EditLogItemBase () {
@@ -3544,15 +3551,15 @@ flag23_loop:
 		EditLogItemBase.prototype = {
 			type: 'Base',
 			_init: function (p, d) {
-				this.position = p.clone();
-				this.data = d.replace(/\u000d/g, '\n');
+				if (p != undefined) this.position = p.clone();
+				if (d != undefined) this.data = d.replace(/\u000d/g, '\n');
 			},
 			_dump: function (depth) {
 				return multiply(' ', depth) +
 					'+ ' + this.type + '\n' +
-					multiply(' ', depth) + '  ' +
-					'position:' + this.position.toString() +
-					', data:"' + toVisibleString(this.data) + '"';
+					multiply(' ', depth + 2) +
+					'position:' + (this.position ? this.position.toString() : '(N/A)') +
+					', data:' + (this.data != undefined ? ('"' + toVisibleString(this.data) + '"') : '(N/A)');
 			},
 			_ensureValidPosition: function (t, p) {
 				return p.row >= 0 && p.row < t.rowLength
@@ -3566,6 +3573,10 @@ flag23_loop:
 			},
 			init: function () {
 				this._init.apply(this, arguments);
+			},
+			undo: function () {
+			},
+			redo: function () {
 			},
 			dump: function (depth) {
 				return this._dump(depth);
@@ -3598,8 +3609,8 @@ flag23_loop:
 					return 0;
 				}
 
-				var ss = this.position;
-				var se = this.position2 || t.offsetBy(ss, this.data.length);
+				var ss = this.position.clone();
+				var se = this.position2 ? this.position2.clone() : t.offsetBy(ss, this.data.length);
 				var data2 = this.hasOwnProperty('data2') ? this.data2 : false;
 
 				if (this.hasOwnProperty('isLineOrient')) {
@@ -3714,8 +3725,9 @@ flag23_loop:
 				return EditLogItemInsert.prototype.redo.apply(this, arguments);
 			},
 			dump: function (depth) {
+				var indent = '\n' + multiply(' ', depth + 2);
 				return this._dump(depth) +
-					', data2:"' + toVisibleString(this.data2) + '"';
+					indent + 'data2:"' + toVisibleString(this.data2) + '"';
 			}
 		});
 		/*
@@ -3748,10 +3760,11 @@ flag23_loop:
 				return EditLogItemInsert.prototype.undo.apply(this, arguments);
 			},
 			dump: function (depth) {
+				var indent = '\n' + multiply(' ', depth + 2);
 				return this._dump(depth) +
-					', position2:' + this.position2.toString() +
-					', isLineOrient:' + this.isLineOrient +
-					', isLastLine:' + this.isLastLine;
+					indent + 'position2:' + this.position2.toString() +
+					indent + 'isLineOrient:' + this.isLineOrient +
+					indent + 'isLastLine:' + this.isLastLine;
 			}
 		});
 		/*
@@ -3800,11 +3813,12 @@ flag23_loop:
 				return 1;
 			},
 			dump: function (depth) {
+				var indent = '\n' + multiply(' ', depth + 2);
 				return this._dump(depth) +
-					', rc:' + this.rowCount +
-					', sc:' + this.shiftCount +
-					', sw:' + this.shiftWidth +
-					', ts:' + this.tabStop;
+					indent + 'rc:' + this.rowCount +
+					indent + 'sc:' + this.shiftCount +
+					indent + 'sw:' + this.shiftWidth +
+					indent + 'ts:' + this.tabStop;
 			}
 		});
 		/*
@@ -3885,6 +3899,7 @@ flag23_loop:
 		};
 
 		var pool = [
+			EditLogItemBase,
 			EditLogItemInsert,
 			EditLogItemOverwrite,
 			EditLogItemDelete,
@@ -3907,7 +3922,6 @@ flag23_loop:
 				else {
 					this.cluster = new EditLogItemCluster();
 				}
-				this.logs.items.length = this.currentPosition + 1;
 				if (func) {
 					try {
 						func();
@@ -3935,6 +3949,7 @@ flag23_loop:
 					if (--this.cluster.nestLevel < 0) {
 						var representer = this.cluster.representer;
 						if (representer) {
+							this.logs.items.length = this.currentPosition + 1;
 							this.logs.push(representer);
 							this.logs.trim(this.max);
 							this.currentPosition = this.logs.length - 1;
@@ -4145,7 +4160,7 @@ flag23_loop:
 	function $ (arg) {
 		return typeof arg == 'string' ? document.getElementById(arg) : arg;
 	}
-	function $call (func) {
+	function $call () {
 		for (var i = 0, goal = arguments.length; i < goal; i++) {
 			typeof arguments[i] == 'function' && arguments[i]();
 		}
@@ -4459,7 +4474,7 @@ flag23_loop:
 		return cp <= 0x7f ? LATIN1_PROPS[cp] : '';
 	}
 	function multiply (letter, times) {
-		if (times <= 0) { return ''; }
+		if (times <= 0) return '';
 		var result = letter;
 		while (result.length * 2 <= times) {
 			result += result;
@@ -4490,6 +4505,11 @@ flag23_loop:
 	function toVisibleControl (code) {
 		// U+2400 - U+243F: Unicode Control Pictures
 		return String.fromCharCode(code == 0x7f ? 0x2421 : 0x2400 + code);
+	}
+	function toNativeControl (s) {
+		return s.replace(/[\u2400-\u243f]/g, function (a) {
+			return String.fromCharCode(a.charCodeAt(0) & 0x00ff);
+		});
 	}
 	function docScrollLeft () {
 		return Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
@@ -5329,7 +5349,7 @@ flag23_loop:
 			case 'console-wait':
 				state = newState;
 				inputMode = newInputMode;
-				cursor.update({visible:!backlog.visible});
+				cursor.update({visible:!backlog.visible && newInputModeSub != 'ex-s'});
 				break;
 			}
 		}
@@ -5392,7 +5412,7 @@ flag23_loop:
 			blink.textContent = '\u2588';
 		}
 		if (message != '' && !volatile_) {
-			lastMessage = message;
+			lastMessage = toNativeControl(message);
 		}
 	}
 	function showLineInput (initial) {
@@ -5715,6 +5735,8 @@ flag23_loop:
 			if (!substituteWorker.kontinue(editor, letter)) {
 				substituteWorker = null;
 				inputModeSub = '';
+				cursor.ensureVisible();
+				cursor.update({visible:true});
 			}
 			return true;
 
@@ -5812,9 +5834,7 @@ flag23_loop:
 				requestShowPrefixInput();
 			}
 			else if (subkey == inputMode && (code == 0x0d || code == 0x0a)) {
-				var line = input.value.replace(/[\u2400-\u243f]/g, function (a) {
-					return String.fromCharCode(a.charCodeAt(0) & 0x00ff);
-				});
+				var line = toNativeControl(input.value);
 				prefixInput.trailer = line + chr(code);
 				mapkey = prefixInput.motion || prefixInput.operation;
 				execMap(
@@ -5900,7 +5920,7 @@ flag23_loop:
 					bell.play();
 				}
 				if (requestedState.notice.message) {
-					lastMessage = requestedState.notice.message;
+					lastMessage = toNativeControl(requestedState.notice.message);
 					console.log(requestedState.notice.message);
 				}
 				requestedState.notice = null;
@@ -6477,12 +6497,8 @@ flag23_loop:
 					depth++;
 					break;
 				case match:
-					if (depth == 0) {
-						return n;
-					}
-					else {
-						depth--;
-					}
+					if (depth == 0) return n;
+					depth--;
 					break;
 				}
 				prevn = n;
@@ -6499,12 +6515,8 @@ flag23_loop:
 					depth++;
 					break;
 				case match:
-					if (depth == 0) {
-						return n;
-					}
-					else {
-						depth--;
-					}
+					if (depth == 0) return n;
+					depth--;
 					break;
 				}
 				prevn = n;
@@ -6635,7 +6647,7 @@ flag23_loop:
 			return n;
 		}
 		function leftPos (n) {
-			if (n <= 0) { return 0; }
+			if (n <= 0) return 0;
 			n--;
 			if (text.charCodeAt(n) == 0x0a) { n--; }
 			return n;
@@ -6910,11 +6922,11 @@ flag23_loop:
 	 * ----------------
 	 */
 
-	function deleteSelection (t) {
+	function deleteSelection (t, isSubseq) {
 		if (!t.selected && !t.isLineOrientSelection) return 0;
 
 		var result = 0;
-		(isEditing() ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
+		(isSubseq || isEditing() ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
 			marks.update(t.selectionStart, function (foldedMarkRegisterer) {
 				result = t.deleteRange(function (content, fragment) {
 					var deleteMarks = fragment.querySelectorAll('span.wasavi_mark');
@@ -6927,7 +6939,7 @@ flag23_loop:
 					!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
 					!isEditing() && editLogger.write(
 						EditLogger.ITEM_TYPE.DELETE,
-						t.selectionStart, content, 
+						t.selectionStart, content,
 						t.selectionEnd, t.isLineOrientSelection,
 						t.selectionEndRow == t.rowLength - 1,
 						deleteMarksDest
@@ -6938,14 +6950,15 @@ flag23_loop:
 		return result;
 	}
 	function insert (t, s, opts) {
-		if (s == '') return;
+		if (s == '' && !t.selected) return;
 
-		deleteSelection(t);
 		opts || (opts = {});
 		var keepPosition = !!opts.keepPosition;
 		var isLineOrientedLast = !!opts.isLineOrientedLast;
 
 		(isEditing() ? $call : editLogger.open).call(editLogger, 'insert', function () {
+			deleteSelection(t, true);
+
 			var startn = t.selectionStart;
 			if (isLineOrientedLast
 			&& s.length >= 2
@@ -7151,63 +7164,82 @@ flag23_loop:
 
 		var item, data = '';
 		if ('register' in opts) {
-			item = registers.get(opts.register);
-			data = item.data;
+			var register = opts.register;
+			if (register == undefined || register == '') {
+				register = '"';
+			}
+			if (registers.exists(register)) {
+				item = registers.get(register);
+				data = item.data;
+			}
+			else {
+				requestRegisterNotice(_('Register {0} is empty.', register));
+				return true;
+			}
 		}
 		else if ('content' in opts) {
 			item = {};
 			data = opts.content;
+		}
+		if (t.selected) {
+			requestRegisterNotice(_('Internal state error.'));
+			return true;
+		}
+		if (data.length == 0) {
+			requestRegisterNotice(_('Putting data is empty.'));
+			return true;
 		}
 
 		var isForward = !!opts.isForward;
 		var isForceLineOrient = !!opts.isForceLineOrient;
 		var n = t.selectionStart;
 
-		if (!t.selected && data != '') {
+		if (item.isLineOrient || isForceLineOrient) {
 			var originalLineOrient = item.isLineOrient;
-			item.isLineOrient = isForceLineOrient || item.isLineOrient;
-			if (item.isLineOrient) {
-				editLogger.open('paste#1', function () {
-					if (isForward) {
-						if (n.row >= t.rowLength - 1) {
-							t.setSelectionRange(t.getLineTailOffset(n));
-							insert(t, '\n', {isLineOrientLast:true});
-							n = t.selectionStart;
-						}
-						else {
-							n.row++;
-							n.col = 0;
-							t.setSelectionRange(n);
-						}
+			item.isLineOrient = true;
+			if (data.substr(-1) != '\n') {
+				data += '\n';
+			}
+			editLogger.open('paste#1', function () {
+				if (isForward) {
+					if (n.row >= t.rowLength - 1) {
+						t.setSelectionRange(t.getLineTailOffset(n));
+						insert(t, '\n', {isLineOrientLast:true});
+						n = t.selectionStart;
 					}
 					else {
+						n.row++;
 						n.col = 0;
 						t.setSelectionRange(n);
 					}
-					for (var i = 0, goal = count - 1; i < goal; i++) {
-						insert(t, data);
-					}
-					insert(t, data, {isLineOrientedLast:true});
-					t.setSelectionRange(t.getLineTopOffset2(n));
-				});
-			}
-			else {
-				if (isForward) {
-					n = t.rightPos(n);
+				}
+				else {
+					n.col = 0;
 					t.setSelectionRange(n);
 				}
-				editLogger.open('paste#2', function () {
-					for (var i = 0; i < count; i++) {
-						insert(t, data);
-					}
-				});
-				if (isForward) {
-					t.setSelectionRange(t.leftPos(t.selectionStart));
+				for (var i = 0, goal = count - 1; i < goal; i++) {
+					insert(t, data);
 				}
-			}
-			isEditCompleted = true;
+				insert(t, data, {isLineOrientedLast:true});
+				t.setSelectionRange(t.getLineTopOffset2(n));
+			});
 			item.isLineOrient = originalLineOrient;
 		}
+		else {
+			if (isForward) {
+				n = t.rightPos(n);
+				t.setSelectionRange(n);
+			}
+			editLogger.open('paste#2', function () {
+				for (var i = 0; i < count; i++) {
+					insert(t, data);
+				}
+			});
+			if (isForward) {
+				t.setSelectionRange(t.leftPos(t.selectionStart));
+			}
+		}
+		isEditCompleted = true;
 		return true;
 	}
 	function startEdit (c, t, opts, isAppend, isAlter) {
@@ -7609,16 +7641,12 @@ flag23_loop:
 					result.push(i + ': null');
 				}
 			}
-			console.log('*** marked items dump ***\n' + (title || '') + '\n' + result.join('\n'));
 		}
 
 		// pass 2
 		editLogger.open('global');
-		console.log('command: "' + toVisibleString(command) + '"');
-		dumpItems('initial');
 		try {
 			for (var i = 0, goal = items.length; i < goal; i++) {
-				dumpItems('loop ' + i + ' start');
 				if (items[i].parentNode) {
 					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
 					var result = executeExCommand(t, command);
@@ -7629,11 +7657,9 @@ flag23_loop:
 				else {
 					items[i] = null;
 				}
-				dumpItems('loop ' + i + ' finish');
 			}
 		}
 		finally {
-			dumpItems('finish');
 			editLogger.close();
 		}
 	}
@@ -7877,7 +7903,7 @@ flag23_loop:
 			source += '\n';
 		}
 
-		while (source.length) {
+		while (source.length && !terminated) {
 			commandName = commandArg = '';
 			commandObj = null;
 
@@ -8170,22 +8196,45 @@ flag23_loop:
 		return resultMessage;
 	}
 	function exPrintRow (t, from, to, flags) {
-		if (flags.hash) {
+		function getLineNumber (i) {
+			return ('     ' + (i + 1)).substr(-6) + '  ';
+		}
+		function getLineNumberNull () {
+			return '';
+		}
+		var lg = flags.hash ? getLineNumber : getLineNumberNull;
+		if (flags.list) {
+			var escapeReplacements = {
+				7: '\\a', 8: '\\b', 9: '\\t', 10: '\\n', 11: '\\v', 12: '\\f', 13: '\\r', 92:'\\\\'
+			};
 			for (var i = from; i <= to; i++) {
-				var line = ('     ' + (i + 1)).substr(-6) + '  ' + t.rows(i);
-				backlog.push(line);
+				var line = toNativeControl(t.rows(i));
+				/*
+				 * char code
+				 * \\   5c
+				 * \a   07
+				 * \b   08
+				 * \t   09
+				 * \n   0a
+				 * \v   0b
+				 * \f   0c
+				 * \r   0d
+				 */
+				line = line.replace(/[\u0007\u0008\u000a-\u000d\\]/g, function (s) {
+					return escapeReplacements[s.charCodeAt(0)];
+				});
+				line = line.replace(/[\u0000-\u0008\u0010-\u001f\u007f]/g, function (s) {
+					return '\\' + ('00' + s.charCodeAt(0).toString(8)).substr(-3);
+				});
+				line = line.replace(/\$/g, '\\$');
+				line = line + '$';
+				backlog.push(lg(i) + line);
 			}
 		}
-		else if (flags.list) {
-			for (var i = from; i <= to; i++) {
-				var line = toVisibleString(t.rows(i));
-				backlog.push(line);
-			}
-		}
-		else if (flags.print) {
+		else if (flags.hash || flags.print) {
 			for (var i = from; i <= to; i++) {
 				var line = t.rows(i);
-				backlog.push(line);
+				backlog.push(lg(i) + line);
 			}
 		}
 	}
@@ -8203,7 +8252,7 @@ flag23_loop:
 	var exGlobalSpecified = false;
 	var substituteWorker;
 	var exCommandDefault = new ExCommand(
-		'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax, 
+		'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
 		function (t, a) {
 			exPrintRow(t, a.range[0], a.range[1], a.flags);
 			t.setSelectionRange(t.getLineTopOffset2(new Position(a.range[1], 0)));
@@ -8350,30 +8399,39 @@ flag23_loop:
 			if (dest >= r[0] && dest < r[1]) {
 				return _('Destination is in inside source.');
 			}
-			if (dest == r[1]) {
-				return;
-			}
+			editLogger.open('move', function () {
+				var rows = r[1] - r[0] + 1;
 
-			var rg = document.createRange();
-			rg.setStartBefore(t.rowNodes(r[0]));
-			rg.setEndAfter(t.rowNodes(r[1]));
-			var f = rg.cloneContents();
-			marks.update(new Position(dest, 0), function () {
-				var rg2 = document.createRange();
-				dest < 0 ?
-					rg2.setStartBefore(t.rowNodes(0)) :
-					rg2.setStartAfter(t.rowNodes(dest));
-				rg2.insertNode(f);
-				rg2.detach();
-				rg.deleteContents();
+				if (dest == r[0] - 1 || dest == r[1]) {
+					editLogger.write(EditLogger.ITEM_TYPE.NOP);
+				}
+				else {
+					// delete
+					t.isLineOrientSelection = true;
+					t.setSelectionRange(new Position(r[0], 0));
+					t.selectRows(rows);
+					var content = t.getSelectionRows();
+					deleteSelection(t);
+					t.isLineOrientSelection = false;
+
+					// fix destination position
+					dest -= dest > r[1] ? rows : 0;
+
+					// paste
+					t.setSelectionRange(new Position(dest, 0));
+					paste(t, 1, {
+						isForward:true,
+						isForceLineOrient:true,
+						content:content,
+					});
+				}
+
+				if (rows >= config.vars.report) {
+					requestShowMessage(_('Moved {0} {line:0}.', rows));
+				}
+
+				t.setSelectionRange(t.getLineTopOffset2(dest + rows, 0));
 			});
-			rg.detach();
-
-			var row = dest;
-			if (dest < r[0]) {
-				row += r[1] - r[0] + 1;
-			}
-			t.setSelectionRange(t.getLineTopOffset2(row, 0));
 			isEditCompleted = true;
 		}),
 		new ExCommand('options', 'opt', '', 0, function (t, a) {
@@ -8385,25 +8443,31 @@ flag23_loop:
 			}
 		}),
 		new ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (t, a) {
+			a.flags.print = true;
 			return exCommandDefault.handler.apply(this, arguments);
 		}),
 		new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (t, a) {
-			t.setSelectionRange(new Position(Math.max(0, a.range[0]), 0));
+			var register = a.flags.register ? a.register : '"';
+			if (!registers.exists(register)) {
+				return _('Register {0} is empty.', register);
+			}
+			t.setSelectionRange(new Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
 			paste(t, 1, {
-				isForward: a.range[0] >= 0,
-				isForceLineOrient: true,
-				register: a.flags.register
+				isForward:true,
+				isForceLineOrient:true,
+				register:register
 			});
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
-			isEditCompleted = true;
 		}),
 		new ExCommand('quit', 'q', '!', 0, function (t, a) {
 			return exQuit(a.flags.force);
 		}),
 		new ExCommand('redo', 'r', '', 0, function (t, a) {
+			editLogger.close();
 			var result = editLogger.redo();
+			editLogger.open('excommand+redo');
 			if (result === false) {
-				return requestRegisterNotice(_('No redo item.'));
+				return _('No redo item.');
 			}
 			else {
 				requestShowMessage(
@@ -8479,6 +8543,9 @@ flag23_loop:
 			}
 		}),
 		new ExCommand('sushi', 'sushi', '', 0, function (t, a) {
+			lastRegexFindCommand.push({});
+			lastRegexFindCommand.setPattern('');
+			lastSubstituteInfo = {};
 			requestShowMessage('Whassup?');
 		}),
 		new ExCommand('registers', 'reg', '', 0, function (t, a) {
@@ -8495,9 +8562,11 @@ flag23_loop:
 			delete abbrevs[lhs];
 		}),
 		new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (t, a) {
+			editLogger.close();
 			var result = editLogger.undo();
+			editLogger.open('excommand+undo');
 			if (result === false) {
-				return requestRegisterNotice(_('No undo item.'));
+				return _('No undo item.');
 			}
 			else {
 				requestShowMessage(
@@ -10297,14 +10366,18 @@ flag23_loop:
 			'line-input': function (c, t) {
 				prefixInput.trailer = c;
 				exGlobalSpecified = false;
-				editLogger.open('excommand', function () {
+				editLogger.open('excommand');
+				try {
 					var result = executeExCommand(t, c);
 					if (typeof result == 'string') {
 						requestShowMessage(result, true);
 					}
-				});
-				registers.set(':', c);
-				lineInputHistories.push(c);
+					registers.set(':', c);
+					lineInputHistories.push(c);
+				}
+				finally {
+					editLogger.close();
+				}
 				return true;
 			}
 		}
@@ -10806,14 +10879,6 @@ flag23_loop:
 				ensureRunning();
 				uninstall(getEditorCore(), false);
 			},
-			/*
-			notifyKeyevent: function (e) {
-				if (!window.chrome && e.type != 'keypress') return;
-				if (window.chrome && e.type != 'keydown' && e.type != 'keypress') return;
-				if (!getRunning()) return;
-				handleKeydown(e);
-			},
-			*/
 			notifyUpdateStorage: function (keys) {
 				keys.forEach(function (key) {
 					switch (key) {

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: undo.js 134 2012-06-11 20:44:34Z akahuku $
+ * @version $Id: undo.js 136 2012-06-15 17:54:45Z akahuku $
  */
 
 /**
@@ -365,8 +365,9 @@ function testPasteCharsForward () {
 	Wasavi.send('ifoo\nbar\u001b');
 
 	Wasavi.send('1G1|y3l');
+	assertEquals('#1-1', 'foo', Wasavi.registers('"'));
 	Wasavi.send('1G1|p');
-	assertEquals('#1-1', 'ffoooo\nbar', Wasavi.value);
+	assertEquals('#1-2', 'ffoooo\nbar', Wasavi.value);
 
 	Wasavi.send('u');
 	assertEquals('#2-1', 'foo\nbar', Wasavi.value);
