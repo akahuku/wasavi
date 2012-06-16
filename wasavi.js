@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 136 2012-06-15 17:54:45Z akahuku $
+ * @version $Id: wasavi.js 137 2012-06-16 00:29:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 136 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 136 2012-06-15 17:54:45Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 137 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 137 2012-06-16 00:29:54Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -1178,6 +1178,7 @@
 
 	/*constructor*/function RegexConverter () {
 		var flips = {
+			// vi metacharacter -> js metacharacter
 			'\\<': '\\b',
 			'\\>': '\\b',
 			'\\{': '{',
@@ -1196,7 +1197,7 @@
 		};
 		function convert (s) {
 			if (typeof s == 'string') {
-				return s.replace(/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()$]/g, function ($0) {
+				return s.replace(/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g, function ($0) {
 					return flips[$0] || $0;
 				});
 			}
@@ -3329,10 +3330,8 @@ flag23_loop:
 			var specialLetters = {'"':'\\"', '\\':'\\\\'};
 			loop(0, 0, 0);
 			try {
-				var code =
-					'var _ = Array.prototype.slice.call(arguments);' +
-					'return ' + codes.join(' ') + ';';
-				result = new Function(code);
+				var code = 'return ' + codes.join(' ') + ';';
+				result = new Function('_', code);
 			}
 			catch (e) {
 				result = null;
@@ -3361,21 +3360,21 @@ flag23_loop:
 						break;
 					case '\\0': case '\\1': case '\\2': case '\\3': case '\\4':
 					case '\\5': case '\\6': case '\\7': case '\\8': case '\\9':
-						codes.push(operator, '_[' + ch + ']');
+						codes.push(operator, '(_[' + ch.charAt(1) + ']||"")');
 						operator = '+';
 						ate = newOperand = true;
 						break;
 					case '\\u':
-						codes.push(operator, 'String.prototype.toUpperCase.call(');
+						codes.push(operator, '(');
 						i = loop(callDepth + 1, 1, i + 1);
-						codes.push(')');
+						codes.push(').replace(/^./,function(_){return _.toUpperCase()})');
 						operator = '+';
 						ate = newOperand = true;
 						break;
 					case '\\l':
-						codes.push(operator, 'String.prototype.toLowerCase.call(');
+						codes.push(operator, '(');
 						i = loop(callDepth + 1, 1, i + 1);
-						codes.push(')');
+						codes.push(').replace(/^./,function(_){return _.toLowerCase()})');
 						operator = '+';
 						ate = newOperand = true;
 						break;
@@ -3387,7 +3386,7 @@ flag23_loop:
 						ate = newOperand = true;
 						break;
 					case '\\L':
-						codes.push(operator, 'String.prototype.toUpperCase.call(');
+						codes.push(operator, 'String.prototype.toLowerCase.call(');
 						i = loop(callDepth + 1, 2, i + 1);
 						codes.push(')');
 						operator = '+';
@@ -8261,11 +8260,10 @@ flag23_loop:
 	);
 	var exCommands = [
 		new ExCommand('abbreviate', 'ab', 'W', 0, function (t, a) {
-			switch (a.argv.length) {
-			case 0:
+			function dispAbbrev (ab) {
 				var maxWidth = 0;
 				var count = 0;
-				for (var i in abbrevs) {
+				for (var i in ab) {
 					if (i.length > maxWidth) {
 						maxWidth = i.length;
 					}
@@ -8273,7 +8271,7 @@ flag23_loop:
 				}
 				if (count) {
 					var list = [_('*** abbreviations ***')];
-					for (var i in abbrevs) {
+					for (var i in ab) {
 						list.push(
 							i + multiply(' ', maxWidth - i.length) +
 							'\t' + toVisibleString(abbrevs[i])
@@ -8285,9 +8283,27 @@ flag23_loop:
 				else {
 					backlog.push(_('No abbreviations are defined.'));
 				}
+			}
+			switch (a.argv.length) {
+			case 0:
+				dispAbbrev(abbrevs);
 				break;
 
-			case 2:
+			case 1:
+				var lhs = a.argv[0];
+				if (lhs == '[clear]') {
+					abbrevs = {};
+				}
+				else {
+					var tmp = {};
+					if (lhs in abbrevs) {
+						tmp[lhs] = abbrevs[lhs];
+					}
+					dispAbbrev(tmp);
+				}
+				break;
+
+			default:
 				var lhs = a.argv[0];
 				var rhs = a.argv[1];
 				if (!config.vars.iskeyword.test(lhs.substr(-1))) {

@@ -5,7 +5,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: vi.html 134 2012-06-11 20:44:34Z akahuku $
+ * @version $Id: vi.html 137 2012-06-16 00:29:54Z akahuku $
 -->
 <html>
 <head>
@@ -15,15 +15,15 @@
 function suite () {
 	var suite = new top.jsUnitTestSuite();
 	[
-		//'basics',
-		//'motions',
-		//'scrollers',
-		//'editing',
-		//'op_delete',
-		//'op_yank',
-		//'op_change',
-		//'op_shift',
-		//'undo',
+		'basics',
+		'motions',
+		'scrollers',
+		'editing',
+		'op_delete',
+		'op_yank',
+		'op_change',
+		'op_shift',
+		'undo',
 		'excommands'
 	].forEach(function (unit) {
 		suite.addTestPage('../tests/test_frame.html?test=' + unit);
