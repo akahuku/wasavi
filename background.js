@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 135 2012-06-11 20:45:00Z akahuku $
+ * @version $Id: background.js 138 2012-06-18 11:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -404,7 +404,7 @@ function FirefoxJetpackExtensionWrapper () {
 	pagemod.PageMod({
 		include:{
 			test:function (url) {
-				if (self.data.url('options.html').test(url)) {
+				if (url.indexOf(self.data.url('options.html')) == 0) {
 					return true;
 				}
 				if (url.substring(0, 5) != 'http:'

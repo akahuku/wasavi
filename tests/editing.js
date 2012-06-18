@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: editing.js 132 2012-06-05 15:44:16Z akahuku $
+ * @version $Id: editing.js 138 2012-06-18 11:10:52Z akahuku $
  */
 
 /**
@@ -269,6 +269,58 @@ function testRepetitionInsert () {
 
 	Wasavi.send('2.');
 	assertEquals('#2', 'fobababarbarrro', Wasavi.value);
+}
+
+function testRepetitionInsertWithControlChar () {
+	Wasavi.send('ifoo\u001b');
+	Wasavi.send('i', 'bax', Wasavi.SPECIAL_KEYS.BS, 'r', Wasavi.SPECIAL_KEYS.ESCAPE);
+	assertEquals('#1-1', 'fobaro', Wasavi.value);
+	assertEquals('#1-2', 'bax\u0008r', Wasavi.registers('.'));
+
+	console.log('*** test #1 ***');
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo', Wasavi.value);
+	assertPos('#2-2', [0, 2]);
+	Wasavi.send('\u0012');
+	assertEquals('#2-3', 'fobaro', Wasavi.value);
+	assertPos('#2-4', [0, 2]);
+
+	console.log('*** test #2 ***');
+	Wasavi.send('.');
+	assertEquals('#3-1', 'fobarbaro', Wasavi.value);
+	Wasavi.send('u');
+	assertEquals('#3-2', 'fobaro', Wasavi.value);
+	assertPos('#3-3', [0, 2]);
+	Wasavi.send('\u0012');
+	assertEquals('#3-4', 'fobarbaro', Wasavi.value);
+	assertPos('#3-5', [0, 2]);
+
+	console.log('*** test #3 ***');
+	Wasavi.send('2.');
+	assertEquals('#4-1', 'fobarbarbarbaro', Wasavi.value);
+	Wasavi.send('u');
+	assertEquals('#4-2', 'fobarbaro', Wasavi.value);
+	assertPos('#4-3', [0, 2]);
+	Wasavi.send('\u0012');
+	assertEquals('#4-4', 'fobarbarbarbaro', Wasavi.value);
+	assertPos('#4-5', [0, 2]);
+}
+
+function testRepetitionInsertWithNewline () {
+	Wasavi.send('ifoo\u001b');
+	Wasavi.send('i', 'bar\nbaz\u001b');
+	assertEquals('#1-1', 'fobar\nbazo', Wasavi.value);
+
+	Wasavi.send('u');
+	assertEquals('#2-1', 'foo', Wasavi.value);
+	assertPos('#2-2', [0, 2]);
+	Wasavi.send('\u0012');
+	assertEquals('#2-3', 'fobar\nbazo', Wasavi.value);
+	assertPos('#2-4', [0, 2]);
+
+	Wasavi.send('.');
+	assertEquals('#3-1', 'fobar\nbazbar\nbazo', Wasavi.value);
+
 }
 
 function testRepetitionJoin () {

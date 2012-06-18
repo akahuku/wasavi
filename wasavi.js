@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 137 2012-06-16 00:29:54Z akahuku $
+ * @version $Id: wasavi.js 138 2012-06-18 11:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 137 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 137 2012-06-16 00:29:54Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 138 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 138 2012-06-18 11:10:52Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -102,7 +102,6 @@
 		'-9': '<tab>',
 		'-13': '<enter>',
 		'-27': '<esc>',
-		'-127': '<delete>',
 		33:  '<pageup>',
 		34:  '<pagedown>',
 		35:  '<end>',
@@ -112,6 +111,7 @@
 		39:  '<right>',
 		40:  '<down>',
 		45:  '<insert>',
+		46:  '<delete>',
 		112: '<f1>', 113:  '<f2>', 114:  '<f3>', 115:  '<f4>',
 		116: '<f5>', 117:  '<f6>', 118:  '<f7>', 119:  '<f8>',
 		120: '<f9>', 121: '<f10>', 122: '<f11>', 123: '<f12>'
@@ -559,7 +559,7 @@
 		function dump () {
 			function dumpItem (item) {
 				var orientString = item.isLineOrient ? _('L') : _('C');
-				return _('  {0}  {1}"', orientString, toVisibleString(item.data));
+				return _('  {0}  {1}', orientString, toVisibleString(item.data));
 			}
 			var a = [_('*** registers ***')];
 			a.push('""' + dumpItem(unnamed));
@@ -3577,6 +3577,8 @@ flag23_loop:
 			},
 			redo: function () {
 			},
+			restorePosition: function () {
+			},
 			dump: function (depth) {
 				return this._dump(depth);
 			},
@@ -3602,7 +3604,7 @@ flag23_loop:
 			init: function (p, d) {
 				this._init.apply(this, arguments);
 			},
-			undo: function (t) {
+			undo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
 					console.error(this.toString() + '#undo: bad position!');
 					return 0;
@@ -3637,12 +3639,13 @@ flag23_loop:
 					t.deleteRange(ss, se);
 				});
 				data2 !== false && t.setRow(ss, data2);
-				t.setSelectionRange(ss);
+				!isClusterMember && this.restorePosition(t);
+				//t.setSelectionRange(ss);
 				t.isLineOrientSelection = false;
 
 				return 1;
 			},
-			redo: function (t) {
+			redo: function (t, isClusterMember) {
 				if (!this._ensureValidPositionForAppend(t, this.position)) {
 					console.error([
 						this.toString() + '#redo: bad position!',
@@ -3684,9 +3687,20 @@ flag23_loop:
 						!marks.get(i) && marks.set(i, this.marks[i]);
 					}
 				}
-				t.setSelectionRange(this.position);
+				!isClusterMember && this.restorePosition(t);
+				//t.setSelectionRange(this.position);
 
 				return 1;
+			},
+			restorePosition: function (t) {
+				var n = this.position.clone();
+				if (n.row >= t.rowLength) {
+					n.row = t.rowLength - 1;
+					t.setSelectionRange(t.getLineTopOffset2(n));
+				}
+				else {
+					t.setSelectionRange(n);
+				}
 			}
 		});
 		/*
@@ -3717,11 +3731,14 @@ flag23_loop:
 				this.data2 = d2;
 				this.inputMethod = 'overwriteChars';
 			},
-			undo: function (t) {
+			undo: function () {
 				return EditLogItemInsert.prototype.undo.apply(this, arguments);
 			},
-			redo: function (t) {
+			redo: function () {
 				return EditLogItemInsert.prototype.redo.apply(this, arguments);
+			},
+			restorePosition: function () {
+				return EditLogItemInsert.prototype.restorePosition.apply(this, arguments);
 			},
 			dump: function (depth) {
 				var indent = '\n' + multiply(' ', depth + 2);
@@ -3752,11 +3769,14 @@ flag23_loop:
 				this.isLastLine = !!ll;
 				this.marks = ms;
 			},
-			undo: function (t) {
+			undo: function () {
 				return EditLogItemInsert.prototype.redo.apply(this, arguments);
 			},
-			redo: function (t) {
+			redo: function () {
 				return EditLogItemInsert.prototype.undo.apply(this, arguments);
+			},
+			restorePosition: function () {
+				return EditLogItemInsert.prototype.restorePosition.apply(this, arguments);
 			},
 			dump: function (depth) {
 				var indent = '\n' + multiply(' ', depth + 2);
@@ -3779,7 +3799,7 @@ flag23_loop:
 				this.shiftWidth = sw;
 				this.tabStop = ts;
 			},
-			undo: function (t) {
+			undo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
 					console.error(this.toString() + '#undo: bad position!');
 					return 0;
@@ -3792,10 +3812,11 @@ flag23_loop:
 						-s.shiftCount, s.shiftWidth, s.tabStop
 					);
 				});
-				t.setSelectionRange(t.getLineTopOffset2(this.position));
+				!isClusterMember && this.restorePosition(t);
+				//t.setSelectionRange(t.getLineTopOffset2(this.position));
 				return 1;
 			},
-			redo: function (t) {
+			redo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
 					console.error(this.toString() + '#redo: bad position!');
 					return 0;
@@ -3808,8 +3829,16 @@ flag23_loop:
 						s.shiftCount, s.shiftWidth, s.tabStop, s.indents
 					);
 				});
-				t.setSelectionRange(t.getLineTopOffset2(this.position));
+				!isClusterMember && this.restorePosition(t);
+				//t.setSelectionRange(t.getLineTopOffset2(this.position));
 				return 1;
+			},
+			restorePosition: function (t) {
+				var n = this.position.clone();
+				if (n.row >= t.rowLength) {
+					n.row = t.rowLength - 1;
+				}
+				t.setSelectionRange(t.getLineTopOffset2(n));
 			},
 			dump: function (depth) {
 				var indent = '\n' + multiply(' ', depth + 2);
@@ -3835,6 +3864,9 @@ flag23_loop:
 			redo: function () {
 				return EditLogItemShift.prototype.undo.apply(this, arguments);
 			},
+			restorePosition: function () {
+				return EditLogItemShift.prototype.restorePosition.apply(this, arguments);
+			},
 			dump: function () {
 				return EditLogItemShift.prototype.dump.apply(this, arguments);
 			}
@@ -3853,16 +3885,20 @@ flag23_loop:
 			undo: function (t) {
 				var result = 0;
 				for (var i = this.items.length - 1; i >= 0; i--) {
-					result += this.items[i].undo(t) || 0;
+					result += this.items[i].undo(t, true) || 0;
 				}
+				result && this.items[0].restorePosition(t);
 				return result;
 			},
 			redo: function (t) {
 				var result = 0;
 				for (var i = 0; i < this.items.length; i++) {
-					result += this.items[i].redo(t) || 0;
+					result += this.items[i].redo(t, true) || 0;
 				}
+				result && this.items[0].restorePosition(t);
 				return result;
+			},
+			restorePosition: function (t) {
 			},
 			trim: function (max) {
 				while (this.items.length > max) {
@@ -3958,7 +3994,7 @@ flag23_loop:
 					}
 				}
 				else {
-					throw new Exeception('edit logger doesn\'t open');
+					throw new Error('edit logger doesn\'t open');
 				}
 			},
 			undo: function () {
@@ -5458,8 +5494,31 @@ flag23_loop:
 			requestedState.inputMode = {mode:mode, modeSub:modeSub || '', initial:initial || ''};
 		}
 	}
-	function requestLogEditing () {
-		requestedState.logEditing = true;
+	function logEditing (t, connect) {
+		var s;
+		if (editedStringCurrent != '' && (s = editedStringCurrent.replace(/[\u0008\u007f]/g, '')) != '') {
+			editLogger.open('editing', function () {
+				if (inputMode == 'edit') {
+					editLogger.write(
+						EditLogger.ITEM_TYPE.INSERT,
+						editStartPosition, s
+					);
+				}
+				else {
+					editLogger.write(
+						EditLogger.ITEM_TYPE.OVERWRITE,
+						editStartPosition, s, overwroteString
+					);
+				}
+			});
+			editedStringCurrent = '';
+			overwroteString = false;
+			editStartPosition = null;
+		}
+		if (!connect && editLogger.clusterNestLevel >= 0) {
+			editLogger.close();
+			editLogger.open('log-editing');
+		}
 	}
 	function requestSimpleCommandUpdate () {
 		if (runLevel == 0) {
@@ -5607,14 +5666,14 @@ flag23_loop:
 			var target, last;
 
 			if (force) {
-				if (editedString.length < 1) return;
-				target = editedString;
+				if (editedStringCurrent.length < 1) return;
+				target = editedStringCurrent;
 				last = '';
 			}
 			else {
-				if (editedString.length < 2) return;
-				target = editedString.substring(0, editedString.length - 1);
-				last = editedString.substr(-1);
+				if (editedStringCurrent.length < 2) return;
+				target = editedStringCurrent.substring(0, editedStringCurrent.length - 1);
+				last = editedStringCurrent.substr(-1);
 				if (!(regex.test(target.substr(-1)) && !regex.test(last))) return;
 			}
 
@@ -5648,28 +5707,11 @@ flag23_loop:
 				}
 				if (!canTransit) continue;
 
-				editedString = target + multiply('\u0008', i.length) + abbrevs[i] + last;
+				editedStringCurrent = target + multiply('\u0008', i.length) + abbrevs[i] + last;
 				deleteChars(t, i.length + last.length);
 				(inputMode == 'edit' ? insert : overwrite)(t, abbrevs[i] + last);
 				break;
 			}
-		}
-		function logEditing (t) {
-			editedString != '' && editLogger.open('editing', function () {
-				if (inputMode == 'edit') {
-					editLogger.write(
-						EditLogger.ITEM_TYPE.INSERT,
-						editStartPosition, editedString
-					);
-				}
-				else {
-					editLogger.write(
-						EditLogger.ITEM_TYPE.OVERWRITE,
-						editStartPosition, editedString, overwroteString
-					);
-				}
-			});
-			editLogger.clusterNestLevel >= 0 && editLogger.close();
 		}
 
 		var editor = getEditorCore();
@@ -5756,16 +5798,16 @@ flag23_loop:
 			if (subkey == inputMode && code == 0x1b) {
 				processAbbrevs(editor, true);
 
-				var editedStringCurrent = editedString;
+				var editedStringSaved = editedString;
 
 				if (editRepeatCount > 1) {
-					var editedStringActual = editedStringSuffix + editedStringCurrent;
+					var editedStringFollowed = editedStringSuffix + editedStringSaved;
 					for (var i = 1; i < editRepeatCount; i++) {
-						executeViCommand(editedStringActual);
+						executeViCommand(editedStringFollowed);
 					}
 				}
 
-				logEditing(editor);
+				logEditing(editor, true);
 
 				var n = editor.selectionStart;
 				n.col = Math.max(n.col - 1, 0);
@@ -5773,8 +5815,8 @@ flag23_loop:
 
 				popInputMode();
 				prefixInput.isLocked = false;
-				prefixInput.trailer = editedStringCurrent;
-				registers.set('.', editedStringCurrent);
+				prefixInput.trailer = editedStringSaved;
+				registers.set('.', editedStringSaved);
 
 				cursor.ensureVisible();
 				cursor.update({type:inputMode, visible:true});
@@ -5784,17 +5826,19 @@ flag23_loop:
 					isSimpleCommandUpdateRequested = false;
 				}
 
-				(isEditCompleted || editedStringCurrent != '') && doEditComplete();
-				editedString = '';
+				(isEditCompleted || editedStringSaved != '') && doEditComplete();
+				editedString = editedStringCurrent = '';
 				overwroteString = false;
 				prefixInput.reset();
 				isEditCompleted = isVerticalMotion = false;
 				isSmoothScrollRequested = false;
 				showMessage('');
 				requestShowPrefixInput();
+				editLogger.close();// edit-wrapper
 			}
 			else {
 				editedString += letter;
+				editedStringCurrent += letter;
 
 				if (config.vars.showmatch) {
 					pairBracketsIndicator && pairBracketsIndicator.clear();
@@ -5804,6 +5848,10 @@ flag23_loop:
 					//
 				}
 				else if (isEditing() && (code == 0x08 || code == 0x0a || code >= 32)) {
+					if (!editStartPosition) {
+						editStartPosition = editor.selectionStart;
+					}
+
 					(inputMode == 'edit' ? insert : overwrite)(editor, letter);
 					processAbbrevs(editor);
 
@@ -5906,13 +5954,6 @@ flag23_loop:
 				}
 				requestedState.modeline = null;
 				config.vars.errorbells && requestRegisterNotice();
-			}
-			if (requestedState.logEditing) {
-				logEditing(editor);
-				editedString = '';
-				overwroteString = false;
-				editStartPosition = editor.selectionStart;
-				requestedState.logEditing = false;
 			}
 			if (requestedState.notice) {
 				if (requestedState.notice.play) {
@@ -6925,7 +6966,7 @@ flag23_loop:
 		if (!t.selected && !t.isLineOrientSelection) return 0;
 
 		var result = 0;
-		(isSubseq || isEditing() ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
+		(isSubseq ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
 			marks.update(t.selectionStart, function (foldedMarkRegisterer) {
 				result = t.deleteRange(function (content, fragment) {
 					var deleteMarks = fragment.querySelectorAll('span.wasavi_mark');
@@ -6936,7 +6977,7 @@ flag23_loop:
 						position && (deleteMarksDest[name] = position.clone());
 					}
 					!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
-					!isEditing() && editLogger.write(
+					editLogger.write(
 						EditLogger.ITEM_TYPE.DELETE,
 						t.selectionStart, content,
 						t.selectionEnd, t.isLineOrientSelection,
@@ -6954,8 +6995,9 @@ flag23_loop:
 		opts || (opts = {});
 		var keepPosition = !!opts.keepPosition;
 		var isLineOrientedLast = !!opts.isLineOrientedLast;
+		var isEditing_ = isEditing();
 
-		(isEditing() ? $call : editLogger.open).call(editLogger, 'insert', function () {
+		(isEditing_ ? $call : editLogger.open).call(editLogger, 'insert', function () {
 			deleteSelection(t, true);
 
 			var startn = t.selectionStart;
@@ -6966,6 +7008,39 @@ flag23_loop:
 			&& t.rowTextNodes(t.selectionStartRow).nodeValue.substring(t.selectionStartCol) == '\n') {
 				s = s.substr(0, s.length - 1);
 			}
+			var re = s.match(/\u0008|\u007f|\n|[^\u0008\u007f\n]+/g);
+			if (!re) return;
+
+			for (var i = 0; i < re.length; i++) {
+				switch (re[i]) {
+				case '\u0008':
+					deleteChars(t, 1, false, true);
+					break;
+				case '\u007f':
+					deleteChars(t, 1, true, true);
+					break;
+				case '\n':
+					!isEditing_ && editLogger.write(
+						EditLogger.ITEM_TYPE.INSERT,
+						t.selectionStart, re[i], keepPosition
+					);
+					marks.update(t.selectionStart, function () {
+						isMultilineTextInput(targetElement) && t.divideLine();
+					});
+					break;
+				default:
+					!isEditing_ && editLogger.write(
+						EditLogger.ITEM_TYPE.INSERT,
+						t.selectionStart, re[i], keepPosition
+					);
+					marks.update(t.selectionStart, function () {
+						t.setSelectionRange(t.insertChars(t.selectionStart, re[i]));
+					});
+					break;
+				}
+			}
+
+			/*
 			!isEditing() && editLogger.write(
 				EditLogger.ITEM_TYPE.INSERT,
 				startn, s, keepPosition
@@ -6987,13 +7062,13 @@ flag23_loop:
 				}
 				isEditCompleted = true;
 			});
+			*/
 			keepPosition && t.setSelectionRange(startn);
 		});
 	}
 	function overwrite (t, s, opts) {
 		if (s == '') return;
 
-		deleteSelection(t);
 		opts || (opts = {});
 		var keepPosition = !!opts.keepPosition;
 		var isLineOrientedLast = !!opts.isLineOrientedLast;
@@ -7003,6 +7078,8 @@ flag23_loop:
 		}
 
 		(isEditing() ? $call : editLogger.open).call(editLogger, 'overwrite', function () {
+			deleteSelection(t);
+
 			var startn = t.selectionStart;
 			!isEditing() && editLogger.write(
 				EditLogger.ITEM_TYPE.OVERWRITE,
@@ -7069,25 +7146,25 @@ flag23_loop:
 		});
 		isEditCompleted = true;
 	}
-	function deleteChars (t, count, forward) {
+	function deleteChars (t, count, isForward, isSubseq) {
 		if (t.selected) {
-			deleteSelection(t);
+			deleteSelection(t, isSubseq);
 		}
 		else {
 			count || (count = 1);
 
-			if (forward) {
+			if (isForward) {
 				var n = t.selectionEnd;
 				var tail = t.getLineTailOffset(n);
 				n.col = Math.min(tail.col, n.col + count);
 				t.selectionEnd = n;
-				deleteSelection(t);
+				deleteSelection(t, isSubseq);
 			}
 			else {
 				var n = t.selectionStart;
 				n.col = Math.max(0, n.col - count);
 				t.selectionStart = n;
-				deleteSelection(t);
+				deleteSelection(t, isSubseq);
 			}
 		}
 		isEditCompleted = true;
@@ -7272,7 +7349,7 @@ flag23_loop:
 			config.vars.showmode && requestShowMessage(_('--INSERT--'), false, false, true);
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
-			editedString = '';
+			editedString = editedStringCurrent = '';
 			overwroteString = false;
 			editedStringSuffix = opened ? '\n' : '';
 			editStartPosition = t.selectionStart;
@@ -8827,6 +8904,7 @@ flag23_loop:
 	var inputModeSub;
 	var editStartPosition;
 	var editedString;
+	var editedStringCurrent;
 	var overwroteString;
 	var editedStringSuffix;
 	var editRepeatCount;
@@ -8915,13 +8993,14 @@ flag23_loop:
 					t.selectionEnd = t.leftPos(t.selectionEnd);
 				}
 
+				editLogger.open('change op');
+
 				t.isLineOrientSelection = isLineOrient;
 				if (isLineOrient) {
 					var selfIndent = t.getIndent(origin);
 					t.selectionEnd = t.selectionStart;
 					t.isLineOrientSelection = true;
 					yank(t, actualCount);
-					editLogger.open('change op');
 					deleted = deleteSelection(t);
 					if (deleted >= config.vars.report) {
 						requestShowMessage(_('Changing {0} {line:0}.', deleted));
@@ -10173,6 +10252,7 @@ flag23_loop:
 		'a': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
+				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAppend:true, repeatCount:prefixInput.count});
 			}
 			else {
@@ -10182,6 +10262,7 @@ flag23_loop:
 		'A': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
+				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAppend:true, isAlter:true, repeatCount:prefixInput.count});
 			}
 			else {
@@ -10191,6 +10272,7 @@ flag23_loop:
 		'i': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
+				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {repeatCount:prefixInput.count});
 			}
 			else {
@@ -10200,6 +10282,7 @@ flag23_loop:
 		'I': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
+				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAlter:true, repeatCount:prefixInput.count});
 			}
 			else {
@@ -10231,11 +10314,11 @@ flag23_loop:
 				config.vars.showmode && requestShowMessage(_('--OVERWRITE--'), false, false, true);
 				prefixInput.operation = c;
 				prefixInput.isLocked = true;
-				editedString = '';
+				editedString = editedStringCurrent = editedStringSuffix = '';
 				overwroteString = false;
-				editedStringSuffix = '';
 				editStartPosition = t.selectionStart;
 				editRepeatCount = prefixInput.count;
+				editLogger.open('edit-wrapper');
 				requestSimpleCommandUpdate();
 			}
 			else {
@@ -10420,15 +10503,18 @@ flag23_loop:
 
 	var editMap = {
 		'\u0008'/*backspace*/: function (c, t) {
+			logEditing(t, true);
 			deleteChars(t, 1, false);
 		},
 		'\u007f'/*delete*/: function (c, t) {
+			logEditing(t, true);
 			deleteChars(t, 1, true);
 		},
 		'\u0009'/*tab*/: function (c, t) {
 			insert(t, '\t');
 		},
 		'\u000d'/*enter*/: function (c, t) {
+			insert(t, '\t');
 			var indent = config.vars.autoindent ? t.getIndent(t.selectionStart) : '';
 			insert(t, '\n' + indent);
 			cursor.ensureVisible();
@@ -10453,38 +10539,39 @@ flag23_loop:
 				cursor.update();
 			}
 		},
+		
 		'<left>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionLeft(c, t, 1);
 		},
 		'<up>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionUp(c, t, 1);
 		},
 		'<right>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionRight(c, t, 1);
 		},
 		'<down>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionDown(c, t, 1);
 		},
 		'<home>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionLineStart(c, t, false);
 		},
 		'<end>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			motionLineEnd(c, t);
 		},
 		'<pageup>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			scrollView(c, t, function (v) {
 				return -(Math.max(parseInt(v.lines - 2), 1));
 			});
 		},
 		'<pagedown>': function (c, t) {
-			requestLogEditing();
+			logEditing(t);
 			return scrollView(c, t, function (v) {
 				return Math.max(parseInt(v.lines - 2), 1);
 			});
@@ -10606,19 +10693,16 @@ flag23_loop:
 
 	// editor (document)
 	function handleKeydown (e) {
-		if (scroller.running) {
+		function stop (e) {
 			e.preventDefault();
 			e.stopPropagation();
 			e.returnValue = false;
-			return;
 		}
 
+		if (scroller.running) {
+			return stop(e);
+		}
 		if (cursor.inComposition) {
-			return;
-		}
-
-		// quick hack for firefox: ignore phantom key
-		if (e.charCode === 255 || e.keyCode === 255) {
 			return;
 		}
 
@@ -10640,7 +10724,7 @@ flag23_loop:
 		if (window.chrome && 'keyIdentifier' in e) {
 			if (e.type == 'keydown') {
 				if (e.keyCode >= 16 && e.keyCode <= 18) {
-					return;
+					return stop(e);
 				}
 				if (e.keyIdentifier != '' && WEBKIT_KEY_IDENTIFIERS_REVERSED[e.keyIdentifier]) {
 					keyCode = -WEBKIT_KEY_IDENTIFIERS_REVERSED[e.keyIdentifier];
@@ -10649,7 +10733,7 @@ flag23_loop:
 					keyCode = WEBKIT_CTRL_SPECIAL_KEYS_REVERSED[e.keyIdentifier];
 				}
 				else if (!fixCtrl(e.keyCode)) {
-					return;
+					return stop(e);
 				}
 			}
 			else {
@@ -10658,7 +10742,10 @@ flag23_loop:
 		}
 		else {
 			if (SPECIAL_KEYS[e.keyCode] && e.which != e.keyCode) {
-				keyCode = -e.keyCode;
+				keyCode = e.keyCode == 46 ? 127 : -e.keyCode;
+			}
+			else if (e.keyCode !== 0 && e.which === 0) {
+				return stop(e);
 			}
 			else {
 				fixCtrl(e.charCode || e.keyCode);
@@ -10673,11 +10760,7 @@ flag23_loop:
 			});
 		}
 		mapManager.process(keyCode, function (keyCode) {
-			if (processInput(keyCode, e)) {
-				e.preventDefault();
-				e.stopPropagation();
-				e.returnValue = false;
-			}
+			processInput(keyCode, e) && stop(e);
 		});
 	}
 	function handleInput (e) {
@@ -10931,6 +11014,7 @@ flag23_loop:
 				}
 				result.ENTER = 13;
 				result.ESCAPE = 27;
+				result.DELETE = 127;
 				return result;
 			}
 		};
