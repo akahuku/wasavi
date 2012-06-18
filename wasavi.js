@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 138 2012-06-18 11:10:52Z akahuku $
+ * @version $Id: wasavi.js 140 2012-06-18 19:05:28Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 138 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 138 2012-06-18 11:10:52Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 140 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 140 2012-06-18 19:05:28Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -5005,6 +5005,7 @@ flag23_loop:
 			'  top:-32px;',
 			'  width:32px;',
 			'  height:32px;',
+			'  ime-mode:disabled',
 			'}'
 		].join('')));
 
@@ -10693,6 +10694,7 @@ flag23_loop:
 
 	// editor (document)
 	function handleKeydown (e) {
+		//console.log([e.keyCode, e.charCode, e.which].join(', '));
 		function stop (e) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -10733,7 +10735,7 @@ flag23_loop:
 					keyCode = WEBKIT_CTRL_SPECIAL_KEYS_REVERSED[e.keyIdentifier];
 				}
 				else if (!fixCtrl(e.keyCode)) {
-					return stop(e);
+					return;
 				}
 			}
 			else {
@@ -10744,7 +10746,7 @@ flag23_loop:
 			if (SPECIAL_KEYS[e.keyCode] && e.which != e.keyCode) {
 				keyCode = e.keyCode == 46 ? 127 : -e.keyCode;
 			}
-			else if (e.keyCode !== 0 && e.which === 0) {
+			else if (e.keyCode >= 127 && e.which === 0) {
 				return stop(e);
 			}
 			else {
