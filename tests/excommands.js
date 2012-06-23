@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: excommands.js 137 2012-06-16 00:29:54Z akahuku $
+ * @version $Id: excommands.js 142 2012-06-23 19:12:10Z akahuku $
  */
 
 /**
@@ -1096,7 +1096,6 @@ function testSubst () {
 	 * c      +       ?
 	 * d
 	 */
-	console.log('*** test #4 ***');
 	Wasavi.send(':1,3s/[a-d]/?/g2\n');
 	assertEquals('#4-1', 'a a\nb b b\n\n?\nd', Wasavi.value);
 	Wasavi.send('u');
@@ -1212,6 +1211,11 @@ function testSubstNewline () {
 	Wasavi.send(':%s/\\d/&\\nline/g\n');
 	assertEquals('#1-1', '1\nline\n2\nline\n3\nline\n4\nline', Wasavi.value);
 	assertPos('#1-2', [7, 0]);
+
+	Wasavi.send(':1\n');
+	Wasavi.send(':s/\\d/&\u0016\u000dLINE/g\n');
+	assertEquals('#2-1', '1\nLINE\nline\n2\nline\n3\nline\n4\nline', Wasavi.value);
+	assertPos('#2-2', [1, 0]);
 }
 
 function testSubstBackref () {
@@ -1250,6 +1254,368 @@ function testSubstUpper () {
 	assertEquals('#3-1', 'first\nsecond\nthird', Wasavi.value);
 	Wasavi.send(':%s/\\w\\+/\\U&\\E \\uline/g\n');
 	assertEquals('#3-2', 'FIRST Line\nSECOND Line\nTHIRD Line', Wasavi.value);
+}
+
+function testSubstAnd () {
+	Wasavi.send(':sushi\n');
+	Wasavi.send('i1\n2\n3\u001b');
+
+	Wasavi.send(':&\n');
+	assertEquals('#1-1', '&: No previous search pattern.', Wasavi.lastMessage);
+
+	Wasavi.send('1G:s/\\d/!/c\ny');
+	assertEquals('#2-1', '!\n2\n3', Wasavi.value);
+
+	Wasavi.send('2G:&\n');
+	assertEquals('#3-1', '!\n!\n3', Wasavi.value);
+
+	Wasavi.send(':%&g\n');
+	assertEquals('#4-1', '!\n!\n!', Wasavi.value);
+}
+
+function testSubstTilde () {
+	Wasavi.send(':sushi\n');
+	Wasavi.send('i1\n2\n3\u001b');
+
+	Wasavi.send(':~\n');
+	assertEquals('#1-1', '~: No previous search pattern.', Wasavi.lastMessage);
+
+	Wasavi.send('1G:s/\\d/&!/c\ny');
+	assertEquals('#2-1', '1!\n2\n3', Wasavi.value);
+
+	Wasavi.send('2G:~\n');
+	assertEquals('#3-1', '1!\n2!\n3', Wasavi.value);
+
+	Wasavi.send(':%~g\n');
+	assertEquals('#4-1', '1!!\n2!!\n3!', Wasavi.value);
+
+	Wasavi.send('1G/!\n');
+	Wasavi.send(':%~g\n');
+	assertEquals('#5-1', '1!!!!\n2!!!!\n3!!', Wasavi.value);
+}
+
+function testSet () {
+	Wasavi.send(':set\n\n');
+	console.log(Wasavi.lastMessage);
+	assert('#1-1', Wasavi.lastMessage.indexOf('*** options ***\n') == 0);
+
+	Wasavi.send(':set all\n\n');
+	assert('#2-1', Wasavi.lastMessage.indexOf('*** options ***\n') == 0);
+
+	Wasavi.send(':set foobar\n');
+	assertEquals('#3-1', 'Unknown option: foobar', Wasavi.lastMessage);
+
+	Wasavi.send(':set redraw\n');
+	assertEquals('#4-1', '', Wasavi.lastMessage);
+	Wasavi.send(':set redraw?\n');
+	assertEquals('#4-2', '  redraw', Wasavi.lastMessage);
+
+	Wasavi.send(':set noredraw\n');
+	assertEquals('#5-1', '', Wasavi.lastMessage);
+	Wasavi.send(':set redraw?\n');
+	assertEquals('#5-2', 'noredraw', Wasavi.lastMessage);
+	
+	Wasavi.send(':set redraw=5\n');
+	assertEquals(
+		'#6-1', 
+		'An extra value assigned to redraw option: redraw=5', 
+		Wasavi.lastMessage);
+
+	Wasavi.send(':set report=10\n');
+	assertEquals('#7-1', '', Wasavi.lastMessage);
+	Wasavi.send(':set report ?\n');
+	assertEquals('#7-2', '  report=10', Wasavi.lastMessage);
+	Wasavi.send(':set report = 6\n');
+	assertEquals('#7-3', 'Invalid integer value: report=', Wasavi.lastMessage);
+	Wasavi.send(':set report =6\n');
+	assertEquals('#7-4', '', Wasavi.lastMessage);
+	Wasavi.send(':set report\n');
+	assertEquals('#7-5', '  report=6', Wasavi.lastMessage);
+}
+
+function testRegisters () {
+	Wasavi.send(':registers\n');
+	assertEquals('#1-1', [
+		'*** registers ***',
+		'""  C  '
+	].join('\n'), Wasavi.lastMessage);
+
+	Wasavi.send('i1\n2\n3\u001b');
+	Wasavi.send('yy');
+	Wasavi.send(':reg\n');
+	assertEquals('#2-1', [
+		'*** registers ***',
+		'""  L  3^J',
+		'".  C  1^J2^J3',
+		'":  C  registers'
+	].join('\n'), Wasavi.lastMessage);
+}
+
+function testUnabbreviate () {
+	Wasavi.send(':ab foo bar\n:ab\n');
+	assertEquals('#1-1', [
+		'*** abbreviations ***',
+		'foo\tbar'
+	].join('\n'), Wasavi.lastMessage);
+
+	Wasavi.send(':unabbreviate\n');
+	assertEquals('#2-1', 'unabbreviate: Invalid argument.', Wasavi.lastMessage);
+
+	Wasavi.send(':unabb xyz\n');
+	assertEquals('#3-1', 'unabbreviate: xyz is not an abbreviation.', Wasavi.lastMessage);
+
+	Wasavi.send(':unabb foo\n');
+	assertEquals('#4-1', '', Wasavi.lastMessage);
+
+	Wasavi.send(':ab\n');
+	assertEquals('#5-1', 'No abbreviations are defined.', Wasavi.lastMessage);
+}
+
+function testUnmap () {
+	Wasavi.send(':map [clear]\n');
+	Wasavi.send(':unmap\n');
+	assertEquals('#1-1', 'unmap: Invalid argument.', Wasavi.lastMessage);
+
+	Wasavi.send(':map H ^\n');
+	Wasavi.send(':map\n');
+	assertEquals('#1-1', [
+		'*** command mode map ***',
+		'H\t^'
+	].join('\n'), Wasavi.lastMessage);
+
+	Wasavi.send(':unma xyz\n');
+	assertEquals('#2-1', 'unmap: xyz is not mapped.', Wasavi.lastMessage);
+
+	Wasavi.send(':unm H\n');
+	Wasavi.send(':map\n');
+	assertEquals('#3-1', 'No mappings for command mode are defined.', Wasavi.lastMessage);
+}
+
+function testVersion () {
+	Wasavi.send(':version\n');
+	assert('#1-1', /^wasavi\/\d+\.\d+\.\d+/.test(Wasavi.lastMessage));
+}
+
+function testInvertedGlobal () {
+	Wasavi.send('i1 x\n2\n3 z\n4 x\n5 y\n6 z\u001b');
+
+	// if range does not specified, all of text should be processed.
+	Wasavi.send(':v/x/p\n');
+	console.log(Wasavi.lastMessage);
+	assertEquals('#1-1', '2\n3 z\n5 y\n6 z', Wasavi.lastMessage);
+	assertPos('#1-2', [5, 0]);
+}
+
+function testInvertedGlobalRanged () {
+	Wasavi.send('i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b');
+
+	// ranged
+	Wasavi.send(':3,5v/x/p\n');
+	assertEquals('#1-1', '3 z\n5 y', Wasavi.lastMessage);
+	assertPos('#1-2', [4, 0]);
+}
+
+function testInvertedGlobalZeroMatch () {
+	Wasavi.send('i1 x\n2 y\n3 z\n4\n5\u001b');
+
+	// zero match regexp
+	/*
+	 * 1 x
+	 * 2 y +
+	 * 3 z +
+	 * 4   +
+	 * 5
+	 */
+	console.log('testInvertedGlobalZeroMatch');
+	Wasavi.send(':2,4v/^/p\n');
+	assertEquals('#1-1', 'v: Pattern found in every line: ^', Wasavi.lastMessage);
+	assertPos('#1-2', [4, 0]);
+}
+
+function testInvertedGlobalWithEmptyCommand () {
+	Wasavi.send('ia\nb\nc\u001b');
+	Wasavi.send(':v/b/\n');
+	assertEquals('#1-1', 'a\nb\nc', Wasavi.value);
+	assertEquals('#1-2', '', Wasavi.lastMessage);
+	assertPos('#1-3', [2, 0]);
+}
+
+function testWrite () {
+	var result;
+	Wasavi.events.onSaved = function (e) {result = e.value;};
+	try {
+		Wasavi.send('ifoobar\u001b');
+		Wasavi.send(':write\n');
+		assertEquals('#1-1', 'foobar', result);
+	}
+	finally {
+		Wasavi.events.onSaved = null;
+	}
+}
+
+function testWriteToFile () {
+	Wasavi.send(':writ foobar\n');
+	// not implemented, for now
+	assertEquals('#1-1', 'write: Specifying file name is not implemented.', Wasavi.lastMessage);
+}
+
+function testWriteToFileAppend () {
+	Wasavi.send(':wri >>\n');
+	// not implemented, for now
+	assertEquals('#1-1', 'write: Appending is not implemented.', Wasavi.lastMessage);
+}
+
+function testWriteRedirect () {
+	Wasavi.send(':wri !foobar\n');
+	// not implemented, for now
+	assertEquals('#1-1', 'write: Command redirection is not implemented.', Wasavi.lastMessage);
+}
+
+function testWriteReadonlyWarning () {
+	Wasavi.send(':set readonly\n');
+	Wasavi.send(':w\n');
+	assertEquals('#1-1', 'write: Readonly option is set (use "!" to override).', Wasavi.lastMessage);
+}
+
+function testWriteAndQuit () {
+	var result;
+	Wasavi.events.onSaved = function (e) {result = e.value;};
+	try {
+		Wasavi.send('ifoobar\u001b');
+		Wasavi.send(':wq\n');
+		assertEquals('#1-1', 'foobar', result);
+		assertFalse(Wasavi.running);
+	}
+	finally {
+		Wasavi.events.onSaved = null;
+	}
+}
+
+function testExitModified () {
+	var result;
+	Wasavi.events.onSaved = function (e) {result = e.value;};
+	try {
+		Wasavi.send('ifoobar\u001b');
+		Wasavi.send(':xit\n');
+		assertEquals('#1-1', 'foobar', result);
+		assertFalse(Wasavi.running);
+	}
+	finally {
+		Wasavi.events.onSaved = null;
+	}
+}
+
+function testExitNotModified () {
+	var result;
+	Wasavi.events.onSaved = function (e) {result = e.value;};
+	try {
+		Wasavi.send(':xit\n');
+		assertUndefined('#1-1', result);
+		assertFalse(Wasavi.running);
+	}
+	finally {
+		Wasavi.events.onSaved = null;
+	}
+}
+
+function testYank () {
+	Wasavi.send('i\t1\n2\n3\u001b');
+	Wasavi.send('1G1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send(':yank\n');
+	assertEquals('#2-1', '\t1\n', Wasavi.registers('"'));
+	assertPos('#2-2', [0, 0]);
+
+	Wasavi.send(':1,2yan a\n');
+	assertEquals('#3-1', '\t1\n2\n', Wasavi.registers('a'));
+	assertPos('#3-2', [0, 0]);
+
+	Wasavi.send(':ya10\n');
+	assertEquals('#4-1', '\t1\n2\n3\n', Wasavi.registers('"'));
+	assertPos('#4-2', [0, 0]);
+}
+
+function testShift () {
+	Wasavi.send(':set sw=8\n');
+	Wasavi.send('i\t1\n2\n3\u001b');
+	Wasavi.send('1G1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send(':>\n');
+	assertEquals('#2-1', '\t\t1\n2\n3', Wasavi.value);
+	assertPos('#2-2', [0, 2]);
+
+	Wasavi.send(':undo\n');
+	assertEquals('#3-1', '\t1\n2\n3', Wasavi.value);
+
+	Wasavi.send(':redo\n');
+	assertEquals('#4-1', '\t\t1\n2\n3', Wasavi.value);
+}
+
+function testShiftMulti () {
+	Wasavi.send(':set sw=8\n');
+	Wasavi.send('i\t1\n2\n3\u001b');
+	Wasavi.send('1G1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send(':>>2\n');
+	assertEquals('#2-1', '\t\t\t1\n\t\t2\n3', Wasavi.value);
+	assertPos('#2-2', [1, 2]);
+
+	Wasavi.send(':undo\n');
+	assertEquals('#3-1', '\t1\n2\n3', Wasavi.value);
+
+	Wasavi.send(':redo\n');
+	assertEquals('#4-1', '\t\t\t1\n\t\t2\n3', Wasavi.value);
+}
+
+function testUnshift () {
+	Wasavi.send(':set sw=8\n');
+	Wasavi.send('i\t\t1\n\t2\n3\u001b');
+	Wasavi.send('1G1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send(':<\n');
+	assertEquals('#2-1', '\t1\n\t2\n3', Wasavi.value);
+	assertPos('#2-2', [0, 1]);
+
+	Wasavi.send(':undo\n');
+	assertEquals('#3-1', '\t\t1\n\t2\n3', Wasavi.value);
+
+	Wasavi.send(':redo\n');
+	assertEquals('#4-1', '\t1\n\t2\n3', Wasavi.value);
+}
+
+function testUnshiftMulti () {
+	Wasavi.send(':set sw=8\n');
+	Wasavi.send('i\t\t\t1\n\t2\n3\u001b');
+	Wasavi.send('1G1|');
+	assertPos('#1-1', [0, 0]);
+
+	Wasavi.send(':<<2\n');
+	assertEquals('#2-1', '\t1\n2\n3', Wasavi.value);
+	assertPos('#2-2', [1, 0]);
+
+	Wasavi.send(':undo\n');
+	assertEquals('#3-1', '\t\t\t1\n\t2\n3', Wasavi.value);
+
+	Wasavi.send(':redo\n');
+	assertEquals('#4-1', '\t1\n2\n3', Wasavi.value);
+}
+
+function testExecuteRegister () {
+	Wasavi.send('is/\\d/\tfoo\u0016\u001b\\n\u0016\u0009\u001b');
+	assertEquals('#1-1', 's/\\d/\tfoo\u001b\\n\t', Wasavi.value);
+	Wasavi.send('"ayy');
+	assertEquals('#1-2', 's/\\d/\tfoo\u001b\\n\t\n', Wasavi.registers('a'));
+	Wasavi.send('u');
+	assertEquals('#1-3', '', Wasavi.value);
+	assertPos('#1-4', [0, 0]);
+
+	Wasavi.send('i1\n2\n3\u001b', Wasavi.value);
+	Wasavi.send(':%@a\n');
+	assertEquals('#2-1', '1\n2\n\tfoo\u001b\n\t', Wasavi.value);
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

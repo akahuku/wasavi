@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 135 2012-06-11 20:45:00Z akahuku $
+ * @version $Id: agent.js 142 2012-06-23 19:12:10Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -108,6 +108,17 @@ typeof WasaviExtensionWrapper != 'undefined'
 		return rect;
 	}
 
+	function getHighestZindex (element) {
+		var result = 0;
+		var view = document.defaultView;
+		for (; element; element = element.parentNode) {
+			if (element.nodeType != 1) continue;
+			var z = (element.style.zIndex || view.getComputedStyle(element, '').zIndex) - 0;
+			if (z > result) result = z;
+		}
+		return result;
+	}
+
 	function run (element) {
 		function getFontStyle (s, fontFamilyOverride) {
 			return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
@@ -120,7 +131,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 		wasaviFrame.style.border = 'none';
 		wasaviFrame.style.overflow = 'hidden';
 		wasaviFrame.style.visibility = 'hidden';
-		wasaviFrame.style.zIndex = 0x00ffffff;
+		wasaviFrame.style.zIndex = getHighestZindex(element) + 100; //0x00ffffff;
 
 		if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
 			wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
@@ -160,6 +171,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			if (value !== undefined) {
 				targetElement.value = value;
 			}
+			targetElement.focus();
 			targetElement.removeAttribute(EXTENSION_CURRENT);
 			targetElement = null;
 		}
@@ -397,28 +409,6 @@ typeof WasaviExtensionWrapper != 'undefined'
 			wasaviFrame.style.height = (req.height || targetElement.offsetHeight) + 'px';
 			wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
 			console.info('wasavi started');
-
-			/*
-			var animationHeight = targetElement.offsetHeight;
-			var goalHeight = req.height || targetElement.offsetHeight;
-
-			(function () {
-				if (!targetElement || !wasaviFrame) return;
-
-				wasaviFrame.style.height = animationHeight + 'px';
-
-				if (keyStroked
-				|| animationHeight >= goalHeight) {
-					wasaviFrame.style.height = goalHeight + 'px';
-					wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
-					console.info('wasavi started');
-				}
-				else {
-					animationHeight += 2;
-					setTimeout(arguments.callee, 10);
-				}
-			})();
-			*/
 			break;
 
 		case 'wasavi-stroked':
@@ -449,6 +439,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 			if (!wasaviFrame) break;
 			cleanup(req.value);
 			console.info('wasavi terminated');
+			break;
+
+		case 'wasavi-saved':
+			if (!wasaviFrame) break;
+			try {targetElement.value = req.value;} catch (e) {;}
 			break;
 		}
 	});

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 134 2012-06-11 20:44:34Z akahuku $
+ * @version $Id: utils.js 142 2012-06-23 19:12:10Z akahuku $
  */
 
 /**
@@ -110,6 +110,13 @@ function syncWait (secs) {
 		xhr.open('GET', 'sync-wait.php?secs=' + secs, false);
 		xhr.send(null);
 	}
+}
+
+function toVisible (s) {
+	return s.replace(/[\u0000-\u001f\u007f]/g, function (a) {
+		var code = a.charCodeAt(0);
+		return code == 0x7f ? '^_' : '^' + String.fromCharCode(code + 64);
+	});
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

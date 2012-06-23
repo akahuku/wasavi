@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 140 2012-06-18 19:05:28Z akahuku $
+ * @version $Id: wasavi.js 142 2012-06-23 19:12:10Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -56,8 +56,8 @@
 			case 'run':
 				var x = req;
 				x.dataset = {};
-				x.getAttribute = function (name) { return this.dataset[name]; };
-				x.setAttribute = function (name, value) { this.dataset[name] = value; };
+				x.getAttribute = function (name) {return this.dataset[name];};
+				x.setAttribute = function (name, value) {this.dataset[name] = value;};
 
 				if (document.readyState == 'interactive'
 				||  document.readyState == 'complete') {
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 140 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 140 2012-06-18 19:05:28Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 142 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 142 2012-06-23 19:12:10Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -193,21 +193,35 @@
 				switch (this.type) {
 				case 'b':
 					v = Boolean(v);
-					if (typeof v != 'boolean') { throw new Error('invalid boolean value'); }
+					if (typeof v != 'boolean') throw new Error(_('Invalid boolean value'));
 					break;
 				case 'i':
-					v = Number(v);
-					if (typeof v != 'number' || isNaN(v)) { throw new Error('invalid integer value'); }
+					if (typeof v == 'string' && !/^[0-9]+$/.test(v)) {
+						throw new Error(_('Invalid integer value'));
+					}
+					v = parseInt(v, 10);
+					if (typeof v != 'number' || isNaN(v)) {
+						throw new Error(_('Invalid integer value'));
+					}
+					break;
+				case 'I':
+					if (!/^[-+]?[0-9]+$/.test(v)) {
+						throw new Error(_('Invalid integer value'));
+					}
+					v = parseInt(v, 10);
+					if (typeof v != 'number' || isNaN(v)) {
+						throw new Error(_('Invalid integer value'));
+					}
 					break;
 				case 's':
 					v = String(v);
-					if (typeof v != 'string') { throw new Error('invalid string value'); }
+					if (typeof v != 'string') throw new Error(_('Invalid string value'));
 					break;
 				case 'r':
-					if (typeof v != 'string') { throw new Error('invalid regex source string value'); }
+					if (typeof v != 'string') throw new Error(_('Invalid regex source string value'));
 					break;
 				default:
-					throw new Error('*invalid type for value getter*');
+					throw new Error('*Invalid type for value getter: ' + this.type + ' *');
 				}
 				if (this.subSetter) {
 					v = this.subSetter(v);
@@ -222,10 +236,10 @@
 			switch (this.type) {
 			case 'b':
 				return (this.nativeValue ? '  ' : 'no') + this.name;
-			case 'i': case 's': case 'r':
+			case 'i': case 'I': case 's': case 'r':
 				return '  ' + this.name + '=' + this.nativeValue.toString();
 			default:
-				throw new Error('*invalid type for visibleString*');
+				throw new Error('*invalid type for visibleString: ' + this.type + ' *');
 			}
 		},
 		getBinder: function () {
@@ -237,7 +251,7 @@
 					}
 				})(this);
 			default:
-				throw new Error('*invalid type for getBinder*');
+				throw new Error('*invalid type for getBinder: ' + this.type + ' *');
 			}
 		}
 	};
@@ -357,7 +371,7 @@
 			}
 			return result;
 		};
-		this.__defineGetter__('vars', function () { return vars; });
+		this.__defineGetter__('vars', function () {return vars;});
 		init();
 	}
 
@@ -558,18 +572,20 @@
 		}
 		function dump () {
 			function dumpItem (item) {
-				var orientString = item.isLineOrient ? _('L') : _('C');
+				var orientString = item.isLineOrient ? 'L' : 'C';
 				return _('  {0}  {1}', orientString, toVisibleString(item.data));
 			}
-			var a = [_('*** registers ***')];
+			var a = [];
 			a.push('""' + dumpItem(unnamed));
 			for (var i in named) {
 				named[i] && a.push('"' + i + dumpItem(named[i]));
 			}
+			a.sort();
+			a.unshift(_('*** registers ***'));
 			return a;
 		}
 
-		this.__defineGetter__('storageKey', function () { return storageKey; });
+		this.__defineGetter__('storageKey', function () {return storageKey;});
 		this.set = set;
 		this.get = get;
 		this.isWritable = isWritable;
@@ -677,10 +693,10 @@
 			};
 
 			if (arguments.length) {
-				Array.prototype.forEach.call(arguments, function (a) { (a in list) && list[a]++; });
+				Array.prototype.forEach.call(arguments, function (a) {(a in list) && list[a]++;});
 			}
 			else {
-				for (var a in list) { list[a]++; }
+				for (var a in list) {list[a]++;}
 			}
 
 			list['register']  && (register = '');
@@ -721,7 +737,7 @@
 		}
 		function _toVisibleString () {
 			return [register, count1, operation, count2, motion, trailer]
-				.map(function (s) { return toVisibleString(s); })
+				.map(function (s) {return toVisibleString(s);})
 				.join('');
 		}
 
@@ -783,17 +799,17 @@
 			isLocked = v;
 		}
 
-		this.__defineGetter__('register', function () { return register.substring(1) || ''; });
-		this.__defineGetter__('operation', function () { return operation; });
-		this.__defineGetter__('motion', function () { return motion; });
-		this.__defineGetter__('count1', function () { return count1 || 0; });
-		this.__defineGetter__('count2', function () { return count2 || 0; });
-		this.__defineGetter__('count', function () { return (count1 || 1) * (count2 || 1); });
-		this.__defineGetter__('trailer', function () { return trailer; });
-		this.__defineGetter__('isEmpty', function () { return isEmpty; });
-		this.__defineGetter__('isEmptyOperation', function () { return operation == ''; });
-		this.__defineGetter__('isCountSpecified', function () { return !!(count1 || count2); });
-		this.__defineGetter__('isLocked', function () { return isLocked; });
+		this.__defineGetter__('register', function () {return register.substring(1) || '';});
+		this.__defineGetter__('operation', function () {return operation;});
+		this.__defineGetter__('motion', function () {return motion;});
+		this.__defineGetter__('count1', function () {return count1 || 0;});
+		this.__defineGetter__('count2', function () {return count2 || 0;});
+		this.__defineGetter__('count', function () {return (count1 || 1) * (count2 || 1);});
+		this.__defineGetter__('trailer', function () {return trailer;});
+		this.__defineGetter__('isEmpty', function () {return isEmpty;});
+		this.__defineGetter__('isEmptyOperation', function () {return operation == '';});
+		this.__defineGetter__('isCountSpecified', function () {return !!(count1 || count2);});
+		this.__defineGetter__('isLocked', function () {return isLocked;});
 
 		this.__defineSetter__('register', setRegister);
 		this.__defineSetter__('operation', setOperation);
@@ -1166,14 +1182,14 @@
 		this.setupEventHandlers = setupEventHandlers;
 		this.dispose = dispose;
 
-		this.__defineGetter__('type', function () { return cursorType; });
-		this.__defineGetter__('focused', function () { return focused; });
-		this.__defineGetter__('visible', function () { return visible; });
-		this.__defineGetter__('commandCursor', function () { return comCursor; });
-		this.__defineGetter__('editCursor', function () { return editCursor; });
-		this.__defineGetter__('inComposition', function () { return inComposition; });
-		this.__defineGetter__('locked', function () { return locked; });
-		this.__defineSetter__('locked', function (v) { locked = v; });
+		this.__defineGetter__('type', function () {return cursorType;});
+		this.__defineGetter__('focused', function () {return focused;});
+		this.__defineGetter__('visible', function () {return visible;});
+		this.__defineGetter__('commandCursor', function () {return comCursor;});
+		this.__defineGetter__('editCursor', function () {return editCursor;});
+		this.__defineGetter__('inComposition', function () {return inComposition;});
+		this.__defineGetter__('locked', function () {return locked;});
+		this.__defineSetter__('locked', function (v) {locked = v;});
 	}
 
 	/*constructor*/function RegexConverter () {
@@ -1374,7 +1390,7 @@
 			//     mark  line   col  text
 			//     a    00000  0000  aaaaaaaaaa
 				_('*** marks ***'),
-				_('mark  line   col   text'),
+				  'mark  line   col   text',
 				  '====  =====  ====  ===='];
 			for (var i in marks) {
 				a.push(
@@ -1433,15 +1449,15 @@
 				}
 			}
 		}
-		this.__defineGetter__('head', function () { return head; });
-		this.__defineGetter__('direction', function () { return direction; });
-		this.__defineGetter__('offset', function () { return offset; });
-		this.__defineGetter__('scrollTop', function () { return scrollTop; });
-		this.__defineGetter__('scrollLeft', function () { return scrollLeft; });
-		this.__defineGetter__('pattern', function () { return pattern; });
-		this.__defineGetter__('verticalOffset', function () { return verticalOffset; });
-		this.__defineGetter__('text', function () { return text; });
-		this.__defineSetter__('text', function (v) { text = v; });
+		this.__defineGetter__('head', function () {return head;});
+		this.__defineGetter__('direction', function () {return direction;});
+		this.__defineGetter__('offset', function () {return offset;});
+		this.__defineGetter__('scrollTop', function () {return scrollTop;});
+		this.__defineGetter__('scrollLeft', function () {return scrollLeft;});
+		this.__defineGetter__('pattern', function () {return pattern;});
+		this.__defineGetter__('verticalOffset', function () {return verticalOffset;});
+		this.__defineGetter__('text', function () {return text;});
+		this.__defineSetter__('text', function (v) {text = v;});
 		this.push = push;
 		this.setPattern = setPattern;
 	}
@@ -1493,7 +1509,7 @@
 				e = this.selectionEnd;
 			}
 			else if (arguments.length != 2) {
-				throw 'select: invalid length of argument';
+				throw new Error('select: invalid length of argument');
 			}
 
 			if (s.row > e.row || s.row == e.row && s.col > e.col) {
@@ -1513,7 +1529,7 @@
 				e = this.selectionEnd;
 			}
 			else if (arguments.length != 2) {
-				throw 'selectRows: invalid length of argument';
+				throw new Error('selectRows: invalid length of argument');
 			}
 
 			if (s.row > e.row || s.row == e.row && s.col > e.col) {
@@ -1585,13 +1601,7 @@
 					throw new Error('rows: argument row (' + row3 + ') out of range: ' + (context || ''));
 				}
 
-				var result = this.elm.childNodes[row3].textContent;
-				if (result.length && result.substr(-1) == '\n') {
-					return result.substr(0, result.length - 1);
-				}
-				else {
-					return result;
-				}
+				return trimTerm(this.elm.childNodes[row3].textContent);
 			},
 			rowNodes: function (arg, context) {
 				var row1 = arg;
@@ -1654,10 +1664,7 @@
 			},
 			getSelectionRows: function () {
 				var r = selectRows.apply(this, arguments);
-				var content = r.r.toString();
-				if (content.length && content.charAt(content.length - 1) != '\n') {
-					content += '\n';
-				}
+				var content = ensureNewline(r.r.toString());
 				r.r.detach();
 				return content;
 			},
@@ -2197,8 +2204,8 @@
 				var last = this.elm.childNodes.length - 1;
 				while (offset > 0) {
 					var node = this.elm.childNodes[row5].textContent;
-					if (!treatLastLineAsNormal && row5 == last && node.substr(-1) == '\n') {
-						node = node.substring(0, node.length - 1);
+					if (!treatLastLineAsNormal && row5 == last) {
+						node = trimTerm(node);
 					}
 					var rest = node.length - col;
 					col += offset;
@@ -2230,11 +2237,7 @@
 				return this.elm.childNodes.length;
 			},
 			get value () {
-				var result = toNativeControl(this.elm.textContent);
-				if (result.length && result.substr(-1) == '\n') {
-					result = result.substring(0, result.length - 1);
-				}
-				return result;
+				return trimTerm(toNativeControl(this.elm.textContent));
 			},
 			get selected () {
 				return this.selectionStart.ne(this.selectionEnd);
@@ -2430,12 +2433,12 @@ syntax_expansion_loop:
 					continue;
 				}
 				else if (ch == 'm') {
-					var j = 1;
-					while (line.charAt(0) == this.name && this.name.length == 1) {
-						line = line.substring(1);
-						j++;
+					var j = 0;
+					if (this.name.length == 1) {
+						while (line.charAt(j) == this.name) {j++;}
+						line = line.substring(j);
 					}
-					argv_exp0(j);
+					argv_exp0(j + 1);
 					continue;
 				}
 
@@ -2631,7 +2634,7 @@ flag23_loop:
 				}
 				else {
 					if (args.range[i] >= t.rowLength) {
-						return {error:this.name + ': ' + _('Out of range.')};
+						return {error:_('{0}: Out of range.', this.name)};
 					}
 				}
 			}
@@ -2721,7 +2724,7 @@ flag23_loop:
 				}
 				return result;
 			};
-			this.__defineGetter__('name', function () { return name; });
+			this.__defineGetter__('name', function () {return name;});
 		}
 
 		/*const*/var NEST_MAX = 100;
@@ -2903,8 +2906,8 @@ flag23_loop:
 			}
 		}
 
-		this.__defineGetter__('commandMap', function () { return maps[0]; });
-		this.__defineGetter__('editMap', function () { return maps[1]; });
+		this.__defineGetter__('commandMap', function () {return maps[0];});
+		this.__defineGetter__('editMap', function () {return maps[1];});
 		this.reset = reset;
 		this.getMap = getMap;
 		this.process = process;
@@ -2941,9 +2944,16 @@ flag23_loop:
 				if (lastMessage.length && lastMessage.substr(-1) != '\n') {
 					lastMessage += '\n';
 				}
-				var line = buffer.shift();
+				var line = '';
+				if (isInteractive) {
+					line = buffer.shift();
+				}
+				else {
+					line = buffer.join('\n');
+					buffer.length = 0;
+				}
 				scaler.textContent = line;
-				if (totalHeight + scaler.offsetHeight > goalHeight || byLine) {
+				if (isInteractive && (totalHeight + scaler.offsetHeight > goalHeight || byLine)) {
 					if (totalHeight == 0) {
 						con.value += line;
 						con.setSelectionRange(con.value.length, con.value.length);
@@ -3159,10 +3169,7 @@ flag23_loop:
 
 			rg.setStartBefore(t.rowNodes(range[0]));
 			rg.setEndAfter(t.rowNodes(range[1]));
-			this.text = rg.toString();
-			if (range[1] == t.rowLength - 1 && this.text.substr(-1) == '\n') {
-				this.text = this.text.substring(0, this.text.length - 1);
-			}
+			this.text = range[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
 			rg.detach();
 
 			this.substCount = 0;
@@ -3327,7 +3334,7 @@ flag23_loop:
 			}
 			var result = undefined, codes = [];
 			var specialEscapes = {'n':'\\n', 't':'\\t'};
-			var specialLetters = {'"':'\\"', '\\':'\\\\'};
+			var specialLetters = {'"':'\\"', '\\':'\\\\', '\r':'\\n'};
 			loop(0, 0, 0);
 			try {
 				var code = 'return ' + codes.join(' ') + ';';
@@ -3406,7 +3413,8 @@ flag23_loop:
 						if (specialLetters[ch]) {
 							ch = specialLetters[ch];
 						}
-						else if (code >= 0x00 && code <= 0x1f || code == 0x7f) {
+						else if (code >= 0x00 && code != 0x09 && code != 0x0a && code <= 0x1f
+						|| code == 0x7f) {
 							ch = toVisibleControl(code);
 						}
 						if (newOperand || codes.length == 0) {
@@ -3551,7 +3559,10 @@ flag23_loop:
 			type: 'Base',
 			_init: function (p, d) {
 				if (p != undefined) this.position = p.clone();
-				if (d != undefined) this.data = d.replace(/\u000d/g, '\n');
+				if (d != undefined) this.data = d.replace(
+					/[\u0000-\u0008\u000b-\u001f\u007f]/g, function (a) {
+						return toVisibleControl(a.charCodeAt(0));
+					});
 			},
 			_dump: function (depth) {
 				return multiply(' ', depth) +
@@ -3659,8 +3670,8 @@ flag23_loop:
 				marks.update(this.position, function () {
 					var data = self.data;
 
-					if (self.isLastLine && data.length && data.substr(-1) == '\n') {
-						data = data.substr(0, data.length - 1);
+					if (self.isLastLine) {
+						data = trimTerm(data);
 					}
 					if (self.position.row == t.rowLength) {
 						t.setSelectionRange(new Position(
@@ -4101,7 +4112,7 @@ flag23_loop:
 
 		function setParagraphMacros (m) {
 			if (!/^[a-zA-Z ]+$/.test(m)) {
-				throw new Error(_('Invalid paragraph format: ' + m));
+				throw new Error(_('Invalid paragraph format: {0}', m));
 			}
 			paragraphs = m;
 			paragraphForwardRegex = paragraphBackwardRegex =
@@ -4109,7 +4120,7 @@ flag23_loop:
 		}
 		function setSectionMacros (m) {
 			if (!/^[a-zA-Z ]+$/.test(m)) {
-				throw new Error(_('Invalid section format: ' + m));
+				throw new Error(_('Invalid section format: {0}', m));
 			}
 			sections = m;
 			sectionForwardRegex = sectionBackwardRegex = null;
@@ -4288,7 +4299,7 @@ flag23_loop:
 	}
 	function reverseObject (o) {
 		var result = {};
-		for (var i in o) { result[o[i]] = i; }
+		for (var i in o) {result[o[i]] = i;}
 		return result;
 	}
 	function style (src, styles) {
@@ -4520,6 +4531,10 @@ flag23_loop:
 		return result;
 	}
 	function toVisibleString (s) {
+		return s.replace(/[\u0000-\u001f\u007f]/g, function (a) {
+			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
+		});
+		/*
 		var result = '';
 		for (var i = 0; i < s.length; i++) {
 			var code = s.charCodeAt(i);
@@ -4536,6 +4551,7 @@ flag23_loop:
 			}
 		}
 		return result;
+		 */
 	}
 	function toVisibleControl (code) {
 		// U+2400 - U+243F: Unicode Control Pictures
@@ -4544,7 +4560,20 @@ flag23_loop:
 	function toNativeControl (s) {
 		return s.replace(/[\u2400-\u243f]/g, function (a) {
 			return String.fromCharCode(a.charCodeAt(0) & 0x00ff);
-		});
+		}).replace(/\u2421/g, '\u007f');
+	}
+	function ensureNewline (s) {
+		if (s.length && s.substr(-1) != '\n') {
+			s += '\n';
+		}
+		return s;
+	}
+	function trimTerm (s, ch) {
+		ch || (ch = '\n');
+		if (s.length && s.substr(-1) == ch) {
+			s = s.substring(0, s.length - 1);
+		}
+		return s;
 	}
 	function docScrollLeft () {
 		return Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
@@ -5120,7 +5149,7 @@ flag23_loop:
 		cursor = new CursorUI(editor, cc, ec);
 		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
-		x.readOnly && config.setData('readonly');
+		config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 		refreshIdealWidthPixels(editor);
 		showMessage(
@@ -5496,8 +5525,17 @@ flag23_loop:
 		}
 	}
 	function logEditing (t, connect) {
+		function resolveEscape (s) {
+			var result = '';
+			s.replace(/\u0016[\s\S]|[\s\S]/g, function (a) {
+				result += a.charAt(a.length == 2 ? 1 : 0);
+				return '';
+			});
+			result = result.replace(/[\u0008\u007f]/g, '');
+			return result;
+		}
 		var s;
-		if (editedStringCurrent != '' && (s = editedStringCurrent.replace(/[\u0008\u007f]/g, '')) != '') {
+		if (editedStringCurrent != '' && (s = resolveEscape(editedStringCurrent)) != '') {
 			editLogger.open('editing', function () {
 				if (inputMode == 'edit') {
 					editLogger.write(
@@ -6025,6 +6063,13 @@ flag23_loop:
 		}
 		return result;
 	}
+	function incrementStrokeCount () {
+		++strokeCount == 1 && extensionChannel && extensionChannel.postMessage({
+			type:'notify-to-parent',
+			parentTabId:targetElement.parentTabId,
+			payload:{type:'wasavi-stroked'}
+		});
+	}
 
 	/*
 	 * low-level functions for editor functionality
@@ -6391,11 +6436,11 @@ flag23_loop:
 				var nonSpaceFound = prop !== 'Z';
 
 				while (n.row > 0 || n.col > 0) {
-					if (t.isNewline(n) && t.isNewline(t.leftPos(n))) { break; }
+					if (t.isNewline(n) && t.isNewline(t.leftPos(n))) {break;}
 
 					var prevn = n;
 					n = t.leftPos(n);
-					if (n.eq(prevn)) { break; }
+					if (n.eq(prevn)) {break;}
 
 					var nextprop = t.charClassAt(n, true);
 					if (nextprop !== 'Z' && !nonSpaceFound) {
@@ -6416,11 +6461,11 @@ flag23_loop:
 				var nonSpaceFound = prop !== 'Z';
 
 				while (n.row > 0 || n.col > 0) {
-					if (t.isNewline(n) && t.isNewline(t.leftPos(n))) { break; }
+					if (t.isNewline(n) && t.isNewline(t.leftPos(n))) {break;}
 
 					var prevn = n;
 					n = t.leftPos(n);
-					if (n.eq(prevn)) { break; }
+					if (n.eq(prevn)) {break;}
 
 					var nextprop = t.charClassAt(n, true);
 					if (nextprop !== 'Z' && !nonSpaceFound) {
@@ -6690,7 +6735,7 @@ flag23_loop:
 		function leftPos (n) {
 			if (n <= 0) return 0;
 			n--;
-			if (text.charCodeAt(n) == 0x0a) { n--; }
+			if (text.charCodeAt(n) == 0x0a) {n--;}
 			return n;
 		}
 		function doBackSearch () {
@@ -7040,30 +7085,6 @@ flag23_loop:
 					break;
 				}
 			}
-
-			/*
-			!isEditing() && editLogger.write(
-				EditLogger.ITEM_TYPE.INSERT,
-				startn, s, keepPosition
-			);
-			marks.update(startn, function () {
-				var re = s.match(/\n|[^\n]+/g);
-				if (!re) return;
-
-				for (var i = 0; i < re.length; i++) {
-					switch (re[i]) {
-					case '\n':
-						isMultilineTextInput(targetElement) && t.divideLine();
-						break;
-
-					default:
-						t.setSelectionRange(t.insertChars(t.selectionStart, re[i]));
-						break;
-					}
-				}
-				isEditCompleted = true;
-			});
-			*/
 			keepPosition && t.setSelectionRange(startn);
 		});
 	}
@@ -7225,6 +7246,9 @@ flag23_loop:
 			registers.set(
 				register == undefined ? prefixInput.register : register,
 				content, true, true);
+			if (result >= config.vars.report) {
+				requestShowMessage(_('Yanked {0} {line:0}.', result));
+			}
 		}
 		else {
 			var content = t.getSelection();
@@ -7613,6 +7637,7 @@ flag23_loop:
 			lastRegexFindCommand.setPattern(pattern);
 			registers.set('/', lastRegexFindCommand.pattern);
 		}
+		var patternString = pattern;
 		pattern = getFindRegex(pattern);
 
 		// initialize text
@@ -7625,10 +7650,7 @@ flag23_loop:
 
 		rg.setStartBefore(t.rowNodes(r[0]));
 		rg.setEndAfter(t.rowNodes(r[1]));
-		text = rg.toString();
-		if (r[1] == t.rowLength - 1 && text.substr(-1) == '\n') {
-			text = text.substring(0, text.length - 1);
-		}
+		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
 		rg.detach();
 		rg = null;
 
@@ -7663,17 +7685,21 @@ flag23_loop:
 					pos = pattern.lastIndex - re[0].length;
 					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
 					row = prevRow + delta;
+					if (row > r[1]) break;
 					delta && items.push(row - rangeStartRow);
 					prevOffset = pos;
 					prevRow = row;
 				}
 
-				var tmp = [];
+				if (items.length >= r[1] - r[0] + 1) {
+					return _('Pattern found in every line: {0}', patternString);
+				}
+				var tmp = [], container = t.elm;
 				for (var i = r[0]; i <= r[1]; i++) {
-					tmp.push(t.rowNodes(i));
+					tmp.push(container.childNodes[i]);
 				}
 				for (var i = items.length - 1; i >= 0; i--) {
-					delete tmp[items[i]];
+					tmp.splice(items[i], 1);
 				}
 				items = tmp;
 			}
@@ -7701,6 +7727,7 @@ flag23_loop:
 					pos = pattern.lastIndex - re[0].length;
 					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
 					row = prevRow + delta;
+					if (row > r[1]) break;
 					delta && items.push(t.rowNodes(row));
 					prevOffset = pos;
 					prevRow = row;
@@ -7718,11 +7745,13 @@ flag23_loop:
 					result.push(i + ': null');
 				}
 			}
+			console.info((title || 'dump') + '\n' + result.join('\n'));
 		}
 
 		// pass 2
 		editLogger.open('global');
 		try {
+			dumpItems('init');
 			for (var i = 0, goal = items.length; i < goal; i++) {
 				if (items[i].parentNode) {
 					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
@@ -7783,80 +7812,104 @@ flag23_loop:
 			}
 		}
 	}
-	function exWrite (t, a, isForce, isAppend, target) {
-		target = (target || '').replace(/^\s+|\s+$/g, '');
+	function exWriteParseArg (t, a) {
+		var re;
+		var arg = a.argv[0] || '';
+		var isCommand = false;
+		var isAppend = false;
+		var name = false;
+		if (re = /^\s*(?!\\)!(.+)/.exec(arg)) {
+			isCommand = true;
+			name = re[1];
+		}
+		else if (re = /^\s*(>>)?(.*)/.exec(arg)) {
+			isAppend = re[1] == '>>';
+			name = re[2] || '';
+		}
+		if (name === false) {
+			return _('Invalid argument.');
+		}
+		return {
+			isCommand:isCommand,
+			isAppend:isAppend,
+			name:name
+		};
+	}
+	function exWrite (t, a, isCommand, isAppend, target) {
+		var isForce = !!a.flags.force;
 
-		if (target == '') {
-			if (isAppend) {
-				return _('Element id to be written doesn\'t specified.');
-			}
-			target = targetElement;
-		}
-
-		target = $(target);
-		if (!target) {
-			return _('Specified element is invalid.');
-		}
-		if (!isMultilineTextInput(target) && !isSinglelineTextInput(target)) {
-			return _('Specified element is not editable.');
-		}
-		if (isForce) {
-			target.readOnly = false;
-			config.setData('noreadonly');
+		if (isCommand) {
+			return _('Command redirection is not implemented.');
 		}
 		else {
-			if (config.vars.readonly && target == targetElement) {
-				return _('Readonly option is set (use "!" to override).');
-			}
-			if (target.readOnly) {
-				return _('Element to be written has readonly attribute (use "!" to override).');
-			}
-		}
-
-		var orient = t.isLineOrientSelection;
-		var ss = t.selectionStart;
-		var se = t.selectionEnd;
-		try {
-			t.isLineOrientSelection = true;
-			t.selectionStart = new Position(a.range[0], 0);
-			t.selectionEnd = new Position(a.range[1], 0);
-
-			var content = t.getSelection();
-			if (a.range[1] == t.rowLength - 1) {
-				content = content.replace(/\n$/, '');
+			target = target || '';
+			if (target != '') {
+				return _('Specifying file name is not implemented.');
 			}
 			if (isAppend) {
-				if (target.value == '') {
-					target.value = content;
-				}
-				else {
-					target.value = target.value + '\n' + content;
-				}
+				return _('Appending is not implemented.');
+			}
+
+			target = targetElement;
+
+			if (isForce) {
+				target.readOnly = false;
+				config.setData('noreadonly');
 			}
 			else {
-				target.value = content;
+				if (config.vars.readonly && target == targetElement) {
+					return _('Readonly option is set (use "!" to override).');
+				}
+				if (target.readOnly) {
+					return _('Element to be written has readonly attribute (use "!" to override).');
+				}
+			}
+
+			var rg = document.createRange();
+			rg.setStartBefore(t.rowNodes(a.range[0]));
+			rg.setEndAfter(t.rowNodes(a.range[1]));
+			var content = toNativeControl(rg.toString());
+			rg.detach();
+
+			if (a.range[1] == t.rowLength - 1) {
+				content = trimTerm(content);
+			}
+			if (extensionChannel) {
+				extensionChannel.postMessage({
+					type:'notify-to-parent',
+					parentTabId:targetElement.parentTabId,
+					payload:{type:'wasavi-saved', value:content}
+				});
+			}
+			if (typeof eventHandlers.onSaved == 'function') {
+				eventHandlers.onSaved({value:content});
 			}
 			if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == targetElement) {
 				isTextDirty = false;
 			}
 		}
-		finally {
-			t.isLineOrientSelection = orient;
-			t.selectionStart = ss;
-			t.selectionEnd = se;
-		}
 	}
 	function exExecuteRegister (t, a) {
-		var register = a.flags.register ? a.register : '@';
-		if (!registers.isReadable(register)) {
+		var command;
+		var register;
+
+		if (a.flags.register) {
+			register = a.register;
+		}
+		else if (!registers.exists('@') || (register = registers.get('@').data) == '') {
+			return _('No previous execution.');
+		}
+		if (register == '@' || !registers.isReadable(register)) {
 			return _('Invalid register name: {0}', register);
 		}
-		if (!registers.exists(register)) {
+		if (!registers.exists(register) || (command = registers.get(register).data) == '') {
 			return _('Register {0} is empty.', register);
 		}
+		if (command.substr(-1) != '\n') {
+			command += '\n';
+		}
 		t.setSelectionRange(new Position(a.range[0], 0));
-		var command = register.get(register).data;
-		var result = executeExCommand(command);
+		var result = executeExCommand(t, command);
 		if (typeof result == 'string') {
 			return result;
 		}
@@ -8422,7 +8475,7 @@ flag23_loop:
 			return exSetMark(t, a);
 		}),
 		new ExCommand('map', 'map', '!W', 0, function (t, a) {
-			var mapName = a.flags.force ? _('edit') : _('command');
+			var mapName = a.flags.force ? 'edit' : 'command';
 			var map = mapManager.getMap(mapName);
 			function dispMap (map) {
 				var maxWidth = 0;
@@ -8432,7 +8485,7 @@ flag23_loop:
 							maxWidth = o[0].length;
 						}
 					});
-					var list = [_('*** {0} mode map ***', mapName)];
+					var list = ['*** ' + mapName + ' mode map ***'];
 					map.map(function (o) {
 						list.push(
 							o[0] + multiply(' ', maxWidth - o[0].length) +
@@ -8573,7 +8626,7 @@ flag23_loop:
 			return (new SubstituteWorker).run(t, a.range, a.argv[0], a.argv[1], a.argv[2]);
 		}),
 		new ExCommand('&', '&', 's', 2, function (t, a) {
-			return (new SubstituteWorker).run(t, a.range, '', '~', a.argv[0]);
+			return (new SubstituteWorker).run(t, a.range, '', '%', a.argv[0]);
 		}),
 		new ExCommand('~', '~', 's', 2, function (t, a) {
 			var pattern;
@@ -8590,7 +8643,7 @@ flag23_loop:
 				messages = config.dump();
 				logToConsole = true;
 			}
-			else if (a.argv.some(function (o) { return o == 'all';})) {
+			else if (a.argv.some(function (o) {return o == 'all';})) {
 				messages = config.dump(true);
 				logToConsole = true;
 			}
@@ -8598,7 +8651,7 @@ flag23_loop:
 				messages = [];
 				for (var i = 0; i < a.argv.length; i++) {
 					var arg = a.argv[i];
-					var re = /^([^=? \t]+)[ \t]*([=?])/.exec(arg) || ['', arg, ''];
+					var re = /^([^=?]+)([=?])/.exec(arg) || ['', arg, ''];
 					var info = config.getInfo(re[1]);
 					if (!info) {
 						messages.push(_('Unknown option: {0}', re[1]));
@@ -8613,12 +8666,25 @@ flag23_loop:
 						i++;
 					}
 					else {
-						var result = config.setData(
-							re[1],
-							re[2] == '=' ? arg.substring(re[1].length + 1) : undefined);
-						if (typeof result == 'string') {
-							messages.push(result);
-							emphasis = true;
+						if (re[2] == ''
+						&& i + 1 < a.argv.length
+						&& a.argv[i + 1].charAt(0) == '=') {
+							re[0] = arg + '=';
+							arg += a.argv[++i];
+							re[2] = '=';
+						}
+						if (re[2] != '=' && info.type != 'b') {
+							messages.push(config.getData(re[1], true));
+						}
+						else {
+							var result = config.setData(
+								re[1],
+								re[2] == '=' ? arg.substring(re[0].length) : undefined);
+							if (typeof result == 'string') {
+								messages.push(result.replace(/\.$/, '') + ': ' + arg);
+								emphasis = true;
+								break;
+							}
 						}
 					}
 				}
@@ -8650,10 +8716,15 @@ flag23_loop:
 		}),
 		new ExCommand('unabbreviate', 'una', 'w1r', 0, function (t, a) {
 			var lhs = a.argv[0];
-			if (!(lhs in abbrevs)) {
+			if (lhs == '[all]') {
+				abbrevs = {};
+			}
+			else if (!(lhs in abbrevs)) {
 				return _('{0} is not an abbreviation.', lhs);
 			}
-			delete abbrevs[lhs];
+			else {
+				delete abbrevs[lhs];
+			}
 		}),
 		new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (t, a) {
 			editLogger.close();
@@ -8669,34 +8740,38 @@ flag23_loop:
 			}
 		}),
 		new ExCommand('unmap', 'unm', '!w1r', 0, function (t, a) {
-			var mapName = a.flags.force ? _('edit') : _('command');
 			var lhs = a.argv[0];
-			var map = mapManager.getMap(mapName);
-			if (!map.isMapped(lhs)) {
+			var map = mapManager.getMap(a.flags.force ? 'edit' : 'command');
+			if (lhs == '[all]') {
+				map.removeAll();
+			}
+			else if (!map.isMapped(lhs)) {
 				return _('{0} is not mapped.', lhs);
 			}
-			map.remove(lhs);
+			else {
+				map.remove(lhs);
+			}
 		}),
 		new ExCommand('version', 'ver', '', 0, function (t, a) {
 			requestShowMessage('wasavi/' + VERSION + ' ' + VERSION_DESC);
 		}),
-		new ExCommand('vglobal', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
+		new ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
 			a.flags.force = true;
 			return exGlobal(t, a);
 		}),
 		new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
-			var re = /^\s*(>>)?\s*(.*)/.exec(a.argv[0] || '');
-			return exWrite(t, a, !!a.flags.force, re[1] == '>>', re[2]);
-
+			var o = exWriteParseArg(t, a);
+			return typeof o == 'string' ? o : exWrite(t, a, o.isCommand, o.isAppend, o.name);
 		}),
 		new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
-			var re = /^\s*(>>)?\s*(.*)/.exec(a.argv[0] || '');
-			var result = exWrite(t, a, !!a.flags.force, re[1] == '>>', re[2]);
+			var o = exWriteParseArg(t, a);
+			if (typeof o == 'string') return o;
+			var result = exWrite(t, a, o.isCommand, o.isAppend, o.name);
 			return typeof result == 'string' ? result : exQuit();
 		}),
 		new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
 			if (isTextDirty) {
-				var result = exWrite(t, a, !!a.flags.force, false, a.argv[0]);
+				var result = exWrite(t, a, false, false, a.argv[0]);
 				return typeof result == 'string' ? result : exQuit();
 			}
 			else {
@@ -8704,25 +8779,18 @@ flag23_loop:
 			}
 		}),
 		new ExCommand('yank', 'ya', 'bca', 2, function (t, a) {
-			var r = a.range;
-			var rg = document.createRange();
-			rg.setStartBefore(t.rowNodes(r[0]));
-			rg.setEndAfter(t.rowNodes(r[1]));
-			registers.set(a.flags.register ? a.register : '', rg.toString(), true, true);
-			rg.detach();
-			var yanked = r[1] - r[0] + 1;
-			if (yanked >= config.vars.report) {
-				requestShowMessage(_('Yanked {0} {line:0}.', yanked));
-			}
+			var p = t.selectionStart;
+			yank(t, a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
+			t.setSelectionRange(p);
 		}),
 		new ExCommand('>', '>', 'mca1', 2, function (t, a) {
 			t.setSelectionRange(new Position(a.range[0], 0));
-			shift(t, a.range[1] - a.range[0] + 1, a.argv[0].length);
+			shift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
 			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 		}),
 		new ExCommand('<', '<', 'mca1', 2, function (t, a) {
 			t.setSelectionRange(new Position(a.range[0], 0));
-			unshift(t, a.range[1] - a.range[0] + 1, a.argv[0].length);
+			unshift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
 			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 		}),
 		new ExCommand('@', '@', 'b', 1, function (t, a) {
@@ -8731,7 +8799,7 @@ flag23_loop:
 		new ExCommand('*', '*', 'b', 1, function (t, a) {
 			return exExecuteRegister(t, a);
 		})
-	].sort(function (a, b) { return a.name.length - b.name.length; });
+	].sort(function (a, b) {return a.name.length - b.name.length;});
 
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
@@ -8787,7 +8855,7 @@ flag23_loop:
 			new VariableItem('writeany', 'b', false),     // not used
 
 			/* defined by wasavi */
-			new VariableItem('modelinehue', 'i', -1),     // O
+			new VariableItem('modelinehue', 'I', -1),     // O
 			new VariableItem('smooth', 'b', true),        // O
 			new VariableItem('bellvolume', 'i', 25),      // O
 			new VariableItem('history', 'i', 20),         // O
@@ -8882,6 +8950,9 @@ flag23_loop:
 			fs: 'fullscreen'
 		}
 	);
+	var eventHandlers = {
+		onSaved:null
+	};
 
 	// extension depend objects
 	var registers;
@@ -8920,6 +8991,7 @@ flag23_loop:
 	var isEditCompleted;
 	var isVerticalMotion;
 	var isReadonlyWarned;
+	var isInteractive;
 	var isSmoothScrollRequested;
 	var isSimpleCommandUpdateRequested;
 	var isJumpBaseUpdateRequested;
@@ -9115,13 +9187,6 @@ flag23_loop:
 				}
 
 				yanked = yank(t);
-
-				if (isLineOrient) {
-					if (yanked >= config.vars.report) {
-						requestShowMessage(_('Yanked {0} {line:0}.', yanked));
-					}
-				}
-
 				t.setSelectionRange(origin);
 				requestSimpleCommandUpdate();
 				return true;
@@ -10098,7 +10163,7 @@ flag23_loop:
 					}
 					executeViCommand(lastSimpleCommand);
 					lastSimpleCommand = lastSimpleCommand.replace(
-						/^(")([1-8])/, function ($0, $1, $2) { return ($1 || '') + (parseInt($2, 10) + 1); });
+						/^(")([1-8])/, function ($0, $1, $2) {return ($1 || '') + (parseInt($2, 10) + 1);});
 				}
 				return true;
 			}
@@ -10153,7 +10218,7 @@ flag23_loop:
 		'\u000c'/*^L*/: function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				$(CONTAINER_ID).style.display = 'none';
-				setTimeout(function () { $(CONTAINER_ID).style.display = ''; }, 100);
+				setTimeout(function () {$(CONTAINER_ID).style.display = '';}, 100);
 			}
 			else {
 				inputEscape(c);
@@ -10515,7 +10580,6 @@ flag23_loop:
 			insert(t, '\t');
 		},
 		'\u000d'/*enter*/: function (c, t) {
-			insert(t, '\t');
 			var indent = config.vars.autoindent ? t.getIndent(t.selectionStart) : '';
 			insert(t, '\n' + indent);
 			cursor.ensureVisible();
@@ -10532,12 +10596,18 @@ flag23_loop:
 			},
 			'wait-a-letter': function (c, t) {
 				var code = c.charCodeAt(0);
-				if (code >= 0x00 && code <= 0x1f || code == 0x7f) {
-					c = toVisibleControl(code);
+				if (code == 0x0a) {
+					this['\u000d'].apply(this, arguments);
 				}
-				(inputMode == 'edit' ? insert : overwrite)(t, c);
-				cursor.ensureVisible();
-				cursor.update();
+				else {
+					if (code >= 0x00 && code != 0x09 && code <= 0x1f || code == 0x7f) {
+						c = toVisibleControl(code);
+					}
+					(inputMode == 'edit' ? insert : overwrite)(t, c);
+					cursor.ensureVisible();
+					cursor.update();
+				}
+				requestShowPrefixInput('');
 			}
 		},
 		
@@ -10754,13 +10824,8 @@ flag23_loop:
 			}
 		}
 
-		if (++strokeCount == 1 && extensionChannel) {
-			extensionChannel.postMessage({
-				type:'notify-to-parent',
-				parentTabId:targetElement.parentTabId,
-				payload:{type:'wasavi-stroked'}
-			});
-		}
+		isInteractive = true;
+		incrementStrokeCount();
 		mapManager.process(keyCode, function (keyCode) {
 			processInput(keyCode, e) && stop(e);
 		});
@@ -10768,9 +10833,9 @@ flag23_loop:
 	function handleInput (e) {
 		processInputSupplement(e);
 	}
-	function handleMousedown (e) { }
-	function handleMouseup (e) { }
-	function handleScroll (e) { }
+	function handleMousedown (e) {}
+	function handleMouseup (e) {}
+	function handleScroll (e) {}
 
 	// cover
 	function handleCoverMousedown (e) {
@@ -10838,7 +10903,7 @@ flag23_loop:
 			return !!targetElement;
 		}
 		function ensureRunning () {
-			if (!getRunning()) { throw new Exeception('wasavi is not running'); }
+			if (!getRunning()) {throw new Error('wasavi is not running');}
 		}
 		return {
 			/*
@@ -10909,12 +10974,15 @@ flag23_loop:
 				return getEditorCore().elm.childNodes.length;
 			},
 			get lastMessage () {
-				ensureRunning();
+				//ensureRunning();
 				return lastMessage;
 			},
 			get lastSimpleCommand () {
 				ensureRunning();
 				return lastSimpleCommand;
+			},
+			get events () {
+				return eventHandlers;
 			},
 
 			/*
@@ -10940,8 +11008,8 @@ flag23_loop:
 					borderStyle:'',
 					paddingStyle:'0',
 					dataset:{},
-					getAttribute: function (name) { return this.dataset[name]; },
-					setAttribute: function (name, value) { this.dataset[name] = value; }
+					getAttribute: function (name) {return this.dataset[name];},
+					setAttribute: function (name, value) {this.dataset[name] = value;}
 				});
 			},
 			send: function () {
@@ -10949,13 +11017,8 @@ flag23_loop:
 				var args = Array.prototype.slice.call(arguments);
 				args.push(true);
 				lastMessage = '';
-				if (++strokeCount == 1 && extensionChannel) {
-					extensionChannel.postMessage({
-						type:'notify-to-parent',
-						parentTabId:targetElement.parentTabId,
-						payload:{type:'stroked'}
-					});
-				}
+				isInteractive = false;
+				incrementStrokeCount();
 				executeViCommand.apply(null, args);
 			},
 			marks: function (name) {
@@ -10970,7 +11033,7 @@ flag23_loop:
 					if (!registers.exists(name)) {
 						return;
 					}
-					return registers.get(name).data;
+					return toNativeControl(registers.get(name).data);
 				}
 				else {
 					return registers.dump();
