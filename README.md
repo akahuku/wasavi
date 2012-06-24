@@ -7,8 +7,7 @@ wasavi (VI editor for any web page)
 wasavi はいくつかの web ブラウザ用のエクステンションで、web ページ上の textarea
 要素を vi エディタ化します。
 
-wasavi はほぼすべての vi コマンド、およびいくつかの ex コマンドをサポートしま
-す。
+wasavi はほぼすべての vi コマンド、およびいくつかの ex コマンドをサポートします。
 
 
 
@@ -35,12 +34,15 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 現在、以下の web ブラウザ用のエクステンションが用意されています。
 
 * Google Chrome
+
   <http://appsweets.net/wasavi/wasavi.crx>
 
 * Opera
+
   <http://appsweets.net/wasavi/wasavi.oex>
 
 * Firefox
+
   <http://appsweets.net/wasavi/wasavi.xpi>
 
 以上のブラウザ用のエクステンションの標準的なインストール方法に従って導入してく
@@ -56,8 +58,8 @@ Google Chrome において、github に公開されているソースを実行�
 ------
 
 適当な web ページの textarea 要素にフォーカスがある状態で Ctrl+Enter、もしくは
-Insert を押下してください。言うまでもありませんが、終了するには ZZ、:q、:wq な
-どを入力します。
+Insert を押下してください。言うまでもありませんが、終了するには ZZ、:q、:wq
+などを入力します。
 
 
 
@@ -76,63 +78,25 @@ Insert を押下してください。言うまでもありませんが、終了�
 
 ### operation:
 
-* c, cc, C
-* y, yy, Y
-* d, dd, D
-* r
-* R
-* a, A
-* i, I
-* o, O
-* &
-* s, S
-* ZZ
-* &gt;, &lt;
+* c cc C y yy Y d dd D &gt; &gt;&gt; &lt; &lt;&lt;
 
 ### motion:
 
-* -, +, &lt;enter&gt;
-* ^, $, 0, &lt;home&gt;, &lt;end&gt;
-* %
-* |
-* ,
-* ;
-* _
-* /
-* ?
-* '
-* `
-* (, )
-* {, }
-* [[, ]]
-* j, k, h, l, ^N, ^P, ^H, &lt;down&gt;, &lt;up&gt;, &lt;left&gt;, &lt;right&gt;, &lt;space&gt;
-* w, W
-* b, B
-* e, E
-* gg, G
-* H, M, L
-* f, F
-* t, T
-* n, N
+* &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
+  &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
+  j k h l ^N ^P ^H
+  &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
+  w W b B e E gg G H M L f F t T n N
 
 ### scroll-command:
 
-* ^U, ^D, ^Y, ^E, ^B, ^F
-* z&lt;enter&gt;, z., zz, z-
+* ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
+  z&lt;enter&gt; z. zz z-
 
 ### edit-command:
 
-* x, X, &lt;delete&gt;
-* p, P
-* J
-* .
-* u
-* ^R
-* ~
-* ^L
-* ^G
-* m
-* @
+* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
+  a A i I o O & s S ZZ
 
 ### ex-command-prefix:
 
@@ -140,42 +104,14 @@ Insert を押下してください。言うまでもありませんが、終了�
 
 ## ex コマンド:
 
-* abbreviate
-* copy
-* delete
-* global
-* join
-* k
-* map
-* mark
-* marks
-* move
-* options
-* print
-* put
-* quit
-* redo
-* s
-* &
-* ~
-* set
-* registers
-* to
-* unabbreviate
-* undo
-* unmap
-* version
-* vglobal
-* write
-* wq
-* xit
-* yank
-* >
-* <
-* @
-* *
+* abbreviate copy delete global join k map mark marks move
+  options print put quit redo s & ~ set registers to
+  unabbreviate undo unmap version v write wq xit yank
+  > < @ &#42;
 
-ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現のいずれも可能です。オフセットを付加することも可能です。このほか、多段 undo/redo とインクリメンタルサーチを実装してあります。
+ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現のいずれも可能です。
+オフセットを付加することも可能です。このほか、多段 undo/redo とインクリメンタル
+サーチを実装してあります。
 
 
 
@@ -186,7 +122,9 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 
 ぜひ現象と再現方法を教えてください。
 バグレポートや要望の受け付けは以下の場所で行います。
-  <http://appsweets.net/wasavi/#forum>
+
+* <http://appsweets.net/wasavi/#forum>
 
 github のアカウントを持っているなら issue でも構いません。
-  <http://github.com/akahuku/wasavi/issues>
+
+* <http://github.com/akahuku/wasavi/issues>
