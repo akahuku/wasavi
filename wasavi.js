@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 142 2012-06-23 19:12:10Z akahuku $
+ * @version $Id: wasavi.js 143 2012-06-24 05:49:44Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -81,8 +81,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 142 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 142 2012-06-23 19:12:10Z akahuku $';
+	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 143 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 143 2012-06-24 05:49:44Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -4317,9 +4317,7 @@ flag23_loop:
 		if (useSpecial && SPECIAL_KEYS[-c]) {
 			return SPECIAL_KEYS[-c];
 		}
-		else {
-			return '';
-		}
+		return '';
 	}
 	function keyName (c) {
 		if (typeof c == 'string') {
@@ -5166,9 +5164,7 @@ flag23_loop:
 		exGlobalSpecified = false;
 		editLogger.open('exrc', function () {
 			var result = executeExCommand(editor, exrc);
-			if (typeof result == 'string') {
-				showMessage(result, true);
-			}
+			typeof result == 'string' && showMessage(result, true);
 		});
 		cursor.ensureVisible();
 		cursor.update({type:inputMode, focused:true, visible:true});
@@ -7756,9 +7752,7 @@ flag23_loop:
 				if (items[i].parentNode) {
 					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
 					var result = executeExCommand(t, command);
-					if (typeof result == 'string') {
-						return result;
-					}
+					if (typeof result == 'string') {return result;}
 				}
 				else {
 					items[i] = null;
@@ -7905,9 +7899,9 @@ flag23_loop:
 		if (!registers.exists(register) || (command = registers.get(register).data) == '') {
 			return _('Register {0} is empty.', register);
 		}
-		if (command.substr(-1) != '\n') {
+		/*if (command.substr(-1) != '\n') {
 			command += '\n';
-		}
+		}*/
 		t.setSelectionRange(new Position(a.range[0], 0));
 		var result = executeExCommand(t, command);
 		if (typeof result == 'string') {
@@ -10395,9 +10389,10 @@ flag23_loop:
 		'&': function (c, t) {
 			if (prefixInput.isEmptyOperation) {
 				var range = [];
-				range.push(t.selectionStartRow);
-				range.push(range[0] + prefixInput.count - 1);
-				(new SubstituteWorker).run(t, range, '', '~', '');
+				range.push(t.selectionStartRow + 1);
+				range.push(Math.min(range[0] + prefixInput.count - 1, t.rowLength));
+				var result = executeExCommand(t, range.join(',') + '&');
+				typeof result == 'string' && requestShowMessage(result, true);
 				return true;
 			}
 			else {
@@ -10442,7 +10437,8 @@ flag23_loop:
 			},
 			'wait-a-letter': function (c, t) {
 				if (c == prefixInput.operation) {
-					terminated = true;
+					var result = executeExCommand(t, 'x');
+					typeof result == 'string' && requestShowMessage(result, true);
 					return true;
 				}
 				else {
@@ -10534,9 +10530,7 @@ flag23_loop:
 				editLogger.open('excommand');
 				try {
 					var result = executeExCommand(t, c);
-					if (typeof result == 'string') {
-						requestShowMessage(result, true);
-					}
+					typeof result == 'string' && requestShowMessage(result, true);
 					registers.set(':', c);
 					lineInputHistories.push(c);
 				}

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: editing.js 138 2012-06-18 11:10:52Z akahuku $
+ * @version $Id: editing.js 143 2012-06-24 05:49:44Z akahuku $
  */
 
 /**
@@ -772,9 +772,17 @@ function testSubstituteWholeLines () {
 }
 
 function testZZ () {
-	Wasavi.send('i', 'foobar', Wasavi.SPECIAL_KEYS.ESCAPE);
-	Wasavi.send('ZZ');
-	assertFalse(Wasavi.running);
+	var result;
+	Wasavi.events.onSaved = function (e) {result = e.value;};
+	try {
+		Wasavi.send('i', 'foobar', Wasavi.SPECIAL_KEYS.ESCAPE);
+		Wasavi.send('ZZ');
+		assertEquals('#1-1', 'foobar', result);
+		assertFalse(Wasavi.running);
+	}
+	finally {
+		Wasavi.events.onSaved = null;
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript : */

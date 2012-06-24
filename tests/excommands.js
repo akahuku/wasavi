@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: excommands.js 142 2012-06-23 19:12:10Z akahuku $
+ * @version $Id: excommands.js 143 2012-06-24 05:49:44Z akahuku $
  */
 
 /**
@@ -1271,6 +1271,20 @@ function testSubstAnd () {
 
 	Wasavi.send(':%&g\n');
 	assertEquals('#4-1', '!\n!\n!', Wasavi.value);
+}
+
+function testSubstAnd2 () {
+	Wasavi.send(':sushi\n');
+	Wasavi.send('i1\n2\n3\u001b');
+
+	Wasavi.send('&');
+	assertEquals('#1-1', '&: No previous search pattern.', Wasavi.lastMessage);
+
+	Wasavi.send('1G:s/\\d/!/c\ny');
+	assertEquals('#2-1', '!\n2\n3', Wasavi.value);
+
+	Wasavi.send('2G&');
+	assertEquals('#3-1', '!\n!\n3', Wasavi.value);
 }
 
 function testSubstTilde () {

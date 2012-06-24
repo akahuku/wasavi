@@ -12,6 +12,23 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 
 
 
+スクリーンショット
+------------
+
+* ネイティブな textarea があったとき:
+  ![native textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
+
+* Ctrl+Enter を押すと wasavi が起動します:
+  ![wasavi running](http://appsweets.net/wasavi/wasavi.jpg)
+
+* ex コマンドもいくつかサポートしています。:set all したところ:
+  ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
+
+* vim からインクリメンタルサーチをポートしています:
+  ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
+
+
+
 インストール
 ------------
 
