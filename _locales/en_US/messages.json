@@ -1,0 +1,455 @@
+{
+	"locale": {
+		"message": "english (USA)"
+	},
+	"wasavi_desc": {
+		"message": "vi editor for any web page."
+	},
+	"_plural_rule@function": {
+		"message": "n==1?'one':''"
+	},
+	"_plural_substitution": {
+		"message": "substitutions"
+	},
+	"_plural_substitution@one": {
+		"message": "substitution"
+	},
+	"_plural_line": {
+		"message": "lines"
+	},
+	"_plural_line@one": {
+		"message": "line"
+	},
+	"_plural_character": {
+		"message": "characters"
+	},
+	"_plural_character@one": {
+		"message": "character"
+	},
+	"_plural_operation": {
+		"message": "operations"
+	},
+	"_plural_operation@one": {
+		"message": "operation"
+	},
+	"invalid_boolean_value": {
+		"message": "Invalid boolean value",
+		"description": "Invalid boolean value"
+	},
+	"invalid_integer_value": {
+		"message": "Invalid integer value",
+		"description": "Invalid integer value"
+	},
+	"invalid_string_value": {
+		"message": "Invalid string value",
+		"description": "Invalid string value"
+	},
+	"invalid_regex_source_string_value": {
+		"message": "Invalid regex source string value",
+		"description": "Invalid regex source string value"
+	},
+	"unknown_option_@0": {
+		"message": "Unknown option: {0}",
+		"description": "Unknown option: {0}"
+	},
+	"an_extra_value_assigned_to_@0_option": {
+		"message": "An extra value assigned to {0} option.",
+		"description": "An extra value assigned to {0} option."
+	},
+	"@0_option_is_not_a_boolean": {
+		"message": "{0} option is not a boolean.",
+		"description": "{0} option is not a boolean."
+	},
+	"_options_": {
+		"message": "*** options ***",
+		"description": "*** options ***"
+	},
+	"_@0_@1": {
+		"message": "  {0}  {1}",
+		"description": "  {0}  {1}"
+	},
+	"_registers_": {
+		"message": "*** registers ***",
+		"description": "*** registers ***"
+	},
+	"_marks_": {
+		"message": "*** marks ***",
+		"description": "*** marks ***"
+	},
+	"bad_address": {
+		"message": "Bad address.",
+		"description": "Bad address."
+	},
+	"count_may_not_be_zero": {
+		"message": "Count may not be zero.",
+		"description": "Count may not be zero."
+	},
+	"address_not_specified": {
+		"message": "Address not specified.",
+		"description": "Address not specified."
+	},
+	"wrong_address_specified": {
+		"message": "Wrong address specified.",
+		"description": "Wrong address specified."
+	},
+	"arguments_count_mismatch": {
+		"message": "Arguments count mismatch.",
+		"description": "Arguments count mismatch."
+	},
+	"internal_syntax_table_error": {
+		"message": "Internal syntax table error.",
+		"description": "Internal syntax table error."
+	},
+	"invalid_argument": {
+		"message": "Invalid argument.",
+		"description": "Invalid argument."
+	},
+	"@0_out_of_range": {
+		"message": "{0}: Out of range.",
+		"description": "{0}: Out of range."
+	},
+	"map_expansion_reached_maximum_recursion_limit": {
+		"message": "Map expansion reached maximum recursion limit.",
+		"description": "Map expansion reached maximum recursion limit."
+	},
+	"more": {
+		"message": "More...",
+		"description": "More..."
+	},
+	"press_any_key_to_continue_or_enter_more_ex_command": {
+		"message": "Press any key to continue, or enter more ex command:",
+		"description": "Press any key to continue, or enter more ex command:"
+	},
+	"no_previous_substitution": {
+		"message": "No previous substitution.",
+		"description": "No previous substitution."
+	},
+	"no_previous_search_pattern": {
+		"message": "No previous search pattern.",
+		"description": "No previous search pattern."
+	},
+	"internal_error_invalid_replace_function": {
+		"message": "Internal Error: invalid replace function",
+		"description": "Internal Error: invalid replace function"
+	},
+	"substitute_yes_no_quit": {
+		"message": "Substitute? ([y]es, [n]o, [q]uit)",
+		"description": "Substitute? ([y]es, [n]o, [q]uit)"
+	},
+	"@0_substitution_on_@1_line": {
+		"message": "{0} {substitution:0} on {1} {line:1}.",
+		"description": "{0} {substitution:0} on {1} {line:1}."
+	},
+	"pattern_not_found_@0": {
+		"message": "Pattern not found: {0}",
+		"description": "Pattern not found: {0}"
+	},
+	"invalid_paragraph_format_@0": {
+		"message": "Invalid paragraph format: {0}",
+		"description": "Invalid paragraph format: {0}"
+	},
+	"invalid_section_format_@0": {
+		"message": "Invalid section format: {0}",
+		"description": "Invalid section format: {0}"
+	},
+	"cannot_find_pair_bracket": {
+		"message": "Cannot find pair bracket.",
+		"description": "Cannot find pair bracket."
+	},
+	"@0_@1@2_line_@3_character": {
+		"message": "\"{0}\" {1}{2} {line:2}, {3} {character:3}.",
+		"description": "\"{0}\" {1}{2} {line:2}, {3} {character:3}."
+	},
+	"readonly_": {
+		"message": "[readonly] ",
+		"description": "[readonly] "
+	},
+	"warning_changing_readonly_element": {
+		"message": "Warning: changing readonly element.",
+		"description": "Warning: changing readonly element."
+	},
+	"modified": {
+		"message": "modified:",
+		"description": "modified:"
+	},
+	"readonly": {
+		"message": "readonly:",
+		"description": "readonly:"
+	},
+	"line_@0_of_@1": {
+		"message": "line {0} of {1}",
+		"description": "line {0} of {1}"
+	},
+	"@0": {
+		"message": "[{0}%]",
+		"description": "[{0}%]"
+	},
+	"@0_canceled": {
+		"message": "{0} canceled.",
+		"description": "{0} canceled."
+	},
+	"in_command_mode": {
+		"message": "In command mode.",
+		"description": "In command mode."
+	},
+	"top_of_line": {
+		"message": "Top of line.",
+		"description": "Top of line."
+	},
+	"tail_of_line": {
+		"message": "Tail of line.",
+		"description": "Tail of line."
+	},
+	"tail_of_text": {
+		"message": "Tail of text.",
+		"description": "Tail of text."
+	},
+	"top_of_text": {
+		"message": "Top of text.",
+		"description": "Top of text."
+	},
+	"next_search_target_not_found": {
+		"message": "Next search target not found.",
+		"description": "Next search target not found."
+	},
+	"previous_search_target_not_found": {
+		"message": "Previous search target not found.",
+		"description": "Previous search target not found."
+	},
+	"search_wrapped": {
+		"message": "Search wrapped.",
+		"description": "Search wrapped."
+	},
+	"replace_count_too_large": {
+		"message": "Replace count too large.",
+		"description": "Replace count too large."
+	},
+	"shifted_@0_line": {
+		"message": "Shifted {0} {line:0}.",
+		"description": "Shifted {0} {line:0}."
+	},
+	"unshifted_@0_line": {
+		"message": "Unshifted {0} {line:0}.",
+		"description": "Unshifted {0} {line:0}."
+	},
+	"yanked_@0_line": {
+		"message": "Yanked {0} {line:0}.",
+		"description": "Yanked {0} {line:0}."
+	},
+	"register_@0_is_empty": {
+		"message": "Register {0} is empty.",
+		"description": "Register {0} is empty."
+	},
+	"internal_state_error": {
+		"message": "Internal state error.",
+		"description": "Internal state error."
+	},
+	"putting_data_is_empty": {
+		"message": "Putting data is empty.",
+		"description": "Putting data is empty."
+	},
+	"insert": {
+		"message": "--INSERT--",
+		"description": "--INSERT--"
+	},
+	"invalid_regex_pattern": {
+		"message": "Invalid regex pattern.",
+		"description": "Invalid regex pattern."
+	},
+	"out_of_range": {
+		"message": "Out of range.",
+		"description": "Out of range."
+	},
+	"the_second_address_is_smaller_than_the_first": {
+		"message": "The second address is smaller than the first.",
+		"description": "The second address is smaller than the first."
+	},
+	"pattern_found_in_every_line_@0": {
+		"message": "Pattern found in every line: {0}",
+		"description": "Pattern found in every line: {0}"
+	},
+	"mark_names_must_be_a_single_character": {
+		"message": "Mark names must be a single character.",
+		"description": "Mark names must be a single character."
+	},
+	"invalid_mark_name": {
+		"message": "Invalid mark name.",
+		"description": "Invalid mark name."
+	},
+	"copied_@0_line": {
+		"message": "Copied {0} {line:0}.",
+		"description": "Copied {0} {line:0}."
+	},
+	"the_text_has_been_modified_use_quit_to_discard_any_changes": {
+		"message": "The text has been modified; use :quit! to discard any changes.",
+		"description": "The text has been modified; use :quit! to discard any changes."
+	},
+	"command_redirection_is_not_implemented": {
+		"message": "Command redirection is not implemented.",
+		"description": "Command redirection is not implemented."
+	},
+	"specifying_file_name_is_not_implemented": {
+		"message": "Specifying file name is not implemented.",
+		"description": "Specifying file name is not implemented."
+	},
+	"appending_is_not_implemented": {
+		"message": "Appending is not implemented.",
+		"description": "Appending is not implemented."
+	},
+	"readonly_option_is_set_use_to_override": {
+		"message": "Readonly option is set (use \"!\" to override).",
+		"description": "Readonly option is set (use \"!\" to override)."
+	},
+	"element_to_be_written_has_readonly_attribute_use_to_override": {
+		"message": "Element to be written has readonly attribute (use \"!\" to override).",
+		"description": "Element to be written has readonly attribute (use \"!\" to override)."
+	},
+	"no_previous_execution": {
+		"message": "No previous execution.",
+		"description": "No previous execution."
+	},
+	"invalid_register_name_@0": {
+		"message": "Invalid register name: {0}",
+		"description": "Invalid register name: {0}"
+	},
+	"@0_extra_range_specified": {
+		"message": "{0}: extra range specified.",
+		"description": "{0}: extra range specified."
+	},
+	"@0_unknown_error": {
+		"message": "{0}: unknown error.",
+		"description": "{0}: unknown error."
+	},
+	"cannot_use_the_global_or_v_command_recursively": {
+		"message": "Cannot use the global or v command recursively.",
+		"description": "Cannot use the global or v command recursively."
+	},
+	"@0_unknown_command": {
+		"message": "{0}: unknown command.",
+		"description": "{0}: unknown command."
+	},
+	"_abbreviations_": {
+		"message": "*** abbreviations ***",
+		"description": "*** abbreviations ***"
+	},
+	"no_abbreviations_are_defined": {
+		"message": "No abbreviations are defined.",
+		"description": "No abbreviations are defined."
+	},
+	"the_keyword_of_abbreviation_must_end_with_a_word_character": {
+		"message": "The keyword of abbreviation must end with a word character.",
+		"description": "The keyword of abbreviation must end with a word character."
+	},
+	"deleted_@0_line": {
+		"message": "Deleted {0} {line:0}.",
+		"description": "Deleted {0} {line:0}."
+	},
+	"no_mappings_for_@0_mode_are_defined": {
+		"message": "No mappings for {0} mode are defined.",
+		"description": "No mappings for {0} mode are defined."
+	},
+	"key_@0_cannot_be_remapped": {
+		"message": "Key {0} cannot be remapped.",
+		"description": "Key {0} cannot be remapped."
+	},
+	"destination_is_in_inside_source": {
+		"message": "Destination is in inside source.",
+		"description": "Destination is in inside source."
+	},
+	"moved_@0_line": {
+		"message": "Moved {0} {line:0}.",
+		"description": "Moved {0} {line:0}."
+	},
+	"dont_know_how_to_open_options_page": {
+		"message": "Don't know how to open options page.",
+		"description": "Don't know how to open options page."
+	},
+	"no_redo_item": {
+		"message": "No redo item.",
+		"description": "No redo item."
+	},
+	"@0_operation_have_executed_again": {
+		"message": "{0} {operation:0} have executed again.",
+		"description": "{0} {operation:0} have executed again."
+	},
+	"@0_is_not_an_abbreviation": {
+		"message": "{0} is not an abbreviation.",
+		"description": "{0} is not an abbreviation."
+	},
+	"no_undo_item": {
+		"message": "No undo item.",
+		"description": "No undo item."
+	},
+	"@0_operation_have_reverted": {
+		"message": "{0} {operation:0} have reverted.",
+		"description": "{0} {operation:0} have reverted."
+	},
+	"@0_is_not_mapped": {
+		"message": "{0} is not mapped.",
+		"description": "{0} is not mapped."
+	},
+	"@0_register_azaz19": {
+		"message": "{0}: register (a-z,A-Z,1-9)",
+		"description": "{0}: register (a-z,A-Z,1-9)"
+	},
+	"changing_@0_line": {
+		"message": "Changing {0} {line:0}.",
+		"description": "Changing {0} {line:0}."
+	},
+	"@0_return_to_mark": {
+		"message": "{0}: return to mark",
+		"description": "{0}: return to mark"
+	},
+	"mark_@0_is_not_set": {
+		"message": "Mark {0} is not set.",
+		"description": "Mark {0} is not set."
+	},
+	"unknown_gprefixed_command_@0": {
+		"message": "Unknown g-prefixed command: {0}",
+		"description": "Unknown g-prefixed command: {0}"
+	},
+	"@0_find_forward": {
+		"message": "{0}: find forward",
+		"description": "{0}: find forward"
+	},
+	"@0_find_backward": {
+		"message": "{0}: find backward",
+		"description": "{0}: find backward"
+	},
+	"unknown_adjust_command": {
+		"message": "Unknown adjust command.",
+		"description": "Unknown adjust command."
+	},
+	"@0_mark": {
+		"message": "{0}: mark",
+		"description": "{0}: mark"
+	},
+	"register_@0_is_not_exist": {
+		"message": "Register {0} is not exist.",
+		"description": "Register {0} is not exist."
+	},
+	"@0_replace_a_char": {
+		"message": "{0}: replace a char",
+		"description": "{0}: replace a char"
+	},
+	"overwrite": {
+		"message": "--OVERWRITE--",
+		"description": "--OVERWRITE--"
+	},
+	"@0_literal_input": {
+		"message": "{0}: literal input",
+		"description": "{0}: literal input"
+	},
+	"tail_of_history": {
+		"message": "Tail of history.",
+		"description": "Tail of history."
+	},
+	"invalid_history_item": {
+		"message": "Invalid history item.",
+		"description": "Invalid history item."
+	},
+	"top_of_history": {
+		"message": "Top of history.",
+		"description": "Top of history."
+	}
+}

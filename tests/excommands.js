@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: excommands.js 143 2012-06-24 05:49:44Z akahuku $
+ * @version $Id: excommands.js 146 2012-06-24 13:12:12Z akahuku $
  */
 
 /**
@@ -1106,6 +1106,13 @@ function testSubst () {
 	assertEquals('#4-4', 'a a\nb b b\n\nc\nd', Wasavi.value);
 }
 
+function testSubst2 () {
+	Wasavi.send('iaaaa\nbbbb\u001b');
+	Wasavi.send('1G:%s/a/b/g\n');
+
+	assertEquals('bbbb\nbbbb', Wasavi.value);
+}
+
 function testSubstPatternOmit () {
 	Wasavi.send(':sushi\n');
 	Wasavi.send('i1\n2\n3\u001b');
@@ -1310,7 +1317,6 @@ function testSubstTilde () {
 
 function testSet () {
 	Wasavi.send(':set\n\n');
-	console.log(Wasavi.lastMessage);
 	assert('#1-1', Wasavi.lastMessage.indexOf('*** options ***\n') == 0);
 
 	Wasavi.send(':set all\n\n');
@@ -1415,7 +1421,6 @@ function testInvertedGlobal () {
 
 	// if range does not specified, all of text should be processed.
 	Wasavi.send(':v/x/p\n');
-	console.log(Wasavi.lastMessage);
 	assertEquals('#1-1', '2\n3 z\n5 y\n6 z', Wasavi.lastMessage);
 	assertPos('#1-2', [5, 0]);
 }
@@ -1440,7 +1445,6 @@ function testInvertedGlobalZeroMatch () {
 	 * 4   +
 	 * 5
 	 */
-	console.log('testInvertedGlobalZeroMatch');
 	Wasavi.send(':2,4v/^/p\n');
 	assertEquals('#1-1', 'v: Pattern found in every line: ^', Wasavi.lastMessage);
 	assertPos('#1-2', [4, 0]);

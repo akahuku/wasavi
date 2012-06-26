@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 143 2012-06-24 05:49:44Z akahuku $
+ * @version $Id: wasavi.js 147 2012-06-26 17:15:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -52,6 +52,7 @@
 			case 'init-response':
 				exrc = req.exrc;
 				fontFamily = req.fontFamily;
+				l10n = new L10n(req.messageCatalog);
 				break;
 			case 'run':
 				var x = req;
@@ -81,8 +82,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.2.' + (/\d+/.exec('$Revision: 143 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 143 2012-06-24 05:49:44Z akahuku $';
+	/*const*/var VERSION = '0.3.' + (/\d+/.exec('$Revision: 147 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 147 2012-06-26 17:15:19Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -327,7 +328,7 @@
 			vars[item.name] = item.value;
 		};
 		this.dump = function (all) {
-			var result = ['*** options ***'];
+			var result = [_('*** options ***')];
 			var phaseThreshold = 20;
 			var gap = 1;
 			for (var i = 0; i < 2; i++) {
@@ -3293,7 +3294,7 @@ flag23_loop:
 				this.text.substring(0, re.index) +
 				replaced +
 				this.text.substring(re.index + re[0].length);
-			this.pattern.lastIndex += Math.max(replaced.length - re[0].length, 1);
+			this.pattern.lastIndex += replaced.length - re[0].length;
 			this.substCount++;
 		},
 		showResult: function (immediate) {
@@ -4197,6 +4198,67 @@ flag23_loop:
 		}
 		return null;
 	};
+	function L10n (catalog) {
+		var PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
+		var getPluralSuffix;
+
+		function getId (m) {
+			return m.toLowerCase()
+				.replace(/\{(\d+)\}/g, '@$1')
+				.replace(/\{(\w+):\d+\}/g, '$1')
+				.replace(/[^A-Za-z0-9_@ ]/g, '')
+				.replace(/ +/g, '_');
+		}
+
+		if (catalog && PLURAL_FUNCTION_SIGNATURE in catalog) {
+			getPluralSuffix = catalog[PLURAL_FUNCTION_SIGNATURE].message;
+		}
+		if (!getPluralSuffix && extensionChannel) {
+			getPluralSuffix = extensionChannel.getMessage(PLURAL_FUNCTION_SIGNATURE);
+		}
+		if (getPluralSuffix) {
+			try {
+				getPluralSuffix = new Function('n', 'return ' + getPluralSuffix);
+			}
+			catch (e) {
+				getPluralSuffix = undefined;
+			}
+		}
+		if (!getPluralSuffix) {
+			getPluralSuffix = function () {return '';};
+		}
+
+		this.getMessage = function (messageId) {
+			if (catalog) {
+				if (messageId in catalog) {
+					return catalog[messageId].message;
+				}
+				var id = getId(messageId);
+				if (id in catalog) {
+					catalog[messageId] = catalog[id];
+					delete catalog[id];
+					return catalog[messageId].message;
+				}
+			}
+			else {
+				if (extensionChannel) {
+					return extensionChannel.getMessage(getId(messageId)) || messageId;
+				}
+			}
+			return messageId;
+		};
+		this.getPluralNoun = function (word, n) {
+			var suffix = getPluralSuffix(n - 0);
+			var id = '_plural_' + (suffix == '' ? '' : ('@' + suffix));
+			if (catalog) {
+				return id in catalog ? catalog[id].message : word;
+			}
+			else if (extensionChannel) {
+				return extensionChannel.getMessage(id) || word;
+			}
+			return word;
+		};
+	}
 
 	/*
 	 * utility functions
@@ -4214,14 +4276,21 @@ flag23_loop:
 	function _ () {
 		var args = Array.prototype.slice.call(arguments);
 		var format = args.shift();
-		format = format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
+		if (l10n) {
+			format = l10n.getMessage(format);
+		}
+		return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
 			if ($1 == undefined || $1 == '') {
 				return args[$2];
 			}
+			if (l10n) {
+				return l10n.getPluralNoun($1, args[$2]);
+			}
+
+			// simple plural fix for english
 			if (args[$2] == 1) {
 				return $1;
 			}
-			// simple plural fix for english
 			if (/[hos]$/.test($1)) {
 				return $1 + 'es';
 			}
@@ -4230,7 +4299,6 @@ flag23_loop:
 			}
 			return $1 + 's';
 		});
-		return format;
 	}
 	function extend (dest, src) {
 		for (var p in src) {
@@ -4529,27 +4597,9 @@ flag23_loop:
 		return result;
 	}
 	function toVisibleString (s) {
-		return s.replace(/[\u0000-\u001f\u007f]/g, function (a) {
+		return (s || '').replace(/[\u0000-\u001f\u007f]/g, function (a) {
 			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
 		});
-		/*
-		var result = '';
-		for (var i = 0; i < s.length; i++) {
-			var code = s.charCodeAt(i);
-			if (/[\u0000-\u001f\u007f]/.test(s.charAt(i))) {
-				if (code == 0x007f) {
-					result += '<del>';
-				}
-				else {
-					result += '^' + String.fromCharCode(code + 64);
-				}
-			}
-			else {
-				result += String.fromCharCode(code);
-			}
-		}
-		return result;
-		 */
 	}
 	function toVisibleControl (code) {
 		// U+2400 - U+243F: Unicode Control Pictures
@@ -4785,6 +4835,7 @@ flag23_loop:
 
 		// container
 		var cnt = $(CONTAINER_ID);
+		console.log('html: ' + document.documentElement.innerHTML);
 		if (!cnt) throw new Error('wasavi container not found');
 
 		//
@@ -5156,6 +5207,8 @@ flag23_loop:
 			x.readOnly ? _('[readonly] ') : '',
 			editor.rowLength,
 			x.value.length));
+
+		x.value = undefined;
 
 		/*
 		 * execute exrc
@@ -6222,7 +6275,7 @@ flag23_loop:
 	}
 	function inputEscape () {
 		if (arguments.length) {
-			requestRegisterNotice(_('{0} canceled.', toVisibleString(arguments[0])));
+			requestRegisterNotice(_('{0} canceled.', toVisibleString(keyName(arguments[0]))));
 		}
 		else {
 			inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
@@ -6712,7 +6765,7 @@ flag23_loop:
 			}
 		}
 		idealWidthPixels = -1;
-		wrapped && requestShowMessage(_('Search wrapped'), false, false, true);
+		wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
 		return {offset:n, matchLength:len};
 	}
 	function motionFindByRegexBackward (c, t, count, opts) {
@@ -6793,7 +6846,7 @@ flag23_loop:
 			}
 		}
 		idealWidthPixels = -1;
-		wrapped && requestShowMessage(_('Search wrapped'), false, false, true);
+		wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
 		return {offset:n, matchLength:len};
 	}
 	function motionForwardBlock (c, t, count, regex, isLineOrient) {
@@ -6898,7 +6951,7 @@ flag23_loop:
 
 		count || (count = 1);
 		refreshIdealWidthPixels(t);
-		n.row <= 0 && requestRegisterNotice(_('Top of text'));
+		n.row <= 0 && requestRegisterNotice(_('Top of text.'));
 		n.row = Math.max(n.row - count, 0);
 
 		var width = 0;
@@ -7747,7 +7800,7 @@ flag23_loop:
 		// pass 2
 		editLogger.open('global');
 		try {
-			dumpItems('init');
+			//dumpItems('init');
 			for (var i = 0, goal = items.length; i < goal; i++) {
 				if (items[i].parentNode) {
 					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
@@ -8020,6 +8073,26 @@ flag23_loop:
 			return true;
 		}
 
+		function paragraph12 () {
+			if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
+				skipto(/[\n|"]/g, {escapeChars:'\u0016'});
+			}
+			else {
+				skipto(/[\n|"]/g);
+			}
+			if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
+				skipto(/\n/g);
+			}
+			if (source.charAt(0) == '"') {
+				skipto(/\n/g, {discard:true});
+			}
+			if (commandName == 'print' && commandArg == '') {
+				commandArg = 'p';
+			}
+			lastTerminator = source.charAt(0);
+			source = source.substring(1);
+		}
+
 		if (/[\\\u0016]$/.test(source)) {
 			source = source.substring(0, source.length - 1);
 		}
@@ -8286,25 +8359,6 @@ flag23_loop:
 			//   e. The terminating <newline> or <vertical-line> character shall be discarded and
 			//   any subsequent characters shall be parsed as a separate ex command.
 			else {
-				function paragraph12 () {
-					if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
-						skipto(/[\n|"]/g, {escapeChars:'\u0016'});
-					}
-					else {
-						skipto(/[\n|"]/g);
-					}
-					if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
-						skipto(/\n/g);
-					}
-					if (source.charAt(0) == '"') {
-						skipto(/\n/g, {discard:true});
-					}
-					if (commandName == 'print' && commandArg == '') {
-						commandArg = 'p';
-					}
-					lastTerminator = source.charAt(0);
-					source = source.substring(1);
-				}
 				paragraph12();
 			}
 
@@ -8952,6 +9006,7 @@ flag23_loop:
 	var registers;
 	var lineInputHistories;
 	var bell;
+	var l10n;
 
 	// instance variables
 	var targetElement;
@@ -10674,7 +10729,7 @@ flag23_loop:
 		},
 		'\u000e'/*^N*/: function (c, t) {
 			if (lineInputHistories.isInitial) {
-				requestRegisterNotice(_('Tail of history'));
+				requestRegisterNotice(_('Tail of history.'));
 			}
 			else {
 				var line = lineInputHistories.next();
@@ -10682,7 +10737,7 @@ flag23_loop:
 					line = dataset(t, 'wasaviLineInputCurrent');
 				}
 				if (line == undefined) {
-					requestRegisterNotice(_('Invalid history item'));
+					requestRegisterNotice(_('Invalid history item.'));
 				}
 				else {
 					t.value = line;
@@ -10697,7 +10752,7 @@ flag23_loop:
 			}
 			var line = lineInputHistories.prev();
 			if (line == undefined) {
-				requestRegisterNotice(_('Top of history'));
+				requestRegisterNotice(_('Top of history.'));
 			}
 			else {
 				t.value = line;

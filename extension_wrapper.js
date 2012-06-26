@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 135 2012-06-11 20:45:00Z akahuku $
+ * @version $Id: extension_wrapper.js 147 2012-06-26 17:15:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -79,7 +79,8 @@
 		},
 		connect: function () {
 			this.sendRequest({type:'init'});
-		}
+		},
+		getMessage: function (messageId) {}
 	};
 
 	ExtensionWrapper.create = function () {
@@ -132,6 +133,9 @@
 		};
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
+		};
+		this.getMessage = function (messageId) {
+			return chrome.i18n.getMessage(messageId);
 		};
 		chrome.extension.onRequest.addListener(function (req, sender, res) {
 			if (req && req.type == 'init-response') {

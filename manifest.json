@@ -1,7 +1,8 @@
 {
   "name": "wasavi",
   "version": "0.1.0",
-  "description": "VI editor for any web page.",
+  "description": "__MSG_wasavi_desc__",
+  "default_locale": "en_US",
   "icons": {
      "16": "icon016.png",
      "48": "icon048.png",

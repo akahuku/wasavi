@@ -69,18 +69,18 @@ Insert を押下してください。言うまでもありませんが、終了�
 実装済みコマンド
 --------------------
 
-## 以下の形式の vi コマンド
+### 以下の形式の vi コマンド
 
 * ([count] [operation])? [count] motion
 * [count] scroll-command
 * [count] edit-command
 * ex-command-prefix
 
-### operation:
+#### operation:
 
 * c cc C y yy Y d dd D &gt; &gt;&gt; &lt; &lt;&lt;
 
-### motion:
+#### motion:
 
 * &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
@@ -88,21 +88,21 @@ Insert を押下してください。言うまでもありませんが、終了�
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
   w W b B e E gg G H M L f F t T n N
 
-### scroll-command:
+#### scroll-command:
 
 * ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
   z&lt;enter&gt; z. zz z-
 
-### edit-command:
+#### edit-command:
 
 * x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
   a A i I o O & s S ZZ
 
-### ex-command-prefix:
+#### ex-command-prefix:
 
 * :
 
-## ex コマンド:
+### ex コマンド:
 
 * abbreviate copy delete global join k map mark marks move
   options print put quit redo s & ~ set registers to

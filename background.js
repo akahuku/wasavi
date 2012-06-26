@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 138 2012-06-18 11:10:52Z akahuku $
+ * @version $Id: background.js 147 2012-06-26 17:15:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -29,6 +29,7 @@
 typeof window == 'undefined' && eval('var window = this; window.jetpack = {};');
 var extension;
 var resourceLoader;
+var messageCatalog;
 var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 
 /**
@@ -102,7 +103,7 @@ function XhrResourceLoader () {
 		}
 		else {
 			var xhr = new XMLHttpRequest;
-			xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, true);
+			xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, false);
 			xhr.overrideMimeType('text/plain;charset=UTF-8');
 			xhr.onload = function () {
 				data[resourcePath] = xhr.responseText;
@@ -110,7 +111,7 @@ function XhrResourceLoader () {
 				xhr = xhr.onload = xhr.onerror = null;
 			};
 			xhr.onerror = function () {
-				data[resourcePath] = '';
+				data[resourcePath] = false;
 				callback && callback(data[resourcePath]);
 				xhr = xhr.onload = xhr.onerror = null;
 			};
@@ -158,6 +159,7 @@ function ExtensionWrapper () {
 	this.storage = new StorageWrapper;
 	this.extensionId = '';
 	this.lastRegisteredTab;
+	this.messageCatalogPath;
 }
 ExtensionWrapper.create = function () {
 	if (window.chrome) {
@@ -308,7 +310,7 @@ function OperaExtensionWrapper () {
 	};
 	this.executeScript = function (tabId, options, callback) {
 		resourceLoader.get(options.file, function (data) {
-			callback && callback({source:data});
+			callback && callback({source:data || ''});
 		});
 	};
 	this.addRequestListener = function (handler) {
@@ -345,6 +347,7 @@ function OperaExtensionWrapper () {
 		lastRegisteredTab = undefined;
 		return result;
 	});
+	this.messageCatalogPath = 'messages.json';
 }
 
 /**
@@ -356,10 +359,12 @@ function dummyRequire () {
 	require('page-mod');
 	require('tabs');
 	require('widget');
+	require('api-utils/l10n/locale');
 }
 function FirefoxJetpackExtensionWrapper () {
 	var self = require('self');
 	var pagemod = require('page-mod');
+	var l10n = require('api-utils/l10n/locale');
 
 	var tabIds = {};
 	var lastRegisteredTab;
@@ -482,7 +487,7 @@ function FirefoxJetpackExtensionWrapper () {
 	};
 	this.executeScript = function (tabId, options, callback) {
 		resourceLoader.get(options.file, function (data) {
-			callback && callback({source:data});
+			callback && callback({source:data || ''});
 		});
 	};
 	this.addRequestListener = function (handler) {
@@ -498,6 +503,29 @@ function FirefoxJetpackExtensionWrapper () {
 		lastRegisteredTab = undefined;
 		return result;
 	});
+	this.messageCatalogPath = (function () {
+		var prefered = l10n.getPreferedLocales();
+		if (!prefered) {
+			return undefined;
+		}
+
+		prefered = prefered.filter(function (l) {
+			return /^([^-]{2})(-[^-]+)*$/.test(l);
+		});
+		if (!prefered || prefered.length == 0) {
+			return undefined;
+		}
+
+		var availables = JSON.parse(self.data.load('xlocale/locales.json')).map(function (l) {
+			return l.replace(/_/g, '-').toLowerCase();
+		});
+		var result = l10n.findClosestLocale(availables, prefered);
+		if (!result) {
+			return undefined;
+		}
+
+		return 'xlocale/' + result + '/messages.json';
+	})();
 }
 
 /*
@@ -530,6 +558,28 @@ function initStorage () {
 	].forEach(function (item) {
 		if (extension.storage.getItem(item[0]) === null) {
 			extension.storage.setItem(item[0], typeof item[1] == 'function' ? item[1]() : item[1]);
+		}
+	});
+}
+
+/*
+ * message catalog initializer
+ */
+
+function initMessageCatalog () {
+	if (typeof extension.messageCatalogPath != 'string') {
+		messageCatalog = false;
+		return;
+	}
+	resourceLoader.get(extension.messageCatalogPath, function (text) {
+		try {
+			messageCatalog = JSON.parse(text);
+			for (var i in messageCatalog) {
+				delete messageCatalog[i].description;
+			}
+		}
+		catch (e) {
+			messageCatalog = false;
 		}
 	});
 }
@@ -569,7 +619,8 @@ function handleRequest (req, tabId, res) {
 			exrc:extension.storage.getItem('exrc'),
 			shortcut:extension.storage.getItem('shortcut'),
 			shortcutCode:extension.storage.getItem('shortcutCode'),
-			fontFamily:extension.storage.getItem('fontFamily')
+			fontFamily:extension.storage.getItem('fontFamily'),
+			messageCatalog:messageCatalog
 		});
 		break;
 
@@ -617,7 +668,7 @@ function handleRequest (req, tabId, res) {
 	case 'bell':
 		if ('file' in req) {
 			resourceLoader.get(req.file, function (data) {
-				res({data:data});
+				res({data:data || ''});
 			});
 		}
 		else {
@@ -722,21 +773,6 @@ function getShortcutCode (shortcuts) {
  */
 
 (function (global) {
-	function dumpGlobal () {
-		var a = [];
-		for (var i in global) {
-			var s = i;
-			try {
-				s += ': ' + (global[i].toString().replace(/[\r\n\t]+/g, ' '));
-			}
-			catch (e) {
-				;
-			}
-			a.push(s);
-		}
-		console.log(a.join('\n'));
-	}
-
 	function handleLoad (e) {
 		window.removeEventListener && window.removeEventListener('load', arguments.callee, false);
 
@@ -744,10 +780,10 @@ function getShortcutCode (shortcuts) {
 		extension = ExtensionWrapper.create();
 
 		initStorage();
+		initMessageCatalog();
 		extension.addRequestListener(handleRequest);
 
 		console.log('wasavi background: running.');
-		//dumpGlobal();
 	}
 
 	window.addEventListener ?
