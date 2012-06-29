@@ -69,7 +69,7 @@ Insert を押下してください。言うまでもありませんが、終了�
 実装済みコマンド
 --------------------
 
-### 以下の形式の vi コマンド
+### 以下の形式の vi コマンド:
 
 * ([count] [operation])? [count] motion
 * [count] scroll-command
@@ -102,7 +102,7 @@ Insert を押下してください。言うまでもありませんが、終了�
 
 * :
 
-### ex コマンド:
+### 以下の ex コマンド:
 
 * abbreviate copy delete global join k map mark marks move
   options print put quit redo s & ~ set registers to

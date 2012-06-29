@@ -2,7 +2,7 @@
 <!--
 	options page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: options.html 135 2012-06-11 20:45:00Z akahuku $
+	@version $Id: options.html 148 2012-06-27 17:29:15Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -24,7 +24,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<link rel="SHORTCUT ICON" href="icon016.png">
-		<title>wasavi options</title>
+		<title>__MSG_option_title__</title>
 		<style>
 			body {
 				background-color:#fff;
@@ -87,6 +87,7 @@
 				width:640px;
 				font-size:80%;
 				color:#888;
+				white-space:pre-line;
 			}
 			hr {
 				visibility:hidden;
@@ -124,23 +125,15 @@
 	<body>
 		<h1>
 			<div class="credit"><a href="http://appsweets.net/"><img src="appsweets.png">appsweets.net</a></div>
-			<img src="icon048.png">wasavi options
+			<img src="icon048.png"><span>__MSG_option_title__</span>
 		</h1>
-		<h2>
-			exrc
-		</h2>
+		<h2>__MSG_option_exrc_head__</h2>
 		<div class="opt-unit">
 			<textarea id="exrc"></textarea>
-			<div class="tips">
-				The contents of this text box are the initialization commands for wasavi.
-				There commands will be executed for every starting of wasavi editor.
-				You can write any ex commands you like.
-			</div>
+			<div class="tips">__MSG_option_exrc_desc__</div>
 		</div>
 		<hr>
-		<h2>
-			target elements
-		</h2>
+		<h2>__MSG_option_target_elements_head__</h2>
 		<div class="opt-unit">
 			<label><input type="checkbox" id="enableTextArea">textarea</label>
 			<label><input type="checkbox" id="enableText"    >input[type=text]</label>
@@ -152,38 +145,20 @@
 			<label><input type="checkbox" id="enableNumber"  >input[type=number]</label>
 		</div>
 		<hr>
-		<h2>
-			shortcut key
-		</h2>
+		<h2>__MSG_option_shortcut_key_head__</h2>
 		<div class="opt-unit">
 			<label><input type="text" id="shortcut"></label>
-			<div class="tips">
-				<ul>
-					<li>Shortcut format is &lt;(<i>modifier</i>-)*<i>key</i>&gt;,...
-					<br>For example, &lt;c-enter&gt;, &lt;insert&gt; means
-					"If ctrl+enter or insert is pressed, then invoke wasavi."</li>
-					<li>Following keys can be used as shortcut: 
-					backspace, bs, tab, enter, return, ret, pageup, pagedown, 
-					end, home, left, up, right, down, insert, ins, delete, del, 
-					f1 to f12, a to z, and 0 to 9.</li>
-					<li> Following keys can be used as modifier:
-					s (means SHIFT), c (means CTRL).</li>
-					<li>Leaving the text field empty, default shortcut 
-					&lt;c-enter&gt;, &lt;insert&gt; will be used.</li>
-				</ul>
-			</div>
+			<div class="tips">__MSG_option_target_elements_desc__</div>
 		</div>
 		<hr>
-		<h2>
-			font family
-		</h2>
+		<h2>__MSG_option_font_family_head__</h2>
 		<div class="opt-unit">
 			<label><input type="text" id="font-family"></label>
 		</div>
 		<div class="bottom">
 		</div>
 		<div class="opt-unit2">
-			<button id="save">Save</button>
+			<button id="save">__MSG_option_save__</button>
 			<span id="save-result"></span>
 		</div>
 	</body>

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 147 2012-06-26 17:15:19Z akahuku $
+ * @version $Id: extension_wrapper.js 148 2012-06-27 17:29:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,7 +38,7 @@
 
 	var extensionId =
 		window.chrome ? chrome.extension.getURL('').split('/')[2] :
-		window.opera  ? 'wuid-4f897a84-0ecb-0471-0249-720a1e60a25b' :
+		window.opera  ? widget.preferences['widget-id'] :
 		IS_FX_JETPACK ? 'jid1-bmmwunrx3u5hqq@jetpack' :
 		'';
 	var extensionHostname =

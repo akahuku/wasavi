@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 147 2012-06-26 17:15:19Z akahuku $
+ * @version $Id: wasavi.js 149 2012-06-29 10:20:59Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -82,8 +82,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.3.' + (/\d+/.exec('$Revision: 147 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 147 2012-06-26 17:15:19Z akahuku $';
+	/*const*/var VERSION = '0.3.' + (/\d+/.exec('$Revision: 149 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 149 2012-06-29 10:20:59Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -142,24 +142,24 @@
 		'U+0036': 30, // ^^
 		'U+00BB': 31  // ^_
 	};
-	/*const*/var LATIN1_PROPS = {
-		0x0000:'Cc', 0x0001:'Cc', 0x0002:'Cc', 0x0003:'Cc', 0x0004:'Cc', 0x0005:'Cc', 0x0006:'Cc', 0x0007:'Cc',
-		0x0008:'Cc', 0x0009:'Zs', 0x000A:'Cc', 0x000B:'Cc', 0x000C:'Cc', 0x000D:'Cc', 0x000E:'Cc', 0x000F:'Cc',
-		0x0010:'Cc', 0x0011:'Cc', 0x0012:'Cc', 0x0013:'Cc', 0x0014:'Cc', 0x0015:'Cc', 0x0016:'Cc', 0x0017:'Cc',
-		0x0018:'Cc', 0x0019:'Cc', 0x001A:'Cc', 0x001B:'Cc', 0x001C:'Cc', 0x001D:'Cc', 0x001E:'Cc', 0x001F:'Cc',
-		0x0020:'Zs', 0x0021:'Po', 0x0022:'Po', 0x0023:'Po', 0x0024:'Sc', 0x0025:'Po', 0x0026:'Po', 0x0027:'Po',
-		0x0028:'Ps', 0x0029:'Pe', 0x002A:'Po', 0x002B:'Sm', 0x002C:'Po', 0x002D:'Pd', 0x002E:'Po', 0x002F:'Po',
-		0x0030:'Ld', 0x0031:'Ld', 0x0032:'Ld', 0x0033:'Ld', 0x0034:'Ld', 0x0035:'Ld', 0x0036:'Ld', 0x0037:'Ld',
-		0x0038:'Ld', 0x0039:'Ld', 0x003A:'Po', 0x003B:'Po', 0x003C:'Sm', 0x003D:'Sm', 0x003E:'Sm', 0x003F:'Po',
-		0x0040:'Po', 0x0041:'Lu', 0x0042:'Lu', 0x0043:'Lu', 0x0044:'Lu', 0x0045:'Lu', 0x0046:'Lu', 0x0047:'Lu',
-		0x0048:'Lu', 0x0049:'Lu', 0x004A:'Lu', 0x004B:'Lu', 0x004C:'Lu', 0x004D:'Lu', 0x004E:'Lu', 0x004F:'Lu',
-		0x0050:'Lu', 0x0051:'Lu', 0x0052:'Lu', 0x0053:'Lu', 0x0054:'Lu', 0x0055:'Lu', 0x0056:'Lu', 0x0057:'Lu',
-		0x0058:'Lu', 0x0059:'Lu', 0x005A:'Lu', 0x005B:'Ps', 0x005C:'Po', 0x005D:'Pe', 0x005E:'Sk', 0x005F:'Pc',
-		0x0060:'Sk', 0x0061:'Ll', 0x0062:'Ll', 0x0063:'Ll', 0x0064:'Ll', 0x0065:'Ll', 0x0066:'Ll', 0x0067:'Ll',
-		0x0068:'Ll', 0x0069:'Ll', 0x006A:'Ll', 0x006B:'Ll', 0x006C:'Ll', 0x006D:'Ll', 0x006E:'Ll', 0x006F:'Ll',
-		0x0070:'Ll', 0x0071:'Ll', 0x0072:'Ll', 0x0073:'Ll', 0x0074:'Ll', 0x0075:'Ll', 0x0076:'Ll', 0x0077:'Ll',
-		0x0078:'Ll', 0x0079:'Ll', 0x007A:'Ll', 0x007B:'Ps', 0x007C:'Sm', 0x007D:'Pe', 0x007E:'Sm', 0x007F:'Cc'
-	};
+	/*const*/var LATIN1_PROPS = [
+		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
+		'Cc', 'Zs', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
+		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
+		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
+		'Zs', 'Po', 'Po', 'Po', 'Sc', 'Po', 'Po', 'Po',
+		'Ps', 'Pe', 'Po', 'Sm', 'Po', 'Pd', 'Po', 'Po',
+		'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld',
+		'Ld', 'Ld', 'Po', 'Po', 'Sm', 'Sm', 'Sm', 'Po',
+		'Po', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
+		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
+		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
+		'Lu', 'Lu', 'Lu', 'Ps', 'Po', 'Pe', 'Sk', 'Pc',
+		'Sk', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
+		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
+		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
+		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'
+	];
 	/*const*/var EXFLAGS = {
 		addr2All: 4,
 		addr2None: 8,
@@ -169,8 +169,10 @@
 		clearFlag: 128,
 		newScreen: 256,
 		roundMax: 512,
-		updateJump: 1024,
+		updateJump: 1024
 	};
+	/*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
+	/*const*/var LINE_NUMBER_MAX_WIDTH = 6;
 
 	/*
 	 * classes
@@ -1002,11 +1004,28 @@
 			this.lostFocus = function () {};
 			this.dispose = function () {};
 		}
+		function getLineNumberWidth () {
+			return Math.min(6, (editor.rowLength + '').length);
+		}
+		function getPaddingLeft (lineNumberWidth) {
+			lineNumberWidth || (lineNumberWidth = getLineNumberWidth());
+			if (!config.vars.number) return '0';
+			return (LINE_NUMBER_MAX_WIDTH + charWidth * (lineNumberWidth + 1)) + 'px';
+		}
 		function syncPosition () {
 			fixPosition();
+
 			var caretdiv = $('wasavi_multiline_scaler');
+			var lineNumberWidth = getLineNumberWidth();
+			var newClass = config.vars.number ? ('n n' + lineNumberWidth) : '';
+
+			if (editor.elm.className != newClass) {
+				editor.elm.className = newClass;
+			}
+
 			var n = editor.selectionStart;
 			caretdiv.textContent = editor.rows(n);
+			caretdiv.style.paddingLeft = getPaddingLeft(lineNumberWidth);
 
 			var eb = editor.rowNodes(0).getBoundingClientRect();
 			var rb = editor.rowNodes(n.row).getBoundingClientRect();
@@ -1059,23 +1078,12 @@
 
 		function getCommandCursorCoord () {
 			var div = $('wasavi_multiline_scaler');
-			if (commandCursorOffsetTop === false && commandCursorOffsetLeft === false) {
-				var s = document.defaultView.getComputedStyle(div, '');
-				commandCursorOffsetLeft =
-					parseInt(s.borderLeftWidth, 10) + parseInt(s.paddingLeft, 10);
-				commandCursorOffsetTop =
-					parseInt(s.borderTopWidth, 10) + parseInt(s.paddingTop, 10);
-			}
-
 			var caret = $('wasavi_caret');
 			var currentRow = editor.rowNodes(editor.selectionStartRow);
+			var s = document.defaultView.getComputedStyle(div, '');
 			var result2 = {
-				left:currentRow.offsetLeft
-					+ caret.offsetLeft
-					- commandCursorOffsetLeft,
-				top:currentRow.offsetTop
-					+ caret.offsetTop
-					- commandCursorOffsetTop
+				left:currentRow.offsetLeft + caret.offsetLeft - parseInt(s.paddingLeft, 10),
+				top:currentRow.offsetTop + caret.offsetTop - parseInt(s.paddingTop, 10)
 			};
 			result2.right = result2.left + caret.offsetWidth;
 			result2.bottom = result2.top + caret.offsetHeight;
@@ -4240,10 +4248,8 @@ flag23_loop:
 					return catalog[messageId].message;
 				}
 			}
-			else {
-				if (extensionChannel) {
-					return extensionChannel.getMessage(getId(messageId)) || messageId;
-				}
+			else if (extensionChannel) {
+				return extensionChannel.getMessage(getId(messageId)) || messageId;
 			}
 			return messageId;
 		};
@@ -4835,7 +4841,6 @@ flag23_loop:
 
 		// container
 		var cnt = $(CONTAINER_ID);
-		console.log('html: ' + document.documentElement.innerHTML);
 		if (!cnt) throw new Error('wasavi container not found');
 
 		//
@@ -4888,7 +4893,8 @@ flag23_loop:
 			'  background:#fff url(' + otm + ') left top repeat-y;',
 			'  background-origin:content-box;',
 			'  overflow-x:hidden;',
-			'  overflow-y:scroll',
+			'  overflow-y:scroll;',
+			'  counter-reset:n;',
 			'}',
 			'#wasavi_multiline_scaler {',
 			'  position:fixed;',
@@ -4899,8 +4905,8 @@ flag23_loop:
 			fontStyle,
 			'  text-decoration:none;',
 			'  text-shadow:none;',
-			'  right:8px;',
-			'  bottom:8px;',
+			'  left:0px;',
+			'  bottom:0px;',
 			'  white-space:pre-wrap;',
 			'  overflow-x:auto;',
 			'  overflow-y:scroll;',
@@ -4955,6 +4961,35 @@ flag23_loop:
 			'  color:#ffffee;',
 			'  background-color:#ffffee;',
 			'}',
+			'#wasavi_editor.n > div:before {',
+			'  display:block;',
+			'  float:left;',
+			'  margin:0;',
+			'  padding:0 ' + charWidth + 'px 0 0;',
+			'  text-align:right;',
+			'  color:#c00;',
+			'  background-color:#fff;',
+			fontStyle,
+			'  counter-increment:n;',
+			'  content:counter(n);',
+			'}',
+			(function () {
+				var result = [];
+				for (var i = 1; i <= LINE_NUMBER_MAX_WIDTH; i++) {
+					result.push(
+						'#wasavi_editor.n' + i + ' > div:before {' +
+						'min-width:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * i) + 'px;' +
+						'margin-left:-' + (LINE_NUMBER_MARGIN_LEFT + charWidth * (i + 1)) + 'px;' +
+						'}'
+					);
+					result.push(
+						'#wasavi_editor.n' + i + ' > div {' +
+						'margin-left:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * (i + 1)) + 'px;' +
+						'}'
+					);
+				}
+				return result.join('\n');
+			})(),
 			'#wasavi_footer {',
 			'  color:#fff;',
 			window.opera  ? '  background:-o-'      + modeLineGradient : '',
@@ -5061,6 +5096,7 @@ flag23_loop:
 			'  display:none;',
 			'  margin:0;',
 			'  padding:0;',
+			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'  border:none;',
 			'  background-color:transparent;',
 			fontStyle,
@@ -5069,6 +5105,7 @@ flag23_loop:
 			'  overflow-y:hidden;',
 			'  resize:none;',
 			'  outline:none;',
+			'  background-color:rgba(192, 0, 0, 0.5);',
 			'}',
 			'#wasavi_cover {',
 			'  position:fixed;',
@@ -5093,8 +5130,7 @@ flag23_loop:
 		focusHolder.id = 'wasavi_focus_holder';
 
 		// editor
-		var editorElement = $(EDITOR_CORE_ID);
-		var editor = new Editor(editorElement);
+		var editor = new Editor($(EDITOR_CORE_ID));
 
 		// caret position scaler
 		var caretdiv = $('wasavi_multiline_scaler');
@@ -5484,6 +5520,19 @@ flag23_loop:
 			setInputMode('command');
 		}
 	}
+	function getCursorPositionString (t) {
+		if (t.elm.scrollHeight <= t.elm.clientHeight) {
+			return _('All');
+		}
+		if (t.elm.scrollTop == 0) {
+			return _('Top');
+		}
+		var viewHeight = t.elm.scrollHeight - t.elm.clientHeight;
+		if (t.elm.scrollTop + t.elm.clientHeight >= t.elm.scrollHeight) {
+			return _('Bot');
+		}
+		return ('  ' + Math.floor(t.elm.scrollTop / viewHeight * 100.)).substr(-3) + '%';
+	}
 	function showPrefixInput (t, message) {
 		if (state != 'normal') return;
 		var line = $('wasavi_footer_modeline');
@@ -5498,7 +5547,7 @@ flag23_loop:
 			// 000000,0000xxx000%
 			(('     ' + (t.selectionStartRow + 1)).substr(-6) +
 			 ',' + ((getLogicalColumn(t) + 1) + '   ').substr(0, 4) +
-			 '   ' + (t.elm.scrollHeight <= t.elm.clientHeight ? 'All' : ('  ' + Math.floor((t.selectionStartRow + 1) / t.rowLength * 100.)).substr(-3) + '%'));
+			 '   ' + getCursorPositionString(t));
 	}
 	function showMessage (message, emphasis, pseudoCursor, volatile_) {
 		if (state != 'normal' && state != 'console-wait') return;
@@ -8617,7 +8666,7 @@ flag23_loop:
 					paste(t, 1, {
 						isForward:true,
 						isForceLineOrient:true,
-						content:content,
+						content:content
 					});
 				}
 
@@ -8868,7 +8917,7 @@ flag23_loop:
 			new VariableItem('list', 'b', false),         // not used
 			new VariableItem('magic', 'b', true),         // O
 			new VariableItem('mesg', 'b', true),          // not used
-			new VariableItem('number', 'b', false),
+			new VariableItem('number', 'b', false),       // O
 			new VariableItem('paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
 				textBlockRegex.setParagraphMacros(v);
 				return v;

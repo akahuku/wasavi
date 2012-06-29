@@ -1,6 +1,6 @@
 {
   "name": "wasavi",
-  "version": "0.1.0",
+  "version": "0.3.147",
   "description": "__MSG_wasavi_desc__",
   "default_locale": "en_US",
   "icons": {
@@ -35,6 +35,6 @@
     }
   ],
   "options_page": "options.html",
-  "homepage_url":"http://appsweets.net/",
+  "homepage_url": "http://appsweets.net/",
   "update_url":"http://appsweets.net/wasavi/queryversion.php?chrome-xml"
 }

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 147 2012-06-26 17:15:19Z akahuku $
+ * @version $Id: background.js 148 2012-06-27 17:29:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -274,6 +274,8 @@ function OperaExtensionWrapper () {
 		});
 	};
 
+	widget.preferences['widget-id'] = location.href.match(/^widget:\/\/([^\/]+)/)[1];
+
 	this.constructor = ExtensionWrapper;
 
 	this.registerTabId = function (tabId) {
@@ -358,7 +360,7 @@ function dummyRequire () {
 	require('self');
 	require('page-mod');
 	require('tabs');
-	require('widget');
+	require('simple-prefs');
 	require('api-utils/l10n/locale');
 }
 function FirefoxJetpackExtensionWrapper () {
@@ -453,13 +455,8 @@ function FirefoxJetpackExtensionWrapper () {
 		}
 	});
 
-	require('widget').Widget({
-		id:'wasavi-widget',
-		label:'wasavi configuration',
-		contentURL:self.data.url('icon016.png'),
-		onClick:function () {
-			require('tabs').open(self.data.url('options.html'));
-		}
+	require('simple-prefs').on('optionsOpener', function () {
+		require('tabs').open(self.data.url('options.html'));
 	});
 
 	this.constructor = ExtensionWrapper;

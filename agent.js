@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 142 2012-06-23 19:12:10Z akahuku $
+ * @version $Id: agent.js 148 2012-06-27 17:29:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -55,6 +55,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var shortcut;
 	var shortcutTester;
 	var fontFamily;
+	var messageCatalog;
 
 	var targetElement;
 	var wasaviFrame;
@@ -235,7 +236,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	 * ----------------
 	 */
 
-	function handleOptionsPageLoaded () {
+	function handleOptionsPageLoaded (req) {
 		for (var i in enableList) {
 			var el = document.getElementById(i);
 			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
@@ -262,6 +263,46 @@ typeof WasaviExtensionWrapper != 'undefined'
 		if (el) {
 			el.addEventListener('click', handleOptionsSave, false);
 		}
+
+		function replaceMessage (messageId, callback) {
+			var fallbackMessage = '(translated message not found)';
+			var message;
+			if (req.messageCatalog) {
+				message = messageId in req.messageCatalog ?
+					req.messageCatalog[messageId].message : fallbackMessage;
+			}
+			else {
+				message = extension.getMessage(messageId) || fallbackMessage;
+			}
+			var nodes = document.evaluate(
+				'//*[.="__MSG_' + messageId + '__"]', document.documentElement, null,
+				XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+
+			for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
+				var node = nodes.snapshotItem(i);
+				if (callback) {
+					callback(node, message);
+				}
+				else {
+					node.textContent = message;
+				}
+			}
+		}
+		replaceMessage('option_title');
+		replaceMessage('option_exrc_head');
+		replaceMessage('option_target_elements_head');
+		replaceMessage('option_shortcut_key_head');
+		replaceMessage('option_font_family_head');
+		replaceMessage('option_exrc_desc');
+		replaceMessage('option_target_elements_desc', function (node, message) {
+			node.textContent = '';
+			var ul = node.appendChild(document.createElement('ul'));
+			message.replace(/^\s*\*\s*/, '').split(/\n\*\s*/).map(function (line) {
+				var li = ul.appendChild(document.createElement('li'));
+				li.textContent = line;
+			});
+		});
+		replaceMessage('option_save');
 	}
 
 	/**
@@ -335,9 +376,9 @@ typeof WasaviExtensionWrapper != 'undefined'
 	 * ----------------
 	 */
 
-	function handleAgentInitialized () {
+	function handleAgentInitialized (req) {
 		if (window.location.href == WasaviExtensionWrapper.optionsPageUrl) {
-			handleOptionsPageLoaded();
+			handleOptionsPageLoaded(req);
 		}
 		//else {
 			window.addEventListener('keydown', handleKeydown, true);
@@ -370,12 +411,12 @@ typeof WasaviExtensionWrapper != 'undefined'
 				WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
 			}
 			if (document.readyState == 'interactive' || document.readyState == 'complete') {
-				handleAgentInitialized();
+				handleAgentInitialized(req);
 			}
 			else {
 				document.addEventListener('DOMContentLoaded', function () {
 					document.removeEventListener('DOMContentLoaded', arguments.callee, false);
-					handleAgentInitialized()
+					handleAgentInitialized(req)
 				}, false);
 			}
 			break;

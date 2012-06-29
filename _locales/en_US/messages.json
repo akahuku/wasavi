@@ -1,9 +1,42 @@
 {
-	"locale": {
+	"wasavi_locale": {
 		"message": "english (USA)"
 	},
 	"wasavi_desc": {
-		"message": "vi editor for any web page."
+		"message": "vi editor for any web page.",
+		"description": "vi editor for any web page."
+	},
+	"option_title": {
+		"message": "wasavi options",
+		"description": "wasavi options"
+	},
+	"option_exrc_desc": {
+		"message": "The contents of this text box are the initialization commands for wasavi. There commands will be executed for every starting of wasavi editor. You can write any ex commands you like.",
+		"description": "The contents of this text box are the initialization commands for wasavi. There commands will be executed for every starting of wasavi editor. You can write any ex commands you like."
+	},
+	"option_target_elements_desc": {
+		"message": "* Shortcut format is <(modifier-)*key>,...\nFor example, <c-enter>, <insert> means \"If ctrl+enter or insert is pressed, then invoke wasavi.\"\n* Following keys can be used as shortcut: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (means SHIFT), c (means CTRL).\n* Leaving the text field empty, default shortcut <c-enter>, <insert> will be used.",
+		"description": "* Shortcut format is <(modifier-)*key>,...\nFor example, <c-enter>, <insert> means \"If ctrl+enter or insert is pressed, then invoke wasavi.\"\n* Following keys can be used as shortcut: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (means SHIFT), c (means CTRL).\n* Leaving the text field empty, default shortcut <c-enter>, <insert> will be used."
+	},
+	"option_save": {
+		"message": "Save",
+		"description": "Save"
+	},
+	"option_exrc_head": {
+		"message": "exrc",
+		"description": "exrc"
+	},
+	"option_target_elements_head": {
+		"message": "target elements",
+		"description": "target elements"
+	},
+	"option_shortcut_key_head": {
+		"message": "shortcut key",
+		"description": "shortcut key"
+	},
+	"option_font_family_head": {
+		"message": "font family",
+		"description": "font family"
 	},
 	"_plural_rule@function": {
 		"message": "n==1?'one':''"
@@ -163,6 +196,18 @@
 	"readonly_": {
 		"message": "[readonly] ",
 		"description": "[readonly] "
+	},
+	"all": {
+		"message": "All",
+		"description": "All"
+	},
+	"top": {
+		"message": "Top",
+		"description": "Top"
+	},
+	"bot": {
+		"message": "Bot",
+		"description": "Bot"
 	},
 	"warning_changing_readonly_element": {
 		"message": "Warning: changing readonly element.",
