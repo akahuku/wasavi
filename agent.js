@@ -1,8 +1,8 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
-// @exclude http://appsweets.net/wasavi/wasavi_frame.html
-// @exclude https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html
+// @exclude http://wasavi.appsweets.net/
+// @exclude https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
 /**
@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 148 2012-06-27 17:29:15Z akahuku $
+ * @version $Id: agent.js 154 2012-07-16 10:26:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -30,8 +30,7 @@
  */
 
 typeof WasaviExtensionWrapper != 'undefined'
-&& window.location.href != WasaviExtensionWrapper.framePageUrl.external
-&& window.location.href != WasaviExtensionWrapper.framePageUrl.externalSecure
+&& !WasaviExtensionWrapper.framePageUrl.isExternal
 && (function (global) {
 
 	/*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
@@ -302,6 +301,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 				li.textContent = line;
 			});
 		});
+		replaceMessage('option_preferred_storage_head');
 		replaceMessage('option_save');
 	}
 
@@ -338,7 +338,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 		var el = document.getElementById('font-family');
 		if (el && el.nodeName == 'INPUT') {
-			items.push({key:'font-family', value:el.value});
+			items.push({key:'fontFamily', value:el.value});
 		}
 
 		items.length && extension.postMessage(
@@ -378,16 +378,17 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 	function handleAgentInitialized (req) {
 		if (window.location.href == WasaviExtensionWrapper.optionsPageUrl) {
+			WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
 			handleOptionsPageLoaded(req);
 		}
-		//else {
-			window.addEventListener('keydown', handleKeydown, true);
-		//}
 
-		var isTopFrame;
-		try { isTopFrame = !window.frameElement; } catch (e) {} 
-		isTopFrame && document.querySelectorAll('textarea').length && console.log(
-			'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
+		window.addEventListener('keydown', handleKeydown, true);
+
+		if (WasaviExtensionWrapper.isTopFrame) {
+			document.querySelectorAll('textarea').length
+			&& console.log(
+				'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
+		}
 	}
 
 	/**
@@ -489,6 +490,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 		}
 	});
 	extension.sendRequest({type:'init-agent'});
+
 })(this);
 
 // vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 148 2012-06-27 17:29:15Z akahuku $
+ * @version $Id: extension_wrapper.js 153 2012-07-12 06:19:22Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -68,6 +68,7 @@
 
 	function ExtensionWrapper () {}
 	ExtensionWrapper.prototype = {
+		clipboardData: '',
 		setMessageListener: function (handler) {},
 		sendRequest: function (data, callback) {},
 		postMessage: function (data, callback) {
@@ -80,7 +81,19 @@
 		connect: function () {
 			this.sendRequest({type:'init'});
 		},
-		getMessage: function (messageId) {}
+		getMessage: function (messageId) {},
+		setClipboard: function (data) {
+			this.postMessage({type:'set-clipboard', data:data});
+		},
+		getClipboard: function (callback) {
+			var result = '';
+			var self = this;
+			this.postMessage({type:'get-clipboard'}, function (req) {
+				result = self.clipboardData = (req.data || '').replace(/\r\n/g, '\n');
+				callback && callback(result);
+			});
+			return result;
+		}
 	};
 
 	ExtensionWrapper.create = function () {
@@ -109,10 +122,27 @@
 	ExtensionWrapper.framePageUrl = {
 		internalAvailable:false,
 		internal:      framePageUrl,
-		external:      'http://appsweets.net/wasavi/wasavi_frame.html',
-		externalSecure:'https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html'
+		external:      'http://wasavi.appsweets.net/?v=0.4',
+		externalSecure:'https://ss1.xrea.com/wasavi.appsweets.net/?v=0.4',
+		eq: function (u1, u2) {
+			return u1.replace(/\?.*/, '') == u2.replace(/\?.*/, '');
+		},
+		get isInternal () {
+			return this.eq(window.location.href, this.internal);
+		},
+		get isExternal () {
+			return this.eq(window.location.href, this.external)
+			    || this.eq(window.location.href, this.externalSecure);
+		},
+		get isAny () {
+			return this.isInternal || this.isExternal;
+		}
 	};
-
+	ExtensionWrapper.isTopFrame = (function () {
+		var result;
+		try { result = !!!window.frameElement; } catch (e) {} 
+		return result;
+	})();
 
 
 
@@ -264,6 +294,8 @@
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
 
+	ExtensionWrapper.framePageUrl.isExternal &&
+		document.documentElement.setAttribute('data-wasavi-present', 1);
 	global.WasaviExtensionWrapper = ExtensionWrapper;
 
 })(this);

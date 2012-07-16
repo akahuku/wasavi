@@ -2,7 +2,7 @@
 <!--
 	background page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: background.html 135 2012-06-11 20:45:00Z akahuku $
+	@version $Id: background.html 153 2012-07-12 06:19:22Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -23,7 +23,11 @@
 <html>
 	<head>
 		<title>wasavi Background</title>
+		<script src="libs/jsOAuth/jsOAuth.js"></script>
 		<script src="background.js"></script>
 	</head>
+	<body>
+		<textarea id="clipboard-buffer"></textarea>
+	</body>
 </html>
 <!-- vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=html : -->

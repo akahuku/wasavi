@@ -2,7 +2,7 @@
 <!--
 	options page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: options.html 148 2012-06-27 17:29:15Z akahuku $
+	@version $Id: options.html 154 2012-07-16 10:26:45Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -110,6 +110,9 @@
 			span#save-result {
 				color:#dd0000;
 			}
+			input[type="radio"][disabled] + span {
+				color:#999;
+			}
 		</style>
 		<script>
 			if (window.chrome) {
@@ -154,6 +157,13 @@
 		<h2>__MSG_option_font_family_head__</h2>
 		<div class="opt-unit">
 			<label><input type="text" id="font-family"></label>
+		</div>
+		<hr>
+		<h2>__MSG_option_preferred_storage_head__</h2>
+		<div class="opt-unit">
+			<label><input type="radio" name="pos" id="pos-dropbox" checked="checked"><span>Dropbox</span></label>
+			<label><input type="radio" name="pos" id="pos-gdrive" disabled="disabled"><span>Google Drive</span></label>
+			<label><input type="radio" name="pos" id="pos-skydrive" disabled="disabled"><span>Microsoft SkyDrive</span></label>
 		</div>
 		<div class="bottom">
 		</div>

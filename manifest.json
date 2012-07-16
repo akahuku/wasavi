@@ -8,7 +8,10 @@
      "48": "icon048.png",
     "128": "icon128.png"
   },
-  "permissions": ["tabs", "http://*/*"],
+  "permissions": [
+    "tabs", "clipboardRead", "clipboardWrite",
+    "https://*.dropbox.com/*"
+  ],
   "background_page": "background.html",
   "content_scripts": [
     {
@@ -17,8 +20,8 @@
         "https://*/*"
       ],
       "exclude_matches": [
-        "http://appsweets.net/wasavi/wasavi_frame.html",
-        "https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html"
+        "http://wasavi.appsweets.net/",
+        "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
       "js": ["extension_wrapper.js", "agent.js"],
       "run_at": "document_start",
@@ -26,8 +29,8 @@
     },
     {
       "matches": [
-        "http://appsweets.net/wasavi/wasavi_frame.html",
-        "https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html"
+        "http://wasavi.appsweets.net/",
+        "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
       "js": ["extension_wrapper.js", "wasavi.js"],
       "run_at": "document_start",

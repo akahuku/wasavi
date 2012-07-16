@@ -1,6 +1,6 @@
 // ==UserScript==
-// @include http://appsweets.net/wasavi/wasavi_frame.html
-// @include https://ss1.xrea.com/appsweets.net/wasavi/wasavi_frame.html
+// @include http://wasavi.appsweets.net/
+// @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
 /**
@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 149 2012-06-29 10:20:59Z akahuku $
+ * @version $Id: wasavi.js 154 2012-07-16 10:26:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -41,35 +41,38 @@
 
 	if (global.WasaviExtensionWrapper
 	&&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
-	&&  (window.location.href == WasaviExtensionWrapper.framePageUrl.internal
-	  || window.location.href == WasaviExtensionWrapper.framePageUrl.external
-	  || window.location.href == WasaviExtensionWrapper.framePageUrl.externalSecure)
-	) {
+	&&  WasaviExtensionWrapper.framePageUrl.isAny) {
 		extensionChannel = WasaviExtensionWrapper.create();
 		extensionChannel.setMessageListener(function (req) {
 			if (!req) return;
+			function run (callback) {
+				if (document.readyState == 'interactive'
+				||  document.readyState == 'complete') {
+					document.body.innerHTML = req.wasaviFrame;
+					callback();
+				}
+				else {
+					document.addEventListener('DOMContentLoaded', function (e) {
+						document.removeEventListener(e.type, arguments.callee, false);
+						document.body.innerHTML = req.wasaviFrame;
+						callback();
+					}, false);
+				}
+			}
 			switch (req.type) {
 			case 'init-response':
 				exrc = req.exrc;
 				fontFamily = req.fontFamily;
 				l10n = new L10n(req.messageCatalog);
+				document.documentElement.setAttribute(
+					'lang', l10n.getMessage('wasavi_locale_code'));
+				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
 				break;
 			case 'run':
-				var x = req;
-				x.dataset = {};
-				x.getAttribute = function (name) {return this.dataset[name];};
-				x.setAttribute = function (name, value) {this.dataset[name] = value;};
-
-				if (document.readyState == 'interactive'
-				||  document.readyState == 'complete') {
-					install(x);
-				}
-				else {
-					document.addEventListener('DOMContentLoaded', function () {
-						document.removeEventListener('DOMContentLoaded', arguments.callee, false);
-						install(x)
-					}, false);
-				}
+				req.dataset = {};
+				req.getAttribute = function (name) {return this.dataset[name];};
+				req.setAttribute = function (name, value) {this.dataset[name] = value;};
+				run(function() {install(req);});
 			}
 		});
 		extensionChannel.connect();
@@ -82,8 +85,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.3.' + (/\d+/.exec('$Revision: 149 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 149 2012-06-29 10:20:59Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 154 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 154 2012-07-16 10:26:45Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -161,15 +164,16 @@
 		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'
 	];
 	/*const*/var EXFLAGS = {
-		addr2All: 4,
-		addr2None: 8,
-		addrZero: 16,
-		addrZeroDef: 32,
-		printDefault: 64,
-		clearFlag: 128,
-		newScreen: 256,
-		roundMax: 512,
-		updateJump: 1024
+		addr2All: 1<<2,
+		addr2None: 1<<3,
+		addrZero: 1<<4,
+		addrZeroDef: 1<<5,
+		printDefault: 1<<6,
+		clearFlag: 1<<7,
+		newScreen: 1<<8,
+		roundMax: 1<<9,
+		updateJump: 1<<10,
+		multiAsync: 1<<11
 	};
 	/*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
 	/*const*/var LINE_NUMBER_MAX_WIDTH = 6;
@@ -258,6 +262,7 @@
 			}
 		}
 	};
+
 	/*constructor*/function Configurator (internals, abbrevs) {
 		var vars = {};
 		var names = {};
@@ -548,12 +553,15 @@
 					findItem(name).set(data, isLineOrient);
 					unnamed.set(data, isLineOrient);
 				}
-				else if (/^[2-9a-z]$/.test(name)) {
-					findItem(name).set(data, isLineOrient);
+				else if (/^[2-9a-z*]$/.test(name)) {
+					var item = findItem(name);
+					item.set(data, isLineOrient);
 					unnamed.set(data, isLineOrient);
+					name == '*' && extensionChannel && extensionChannel.setClipboard(item.data);
 				}
-				else if (/^[@.:*\/]$/.test(name) && !isInteractive) {
-					findItem(name).set(data, isLineOrient);
+				else if (/^[@.:\/]$/.test(name) && !isInteractive) {
+					var item = findItem(name);
+					item.set(data, isLineOrient);
 				}
 				else if (/^[A-Z]$/.test(name)) {
 					name = name.toLowerCase();
@@ -569,7 +577,9 @@
 			}
 			name = name.toLowerCase();
 			if (isReadable(name)) {
-				return findItem(name);
+				var item = findItem(name);
+				name == '*' && extensionChannel && item.set(extensionChannel.clipboardData, true);
+				return item;
 			}
 			return new RegisterItem();
 		}
@@ -1286,7 +1296,7 @@
 			dataset(targetElement, 'wasaviMarks', serialize());
 		}
 		function isValidName (name) {
-			return /^[a-zA-Z']$/.test(name);
+			return /^[a-z']$/.test(name);
 		}
 		function regalizeName (name) {
 			if (name == '`') {
@@ -1394,6 +1404,9 @@
 				save();
 			}
 		}
+		function clear () {
+			marks = {};
+		}
 		function dump () {
 			var a = [
 			//     mark  line   col  text
@@ -1420,6 +1433,7 @@
 		this.dump = dump;
 		this.save = save;
 		this.isValidName = isValidName;
+		this.clear = clear;
 		this.dispose = dispose;
 
 		restore(dataset(targetElement, 'wasaviMarks') || '');
@@ -2406,17 +2420,34 @@
 			printDefault: !!(flags & EXFLAGS.printDefault),
 			clearFlag:    !!(flags & EXFLAGS.clearFlag),
 			roundMax:     !!(flags & EXFLAGS.roundMax),
-			updateJump:   !!(flags & EXFLAGS.updateJump)
+			updateJump:   !!(flags & EXFLAGS.updateJump),
+			multiAsync:   !!(flags & EXFLAGS.multiAsync)
 		};
 	}
 	ExCommand.prototype = {
-		buildArgs: function (t, range, line, syntax) {
+		clone: function () {
+			return new ExCommand(
+				this.name,
+				this.shortName,
+				this.syntax,
+				JSON.parse(JSON.stringify(this.flags)),
+				this.handler
+			);
+		},
+		parseArgs: function (t, range, line, syntax) {
 			function argv_exp0 (s) {
 				result.argv.push(s);
 			}
 			function argv_exp3 (s) {
 				while ((s = s.replace(/^\s+/, '')) != '') {
 					var re = /(?:\u0016.|\S)*/.exec(s);
+					result.argv.push(re[0]);
+					s = s.substring(re[0].length);
+				}
+			}
+			function argv_fexp (s) {
+				while ((s = s.replace(/^\s+/, '')) != '') {
+					var re = /(?:\\(.)|\S)*/.exec(s);
 					result.argv.push(re[0]);
 					s = s.substring(re[0].length);
 				}
@@ -2554,10 +2585,12 @@ flag23_loop:
 					break;
 
 				case 'f':
-					/*not implemented*/
-					break;
+					argv_fexp(line);
+					needCheckRest = false;
+					break syntax_expansion_loop;
+
 				case 'l':
-					var dest = exParseRange(t, line, 1, true);
+					var dest = this.parseRange(t, line, 1, true);
 					if (typeof dest == 'string') {
 						return dest;
 					}
@@ -2575,7 +2608,6 @@ flag23_loop:
 					break;
 
 				case 'S':
-					/*not implemented*/
 					if (line != '') {
 						argv_exp1(line);
 						needCheckRest = false;
@@ -2624,10 +2656,211 @@ flag23_loop:
 
 			return result;
 		},
-		run: function (t, range, s, sups) {
-			var args = this.buildArgs(t, range, s);
+		parseRange: function (t, s, requiredCount, allowZeroAddress) {
+			var rows = [];
+			var ss = t.selectionStart;
+			var error = false;
+			var re;
+
+			if ((re = /^[ \t]*%/.exec(s))) {
+				rows.push(0, t.rowLength - 1);
+				s = s.substring(re[0].length);
+			}
+			else {
+				while (true) {
+					s = s.replace(/^[ \t]+/, '');
+
+					var found = false;
+					var regexSpecified = false;
+
+					if (s.charAt(0) == '.') {
+						rows.push(t.selectionStartRow);
+						s = s.substring(1);
+						found = true;
+					}
+					else if (s.charAt(0) == '$') {
+						rows.push(t.rowLength - 1);
+						s = s.substring(1);
+						isJumpBaseUpdateRequested = true;
+						found = true;
+					}
+					else if ((re = /^\d+/.exec(s))) {
+						var n = re[0] - 1;
+						if (n < 0) {
+							n = allowZeroAddress ? -1 : 0;
+						}
+						rows.push(n);
+						s = s.substring(re[0].length);
+						isJumpBaseUpdateRequested = true;
+						found = true;
+					}
+					else if ((re = /^'([a-z`'])/.exec(s))) {
+						var mark = marks.get(re[1]);
+						if (mark == undefined) {
+							error = true;
+							break;
+						}
+						else {
+							rows.push(mark.row);
+							s = s.substring(re[0].length);
+							isJumpBaseUpdateRequested = true;
+							found = true;
+						}
+					}
+					else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
+						var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
+						var regex = pattern == '' ? null : getFindRegex(pattern);
+						if (!regex) {
+							if (re[1] == '' && pattern == '') {
+								error = _('No previous search pattern.');
+							}
+							else {
+								error = _('Invalid regex pattern.');
+							}
+							break;
+						}
+						else {
+							regexSpecified = true;
+							lastRegexFindCommand.push({direction:1});
+							pattern != '' && lastRegexFindCommand.setPattern(pattern);
+
+							motionLineEnd('', t);
+							var result = motionFindByRegexForward(regex, t, 1);
+							if (result) {
+								rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+								s = s.substring(re[0].length);
+								isJumpBaseUpdateRequested = true;
+								found = true;
+							}
+							else {
+								error = _('Pattern not found: {0}', pattern);
+								break;
+							}
+						}
+					}
+					else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
+						var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
+						var regex = pattern == '' ? null : getFindRegex(pattern);
+						if (!regex) {
+							if (re[1] == '' && pattern == '') {
+								error = _('No previous search pattern.');
+							}
+							else {
+								error = _('Invalid regex pattern.');
+							}
+							break;
+						}
+						else {
+							regexSpecified = true;
+							lastRegexFindCommand.push({direction:-1});
+							pattern != '' && lastRegexFindCommand.setPattern(pattern);
+
+							motionLineStart('', t, true);
+							var result = motionFindByRegexBackward(regex, t, 1);
+							if (result) {
+								rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+								s = s.substring(re[0].length);
+								isJumpBaseUpdateRequested = true;
+								found = true;
+							}
+							else {
+								error = _('Pattern not found: {0}', pattern);
+								break;
+							}
+						}
+					}
+					else if ((re = /^[\+\-](\d*)/.exec(s))) {
+						var offset = re[1] == '' ?
+							(re[0].charAt(0) == '+' ? 1 : -1) :
+							parseInt(re[0], 10);
+						rows.push(t.selectionStartRow + offset);
+						s = s.substring(re[0].length);
+						found = true;
+					}
+
+					if (found) {
+						if ((re = /^\s*[\+\-](\d*)/.exec(s))) {
+							var offset = re[1] == '' ?
+								(re[0].charAt(0) == '+' ? 1 : -1) :
+								parseInt(re[0], 10);
+							rows[rows.length - 1] += offset;
+							if (regexSpecified) {
+								lastRegexFindCommand.verticalOffset = offset;
+							}
+							s = s.substring(re[0].length);
+						}
+
+						if (rows[rows.length - 1] < 0) {
+							rows[rows.length - 1] = allowZeroAddress ? -1 : 0;
+						}
+
+						s = s.replace(/^[ \t]+/, '');
+					}
+
+					if (s.charAt(0) == ',') {
+						s = s.substring(1);
+						!found && rows.push(t.selectionStartRow);
+					}
+					else if (s.charAt(0) == ';') {
+						if (rows[rows.length - 1] >= t.rowLength) {
+							error = _('Out of range.');
+							break;
+						}
+						t.setSelectionRange(new Position(rows[rows.length - 1], 0));
+						s = s.substring(1);
+						!found && rows.push(t.selectionStartRow);
+					}
+					else {
+						break;
+					}
+				}
+			}
+
+			rows.last = function (t, count, isGlobal) {
+				var result = [];
+				count = Math.min(count, 2);
+				if (count == 1) {
+					if (this.length >= 1) {
+						result = [this[this.length - 1]];
+					}
+					else {
+						result = [t.selectionStartRow];
+					}
+				}
+				else if (count == 2) {
+					if (this.length >= 2) {
+						result = [ this[this.length - 2], this[this.length - 1] ];
+					}
+					else if (this.length == 1) {
+						result = [ this[0], this[0] ];
+					}
+					else {
+						if (isGlobal) {
+							result = [0, t.rowLength - 1];
+						}
+						else {
+							result = [ t.selectionStartRow, t.selectionStartRow ];
+						}
+					}
+					if (result[1] < result[0]) {
+						return _('The second address is smaller than the first.');
+					}
+				}
+				result.specifiedAddresses = Math.min(this.length, 2);
+				return result;
+			};
+
+			t.setSelectionRange(ss);
+
+			return error || {
+				rows: requiredCount == undefined ? rows : rows.last(t, requiredCount),
+				rest: s
+			};
+		},
+		buildArgs: function (t, range, s, sups) {
+			var args = this.parseArgs(t, range, s);
 			if (typeof args == 'string') {
-				return {error:this.name + ': ' + args};
+				return this.name + ': ' + args;
 			}
 			if (sups instanceof Array) {
 				sups.push.apply(sups, args.argv);
@@ -2643,22 +2876,1072 @@ flag23_loop:
 				}
 				else {
 					if (args.range[i] >= t.rowLength) {
-						return {error:_('{0}: Out of range.', this.name)};
+						return _('{0}: Out of range.', this.name);
 					}
 				}
 			}
-
+			return args;
+		},
+		run: function (t, args) {
 			var result;
 			try {
-				result = this.handler.call(this, t, args);
+				result = this.handler(t, args);
 			}
 			catch (e) {
 				result = e.toString();
 			}
 			if (typeof result == 'string') {
-				return {error:this.name + ': ' + result};
+				return this.name + ': ' + result;
 			}
 			return {flags:args.flags, offset:args.flagoff};
+		},
+		toString: function () {
+			return '[ExCommand ' + this.name + ']';
+		}
+	};
+	ExCommand.defaultCommand = new ExCommand(
+		'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
+		function (t, a) {
+			ExCommand.printRow(t, a.range[0], a.range[1], a.flags);
+			t.setSelectionRange(t.getLineTopOffset2(new Position(a.range[1], 0)));
+			a.flags.hash = a.flags.list = a.flags.print = false;
+		}
+	);
+	ExCommand.global = function (t, a) {
+		var r = a.range;
+		var inverted = !!a.flags.force;
+		var pattern = a.argv[0];
+		var command = a.argv[1];
+
+		if (pattern == '') {
+			if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
+				return _('No previous search pattern.');
+			}
+		}
+		else {
+			lastRegexFindCommand.push({direction:1});
+			lastRegexFindCommand.setPattern(pattern);
+			registers.set('/', lastRegexFindCommand.pattern);
+		}
+		var patternString = pattern;
+		pattern = getFindRegex(pattern);
+
+		// initialize text
+		var textPreLength;
+		var text;
+		var rg = document.createRange();
+		rg.setStartBefore(t.rowNodes(0));
+		rg.setEndBefore(t.rowNodes(r[0]));
+		textPreLength = rg.toString().length;
+
+		rg.setStartBefore(t.rowNodes(r[0]));
+		rg.setEndAfter(t.rowNodes(r[1]));
+		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
+		rg.detach();
+		rg = null;
+
+		// pass 1
+		var re;
+		var items = [];
+		var prevOffset;
+		var prevRow;
+		var nullNewline = {length:0};
+		pattern.lastIndex = 0;
+		if (inverted) {
+			var rangeStartRow = t.indexOf(t.rowNodes(r[0]));
+			re = pattern.exec(text);
+			if (re) {
+				var pos = pattern.lastIndex - re[0].length;
+				var row, delta;
+				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
+				items.push(row - rangeStartRow);
+				prevOffset = pos;
+				prevRow = row;
+
+				while ((re = pattern.exec(text))) {
+					if (pattern.lastIndex == prevOffset) {
+						if (pattern.lastIndex < text.length) {
+							pattern.lastIndex++;
+							continue;
+						}
+						else {
+							break;
+						}
+					}
+					pos = pattern.lastIndex - re[0].length;
+					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
+					row = prevRow + delta;
+					if (row > r[1]) break;
+					delta && items.push(row - rangeStartRow);
+					prevOffset = pos;
+					prevRow = row;
+				}
+
+				if (items.length >= r[1] - r[0] + 1) {
+					return _('Pattern found in every line: {0}', patternString);
+				}
+				var tmp = [], container = t.elm;
+				for (var i = r[0]; i <= r[1]; i++) {
+					tmp.push(container.childNodes[i]);
+				}
+				for (var i = items.length - 1; i >= 0; i--) {
+					tmp.splice(items[i], 1);
+				}
+				items = tmp;
+			}
+		}
+		else {
+			re = pattern.exec(text);
+			if (re) {
+				var pos = pattern.lastIndex - re[0].length;
+				var row, delta;
+				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
+				items.push(t.rowNodes(row));
+				prevOffset = pos;
+				prevRow = row;
+
+				while ((re = pattern.exec(text))) {
+					if (pattern.lastIndex == prevOffset) {
+						if (pattern.lastIndex < text.length) {
+							pattern.lastIndex++;
+							continue;
+						}
+						else {
+							break;
+						}
+					}
+					pos = pattern.lastIndex - re[0].length;
+					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
+					row = prevRow + delta;
+					if (row > r[1]) break;
+					delta && items.push(t.rowNodes(row));
+					prevOffset = pos;
+					prevRow = row;
+				}
+			}
+		}
+
+		function dumpItems (title) {
+			var result = [];
+			for (var i = 0, goal = items.length; i < goal; i++) {
+				if (items[i]) {
+					result.push(i + ': "' + toVisibleString(items[i].innerHTML) + '"');
+				}
+				else {
+					result.push(i + ': null');
+				}
+			}
+			console.info((title || 'dump') + '\n' + result.join('\n'));
+		}
+
+		// pass 2
+		editLogger.open('global');
+		try {
+			//dumpItems('init');
+			for (var i = 0, goal = items.length; i < goal; i++) {
+				if (items[i].parentNode) {
+					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
+					var result = executeExCommand(t, command);
+					if (typeof result == 'string') {return result;}
+				}
+				else {
+					items[i] = null;
+				}
+			}
+		}
+		finally {
+			editLogger.close();
+		}
+	};
+	ExCommand.setMark = function (t, a) {
+		var name = a.argv[0];
+		if (name.length > 1) {
+			return _('Mark names must be a single character.');
+		}
+		if (!marks.isValidName(name)) {
+			return _('Invalid mark name.');
+		}
+		marks.set(name, new Position(a.range[0], 0));
+	};
+	ExCommand.copy = function (t, a) {
+		var rg = document.createRange();
+		rg.setStartBefore(t.rowNodes(a.range[0]));
+		rg.setEndAfter(t.rowNodes(a.range[1]));
+		var content = rg.toString();
+		rg.detach();
+		t.setSelectionRange(new Position(a.lineNumber, 0));
+		paste(t, 1, {
+			isForward:true,
+			isForceLineOrient:true,
+			content:content
+		});
+		var copied = a.range[1] - a.range[0] + 1;
+		if (copied >= config.vars.report) {
+			requestShowMessage(_('Copied {0} {line:0}.', copied));
+		}
+		t.setSelectionRange(t.getLineTopOffset2(a.lineNumber + 1 + copied - 1, 0));
+		isEditCompleted = true;
+	};
+	ExCommand.quit = function (isForce) {
+		if (isForce) {
+			writeOnTermination = false;
+			terminated = true;
+		}
+		else {
+			if (isTextDirty) {
+				return _('The text has been modified; use :quit! to discard any changes.');
+			}
+			else {
+				terminated = true;
+			}
+		}
+	};
+	ExCommand.parseWriteArg = function (t, a) {
+		var re;
+		var arg = a.argv[0] || '';
+		var isCommand = false;
+		var isAppend = false;
+		var name = false;
+		if (re = /^\s*(?!\\)!(.+)/.exec(arg)) {
+			isCommand = true;
+			name = re[1];
+		}
+		else if (re = /^\s*(>>)?(.*)/.exec(arg)) {
+			isAppend = re[1] == '>>';
+			name = re[2] || '';
+		}
+		if (name === false) {
+			return _('Invalid argument.');
+		}
+		return {
+			isCommand:isCommand,
+			isAppend:isAppend,
+			name:name
+		};
+	};
+	ExCommand.write = function (t, a, isCommand, isAppend, path) {
+		var isForce = !!a.flags.force;
+
+		if (isCommand) {
+			return _('Command redirection is not implemented.');
+		}
+
+		path || (path = fileName);
+		if (path != '' && !WasaviExtensionWrapper.isTopFrame) {
+			return _('Only stand alone form can write.');
+		}
+		if (isAppend) {
+			return _('Appending is not implemented.');
+		}
+
+		var target = targetElement;
+
+		if (isForce) {
+			target.readOnly = false;
+			config.setData('noreadonly');
+		}
+		else {
+			if (config.vars.readonly && target == targetElement) {
+				return _('Readonly option is set (use "!" to override).');
+			}
+			if (target.readOnly) {
+				return _('Element to be written has readonly attribute (use "!" to override).');
+			}
+		}
+
+		var rg = document.createRange();
+		rg.setStartBefore(t.rowNodes(a.range[0]));
+		rg.setEndAfter(t.rowNodes(a.range[1]));
+		var content = toNativeControl(rg.toString());
+		rg.detach();
+
+		if (a.range[1] == t.rowLength - 1) {
+			content = trimTerm(content);
+		}
+		if (extensionChannel) {
+			extensionChannel.postMessage({
+				type:'notify-to-parent',
+				parentTabId:targetElement.parentTabId,
+				payload:{
+					type:'wasavi-saved',
+					path:path,
+					value:content.replace(/\n/g, preferredNewline)
+				}
+			});
+		}
+		if (typeof eventHandlers.onSaved == 'function') {
+			eventHandlers.onSaved({value:content});
+		}
+		if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == targetElement) {
+			isTextDirty = false;
+		}
+	};
+	ExCommand.read = function (t, a, content, meta) {
+		if (meta.status == 404) {
+			return _('Cannot open "{0}".', meta.path);
+		}
+		if (content == '') return;
+		content = content.replace(/\r\n|\r/g, '\n');
+		var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
+		t.setSelectionRange(new Position(startLine, 0));
+		paste(t, 1, {
+			isForward:true,
+			isForceLineOrient:true,
+			content:content
+		});
+		t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
+	};
+	ExCommand.edit = function (t, a, content, meta) {
+		isTextDirty = false;
+		fileName = meta.path;
+		document.title = /[^\/]+$/.exec(fileName)[0] + ' - wasavi';
+		var empty = [];
+		var charCount = content.length;
+		preferredNewline = [
+			['\n',   (content.match(/(?:^|[^\r])\n/g) || empty).length],
+			['\r',   (content.match(/\r(?!\n)/g) || empty).length],
+			['\r\n', (content.match(/\r\n/g) || empty).length]
+		].sort(function (a, b) {return b[1] - a[1];})[0][0];
+		t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
+		editLogger.close().clear().open('excommand+edit');
+		marks.clear();
+
+		/*
+		// exrc
+		var exrcCommands = executeExCommand(t, exrc, false, true);
+		if (typeof exrcCommands == 'string') {
+			return exrcCommands;
+		}
+		exCommandExecutor.commands = Array.prototype.push.apply(
+			exrcCommands.commands, exCommandExecutor.commands);
+		 */
+
+		// +command
+		var initCommands = executeExCommand(t, a.initCommand, false, true);
+		if (typeof initCommands == 'string') {
+			return initCommands;
+		}
+		var terminator = ExCommand.defaultCommand.clone();
+		if (initCommands.commands.length) {
+			terminator.handler = function (t, a) {
+				t.setSelectionRange(t.getLineTopOffset2(t.rowLength - 1, 0));
+			};
+		}
+		else {
+			terminator.handler = function (t, a) {
+				t.setSelectionRange(t.getLineTopOffset2(0, 0));
+			};
+		}
+		initCommands.commands.push([terminator, terminator.buildArgs(t, [], '')]);
+		Array.prototype.unshift.apply(exCommandExecutor.commands, initCommands.commands);
+
+		requestShowMessage(getFileIoResultInfo(t, charCount, meta.status == 404));
+	};
+	ExCommand.executeRegister = function (t, a) {
+		var command;
+		var register;
+
+		if (a.flags.register) {
+			register = a.register;
+		}
+		else if (!registers.exists('@') || (register = registers.get('@').data) == '') {
+			return _('No previous execution.');
+		}
+		if (register == '@' || !registers.isReadable(register)) {
+			return _('Invalid register name: {0}', register);
+		}
+		if (!registers.exists(register) || (command = registers.get(register).data) == '') {
+			return _('Register {0} is empty.', register);
+		}
+		t.setSelectionRange(new Position(a.range[0], 0));
+		var result = executeExCommand(t, command);
+		if (typeof result == 'string') {
+			return result;
+		}
+		registers.set('@', command, true);
+	};
+	ExCommand.printRow = function (t, from, to, flags) {
+		function getLineNumber (i) {
+			return ('     ' + (i + 1)).substr(-6) + '  ';
+		}
+		function getLineNumberNull () {
+			return '';
+		}
+		var lg = flags.hash ? getLineNumber : getLineNumberNull;
+		if (flags.list) {
+			var escapeReplacements = {
+				7: '\\a', 8: '\\b', 9: '\\t', 10: '\\n', 11: '\\v', 12: '\\f', 13: '\\r', 92:'\\\\'
+			};
+			for (var i = from; i <= to; i++) {
+				var line = toNativeControl(t.rows(i));
+				/*
+				 * char code
+				 * \\   5c
+				 * \a   07
+				 * \b   08
+				 * \t   09
+				 * \n   0a
+				 * \v   0b
+				 * \f   0c
+				 * \r   0d
+				 */
+				line = line.replace(/[\u0007\u0008\u000a-\u000d\\]/g, function (s) {
+					return escapeReplacements[s.charCodeAt(0)];
+				});
+				line = line.replace(/[\u0000-\u0008\u0010-\u001f\u007f]/g, function (s) {
+					return '\\' + ('00' + s.charCodeAt(0).toString(8)).substr(-3);
+				});
+				line = line.replace(/\$/g, '\\$');
+				line = line + '$';
+				backlog.push(lg(i) + line);
+			}
+		}
+		else if (flags.hash || flags.print) {
+			for (var i = from; i <= to; i++) {
+				var line = t.rows(i);
+				backlog.push(lg(i) + line);
+			}
+		}
+	};
+	ExCommand.commands = [
+		new ExCommand('abbreviate', 'ab', 'W', 0, function (t, a) {
+			function dispAbbrev (ab) {
+				var maxWidth = 0;
+				var count = 0;
+				for (var i in ab) {
+					if (i.length > maxWidth) {
+						maxWidth = i.length;
+					}
+					count++;
+				}
+				if (count) {
+					var list = [_('*** abbreviations ***')];
+					for (var i in ab) {
+						list.push(
+							i + multiply(' ', maxWidth - i.length) +
+							'\t' + toVisibleString(abbrevs[i])
+						);
+					}
+					list.sort();
+					backlog.push(list);
+				}
+				else {
+					backlog.push(_('No abbreviations are defined.'));
+				}
+			}
+			switch (a.argv.length) {
+			case 0:
+				dispAbbrev(abbrevs);
+				break;
+
+			case 1:
+				var lhs = a.argv[0];
+				if (lhs == '[clear]') {
+					abbrevs = {};
+				}
+				else {
+					var tmp = {};
+					if (lhs in abbrevs) {
+						tmp[lhs] = abbrevs[lhs];
+					}
+					dispAbbrev(tmp);
+				}
+				break;
+
+			default:
+				var lhs = a.argv[0];
+				var rhs = a.argv[1];
+				if (!config.vars.iskeyword.test(lhs.substr(-1))) {
+					return _('The keyword of abbreviation must end with a word character.');
+				}
+				abbrevs[lhs] = rhs;
+				break;
+			}
+		}),
+		new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
+			return ExCommand.copy(t, a);
+		}),
+		new ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (t, a) {
+			t.setSelectionRange(new Position(a.range[0], 0));
+			t.isLineOrientSelection = true;
+			var deleted = a.range[1] - a.range[0] + 1;
+			yank(t, deleted, true, a.flags.register ? a.register : '');
+			deleteSelection(t);
+			if (deleted >= config.vars.report) {
+				requestShowMessage(_('Deleted {0} {line:0}.', deleted));
+			}
+			var n = new Position(Math.min(a.range[0], t.rowLength - 1), 0);
+			t.setSelectionRange(t.getLineTopOffset2(n));
+			isEditCompleted = true;
+		}),
+		new ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (t, a) {
+			if (!extensionChannel || !WasaviExtensionWrapper.isTopFrame) {
+				return _('Only stand alone form can edit.');
+			}
+			if (!a.flags.force && isTextDirty) {
+				return _('File is modified; write or use "!" to override.');
+			}
+			if (a.argv.length > 2) {
+				return _('Too much arguments.');
+			}
+			var path = a.argv[0] || '';
+			if (path.charAt(0) == '+') {
+				a.initCommand = path.substring(1).replace(/\\(.)/g, '$1');
+				path = a.argv[1] || '';
+			}
+			else {
+				a.initCommand = '';
+			}
+			path = path.replace(/\\(.)/g, '$1');
+			if (path == '' && fileName == '') {
+				return _('File name is empty.');
+			}
+			extensionChannel.postMessage({
+				type:'read',
+				path:path
+			});
+		}),
+		new ExCommand('file', 'f', 'f', 0, function (t, a) {
+			if (!extensionChannel || !WasaviExtensionWrapper.isTopFrame) {
+				return _('Only stand alone form can edit.');
+			}
+			if (a.argv.length > 1) {
+				return _('Too much arguments.');
+			}
+			if (a.argv.length == 1) {
+				var arg = a.argv[0].replace(/\\(.)/g, '$1');
+				if (/(?:^|\/)\.{1,2}$/.test(arg)) {
+					arg += '/';
+				}
+
+				var from = /^(.*\/)?([^\/]*)$/
+					.exec(fileName)
+					.map(function (a) {return a || '';});
+				var to = /^(.*\/)?([^\/]*)$/
+					.exec(arg)
+					.map(function (a) {return a || '';});
+
+				if (to[2] == '') {
+					if (from[2] == '') {
+						return _('File name is empty.');
+					}
+					to[2] = from[2];
+				}
+				if (to[1].charAt(0) == '/') {
+					fileName = to[1] + to[2];
+				}
+				else {
+					fileName = (from[1] != '' ? from[1] : '/') + to[1] + to[2];
+				}
+
+				fileName = fileName.replace(/\/\.\//g, '//');
+				fileName = fileName.replace(/\/\//g, '/');
+				while (/\/\.\.\//.test(fileName)) {
+					fileName = fileName.replace(/(?:[^\/]*)\/\.\.\/([^\/]+)/, '$1');
+				}
+			}
+			requestShowMessage(getFileInfo(t));
+		}),
+		new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
+			return ExCommand.global(t, a);
+		}),
+		new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (t, a) {
+			var head = a.range[0];
+			var tail = Math.min(t.rowLength - 1, a.range[1] + (a.flags.count ? a.count - 1 : 0));
+			t.setSelectionRange(new Position(head, 0));
+			joinLines(t, tail - head, a.flags.force);
+			t.setSelectionRange(t.getLineTopOffset2(head, 0));
+			isEditCompleted = true;
+		}),
+		new ExCommand('k', 'k', 'w1r', 1, function (t, a) {
+			return ExCommand.setMark(t, a);
+		}),
+		new ExCommand('map', 'map', '!W', 0, function (t, a) {
+			var mapName = a.flags.force ? 'edit' : 'command';
+			var map = mapManager.getMap(mapName);
+			function dispMap (map) {
+				var maxWidth = 0;
+				if (map.length) {
+					map.map(function (o) {
+						if (o[0].length > maxWidth) {
+							maxWidth = o[0].length;
+						}
+					});
+					var list = ['*** ' + mapName + ' mode map ***'];
+					map.map(function (o) {
+						list.push(
+							o[0] + multiply(' ', maxWidth - o[0].length) +
+							'\t' + toVisibleString(o[1]));
+					});
+					backlog.push(list);
+				}
+				else {
+					backlog.push(_('No mappings for {0} mode are defined.', mapName));
+				}
+			}
+			if (a.argv.length == 0) {
+				dispMap(map.toArray());
+			}
+			else {
+				var lhs = a.argv[0] || '';
+				var rhs = a.argv[1] || '';
+				var remap = true;
+				switch (lhs) {
+				case '[clear]':
+					map.removeAll();
+					break;
+				case '[noremap]':
+					lhs = rhs;
+					rhs = a.argv[2] || '';
+					remap = false;
+					/*FALLTHRU*/
+				default:
+					if (rhs == '') {
+						dispMap(map.toArray().filter(function (o) {
+							return o[0].indexOf(lhs) >= 0;
+						}));
+					}
+					else {
+						// reject some mappings for text input mode: <escape>, <nl>
+						if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
+							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+						}
+						// reject some mappings for command mode: :, <escape>
+						if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
+							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+						}
+						map.register(lhs, rhs, remap);
+					}
+					break;
+				}
+			}
+		}),
+		new ExCommand('mark', 'ma', 'w1r', 1, function (t, a) {
+			return ExCommand.setMark(t, a);
+		}),
+		new ExCommand('marks', 'marks', '', 0, function (t, a) {
+			backlog.push(marks.dump());
+		}),
+		new ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (t, a) {
+			var r = a.range;
+			var dest = a.lineNumber;
+			if (dest >= r[0] && dest < r[1]) {
+				return _('Destination is in inside source.');
+			}
+			editLogger.open('move', function () {
+				var rows = r[1] - r[0] + 1;
+
+				if (dest == r[0] - 1 || dest == r[1]) {
+					editLogger.write(EditLogger.ITEM_TYPE.NOP);
+				}
+				else {
+					// delete
+					t.isLineOrientSelection = true;
+					t.setSelectionRange(new Position(r[0], 0));
+					t.selectRows(rows);
+					var content = t.getSelectionRows();
+					deleteSelection(t);
+					t.isLineOrientSelection = false;
+
+					// fix destination position
+					dest -= dest > r[1] ? rows : 0;
+
+					// paste
+					t.setSelectionRange(new Position(dest, 0));
+					paste(t, 1, {
+						isForward:true,
+						isForceLineOrient:true,
+						content:content
+					});
+				}
+
+				if (rows >= config.vars.report) {
+					requestShowMessage(_('Moved {0} {line:0}.', rows));
+				}
+
+				t.setSelectionRange(t.getLineTopOffset2(dest + rows, 0));
+			});
+			isEditCompleted = true;
+		}),
+		new ExCommand('options', 'opt', '', 0, function (t, a) {
+			if (extensionChannel) {
+				extensionChannel.postMessage({type:'open-options-page'});
+			}
+			else {
+				return requestRegisterNotice(_('Don\'t know how to open options page.'));
+			}
+		}),
+		new ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (t, a) {
+			a.flags.print = true;
+			return ExCommand.defaultCommand.handler.apply(this, arguments);
+		}),
+		new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (t, a) {
+			var register = a.flags.register ? a.register : '"';
+			if (!registers.exists(register)) {
+				return _('Register {0} is empty.', register);
+			}
+			t.setSelectionRange(new Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
+			paste(t, 1, {
+				isForward:true,
+				isForceLineOrient:true,
+				register:register
+			});
+			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
+		}),
+		new ExCommand('quit', 'q', '!', 0, function (t, a) {
+			return ExCommand.quit(a.flags.force);
+		}),
+		new ExCommand('read', 'r', 's', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (t, a) {
+			if (!extensionChannel) {
+				return _('Extension system required.');
+			}
+			extensionChannel.postMessage({
+				type:'read',
+				path:a.argv[0]
+			});
+		}),
+		new ExCommand('redo', 're', '', 0, function (t, a) {
+			editLogger.close();
+			var result = editLogger.redo();
+			editLogger.open('excommand+redo');
+			if (result === false) {
+				return _('No redo item.');
+			}
+			else {
+				requestShowMessage(
+					_('{0} {operation:0} have executed again.', result));
+				return;
+			}
+		}),
+		new ExCommand('s', 's', 's', 2, function (t, a) {
+			return (new SubstituteWorker).run(t, a.range, a.argv[0], a.argv[1], a.argv[2]);
+		}),
+		new ExCommand('&', '&', 's', 2, function (t, a) {
+			return (new SubstituteWorker).run(t, a.range, '', '%', a.argv[0]);
+		}),
+		new ExCommand('~', '~', 's', 2, function (t, a) {
+			var pattern;
+			if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
+				return _('No previous search pattern.');
+			}
+			return (new SubstituteWorker).run(t, a.range, pattern, '~', a.argv[0]);
+		}),
+		new ExCommand('set', 'se', 'wN', 0, function (t, a) {
+			var messages;
+			var logToConsole = false;
+			var emphasis = false;
+			if (a.argv.length == 0) {
+				messages = config.dump();
+				logToConsole = true;
+			}
+			else if (a.argv.some(function (o) {return o == 'all';})) {
+				messages = config.dump(true);
+				logToConsole = true;
+			}
+			else {
+				messages = [];
+				for (var i = 0; i < a.argv.length; i++) {
+					var arg = a.argv[i];
+					var re = /^([^=?]+)([=?])/.exec(arg) || ['', arg, ''];
+					var info = config.getInfo(re[1]);
+					if (!info) {
+						messages.push(_('Unknown option: {0}', re[1]));
+						emphasis = true;
+						continue;
+					}
+					if (re[2] == '?') {
+						messages.push(config.getData(re[1], true));
+					}
+					else if (i + 1 < a.argv.length && a.argv[i + 1] == '?') {
+						messages.push(config.getData(re[1], true));
+						i++;
+					}
+					else {
+						if (re[2] == ''
+						&& i + 1 < a.argv.length
+						&& a.argv[i + 1].charAt(0) == '=') {
+							re[0] = arg + '=';
+							arg += a.argv[++i];
+							re[2] = '=';
+						}
+						if (re[2] != '=' && info.type != 'b') {
+							messages.push(config.getData(re[1], true));
+						}
+						else {
+							var result = config.setData(
+								re[1],
+								re[2] == '=' ? arg.substring(re[0].length) : undefined);
+							if (typeof result == 'string') {
+								messages.push(result.replace(/\.$/, '') + ': ' + arg);
+								emphasis = true;
+								break;
+							}
+						}
+					}
+				}
+				if (messages.length == 1) {
+					messages = messages[0];
+				}
+				else {
+					logToConsole = true;
+				}
+			}
+			if (logToConsole) {
+				backlog.push(messages);
+			}
+			else {
+				requestShowMessage(messages, emphasis);
+			}
+		}),
+		new ExCommand('sushi', 'sushi', '', 0, function (t, a) {
+			lastRegexFindCommand.push({});
+			lastRegexFindCommand.setPattern('');
+			lastSubstituteInfo = {};
+			requestShowMessage('Whassup?');
+		}),
+		new ExCommand('registers', 'reg', '', 0, function (t, a) {
+			backlog.push(registers.dump());
+		}),
+		new ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
+			return ExCommand.copy(t, a);
+		}),
+		new ExCommand('unabbreviate', 'una', 'w1r', 0, function (t, a) {
+			var lhs = a.argv[0];
+			if (lhs == '[all]') {
+				abbrevs = {};
+			}
+			else if (!(lhs in abbrevs)) {
+				return _('{0} is not an abbreviation.', lhs);
+			}
+			else {
+				delete abbrevs[lhs];
+			}
+		}),
+		new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (t, a) {
+			editLogger.close();
+			var result = editLogger.undo();
+			editLogger.open('excommand+undo');
+			if (result === false) {
+				return _('No undo item.');
+			}
+			else {
+				requestShowMessage(
+					_('{0} {operation:0} have reverted.', result));
+				return;
+			}
+		}),
+		new ExCommand('unmap', 'unm', '!w1r', 0, function (t, a) {
+			var lhs = a.argv[0];
+			var map = mapManager.getMap(a.flags.force ? 'edit' : 'command');
+			if (lhs == '[all]') {
+				map.removeAll();
+			}
+			else if (!map.isMapped(lhs)) {
+				return _('{0} is not mapped.', lhs);
+			}
+			else {
+				map.remove(lhs);
+			}
+		}),
+		new ExCommand('version', 'ver', '', 0, function (t, a) {
+			requestShowMessage('wasavi/' + VERSION + ' ' + VERSION_DESC);
+		}),
+		new ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
+			a.flags.force = true;
+			return ExCommand.global(t, a);
+		}),
+		new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
+			var o = ExCommand.parseWriteArg(t, a);
+			return typeof o == 'string' ? o : ExCommand.write(t, a, o.isCommand, o.isAppend, o.name);
+		}),
+		new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
+			var o = ExCommand.parseWriteArg(t, a);
+			if (typeof o == 'string') return o;
+			var result = ExCommand.write(t, a, o.isCommand, o.isAppend, o.name);
+			return typeof result == 'string' ? result : ExCommand.quit();
+		}),
+		new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
+			if (isTextDirty) {
+				var result = ExCommand.write(t, a, false, false, a.argv[0]);
+				return typeof result == 'string' ? result : ExCommand.quit();
+			}
+			else {
+				return ExCommand.quit(!!a.flags.force);
+			}
+		}),
+		new ExCommand('yank', 'ya', 'bca', 2, function (t, a) {
+			var p = t.selectionStart;
+			yank(t, a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
+			t.setSelectionRange(p);
+		}),
+		new ExCommand('>', '>', 'mca1', 2, function (t, a) {
+			t.setSelectionRange(new Position(a.range[0], 0));
+			shift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
+			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
+		}),
+		new ExCommand('<', '<', 'mca1', 2, function (t, a) {
+			t.setSelectionRange(new Position(a.range[0], 0));
+			unshift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
+			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
+		}),
+		new ExCommand('@', '@', 'b', 1, function (t, a) {
+			return ExCommand.executeRegister(t, a);
+		}),
+		new ExCommand('*', '*', 'b', 1, function (t, a) {
+			return ExCommand.executeRegister(t, a);
+		})
+	].sort(function (a, b) {return a.name.length - b.name.length;});
+
+	/*constructor*/function ExCommandExecutor (editor, isRoot, onFinish) {
+		this.editor = editor;
+		this.commands = [];
+		this.editLogLevel = 0;
+		this.isRoot = !!isRoot;
+		this.isAsync = false;
+		this.sGlobalSpecified = false;
+		this.source = '';
+		this.onFinish = onFinish || null;
+		this.lastError = undefined;
+		this.lastCommand = undefined;
+
+		var isRunning = false;
+		this.__defineGetter__('isRunning', function () {return isRunning;});
+		this.__defineSetter__('isRunning', function (v) {
+			if (v == isRunning) return;
+			isRunning = v;
+			$('wasavi_cover').className = v ? 'dim' : '';
+		});
+	}
+	ExCommandExecutor.prototype = {
+		_runCore: function (command, args) {
+			var editor = this.editor;
+			var ss = editor.selectionStart;
+			var result = command.run(editor, args);
+			if (typeof result == 'string') {
+				this.lastError = result || _('{0}: unknown error.', command.name);
+				return false;
+			}
+			if ((isJumpBaseUpdateRequested || command.flags.updateJump)
+			&& editor.selectionStart.ne(ss)) {
+				marks.set('\'', ss);
+				isJumpBaseUpdateRequested = false;
+			}
+			if (result.flags.hash || result.flags.list || result.flags.print) {
+				var n = Math.max(0, Math.min(
+					editor.selectionStartRow + result.flagoff, t.rowLength - 1));
+				editor.setSelectionRange(editor.getLineTopOffset2(n, 0));
+				ExCommand.printRow(editor, n.row, n.row, result.flags);
+			}
+			this.lastError = undefined;
+			return true;
+		},
+		_runAsyncWrapper: function () {
+			var tc;
+			try {
+				if (this.commands.length) {
+					this.lastCommand = tc = this.commands.shift();
+					if (tc[0].flags.multiAsync && !this.isAsync) {
+						this.lastError = _('{0}: Executed in synchronous context.', tc[0].name);
+						this.commands.length = 0;
+						this.lastCommand = tc = undefined;
+					}
+					else if (!this._runCore(tc[0], tc[1])) {
+						this.commands.length = 0;
+						this.lastCommand = tc = undefined;
+					}
+				}
+			}
+			finally {
+				if (!tc || !tc[0] || !tc[0].flags.multiAsync) {
+					this.runAsyncNext();
+				}
+			}
+		},
+		_isClipboardAccess: function (args) {
+			return extensionChannel && args.flags.register && args.register == '*';
+		},
+		clear: function () {
+			this.commands.length = 0;
+			this.lastCommand = undefined;
+			this.isAsync = false;
+		},
+		stop: function () {
+			this.commands.length = 0;
+			this.lastCommand = undefined;
+			this.runAsyncNext();
+		},
+		add: function (ex, args) {
+			this.commands.push([ex, args]);
+			this.isAsync = this.isAsync || this._isClipboardAccess(args) || ex.flags.multiAsync;
+		},
+		runAsyncNext: function (injectExCommand, arg) {
+			if (!this.isAsync) return;
+
+			injectExCommand && arg && this.commands.unshift([injectExCommand, arg]);
+
+			if (this.commands.length) {
+				setTimeout((function (obj, fn, cmd) {return function () {
+					if (obj._isClipboardAccess(cmd[1])) {
+						extensionChannel.getClipboard(function () {fn.call(obj);});
+					}
+					else {
+						fn.call(obj);
+					}
+				}})(this, this._runAsyncWrapper, this.commands[0]), 0);
+			}
+			else {
+				if (this.editLogLevel > 0) {
+					editLogger.close();
+					this.isRunning = false;
+					this.editLogLevel--;
+				}
+				this.onFinish && this.onFinish(this);
+				var e = document.createEvent('UIEvent');
+				e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
+				processInput(0, e);
+			}
+		},
+		run: function () {
+			if (this.commands.length == 0) return;
+
+			if (this.isAsync && this.isRoot && isInteractive) {
+				//console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
+				if (this.editLogLevel == 0) {
+					editLogger.open('excommand');
+					this.isRunning = true;
+
+					this.editLogLevel++;
+				}
+				this.runAsyncNext();
+			}
+			else {
+				this.isRunning = true;
+				if (this.isRoot) {
+					editLogger.open('excommand');
+				}
+				try {
+					for (var i = 0, goal = this.commands.length; i < goal; i++) {
+						if (!this._runCore(this.commands[i][0], this.commands[i][1])) {
+							return this.lastError;
+						}
+					}
+				}
+				finally {
+					if (this.isRoot) {
+						editLogger.close();
+						this.onFinish && this.onFinish(this);
+					}
+					this.commands.length = 0;
+					this.isRunning = false;
+				}
+				return true;
+			}
+		},
+		get lastCommandObj () {
+			return this.lastCommand ? this.lastCommand[0] : null;
+		},
+		get lastCommandArg () {
+			return this.lastCommand ? this.lastCommand[1] : null;
 		}
 	};
 
@@ -3460,20 +4743,25 @@ flag23_loop:
 			if (!src || !(src instanceof Object)) return;
 
 			var tmp = {};
-			for (var na in s) {
-				if (!(na in src)) continue;
-				if (!(src[na] instanceof Object)) continue;
-				if (!(src[na].lines instanceof Array)) continue;
+			if ('s' in src && src.s instanceof Object) {
+				src = src.s;
+				for (var na in src) {
+					if (!(na in src)) continue;;
+					if (!(src[na] instanceof Object)) continue;;
+					if (!(src[na].lines instanceof Array)) continue;;
+					if (typeof src[na].current != 'number') continue;
 
-				tmp[na] = {};
-				tmp[na].lines = src[na].lines.filter(function (s) {
-					return typeof s == 'string';
-				}).slice(-maxSize);
-				tmp[na].current = tmp[na].length - 1;
+					tmp[na] = {};
+					tmp[na].lines = src[na].lines.filter(function (s) {
+						return typeof s == 'string';
+					}).slice(-maxSize);
+					tmp[na].current = Math.min(Math.max(-1, Math.floor(src[na].current)), tmp[na].lines.length - 1);
+				}
 			}
 			s = extend(s, tmp);
 		}
 		function save () {
+			var value = serialize();
 			setLocalStorage(storageKey, serialize());
 		}
 		function load (callback) {
@@ -3660,7 +4948,6 @@ flag23_loop:
 				});
 				data2 !== false && t.setRow(ss, data2);
 				!isClusterMember && this.restorePosition(t);
-				//t.setSelectionRange(ss);
 				t.isLineOrientSelection = false;
 
 				return 1;
@@ -3708,7 +4995,6 @@ flag23_loop:
 					}
 				}
 				!isClusterMember && this.restorePosition(t);
-				//t.setSelectionRange(this.position);
 
 				return 1;
 			},
@@ -3833,7 +5119,6 @@ flag23_loop:
 					);
 				});
 				!isClusterMember && this.restorePosition(t);
-				//t.setSelectionRange(t.getLineTopOffset2(this.position));
 				return 1;
 			},
 			redo: function (t, isClusterMember) {
@@ -3850,7 +5135,6 @@ flag23_loop:
 					);
 				});
 				!isClusterMember && this.restorePosition(t);
-				//t.setSelectionRange(t.getLineTopOffset2(this.position));
 				return 1;
 			},
 			restorePosition: function (t) {
@@ -3966,9 +5250,13 @@ flag23_loop:
 			init: function (editor, max) {
 				this.editor = editor;
 				this.max = max;
+				this.clear();
+			},
+			clear: function () {
 				this.logs = new EditLogItemCluster;
 				this.cluster = null;
 				this.currentPosition = this.logs.length - 1;
+				return this;
 			},
 			open: function (tag, func) {
 				if (this.cluster) {
@@ -3985,6 +5273,7 @@ flag23_loop:
 						this.close();
 					}
 				}
+				return this;
 			},
 			write: function (type) {
 				var item;
@@ -3995,7 +5284,7 @@ flag23_loop:
 					this.cluster.push(item);
 				}
 				else {
-					throw new Error('invalid undo item type');
+					throw new Error('EditLogger: invalid undo item type');
 				}
 				return item;
 			},
@@ -4014,8 +5303,9 @@ flag23_loop:
 					}
 				}
 				else {
-					throw new Error('edit logger doesn\'t open');
+					throw new Error('EditLogger: edit logger doesn\'t open');
 				}
+				return this;
 			},
 			undo: function () {
 				if (!this.cluster && this.currentPosition >= 0) {
@@ -4043,7 +5333,7 @@ flag23_loop:
 			},
 			set logMax (v) {
 				if (typeof v != 'number' || v < 0) {
-					throw new Exeception('invalid logMax');
+					throw new Exeception('EditLogger: invalid logMax');
 				}
 				this.max = v;
 				this.logs.trim(this.max);
@@ -4206,7 +5496,8 @@ flag23_loop:
 		}
 		return null;
 	};
-	function L10n (catalog) {
+
+	/*constructor*/function L10n (catalog) {
 		var PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
 		var getPluralSuffix;
 
@@ -4743,9 +6034,7 @@ flag23_loop:
 		}
 		if (extensionChannel) {
 			load(function () {
-				registers = new Registers(
-					handleLoaded
-				);
+				registers = new Registers(handleLoaded);
 			});
 			load(function () {
 				lineInputHistories = new LineInputHistories(
@@ -4795,15 +6084,25 @@ flag23_loop:
 		/*
 		 * DOM structure:
 		 *
+		 * style#wasavi_global_styles [style sheet]
+		 *
 		 * div#wasavi_container
-		 *   |
-		 *   + style#wasavi_global_styles [style sheet]
 		 *   |
 		 *   + div#wasavi_editor [main editor screen] [POSITIONING TARGET]
 		 *   |
 		 *   + div#wasavi_footer [POSITIONING TARGET]
 		 *   |   |
-		 *   |   + div#wasavi_footer_modeline [modeline]
+		 *   |   + div#wasavi_footer_modeline
+		 *   |   |   |
+		 *   |   |   + table#wasavi_footer_modeline_table
+		 *   |   |       |
+		 *   |   |       + tbody
+		 *   |   |         |
+		 *   |   |         + tr
+		 *   |   |             |
+		 *   |   |             + td#wasavi_footer_file_indicator [file name indicator]
+		 *   |   |             |
+		 *   |   |             + td#wasavi_footer_prefix_indicator [prefix input indicator]
 		 *   |   |
 		 *   |   + div#wasavi_footer_alter
 		 *   |       |
@@ -4815,7 +6114,7 @@ flag23_loop:
 		 *   |                 |
 		 *   |                 + td#wasavi_footer_input_indicator [header indicator]
 		 *   |                 |
-		 *   |                 + td
+		 *   |                 + td#wasavi_footer_input_container
 		 *   |                     |
 		 *   |                     + input#wasavi_footer_input [line input editor]
 		 *   |
@@ -4844,8 +6143,10 @@ flag23_loop:
 		if (!cnt) throw new Error('wasavi container not found');
 
 		//
+		var n = new Date;
 		var hue = config.vars.modelinehue < 0 ?
-			Math.floor(Math.random() * 360) : config.vars.modelinehue;
+			Math.floor((n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds()) / 240) :
+			config.vars.modelinehue;
 		var hsl = 'hsl(' + [hue, '100%', '33%'].join(',') + ')';
 		var modeLineGradient = 'linear-gradient(top, ' + hsl + ' 0%,#000 100%);';
 		var borderStyles = 'border:none;';
@@ -4875,6 +6176,7 @@ flag23_loop:
 		// style
 		var styleElement = $('wasavi_global_styles');
 		styleElement.appendChild(document.createTextNode([
+			'body { visibility:visible; }',
 			'#wasavi_container {',
 			'  background-color:transparent;',
 			'  line-height:1;',
@@ -4992,8 +6294,8 @@ flag23_loop:
 			})(),
 			'#wasavi_footer {',
 			'  color:#fff;',
-			window.opera  ? '  background:-o-'      + modeLineGradient : '',
 			window.chrome ? '  background:-webkit-' + modeLineGradient : '',
+			window.opera  ? '  background:-o-'      + modeLineGradient : '',
 			IS_GECKO	  ? '  background:-moz-'    + modeLineGradient : '',
 			//'  background:' + modeLineGradient,
 			'  padding:2px 2px 1px 2px;',
@@ -5004,30 +6306,37 @@ flag23_loop:
 			'  ' + boxSizingPrefix + 'box-sizing:content-box;',
 			'}',
 			'#wasavi_footer_modeline {',
-			'  text-align:right;',
-			'  padding:0 8px 1px 0;',
-			'  font-size:10pt;',
-			'  line-height:1;',
-			'  white-space:pre;',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'}',
 			'#wasavi_footer_alter {',
 			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
 			'}',
-			'#wasavi_footer_alter_table {',
+			'#wasavi_footer_modeline_table,#wasavi_footer_alter_table {',
 			'  padding:0;',
 			'  margin:0;',
 			'  border-collapse:collapse;',
 			'  border:none;',
 			'  background-color:transparent',
 			'}',
-			'#wasavi_footer_alter>table td {',
+			'#wasavi_footer_modeline>table td,#wasavi_footer_alter>table td {',
 			'  border:none;',
 			'  padding:0;',
 			'  line-height:1;',
+			'  white-space:pre;',
+			'}',
+			'#wasavi_footer_file_indicator {',
+			'  padding:0;',
+			'  line-height:1;',
+			'  text-align:left;',
+			'}',
+			'#wasavi_footer_prefix_indicator {',
+			'  width:1px;',
+			'  padding:0;',
+			'  line-height:1;',
+			'  text-align:right;',
 			'}',
 			'#wasavi_footer_input_indicator {',
-			'  width:1%;',
+			'  width:1px;',
 			'  padding:0;',
 			'  line-height:1;',
 			'  background-color:rgba(0,0,0,0.5)',
@@ -5105,22 +6414,31 @@ flag23_loop:
 			'  overflow-y:hidden;',
 			'  resize:none;',
 			'  outline:none;',
-			'  background-color:rgba(192, 0, 0, 0.5);',
+			//'  background-color:rgba(192, 0, 0, 0.5);',
 			'}',
 			'#wasavi_cover {',
 			'  position:fixed;',
 			'  left:0; top:0; right:0; bottom:0;',
 			'  background-color:rgba(0,0,0,0.0)',
 			'}',
+			'#wasavi_cover.dim {',
+			window.chrome ? '  -webkit-transition:background-color 0.5s linear 0s;' : '',
+			window.opera  ? '       -o-transition:background-color 0.5s linear 0s;' : '',
+			IS_GECKO	  ? '     -moz-transition:background-color 0.5s linear 0s;' : '',
+			'  background-color:rgba(0,0,0,0.25);',
+			'}',
 			'#wasavi_focus_holder {',
 			'  position:fixed;',
 			'  border:none;',
+			'  outline:none;',
+			'  resize:none;',
 			'  padding:0;',
-			'  left:0px;',
-			'  top:-32px;',
+			'  left:-1px;',
+			'  top:0px;',
 			'  width:32px;',
 			'  height:32px;',
-			'  ime-mode:disabled',
+			'  background-color:transparent;',
+			'  ime-mode:disabled;',
 			'}'
 		].join('')));
 
@@ -5148,7 +6466,8 @@ flag23_loop:
 
 		// footer (default indicator)
 		var footerDefault = $('wasavi_footer_modeline');
-		footerDefault.textContent = '#';
+		$('wasavi_footer_file_indicator').textContent = '#';
+		//footerDefault.textContent = '#';
 
 		// footer (alter: line input)
 		var footerAlter = $('wasavi_footer_alter');
@@ -5201,6 +6520,8 @@ flag23_loop:
 		 */
 
 		targetElement = x;
+		fileName = '';
+		preferredNewline = '\n';
 		terminated = false;
 		writeOnTermination = true;
 		state = 'normal';
@@ -5234,15 +6555,11 @@ flag23_loop:
 		cursor = new CursorUI(editor, cc, ec);
 		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
+		exCommandExecutor = new ExCommandExecutor(editor, true);
 		config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 		refreshIdealWidthPixels(editor);
-		showMessage(
-			_('"{0}" {1}{2} {line:2}, {3} {character:3}.',
-			x.nodeName + (x.id != '' ? '#' + x.id : ''),
-			x.readOnly ? _('[readonly] ') : '',
-			editor.rowLength,
-			x.value.length));
+		showMessage(getFileIoResultInfo(editor, x.value.length, true));
 
 		x.value = undefined;
 
@@ -5250,11 +6567,9 @@ flag23_loop:
 		 * execute exrc
 		 */
 
-		exGlobalSpecified = false;
-		editLogger.open('exrc', function () {
-			var result = executeExCommand(editor, exrc);
-			typeof result == 'string' && showMessage(result, true);
-		});
+		isInteractive = false;
+		var result = executeExCommand(editor, exrc, true);
+		typeof result == 'string' && showMessage(result, true);
 		cursor.ensureVisible();
 		cursor.update({type:inputMode, focused:true, visible:true});
 
@@ -5358,6 +6673,7 @@ flag23_loop:
 		// window
 		window[method]('focus', handleWindowFocus, false);
 		window[method]('blur', handleWindowBlur, false);
+		window[method]('resize', handleWindowResize, false);
 
 		// document
 		window.chrome && document[method]('keydown', handleKeydown, true);
@@ -5399,20 +6715,28 @@ flag23_loop:
 		var con = $('wasavi_console');
 		var conScaler = $('wasavi_console_scaler');
 		var mScaler = $('wasavi_multiline_scaler');
+		var fmodTable = $('wasavi_footer_modeline_table');
 		var faltTable = $('wasavi_footer_alter_table');
 
 		if (!container || !editor || !footer || !conCon || !con || !conScaler
-		||  !mScaler || !faltTable) {
+		||  !mScaler || !fmodTable || !faltTable) {
 			throw new Error(
 				'setGeometory: invalid element: ' +
-				[container, editor, footer, con, conScaler, mScaler, faltTable].join(', ')
+				[
+					container, editor, footer, con, conScaler,
+					mScaler, fmodTable, faltTable
+				].join(', ')
 			);
 		}
 
 		var rect = target.rect;
 
+		if (isStandAlone) {
+			rect.height -= footer.offsetHeight;
+		}
+
 		style(container, {
-			//width:rect.width + 'px',
+			width:rect.width + 'px',
 			height:(rect.height + footer.offsetHeight) + 'px'
 		});
 
@@ -5443,6 +6767,10 @@ flag23_loop:
 		style(mScaler, {
 			width:rect.width + 'px',
 			height:rect.height + 'px'
+		});
+
+		style(fmodTable, {
+			width:(rect.width - 4) + 'px'
 		});
 
 		style(faltTable, {
@@ -5537,13 +6865,12 @@ flag23_loop:
 		if (state != 'normal') return;
 		var line = $('wasavi_footer_modeline');
 		var alter = $('wasavi_footer_alter');
-		line.style.display = '';
+		var indf = $('wasavi_footer_file_indicator');
+		var indp = $('wasavi_footer_prefix_indicator');
+		line.style.display = indf.style.display = indp.style.display = '';
 		alter.style.display = 'none';
-		line.style.textAlign = 'right';
-		line.style.fontWeight = 'normal';
-		line.style.color = '#fff';
-		line.style.backgroundColor = 'transparent';
-		line.textContent = message || prefixInput.toString() ||
+		indf.textContent = getFileNameString();
+		indp.textContent = message || prefixInput.toString() ||
 			// 000000,0000xxx000%
 			(('     ' + (t.selectionStartRow + 1)).substr(-6) +
 			 ',' + ((getLogicalColumn(t) + 1) + '   ').substr(0, 4) +
@@ -5553,22 +6880,22 @@ flag23_loop:
 		if (state != 'normal' && state != 'console-wait') return;
 		var line = $('wasavi_footer_modeline');
 		var alter = $('wasavi_footer_alter');
-		line.style.display = '';
+		var indf = $('wasavi_footer_file_indicator');
+		var indp = $('wasavi_footer_prefix_indicator');
+		line.style.display = indf.style.display = indp.style.display = '';
 		alter.style.display = 'none';
-		line.style.textAlign = 'left';
-		line.style.fontWeight = 'bold';
-		line.style.color = '#fff';
+		indf.style.fontWeight = 'bold';
+		indp.textContent = '';
 		var pa = line;
 		if (emphasis) {
-			line.innerHTML = '';
-			var span = line.appendChild(document.createElement('span'));
+			indf.innerHTML = '';
+			var span = indf.appendChild(document.createElement('span'));
 			span.style.backgroundColor = '#f00';
 			span.textContent = message;
 			pa = span;
 		}
 		else {
-			line.style.backgroundColor = 'transparent';
-			line.textContent = message;
+			indf.textContent = message;
 		}
 		if (pseudoCursor) {
 			var blink = pa.appendChild(document.createElement('blink'));
@@ -5661,6 +6988,416 @@ flag23_loop:
 		if (runLevel == 0) {
 			isSimpleCommandUpdateRequested = true;
 		}
+	}
+	function executeExCommand (t, source, isRoot, parseOnly) {
+		// @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
+
+		var resultMessage;
+		var lastTerminator;
+		var commandName = '';
+		var commandArg = '';
+		var commandArgSups;
+		var commandObj = null;
+		var range = null;
+		var executor = isRoot ? exCommandExecutor : new ExCommandExecutor(t);
+
+		function getRegex (delimiter) {
+			delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
+			return new RegExp('\\n|' + delimiter, 'g');
+		}
+
+		function skipblank () {
+			var re = /^[ \t]+/.exec(source);
+			if (re) {
+				commandArg += re[0];
+				source = source.substring(re[0].length);
+			}
+		}
+		function skipto (regex, opts) {
+			opts || (opts = {});
+			var escapeChars = opts.escapeChars || '\\';
+			var discard = opts.discard;
+			var re = regex.exec(source);
+			if (re) {
+				do {
+					var index = regex.lastIndex - re[0].length;
+					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
+						if (!discard) {
+							if (commandArgSups) {
+								commandArgSups.push(source.substring(0, index));
+							}
+							else {
+								commandArg += source.substring(0, index);
+							}
+						}
+						source = source.substring(index);
+						return;
+					}
+				} while ((re = regex.exec(source)));
+			}
+			if (!discard) {
+				commandArg = source;
+			}
+			source = '';
+		}
+
+		function skipto2 (regex, delimiter) {
+			var escapeChars = '\\';
+			var re = regex.exec(source);
+			var found = 0;
+			var fragmentStart = 0;
+			if (re) {
+				do {
+					var index = regex.lastIndex - re[0].length;
+					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
+						found++;
+						commandArgSups.push(source.substring(fragmentStart, index));
+						fragmentStart = regex.lastIndex;
+						if (re[0] == '\n' || re[0] == delimiter && found == 2) {
+							source = source.substring(index);
+							return;
+						}
+					}
+				} while ((re = regex.exec(source)));
+			}
+			commandArg = source;
+			source = '';
+		}
+
+		function pushCommand () {
+			var r;
+			if (commandObj.rangeCount == 0) {
+				if (range.rows.length) {
+					resultMessage = _('{0}: extra range specified.', commandObj.name);
+					return false;
+				}
+				r = [];
+			}
+			else {
+				r = range.rows.last(t, commandObj.rangeCount, commandObj.flags.addr2All);
+				if (typeof r == 'string') {
+					resultMessage = r;
+					return false;
+				}
+			}
+
+			var args = commandObj.buildArgs(t, r, commandArg, commandArgSups);
+			if (typeof args == 'string') {
+				resultMessage = args || _('{0}: unknown syntax error.', commandObj.name);
+				return false;
+			}
+
+			executor.add(commandObj, args);
+			return true;
+		}
+
+		function paragraph12 () {
+			if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
+				skipto(/[\n|"]/g, {escapeChars:'\u0016'});
+			}
+			else {
+				skipto(/[\n|"]/g);
+			}
+			if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
+				skipto(/\n/g);
+			}
+			if (source.charAt(0) == '"') {
+				skipto(/\n/g, {discard:true});
+			}
+			if (commandName == 'print' && commandArg == '') {
+				commandArg = 'p';
+			}
+			lastTerminator = source.charAt(0);
+			source = source.substring(1);
+		}
+
+		if (/[\\\u0016]$/.test(source)) {
+			source = source.substring(0, source.length - 1);
+		}
+		if (!/\n$/.test(source)) {
+			source += '\n';
+		}
+		if (isRoot) {
+			exCommandExecutor.isGlobalSpecified = false;
+		}
+
+		executor.clear();
+		executor.source = source.replace(/\n+$/, '');
+
+		while (source.length && !terminated) {
+			commandName = commandArg = '';
+			commandObj = null;
+
+			// 1. Leading <colon> characters shall be skipped.
+			// 2. Leading <blank> characters shall be skipped.
+			source = source.replace(/^[: \t]+/, '');
+
+			// 3. If the leading character is a double-quote character, the characters up to and
+			// including the next non- <backslash>-escaped <newline> shall be discarded, and any
+			// subsequent characters shall be parsed as a separate command.
+			if (/^"/.test(source)) {
+				skipto(/\n/g, {discard:true});
+				lastTerminator = source.charAt(0);
+				source = source.substring(1);
+				continue;
+			}
+
+			// 4. Leading characters that can be interpreted as addresses shall be evaluate;
+			// see Addressing in ex
+			// (http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_02).
+			range = ExCommand.prototype.parseRange(t, source, undefined, true);
+			if (typeof range == 'string') {
+				resultMessage = range;
+				break;
+			}
+			source = range.rest;
+
+			// 5. Leading <blank> characters shall be skipped.
+			source = source.replace(/^[: \t]+/, '');
+
+			// 6. If the next character is a <vertical-line> character or a <newline>:
+			//
+			//   a. If the next character is a <newline>:
+			//
+			//     i. If ex is in open or visual mode, the current line shall be set to the last
+			//     address specified, if any.
+			//
+			//     ii. Otherwise, if the last command was terminated by a <vertical-line> character,
+			//     no action shall be taken; for example, the command "||<newline>" shall execute
+			//     two implied commands, not three.
+			//
+			//     iii. Otherwise, step 6.b. shall apply.
+			//
+			//   b. Otherwise, the implied command shall be the print command. The last #, p, and l
+			//   flags specified to any ex command shall be remembered and shall apply to this
+			//   implied command. Executing the ex number, print, or list command shall set the
+			//   remembered flags to #, nothing, and l, respectively, plus any other flags
+			//   specified for that execution of the number, print, or list command.
+			//
+			//   If ex is not currently performing a global or v command, and no address or count
+			//   is specified, the current line shall be incremented by 1 before the command is
+			//   executed. If incrementing the current line would result in an address past the
+			//   last line in the edit buffer, the command shall fail, and the increment shall not
+			//   happen.
+			//
+			//   c. The <newline> or <vertical-line> character shall be discarded and any
+			//   subsequent characters shall be parsed as a separate command.
+			if (source.charAt(0) == '|' || source.charAt(0) == '\n') {
+				switch (source.charAt(0)) {
+				case '\n':
+					isJumpBaseUpdateRequested = false;
+					if (range && range.rows.length) {
+						commandObj = ExCommand.defaultCommand;
+						break;
+					}
+					if (lastTerminator == undefined || lastTerminator == '|') {
+						break;
+					}
+					/*FALLTHRU*/
+
+				case '|':
+					commandObj = ExCommand.defaultCommand;
+					commandArg = 'p';
+					break;
+				}
+
+				lastTerminator = source.charAt(0);
+				source = source.substring(1);
+
+				if (commandObj && !pushCommand()) {
+					break;
+				}
+
+				continue;
+			}
+
+			// 7. The command name shall be comprised of the next character (if the character
+			// is not alphabetic), or the next character and any subsequent alphabetic characters
+			// (if the character is alphabetic), with the following exceptions:
+			//
+			//   a. Commands that consist of any prefix of the characters in the command name
+			//   delete, followed immediately by any of the characters 'l' , 'p' , '+' , '-' , or
+			//   '#' shall be interpreted as a delete command, followed by a <blank>, followed by
+			//   the characters that were not part of the prefix of the delete command. The maximum
+			//   number of characters shall be matched to the command name delete; for example,
+			//   "del" shall not be treated as "de" followed by the flag l.
+			//
+			//   b. Commands that consist of the character 'k' , followed by a character that can
+			//   be used as the name of a mark, shall be equivalent to the mark command followed
+			//   by a <blank>, followed by the character that followed the 'k' .
+			//
+			//   c. Commands that consist of the character 's' , followed by characters that could
+			//   be interpreted as valid options to the s command, shall be the equivalent of the
+			//   s command, without any pattern or replacement values, followed by a <blank>,
+			//   followed by the characters after the 's' .
+			if (/^[a-z]/i.test(source)) {
+				if (/^(?:k\s*[a-zA-Z]|s\s*[^a-zA-Z \\|\n"])/.test(source)) {
+					commandName = source.charAt(0);
+					source = source.substring(1);
+				}
+				else {
+					var re = /^[a-z]+/i.exec(source);
+					commandName = re[0];
+					source = source.substring(re[0].length);
+				}
+			}
+			else {
+				commandName = source.charAt(0);
+				source = source.substring(1);
+			}
+
+			// 8.The command name shall be matched against the possible command names, and a
+			// command name that contains a prefix matching the characters specified by the user
+			// shall be the executed command. In the case of commands where the characters
+			// specified by the user could be ambiguous, the executed command shall be as
+			// follows:
+			//
+			//   a:  append    n:  next    t:  t
+			//   c:  change    p:  print   u:  undo
+			//   ch: change    pr: print   un: undo
+			//   e:  edit      r:  read    v:  v
+			//   m:  move      re: read    w:  write
+			//   ma: mark      s:  s
+			//
+			// Implementation extensions with names causing similar ambiguities shall not be
+			// checked for a match until all possible matches for commands specified by
+			// POSIX.1-2008 have been checked.
+			for (var i = 0, commands = ExCommand.commands; i < commands.length; i++) {
+				if (commandName.indexOf(commands[i].shortName) == 0
+				&&  commands[i].name.indexOf(commandName) == 0) {
+					for (var j = 0; j < commands[i].name.length; j++) {
+						if (commandName.charCodeAt(j) != commands[i].name.charCodeAt(j)) {
+							source = commandName.substring(j) + source;
+							break;
+						}
+					}
+					commandObj = commands[i];
+					commandName = commands[i].name;
+					break;
+				}
+			}
+
+			// 9. (wasavi supports neither '!' nor 'read' command)
+
+			// 10. Otherwise, if the command is an edit, ex, or next command, or a visual command
+			// while in open or visual mode, the next part of the command shall be parsed as
+			// follows:
+			//
+			//   a. Any '!' character immediately following the command shall be skipped and be
+			//   part of the command.
+			//
+			//   b. Any leading <blank> characters shall be skipped and be part of the command.
+			//
+			//   c. If the next character is a '+' , characters up to the first non- <backslash>-
+			//   escaped <newline> or non- <backslash>-escaped <blank> shall be skipped and be part
+			//   of the command.
+			//
+			//   d. The rest of the command shall be determined by the steps specified in paragraph
+			//   12.
+			if (/^(?:edit|ex|next|visual)$/.test(commandName)) {
+				if (source.charAt(0) == '!') {
+					commandArg += source.charAt(0);
+					source = source.substring(1);
+				}
+				skipblank();
+				if (source.charAt(0) == '+') {
+					skipto(/[\n \t]/g);
+				}
+				paragraph12();
+			}
+
+			// 11. Otherwise, if the command is a global, open, s, or v command, the next part of
+			// the command shall be parsed as follows:
+			//
+			//   a. Any leading <blank> characters shall be skipped and be part of the command.
+			//
+			//   b. If the next character is not an alphanumeric, double-quote, <newline>,
+			//   <backslash>, or <vertical-line> character:
+			//
+			//     i. The next character shall be used as a command delimiter.
+			//
+			//     ii. If the command is a global, open, or v command, characters up to the first
+			//     non- <backslash>-escaped <newline>, or first non- <backslash>-escaped delimiter
+			//     character, shall be skipped and be part of the command.
+			//
+			//     iii. If the command is an s command, characters up to the first non- <backslash>
+			//     -escaped <newline>, or second non- <backslash>-escaped delimiter character,
+			//     shall be skipped and be part of the command.
+			//
+			//   c. If the command is a global or v command, characters up to the first non-
+			//   <backslash>-escaped <newline> shall be skipped and be part of the command.
+			//
+			//   d. Otherwise, the rest of the command shall be determined by the steps specified
+			//   in paragraph 12.
+			else if (/^(?:global|open|s|v)$/.test(commandName)) {
+				skipblank();
+				if (/^(?:[^a-zA-Z"\n\\|])/.test(source)) {
+					var delimiter = source.charAt(0);
+					commandArgSups = [];
+					source = source.substring(1);
+
+					if (commandName != 's') {
+						skipto(getRegex(delimiter));
+					}
+					else {
+						skipto2(getRegex(delimiter), delimiter);
+					}
+					if (source.charAt(0) == delimiter) {
+						source = source.substring(1);
+					}
+				}
+				if (/^(?:global|v)$/.test(commandName)) {
+					if (exCommandExecutor.isGlobalSpecified) {
+						resultMessage = _('Cannot use the global or v command recursively.');
+						break;
+					}
+					exCommandExecutor.isGlobalSpecified = true;
+					skipto(/\n/g);
+					lastTerminator = source.charAt(0);
+					source = source.substring(1);
+				}
+				else {
+					paragraph12();
+				}
+			}
+
+			// 12. Otherwise:
+			//
+			//   a. If the command was a map, unmap, abbreviate, or unabbreviate command,
+			//   characters up to the first non- <control>-V-escaped <newline>, <vertical-line>,
+			//   or double-quote character shall be skipped and be part of the command.
+			//
+			//   b. Otherwise, characters up to the first non- <backslash>-escaped <newline>,
+			//   <vertical-line>, or double-quote character shall be skipped and be part of the
+			//   command.
+			//
+			//   c. If the command was an append, change, or insert command, and the step 12.b.
+			//   ended at a <vertical-line> character, any subsequent characters, up to the next
+			//   non- <backslash>-escaped <newline> shall be used as input text to the command.
+			//
+			//   d. If the command was ended by a double-quote character, all subsequent
+			//   characters, up to the next non- <backslash>-escaped <newline>, shall be discarded.
+			//
+			//   e. The terminating <newline> or <vertical-line> character shall be discarded and
+			//   any subsequent characters shall be parsed as a separate ex command.
+			else {
+				paragraph12();
+			}
+
+			if (commandObj && !pushCommand()) {
+				break;
+			}
+			if (!commandObj && commandName != '') {
+				resultMessage = _('{0}: unknown command.', commandName);
+				break;
+			}
+		}
+
+		if (typeof resultMessage == 'string') {
+			return resultMessage;
+		}
+
+		return parseOnly ? executor : executor.run();
 	}
 	function executeViCommand (/*, keepRunLevel*/) {
 		var editor = getEditorCore();
@@ -6198,32 +7935,79 @@ flag23_loop:
 		}
 		return false;
 	}
-	function getFileInfo (t) {
-		var result = [];
-
-		// file name
-		if (targetElement.id != '') {
-			result.push('"' + targetElement.nodeName + '#' + targetElement.id + '"');
+	function getFileNameString () {
+		if (WasaviExtensionWrapper.isTopFrame) {
+			if (fileName == '') {
+				return _('*Untitled*');
+			}
+			else {
+				return fileName;
+			}
 		}
 		else {
-			result.push('"' + targetElement.nodeName + '"');
+			if (targetElement.id != '') {
+				return targetElement.nodeName + '#' + targetElement.id;
+			}
+			else {
+				return targetElement.nodeName;
+			}
 		}
+	}
+	function getCaretPositionString (t) {
+		if (t.rowLength == 1 && t.rows(0) == '') {
+			return _('--No lines in buffer--');
+		}
+		else {
+			return _('line {0} of {1} ({2}%)',
+				t.selectionStartRow + 1,
+				t.rowLength,
+				parseInt(t.selectionStartRow / t.rowLength * 100.0));
+		}
+	}
+	function getNewlineType (newline) {
+		return {'\r\n':'dos', '\r':'mac', '\n':'unix'}[newline] || '?';
+	}
+	function getFileIoResultInfo (t, charLength, isNew) {
+		var result = [];
+		var attribs = [];
 
-		// modified
-		if (isTextDirty) {
-			result.push(_('modified:'));
-		}
+		// file name
+		result.push('"' + getFileNameString() + '"');
 
-		// read only
-		if (config.vars.readonly) {
-			result.push(_('readonly:'));
-		}
+		// partial attributes
+		attribs.push(getNewlineType(preferredNewline)); // newline type
+		result.push('[' + attribs.join(', ') + ']');
 
 		// current line number
-		result.push(_('line {0} of {1}', t.selectionStartRow + 1, t.rowLength));
+		var rowLength = t.rowLength;
+		if (t.rowLength == 1 && t.rows(0) == '') {
+			rowLength = 0;
+		}
 
-		// ratio of caret position
-		result.push(_('[{0}%]', parseInt(t.selectionStartRow / t.rowLength * 100.0)));
+		if (isNew) {
+			result.push(_('New file'));
+		}
+		else {
+			result.push(_('{0} {line:0}, {1} {character:1}.', rowLength, charLength));
+		}
+
+		return result.join(' ');
+	}
+	function getFileInfo (t) {
+		var result = [];
+		var attribs = [];
+
+		// file name
+		result.push('"' + getFileNameString() + '"');
+
+		// attributes
+		attribs.push(getNewlineType(preferredNewline)); // newline type
+		isTextDirty && attribs.push(_('modified')); // modified
+		config.vars.readonly && attribs.push(_('readonly')); // read only
+		result.push('[' + attribs.join(', ') + ']');
+
+		// current line number
+		result.push(getCaretPositionString(t));
 
 		return result.join(' ');
 	}
@@ -7514,959 +9298,6 @@ flag23_loop:
 	}
 
 	/*
-	 * ex command functions
-	 * ----------------
-	 */
-
-	function exParseRange (t, s, requiredCount, allowZeroAddress) {
-		var rows = [];
-		var ss = t.selectionStart;
-		var error = false;
-		var re;
-
-		if ((re = /^[ \t]*%/.exec(s))) {
-			rows.push(0, t.rowLength - 1);
-			s = s.substring(re[0].length);
-		}
-		else {
-			while (true) {
-				s = s.replace(/^[ \t]+/, '');
-
-				var found = false;
-				var regexSpecified = false;
-
-				if (s.charAt(0) == '.') {
-					rows.push(t.selectionStartRow);
-					s = s.substring(1);
-					found = true;
-				}
-				else if (s.charAt(0) == '$') {
-					rows.push(t.rowLength - 1);
-					s = s.substring(1);
-					isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^\d+/.exec(s))) {
-					var n = re[0] - 1;
-					if (n < 0) {
-						n = allowZeroAddress ? -1 : 0;
-					}
-					rows.push(n);
-					s = s.substring(re[0].length);
-					isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^'([a-z`'])/.exec(s))) {
-					var mark = marks.get(re[1]);
-					if (mark == undefined) {
-						error = true;
-						break;
-					}
-					else {
-						rows.push(mark.row);
-						s = s.substring(re[0].length);
-						isJumpBaseUpdateRequested = true;
-						found = true;
-					}
-				}
-				else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
-					var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
-					var regex = pattern == '' ? null : getFindRegex(pattern);
-					if (!regex) {
-						if (re[1] == '' && pattern == '') {
-							error = _('No previous search pattern.');
-						}
-						else {
-							error = _('Invalid regex pattern.');
-						}
-						break;
-					}
-					else {
-						regexSpecified = true;
-						lastRegexFindCommand.push({direction:1});
-						pattern != '' && lastRegexFindCommand.setPattern(pattern);
-
-						motionLineEnd('', t);
-						var result = motionFindByRegexForward(regex, t, 1);
-						if (result) {
-							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-							s = s.substring(re[0].length);
-							isJumpBaseUpdateRequested = true;
-							found = true;
-						}
-						else {
-							error = _('Pattern not found: {0}', pattern);
-							break;
-						}
-					}
-				}
-				else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
-					var pattern = re[1] == '' ? (lastRegexFindCommand.pattern || '') : re[1];
-					var regex = pattern == '' ? null : getFindRegex(pattern);
-					if (!regex) {
-						if (re[1] == '' && pattern == '') {
-							error = _('No previous search pattern.');
-						}
-						else {
-							error = _('Invalid regex pattern.');
-						}
-						break;
-					}
-					else {
-						regexSpecified = true;
-						lastRegexFindCommand.push({direction:-1});
-						pattern != '' && lastRegexFindCommand.setPattern(pattern);
-
-						motionLineStart('', t, true);
-						var result = motionFindByRegexBackward(regex, t, 1);
-						if (result) {
-							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-							s = s.substring(re[0].length);
-							isJumpBaseUpdateRequested = true;
-							found = true;
-						}
-						else {
-							error = _('Pattern not found: {0}', pattern);
-							break;
-						}
-					}
-				}
-				else if ((re = /^[\+\-](\d*)/.exec(s))) {
-					var offset = re[1] == '' ?
-						(re[0].charAt(0) == '+' ? 1 : -1) :
-						parseInt(re[0], 10);
-					rows.push(t.selectionStartRow + offset);
-					s = s.substring(re[0].length);
-					found = true;
-				}
-
-				if (found) {
-					if ((re = /^\s*[\+\-](\d*)/.exec(s))) {
-						var offset = re[1] == '' ?
-							(re[0].charAt(0) == '+' ? 1 : -1) :
-							parseInt(re[0], 10);
-						rows[rows.length - 1] += offset;
-						if (regexSpecified) {
-							lastRegexFindCommand.verticalOffset = offset;
-						}
-						s = s.substring(re[0].length);
-					}
-
-					if (rows[rows.length - 1] < 0) {
-						rows[rows.length - 1] = allowZeroAddress ? -1 : 0;
-					}
-
-					s = s.replace(/^[ \t]+/, '');
-				}
-
-				if (s.charAt(0) == ',') {
-					s = s.substring(1);
-					!found && rows.push(t.selectionStartRow);
-				}
-				else if (s.charAt(0) == ';') {
-					if (rows[rows.length - 1] >= t.rowLength) {
-						error = _('Out of range.');
-						break;
-					}
-					t.setSelectionRange(new Position(rows[rows.length - 1], 0));
-					s = s.substring(1);
-					!found && rows.push(t.selectionStartRow);
-				}
-				else {
-					break;
-				}
-			}
-		}
-
-		rows.last = function (t, count, isGlobal) {
-			var result = [];
-			count = Math.min(count, 2);
-			if (count == 1) {
-				if (this.length >= 1) {
-					result = [this[this.length - 1]];
-				}
-				else {
-					result = [t.selectionStartRow];
-				}
-			}
-			else if (count == 2) {
-				if (this.length >= 2) {
-					result = [ this[this.length - 2], this[this.length - 1] ];
-				}
-				else if (this.length == 1) {
-					result = [ this[0], this[0] ];
-				}
-				else {
-					if (isGlobal) {
-						result = [0, t.rowLength - 1];
-					}
-					else {
-						result = [ t.selectionStartRow, t.selectionStartRow ];
-					}
-				}
-				if (result[1] < result[0]) {
-					return _('The second address is smaller than the first.');
-				}
-			}
-			result.specifiedAddresses = Math.min(this.length, 2);
-			return result;
-		};
-
-		t.setSelectionRange(ss);
-
-		return error || {
-			rows: requiredCount == undefined ? rows : rows.last(t, requiredCount),
-			rest: s
-		};
-	}
-	function exGlobal (t, a) {
-		var r = a.range;
-		var inverted = !!a.flags.force;
-		var pattern = a.argv[0];
-		var command = a.argv[1];
-
-		if (pattern == '') {
-			if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
-				return _('No previous search pattern.');
-			}
-		}
-		else {
-			lastRegexFindCommand.push({direction:1});
-			lastRegexFindCommand.setPattern(pattern);
-			registers.set('/', lastRegexFindCommand.pattern);
-		}
-		var patternString = pattern;
-		pattern = getFindRegex(pattern);
-
-		// initialize text
-		var textPreLength;
-		var text;
-		var rg = document.createRange();
-		rg.setStartBefore(t.rowNodes(0));
-		rg.setEndBefore(t.rowNodes(r[0]));
-		textPreLength = rg.toString().length;
-
-		rg.setStartBefore(t.rowNodes(r[0]));
-		rg.setEndAfter(t.rowNodes(r[1]));
-		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
-		rg.detach();
-		rg = null;
-
-		// pass 1
-		var re;
-		var items = [];
-		var prevOffset;
-		var prevRow;
-		var nullNewline = {length:0};
-		pattern.lastIndex = 0;
-		if (inverted) {
-			var rangeStartRow = t.indexOf(t.rowNodes(r[0]));
-			re = pattern.exec(text);
-			if (re) {
-				var pos = pattern.lastIndex - re[0].length;
-				var row, delta;
-				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
-				items.push(row - rangeStartRow);
-				prevOffset = pos;
-				prevRow = row;
-
-				while ((re = pattern.exec(text))) {
-					if (pattern.lastIndex == prevOffset) {
-						if (pattern.lastIndex < text.length) {
-							pattern.lastIndex++;
-							continue;
-						}
-						else {
-							break;
-						}
-					}
-					pos = pattern.lastIndex - re[0].length;
-					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
-					row = prevRow + delta;
-					if (row > r[1]) break;
-					delta && items.push(row - rangeStartRow);
-					prevOffset = pos;
-					prevRow = row;
-				}
-
-				if (items.length >= r[1] - r[0] + 1) {
-					return _('Pattern found in every line: {0}', patternString);
-				}
-				var tmp = [], container = t.elm;
-				for (var i = r[0]; i <= r[1]; i++) {
-					tmp.push(container.childNodes[i]);
-				}
-				for (var i = items.length - 1; i >= 0; i--) {
-					tmp.splice(items[i], 1);
-				}
-				items = tmp;
-			}
-		}
-		else {
-			re = pattern.exec(text);
-			if (re) {
-				var pos = pattern.lastIndex - re[0].length;
-				var row, delta;
-				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
-				items.push(t.rowNodes(row));
-				prevOffset = pos;
-				prevRow = row;
-
-				while ((re = pattern.exec(text))) {
-					if (pattern.lastIndex == prevOffset) {
-						if (pattern.lastIndex < text.length) {
-							pattern.lastIndex++;
-							continue;
-						}
-						else {
-							break;
-						}
-					}
-					pos = pattern.lastIndex - re[0].length;
-					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
-					row = prevRow + delta;
-					if (row > r[1]) break;
-					delta && items.push(t.rowNodes(row));
-					prevOffset = pos;
-					prevRow = row;
-				}
-			}
-		}
-
-		function dumpItems (title) {
-			var result = [];
-			for (var i = 0, goal = items.length; i < goal; i++) {
-				if (items[i]) {
-					result.push(i + ': "' + toVisibleString(items[i].innerHTML) + '"');
-				}
-				else {
-					result.push(i + ': null');
-				}
-			}
-			console.info((title || 'dump') + '\n' + result.join('\n'));
-		}
-
-		// pass 2
-		editLogger.open('global');
-		try {
-			//dumpItems('init');
-			for (var i = 0, goal = items.length; i < goal; i++) {
-				if (items[i].parentNode) {
-					t.setSelectionRange(t.getLineTopOffset2(new Position(t.indexOf(items[i]), 0)));
-					var result = executeExCommand(t, command);
-					if (typeof result == 'string') {return result;}
-				}
-				else {
-					items[i] = null;
-				}
-			}
-		}
-		finally {
-			editLogger.close();
-		}
-	}
-	function exSetMark (t, a) {
-		var name = a.argv[0];
-		if (name.length > 1) {
-			return _('Mark names must be a single character.');
-		}
-		if (!marks.isValidName(name)) {
-			return _('Invalid mark name.');
-		}
-		marks.set(name, new Position(a.range[0], 0));
-	}
-	function exCopy (t, a) {
-		var rg = document.createRange();
-		rg.setStartBefore(t.rowNodes(a.range[0]));
-		rg.setEndAfter(t.rowNodes(a.range[1]));
-		var content = rg.toString();
-		rg.detach();
-		t.setSelectionRange(new Position(a.lineNumber, 0));
-		paste(t, 1, {
-			isForward:true,
-			isForceLineOrient:true,
-			content:content
-		});
-		var copied = a.range[1] - a.range[0] + 1;
-		if (copied >= config.vars.report) {
-			requestShowMessage(_('Copied {0} {line:0}.', copied));
-		}
-		t.setSelectionRange(t.getLineTopOffset2(a.lineNumber + 1 + copied - 1, 0));
-		isEditCompleted = true;
-	}
-	function exQuit (isForce) {
-		if (isForce) {
-			writeOnTermination = false;
-			terminated = true;
-		}
-		else {
-			if (isTextDirty) {
-				return _('The text has been modified; use :quit! to discard any changes.');
-			}
-			else {
-				terminated = true;
-			}
-		}
-	}
-	function exWriteParseArg (t, a) {
-		var re;
-		var arg = a.argv[0] || '';
-		var isCommand = false;
-		var isAppend = false;
-		var name = false;
-		if (re = /^\s*(?!\\)!(.+)/.exec(arg)) {
-			isCommand = true;
-			name = re[1];
-		}
-		else if (re = /^\s*(>>)?(.*)/.exec(arg)) {
-			isAppend = re[1] == '>>';
-			name = re[2] || '';
-		}
-		if (name === false) {
-			return _('Invalid argument.');
-		}
-		return {
-			isCommand:isCommand,
-			isAppend:isAppend,
-			name:name
-		};
-	}
-	function exWrite (t, a, isCommand, isAppend, target) {
-		var isForce = !!a.flags.force;
-
-		if (isCommand) {
-			return _('Command redirection is not implemented.');
-		}
-		else {
-			target = target || '';
-			if (target != '') {
-				return _('Specifying file name is not implemented.');
-			}
-			if (isAppend) {
-				return _('Appending is not implemented.');
-			}
-
-			target = targetElement;
-
-			if (isForce) {
-				target.readOnly = false;
-				config.setData('noreadonly');
-			}
-			else {
-				if (config.vars.readonly && target == targetElement) {
-					return _('Readonly option is set (use "!" to override).');
-				}
-				if (target.readOnly) {
-					return _('Element to be written has readonly attribute (use "!" to override).');
-				}
-			}
-
-			var rg = document.createRange();
-			rg.setStartBefore(t.rowNodes(a.range[0]));
-			rg.setEndAfter(t.rowNodes(a.range[1]));
-			var content = toNativeControl(rg.toString());
-			rg.detach();
-
-			if (a.range[1] == t.rowLength - 1) {
-				content = trimTerm(content);
-			}
-			if (extensionChannel) {
-				extensionChannel.postMessage({
-					type:'notify-to-parent',
-					parentTabId:targetElement.parentTabId,
-					payload:{type:'wasavi-saved', value:content}
-				});
-			}
-			if (typeof eventHandlers.onSaved == 'function') {
-				eventHandlers.onSaved({value:content});
-			}
-			if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == targetElement) {
-				isTextDirty = false;
-			}
-		}
-	}
-	function exExecuteRegister (t, a) {
-		var command;
-		var register;
-
-		if (a.flags.register) {
-			register = a.register;
-		}
-		else if (!registers.exists('@') || (register = registers.get('@').data) == '') {
-			return _('No previous execution.');
-		}
-		if (register == '@' || !registers.isReadable(register)) {
-			return _('Invalid register name: {0}', register);
-		}
-		if (!registers.exists(register) || (command = registers.get(register).data) == '') {
-			return _('Register {0} is empty.', register);
-		}
-		/*if (command.substr(-1) != '\n') {
-			command += '\n';
-		}*/
-		t.setSelectionRange(new Position(a.range[0], 0));
-		var result = executeExCommand(t, command);
-		if (typeof result == 'string') {
-			return result;
-		}
-		registers.set('@', command, true);
-	}
-	function executeExCommand (t, source) {
-		// @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
-
-		var resultMessage;
-		var lastTerminator;
-		var commandName = '';
-		var commandArg = '';
-		var commandArgSups;
-		var commandObj = null;
-		var range = null;
-
-		function getRegex (delimiter) {
-			delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
-			return new RegExp('\\n|' + delimiter, 'g');
-		}
-
-		function skipblank () {
-			var re = /^[ \t]+/.exec(source);
-			if (re) {
-				commandArg += re[0];
-				source = source.substring(re[0].length);
-			}
-		}
-		function skipto (regex, opts) {
-			opts || (opts = {});
-			var escapeChars = opts.escapeChars || '\\';
-			var discard = opts.discard;
-			var re = regex.exec(source);
-			if (re) {
-				do {
-					var index = regex.lastIndex - re[0].length;
-					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
-						if (!discard) {
-							if (commandArgSups) {
-								commandArgSups.push(source.substring(0, index));
-							}
-							else {
-								commandArg += source.substring(0, index);
-							}
-						}
-						source = source.substring(index);
-						return;
-					}
-				} while ((re = regex.exec(source)));
-			}
-			if (!discard) {
-				commandArg = source;
-			}
-			source = '';
-		}
-
-		function skipto2 (regex, delimiter) {
-			var escapeChars = '\\';
-			var re = regex.exec(source);
-			var found = 0;
-			var fragmentStart = 0;
-			if (re) {
-				do {
-					var index = regex.lastIndex - re[0].length;
-					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
-						found++;
-						commandArgSups.push(source.substring(fragmentStart, index));
-						fragmentStart = regex.lastIndex;
-						if (re[0] == '\n' || re[0] == delimiter && found == 2) {
-							source = source.substring(index);
-							return;
-						}
-					}
-				} while ((re = regex.exec(source)));
-			}
-			commandArg = source;
-			source = '';
-		}
-
-		function run () {
-			var r;
-			if (commandObj.rangeCount == 0) {
-				if (range.rows.length) {
-					resultMessage = _('{0}: extra range specified.', commandObj.name);
-					return false;
-				}
-				r = [];
-			}
-			else {
-				r = range.rows.last(t, commandObj.rangeCount, commandObj.flags.addr2All);
-				if (typeof r == 'string') {
-					resultMessage = r;
-					return false;
-				}
-			}
-
-			var ss = t.selectionStart;
-			var result = commandObj.run(t, r, commandArg, commandArgSups);
-			if (result.error) {
-				resultMessage = result.error || _('{0}: unknown error.', commandObj.name);
-				return false;
-			}
-			if ((isJumpBaseUpdateRequested || commandObj.flags.updateJump) && t.selectionStart.ne(ss)) {
-				marks.set('\'', ss);
-				isJumpBaseUpdateRequested = false;
-			}
-			if (result.flags.hash || result.flags.list || result.flags.print) {
-				var n = Math.max(0, Math.min(t.selectionStartRow + result.flagoff, t.rowLength - 1));
-				t.setSelectionRange(t.getLineTopOffset2(n, 0));
-				exPrintRow(t, n.row, n.row, result.flags);
-			}
-
-			resultMessage = true;
-			return true;
-		}
-
-		function paragraph12 () {
-			if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
-				skipto(/[\n|"]/g, {escapeChars:'\u0016'});
-			}
-			else {
-				skipto(/[\n|"]/g);
-			}
-			if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
-				skipto(/\n/g);
-			}
-			if (source.charAt(0) == '"') {
-				skipto(/\n/g, {discard:true});
-			}
-			if (commandName == 'print' && commandArg == '') {
-				commandArg = 'p';
-			}
-			lastTerminator = source.charAt(0);
-			source = source.substring(1);
-		}
-
-		if (/[\\\u0016]$/.test(source)) {
-			source = source.substring(0, source.length - 1);
-		}
-		if (!/\n$/.test(source)) {
-			source += '\n';
-		}
-
-		while (source.length && !terminated) {
-			commandName = commandArg = '';
-			commandObj = null;
-
-			// 1. Leading <colon> characters shall be skipped.
-			// 2. Leading <blank> characters shall be skipped.
-			source = source.replace(/^[: \t]+/, '');
-
-			// 3. If the leading character is a double-quote character, the characters up to and
-			// including the next non- <backslash>-escaped <newline> shall be discarded, and any
-			// subsequent characters shall be parsed as a separate command.
-			if (/^"/.test(source)) {
-				skipto(/\n/g, {discard:true});
-				lastTerminator = source.charAt(0);
-				source = source.substring(1);
-				continue;
-			}
-
-			// 4. Leading characters that can be interpreted as addresses shall be evaluate;
-			// see Addressing in ex
-			// (http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_02).
-			range = exParseRange(t, source, undefined, true);
-			if (typeof range == 'string') {
-				resultMessage = range;
-				break;
-			}
-			source = range.rest;
-
-			// 5. Leading <blank> characters shall be skipped.
-			source = source.replace(/^[: \t]+/, '');
-
-			// 6. If the next character is a <vertical-line> character or a <newline>:
-			//
-			//   a. If the next character is a <newline>:
-			//
-			//     i. If ex is in open or visual mode, the current line shall be set to the last
-			//     address specified, if any.
-			//
-			//     ii. Otherwise, if the last command was terminated by a <vertical-line> character,
-			//     no action shall be taken; for example, the command "||<newline>" shall execute
-			//     two implied commands, not three.
-			//
-			//     iii. Otherwise, step 6.b. shall apply.
-			//
-			//   b. Otherwise, the implied command shall be the print command. The last #, p, and l
-			//   flags specified to any ex command shall be remembered and shall apply to this
-			//   implied command. Executing the ex number, print, or list command shall set the
-			//   remembered flags to #, nothing, and l, respectively, plus any other flags
-			//   specified for that execution of the number, print, or list command.
-			//
-			//   If ex is not currently performing a global or v command, and no address or count
-			//   is specified, the current line shall be incremented by 1 before the command is
-			//   executed. If incrementing the current line would result in an address past the
-			//   last line in the edit buffer, the command shall fail, and the increment shall not
-			//   happen.
-			//
-			//   c. The <newline> or <vertical-line> character shall be discarded and any
-			//   subsequent characters shall be parsed as a separate command.
-			if (source.charAt(0) == '|' || source.charAt(0) == '\n') {
-				switch (source.charAt(0)) {
-				case '\n':
-					isJumpBaseUpdateRequested = false;
-					if (range && range.rows.length) {
-						commandObj = exCommandDefault;
-						break;
-					}
-					if (lastTerminator == undefined || lastTerminator == '|') {
-						break;
-					}
-					/*FALLTHRU*/
-
-				case '|':
-					commandObj = exCommandDefault;
-					commandArg = 'p';
-					break;
-				}
-
-				lastTerminator = source.charAt(0);
-				source = source.substring(1);
-
-				if (commandObj && !run()) {
-					break;
-				}
-
-				continue;
-			}
-
-			// 7. The command name shall be comprised of the next character (if the character
-			// is not alphabetic), or the next character and any subsequent alphabetic characters
-			// (if the character is alphabetic), with the following exceptions:
-			//
-			//   a. Commands that consist of any prefix of the characters in the command name
-			//   delete, followed immediately by any of the characters 'l' , 'p' , '+' , '-' , or
-			//   '#' shall be interpreted as a delete command, followed by a <blank>, followed by
-			//   the characters that were not part of the prefix of the delete command. The maximum
-			//   number of characters shall be matched to the command name delete; for example,
-			//   "del" shall not be treated as "de" followed by the flag l.
-			//
-			//   b. Commands that consist of the character 'k' , followed by a character that can
-			//   be used as the name of a mark, shall be equivalent to the mark command followed
-			//   by a <blank>, followed by the character that followed the 'k' .
-			//
-			//   c. Commands that consist of the character 's' , followed by characters that could
-			//   be interpreted as valid options to the s command, shall be the equivalent of the
-			//   s command, without any pattern or replacement values, followed by a <blank>,
-			//   followed by the characters after the 's' .
-			if (/^[a-z]/i.test(source)) {
-				if (/^(?:k\s*[a-zA-Z]|s\s*[^a-zA-Z \\|\n"])/.test(source)) {
-					commandName = source.charAt(0);
-					source = source.substring(1);
-				}
-				else {
-					var re = /^[a-z]+/i.exec(source);
-					commandName = re[0];
-					source = source.substring(re[0].length);
-				}
-			}
-			else {
-				commandName = source.charAt(0);
-				source = source.substring(1);
-			}
-
-			// 8.The command name shall be matched against the possible command names, and a
-			// command name that contains a prefix matching the characters specified by the user
-			// shall be the executed command. In the case of commands where the characters
-			// specified by the user could be ambiguous, the executed command shall be as
-			// follows:
-			//
-			//   a:  append    n:  next    t:  t
-			//   c:  change    p:  print   u:  undo
-			//   ch: change    pr: print   un: undo
-			//   e:  edit      r:  read    v:  v
-			//   m:  move      re: read    w:  write
-			//   ma: mark      s:  s
-			//
-			// Implementation extensions with names causing similar ambiguities shall not be
-			// checked for a match until all possible matches for commands specified by
-			// POSIX.1-2008 have been checked.
-			for (var i = 0; i < exCommands.length; i++) {
-				if (commandName.indexOf(exCommands[i].shortName) == 0
-				&&  exCommands[i].name.indexOf(commandName) == 0) {
-					for (var j = 0; j < exCommands[i].name.length; j++) {
-						if (commandName.charCodeAt(j) != exCommands[i].name.charCodeAt(j)) {
-							source = commandName.substring(j) + source;
-							break;
-						}
-					}
-					commandObj = exCommands[i];
-					commandName = exCommands[i].name;
-					break;
-				}
-			}
-
-			// 9. (wasavi supports neither '!' nor 'read' command)
-
-			// 10. Otherwise, if the command is an edit, ex, or next command, or a visual command
-			// while in open or visual mode, the next part of the command shall be parsed as
-			// follows:
-			//
-			//   a. Any '!' character immediately following the command shall be skipped and be
-			//   part of the command.
-			//
-			//   b. Any leading <blank> characters shall be skipped and be part of the command.
-			//
-			//   c. If the next character is a '+' , characters up to the first non- <backslash>-
-			//   escaped <newline> or non- <backslash>-escaped <blank> shall be skipped and be part
-			//   of the command.
-			//
-			//   d. The rest of the command shall be determined by the steps specified in paragraph
-			//   12.
-			if (/^(?:edit|ex|next|visual)$/.test(commandName)) {
-				if (source.charAt(0) == '!') {
-					commandArg += source.charAt(0);
-					source = source.substring(1);
-				}
-				skipblank();
-				if (source.charAt(0) == '+') {
-					skipto(/[\n \t]/g);
-				}
-				paragraph12();
-			}
-
-			// 11. Otherwise, if the command is a global, open, s, or v command, the next part of
-			// the command shall be parsed as follows:
-			//
-			//   a. Any leading <blank> characters shall be skipped and be part of the command.
-			//
-			//   b. If the next character is not an alphanumeric, double-quote, <newline>,
-			//   <backslash>, or <vertical-line> character:
-			//
-			//     i. The next character shall be used as a command delimiter.
-			//
-			//     ii. If the command is a global, open, or v command, characters up to the first
-			//     non- <backslash>-escaped <newline>, or first non- <backslash>-escaped delimiter
-			//     character, shall be skipped and be part of the command.
-			//
-			//     iii. If the command is an s command, characters up to the first non- <backslash>
-			//     -escaped <newline>, or second non- <backslash>-escaped delimiter character,
-			//     shall be skipped and be part of the command.
-			//
-			//   c. If the command is a global or v command, characters up to the first non-
-			//   <backslash>-escaped <newline> shall be skipped and be part of the command.
-			//
-			//   d. Otherwise, the rest of the command shall be determined by the steps specified
-			//   in paragraph 12.
-			else if (/^(?:global|open|s|v)$/.test(commandName)) {
-				skipblank();
-				if (/^(?:[^a-zA-Z"\n\\|])/.test(source)) {
-					var delimiter = source.charAt(0);
-					commandArgSups = [];
-					source = source.substring(1);
-
-					if (commandName != 's') {
-						skipto(getRegex(delimiter));
-					}
-					else {
-						skipto2(getRegex(delimiter), delimiter);
-					}
-					if (source.charAt(0) == delimiter) {
-						source = source.substring(1);
-					}
-				}
-				if (/^(?:global|v)$/.test(commandName)) {
-					if (exGlobalSpecified) {
-						requestShowMessage(
-							_('Cannot use the global or v command recursively.'),
-							true);
-						break;
-					}
-					exGlobalSpecified = true;
-					skipto(/\n/g);
-					lastTerminator = source.charAt(0);
-					source = source.substring(1);
-				}
-				else {
-					paragraph12();
-				}
-			}
-
-			// 12. Otherwise:
-			//
-			//   a. If the command was a map, unmap, abbreviate, or unabbreviate command,
-			//   characters up to the first non- <control>-V-escaped <newline>, <vertical-line>,
-			//   or double-quote character shall be skipped and be part of the command.
-			//
-			//   b. Otherwise, characters up to the first non- <backslash>-escaped <newline>,
-			//   <vertical-line>, or double-quote character shall be skipped and be part of the
-			//   command.
-			//
-			//   c. If the command was an append, change, or insert command, and the step 12.b.
-			//   ended at a <vertical-line> character, any subsequent characters, up to the next
-			//   non- <backslash>-escaped <newline> shall be used as input text to the command.
-			//
-			//   d. If the command was ended by a double-quote character, all subsequent
-			//   characters, up to the next non- <backslash>-escaped <newline>, shall be discarded.
-			//
-			//   e. The terminating <newline> or <vertical-line> character shall be discarded and
-			//   any subsequent characters shall be parsed as a separate ex command.
-			else {
-				paragraph12();
-			}
-
-			// execute...
-			if (commandObj && !run()) {
-				break;
-			}
-			if (!commandObj && commandName != '') {
-				resultMessage = _('{0}: unknown command.', commandName);
-				break;
-			}
-		}
-		return resultMessage;
-	}
-	function exPrintRow (t, from, to, flags) {
-		function getLineNumber (i) {
-			return ('     ' + (i + 1)).substr(-6) + '  ';
-		}
-		function getLineNumberNull () {
-			return '';
-		}
-		var lg = flags.hash ? getLineNumber : getLineNumberNull;
-		if (flags.list) {
-			var escapeReplacements = {
-				7: '\\a', 8: '\\b', 9: '\\t', 10: '\\n', 11: '\\v', 12: '\\f', 13: '\\r', 92:'\\\\'
-			};
-			for (var i = from; i <= to; i++) {
-				var line = toNativeControl(t.rows(i));
-				/*
-				 * char code
-				 * \\   5c
-				 * \a   07
-				 * \b   08
-				 * \t   09
-				 * \n   0a
-				 * \v   0b
-				 * \f   0c
-				 * \r   0d
-				 */
-				line = line.replace(/[\u0007\u0008\u000a-\u000d\\]/g, function (s) {
-					return escapeReplacements[s.charCodeAt(0)];
-				});
-				line = line.replace(/[\u0000-\u0008\u0010-\u001f\u007f]/g, function (s) {
-					return '\\' + ('00' + s.charCodeAt(0).toString(8)).substr(-3);
-				});
-				line = line.replace(/\$/g, '\\$');
-				line = line + '$';
-				backlog.push(lg(i) + line);
-			}
-		}
-		else if (flags.hash || flags.print) {
-			for (var i = from; i <= to; i++) {
-				var line = t.rows(i);
-				backlog.push(lg(i) + line);
-			}
-		}
-	}
-
-	/*
 	 * variables
 	 * ----------------
 	 */
@@ -8475,433 +9306,14 @@ flag23_loop:
 
 	var runType;
 	var exrc = '';
-	var fontFamily = '"Consolas","Monaco","Courier New","Courier",monospace';
-	var exGlobalSpecified = false;
+	var fontFamily = 'monospace';
 	var substituteWorker;
-	var exCommandDefault = new ExCommand(
-		'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
-		function (t, a) {
-			exPrintRow(t, a.range[0], a.range[1], a.flags);
-			t.setSelectionRange(t.getLineTopOffset2(new Position(a.range[1], 0)));
-			a.flags.hash = a.flags.list = a.flags.print = false;
-		}
-	);
-	var exCommands = [
-		new ExCommand('abbreviate', 'ab', 'W', 0, function (t, a) {
-			function dispAbbrev (ab) {
-				var maxWidth = 0;
-				var count = 0;
-				for (var i in ab) {
-					if (i.length > maxWidth) {
-						maxWidth = i.length;
-					}
-					count++;
-				}
-				if (count) {
-					var list = [_('*** abbreviations ***')];
-					for (var i in ab) {
-						list.push(
-							i + multiply(' ', maxWidth - i.length) +
-							'\t' + toVisibleString(abbrevs[i])
-						);
-					}
-					list.sort();
-					backlog.push(list);
-				}
-				else {
-					backlog.push(_('No abbreviations are defined.'));
-				}
-			}
-			switch (a.argv.length) {
-			case 0:
-				dispAbbrev(abbrevs);
-				break;
-
-			case 1:
-				var lhs = a.argv[0];
-				if (lhs == '[clear]') {
-					abbrevs = {};
-				}
-				else {
-					var tmp = {};
-					if (lhs in abbrevs) {
-						tmp[lhs] = abbrevs[lhs];
-					}
-					dispAbbrev(tmp);
-				}
-				break;
-
-			default:
-				var lhs = a.argv[0];
-				var rhs = a.argv[1];
-				if (!config.vars.iskeyword.test(lhs.substr(-1))) {
-					return _('The keyword of abbreviation must end with a word character.');
-				}
-				abbrevs[lhs] = rhs;
-				break;
-			}
-		}),
-		new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
-			return exCopy(t, a);
-		}),
-		new ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (t, a) {
-			t.setSelectionRange(new Position(a.range[0], 0));
-			t.isLineOrientSelection = true;
-			var deleted = a.range[1] - a.range[0] + 1;
-			yank(t, deleted, true, a.flags.register ? a.register : '');
-			deleteSelection(t);
-			if (deleted >= config.vars.report) {
-				requestShowMessage(_('Deleted {0} {line:0}.', deleted));
-			}
-			var n = new Position(Math.min(a.range[0], t.rowLength - 1), 0);
-			t.setSelectionRange(t.getLineTopOffset2(n));
-			isEditCompleted = true;
-		}),
-		new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
-			return exGlobal(t, a);
-		}),
-		new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (t, a) {
-			var head = a.range[0];
-			var tail = Math.min(t.rowLength - 1, a.range[1] + (a.flags.count ? a.count - 1 : 0));
-			t.setSelectionRange(new Position(head, 0));
-			joinLines(t, tail - head, a.flags.force);
-			t.setSelectionRange(t.getLineTopOffset2(head, 0));
-			isEditCompleted = true;
-		}),
-		new ExCommand('k', 'k', 'w1r', 1, function (t, a) {
-			return exSetMark(t, a);
-		}),
-		new ExCommand('map', 'map', '!W', 0, function (t, a) {
-			var mapName = a.flags.force ? 'edit' : 'command';
-			var map = mapManager.getMap(mapName);
-			function dispMap (map) {
-				var maxWidth = 0;
-				if (map.length) {
-					map.map(function (o) {
-						if (o[0].length > maxWidth) {
-							maxWidth = o[0].length;
-						}
-					});
-					var list = ['*** ' + mapName + ' mode map ***'];
-					map.map(function (o) {
-						list.push(
-							o[0] + multiply(' ', maxWidth - o[0].length) +
-							'\t' + toVisibleString(o[1]));
-					});
-					backlog.push(list);
-				}
-				else {
-					backlog.push(_('No mappings for {0} mode are defined.', mapName));
-				}
-			}
-			if (a.argv.length == 0) {
-				dispMap(map.toArray());
-			}
-			else {
-				var lhs = a.argv[0] || '';
-				var rhs = a.argv[1] || '';
-				var remap = true;
-				switch (lhs) {
-				case '[clear]':
-					map.removeAll();
-					break;
-				case '[noremap]':
-					lhs = rhs;
-					rhs = a.argv[2] || '';
-					remap = false;
-					/*FALLTHRU*/
-				default:
-					if (rhs == '') {
-						dispMap(map.toArray().filter(function (o) {
-							return o[0].indexOf(lhs) >= 0;
-						}));
-					}
-					else {
-						// reject some mappings for text input mode: <escape>, <nl>
-						if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
-							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-						}
-						// reject some mappings for command mode: :, <escape>
-						if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
-							return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-						}
-						map.register(lhs, rhs, remap);
-					}
-					break;
-				}
-			}
-		}),
-		new ExCommand('mark', 'ma', 'w1r', 1, function (t, a) {
-			return exSetMark(t, a);
-		}),
-		new ExCommand('marks', 'marks', '', 0, function (t, a) {
-			backlog.push(marks.dump());
-		}),
-		new ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (t, a) {
-			var r = a.range;
-			var dest = a.lineNumber;
-			if (dest >= r[0] && dest < r[1]) {
-				return _('Destination is in inside source.');
-			}
-			editLogger.open('move', function () {
-				var rows = r[1] - r[0] + 1;
-
-				if (dest == r[0] - 1 || dest == r[1]) {
-					editLogger.write(EditLogger.ITEM_TYPE.NOP);
-				}
-				else {
-					// delete
-					t.isLineOrientSelection = true;
-					t.setSelectionRange(new Position(r[0], 0));
-					t.selectRows(rows);
-					var content = t.getSelectionRows();
-					deleteSelection(t);
-					t.isLineOrientSelection = false;
-
-					// fix destination position
-					dest -= dest > r[1] ? rows : 0;
-
-					// paste
-					t.setSelectionRange(new Position(dest, 0));
-					paste(t, 1, {
-						isForward:true,
-						isForceLineOrient:true,
-						content:content
-					});
-				}
-
-				if (rows >= config.vars.report) {
-					requestShowMessage(_('Moved {0} {line:0}.', rows));
-				}
-
-				t.setSelectionRange(t.getLineTopOffset2(dest + rows, 0));
-			});
-			isEditCompleted = true;
-		}),
-		new ExCommand('options', 'opt', '', 0, function (t, a) {
-			if (extensionChannel) {
-				extensionChannel.postMessage({type:'open-options-page'});
-			}
-			else {
-				return requestRegisterNotice(_('Don\'t know how to open options page.'));
-			}
-		}),
-		new ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (t, a) {
-			a.flags.print = true;
-			return exCommandDefault.handler.apply(this, arguments);
-		}),
-		new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (t, a) {
-			var register = a.flags.register ? a.register : '"';
-			if (!registers.exists(register)) {
-				return _('Register {0} is empty.', register);
-			}
-			t.setSelectionRange(new Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
-			paste(t, 1, {
-				isForward:true,
-				isForceLineOrient:true,
-				register:register
-			});
-			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
-		}),
-		new ExCommand('quit', 'q', '!', 0, function (t, a) {
-			return exQuit(a.flags.force);
-		}),
-		new ExCommand('redo', 'r', '', 0, function (t, a) {
-			editLogger.close();
-			var result = editLogger.redo();
-			editLogger.open('excommand+redo');
-			if (result === false) {
-				return _('No redo item.');
-			}
-			else {
-				requestShowMessage(
-					_('{0} {operation:0} have executed again.', result));
-				return;
-			}
-		}),
-		new ExCommand('s', 's', 's', 2, function (t, a) {
-			return (new SubstituteWorker).run(t, a.range, a.argv[0], a.argv[1], a.argv[2]);
-		}),
-		new ExCommand('&', '&', 's', 2, function (t, a) {
-			return (new SubstituteWorker).run(t, a.range, '', '%', a.argv[0]);
-		}),
-		new ExCommand('~', '~', 's', 2, function (t, a) {
-			var pattern;
-			if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
-				return _('No previous search pattern.');
-			}
-			return (new SubstituteWorker).run(t, a.range, pattern, '~', a.argv[0]);
-		}),
-		new ExCommand('set', 'se', 'wN', 0, function (t, a) {
-			var messages;
-			var logToConsole = false;
-			var emphasis = false;
-			if (a.argv.length == 0) {
-				messages = config.dump();
-				logToConsole = true;
-			}
-			else if (a.argv.some(function (o) {return o == 'all';})) {
-				messages = config.dump(true);
-				logToConsole = true;
-			}
-			else {
-				messages = [];
-				for (var i = 0; i < a.argv.length; i++) {
-					var arg = a.argv[i];
-					var re = /^([^=?]+)([=?])/.exec(arg) || ['', arg, ''];
-					var info = config.getInfo(re[1]);
-					if (!info) {
-						messages.push(_('Unknown option: {0}', re[1]));
-						emphasis = true;
-						continue;
-					}
-					if (re[2] == '?') {
-						messages.push(config.getData(re[1], true));
-					}
-					else if (i + 1 < a.argv.length && a.argv[i + 1] == '?') {
-						messages.push(config.getData(re[1], true));
-						i++;
-					}
-					else {
-						if (re[2] == ''
-						&& i + 1 < a.argv.length
-						&& a.argv[i + 1].charAt(0) == '=') {
-							re[0] = arg + '=';
-							arg += a.argv[++i];
-							re[2] = '=';
-						}
-						if (re[2] != '=' && info.type != 'b') {
-							messages.push(config.getData(re[1], true));
-						}
-						else {
-							var result = config.setData(
-								re[1],
-								re[2] == '=' ? arg.substring(re[0].length) : undefined);
-							if (typeof result == 'string') {
-								messages.push(result.replace(/\.$/, '') + ': ' + arg);
-								emphasis = true;
-								break;
-							}
-						}
-					}
-				}
-				if (messages.length == 1) {
-					messages = messages[0];
-				}
-				else {
-					logToConsole = true;
-				}
-			}
-			if (logToConsole) {
-				backlog.push(messages);
-			}
-			else {
-				requestShowMessage(messages, emphasis);
-			}
-		}),
-		new ExCommand('sushi', 'sushi', '', 0, function (t, a) {
-			lastRegexFindCommand.push({});
-			lastRegexFindCommand.setPattern('');
-			lastSubstituteInfo = {};
-			requestShowMessage('Whassup?');
-		}),
-		new ExCommand('registers', 'reg', '', 0, function (t, a) {
-			backlog.push(registers.dump());
-		}),
-		new ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (t, a) {
-			return exCopy(t, a);
-		}),
-		new ExCommand('unabbreviate', 'una', 'w1r', 0, function (t, a) {
-			var lhs = a.argv[0];
-			if (lhs == '[all]') {
-				abbrevs = {};
-			}
-			else if (!(lhs in abbrevs)) {
-				return _('{0} is not an abbreviation.', lhs);
-			}
-			else {
-				delete abbrevs[lhs];
-			}
-		}),
-		new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (t, a) {
-			editLogger.close();
-			var result = editLogger.undo();
-			editLogger.open('excommand+undo');
-			if (result === false) {
-				return _('No undo item.');
-			}
-			else {
-				requestShowMessage(
-					_('{0} {operation:0} have reverted.', result));
-				return;
-			}
-		}),
-		new ExCommand('unmap', 'unm', '!w1r', 0, function (t, a) {
-			var lhs = a.argv[0];
-			var map = mapManager.getMap(a.flags.force ? 'edit' : 'command');
-			if (lhs == '[all]') {
-				map.removeAll();
-			}
-			else if (!map.isMapped(lhs)) {
-				return _('{0} is not mapped.', lhs);
-			}
-			else {
-				map.remove(lhs);
-			}
-		}),
-		new ExCommand('version', 'ver', '', 0, function (t, a) {
-			requestShowMessage('wasavi/' + VERSION + ' ' + VERSION_DESC);
-		}),
-		new ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (t, a) {
-			a.flags.force = true;
-			return exGlobal(t, a);
-		}),
-		new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
-			var o = exWriteParseArg(t, a);
-			return typeof o == 'string' ? o : exWrite(t, a, o.isCommand, o.isAppend, o.name);
-		}),
-		new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
-			var o = exWriteParseArg(t, a);
-			if (typeof o == 'string') return o;
-			var result = exWrite(t, a, o.isCommand, o.isAppend, o.name);
-			return typeof result == 'string' ? result : exQuit();
-		}),
-		new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (t, a) {
-			if (isTextDirty) {
-				var result = exWrite(t, a, false, false, a.argv[0]);
-				return typeof result == 'string' ? result : exQuit();
-			}
-			else {
-				return exQuit(!!a.flags.force);
-			}
-		}),
-		new ExCommand('yank', 'ya', 'bca', 2, function (t, a) {
-			var p = t.selectionStart;
-			yank(t, a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
-			t.setSelectionRange(p);
-		}),
-		new ExCommand('>', '>', 'mca1', 2, function (t, a) {
-			t.setSelectionRange(new Position(a.range[0], 0));
-			shift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
-			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
-		}),
-		new ExCommand('<', '<', 'mca1', 2, function (t, a) {
-			t.setSelectionRange(new Position(a.range[0], 0));
-			unshift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
-			t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
-		}),
-		new ExCommand('@', '@', 'b', 1, function (t, a) {
-			return exExecuteRegister(t, a);
-		}),
-		new ExCommand('*', '*', 'b', 1, function (t, a) {
-			return exExecuteRegister(t, a);
-		})
-	].sort(function (a, b) {return a.name.length - b.name.length;});
-
+	var resizeHandlerInvokeTimer;
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
-	var textBlockRegex = new TextBlockRegex();
+	var textBlockRegex = new TextBlockRegex;
 	var abbrevs = {};
+	var eventHandlers = {onSaved:null};
 	var config = new Configurator(
 		[
 			/* defined by POSIX */
@@ -9047,9 +9459,11 @@ flag23_loop:
 			fs: 'fullscreen'
 		}
 	);
-	var eventHandlers = {
-		onSaved:null
-	};
+	var isStandAlone = (function () {
+		var result;
+		try { result = !!!window.frameElement; } catch (e) {} 
+		return result;
+	});
 
 	// extension depend objects
 	var registers;
@@ -9059,6 +9473,8 @@ flag23_loop:
 
 	// instance variables
 	var targetElement;
+	var fileName;
+	var preferredNewline;
 	var terminated;
 	var writeOnTermination;
 	var state;
@@ -9084,6 +9500,7 @@ flag23_loop:
 	var idealWidthPixels;
 	var backlog;
 	var pairBracketsIndicator;
+	var exCommandExecutor;
 
 	var isTextDirty;
 	var isEditCompleted;
@@ -9107,6 +9524,11 @@ flag23_loop:
 	 */
 
 	var commandMap = {
+		// internal special
+		'\u0000': function (c, t) {
+			return true;
+		},
+
 		// escape
 		'\u001b': inputEscape,
 
@@ -10630,18 +11052,21 @@ flag23_loop:
 			},
 			'line-input': function (c, t) {
 				prefixInput.trailer = c;
-				exGlobalSpecified = false;
-				editLogger.open('excommand');
-				try {
-					var result = executeExCommand(t, c);
-					typeof result == 'string' && requestShowMessage(result, true);
-					registers.set(':', c);
-					lineInputHistories.push(c);
+				if (!exCommandExecutor.onFinish) {
+					exCommandExecutor.onFinish = function (executor) {
+						executor.lastError && requestShowMessage(executor.lastError, true);
+						registers.set(':', executor.source);
+						lineInputHistories.push(executor.source);
+					};
 				}
-				finally {
-					editLogger.close();
+				var result = executeExCommand(t, c, true);
+				if (typeof result == 'string') {
+					requestShowMessage(result, true);
+					return true;
 				}
-				return true;
+				else {
+					return result;
+				}
 			}
 		}
 
@@ -10708,7 +11133,7 @@ flag23_loop:
 				requestShowPrefixInput('');
 			}
 		},
-		
+
 		'<left>': function (c, t) {
 			logEditing(t);
 			motionLeft(c, t, 1);
@@ -10859,6 +11284,16 @@ flag23_loop:
 	function handleWindowBlur (e) {
 		cursor.update({focused:false});
 	}
+	function handleWindowResize (e) {
+		if (!resizeHandlerInvokeTimer && targetElement) {
+			resizeHandlerInvokeTimer = setTimeout(function () {
+				targetElement.rect.width = document.documentElement.clientWidth;
+				targetElement.rect.height = document.documentElement.clientHeight;
+				setGeometory();
+				resizeHandlerInvokeTimer = null;
+			}, 100);
+		}
+	}
 
 	// editor (document)
 	function handleKeydown (e) {
@@ -10872,7 +11307,7 @@ flag23_loop:
 		if (scroller.running) {
 			return stop(e);
 		}
-		if (cursor.inComposition) {
+		if (cursor.inComposition || exCommandExecutor.isRunning) {
 			return;
 		}
 
@@ -10924,9 +11359,12 @@ flag23_loop:
 
 		isInteractive = true;
 		incrementStrokeCount();
-		mapManager.process(keyCode, function (keyCode) {
-			processInput(keyCode, e) && stop(e);
-		});
+		(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
+			.call(extensionChannel, function () {
+				mapManager.process(keyCode, function (keyCode) {
+					processInput(keyCode, e) && stop(e);
+				});
+			});
 	}
 	function handleInput (e) {
 		processInputSupplement(e);
@@ -10983,11 +11421,66 @@ flag23_loop:
 	// frame channel
 	function handleExtensionChannelMessage (req) {
 		if (!req) return;
+
+		var t = getEditorCore();
 		switch (req.type) {
 		case 'relocate':
 			targetElement.rect = req.rect;
 			setGeometory();
 			break;
+		case 'authorize-response':
+			if (req.error) {
+				showMessage(req.error, true, false);
+				exCommandExecutor.stop();
+				break;
+			}
+			showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+			break;
+		case 'fileio-write-response':
+			if (req.error) {
+				showMessage(req.error, true, false);
+				console.log(req.error.replace(/&/g, '\n&'));
+				//exCommandExecutor.stop();
+				break;
+			}
+			switch (req.state) {
+			case 'buffered':
+				showMessage(_('Buffered: {0}', fileName));
+				break;
+			case 'writing':
+				showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
+				break;
+			case 'complete':
+				showMessage(_('Written: {0}', getFileIoResultInfo(t, req.meta.charLength)));
+				break;
+			}
+			//exCommandExecutor.runAsyncNext();
+			break;
+		case 'fileio-read-response':
+			//console.log('*** fileio-read-response ***\n' + JSON.stringify(req, null, ' '));
+			if (req.error) {
+				showMessage(req.error, true, false);
+				exCommandExecutor.stop();
+				break;
+			}
+			switch (req.state) {
+			case 'reading':
+				showMessage(_('Reading ({0}%)', req.progress.toFixed(2)));
+				break;
+			case 'complete':
+				var read = exCommandExecutor.lastCommandObj.clone();
+				read.handler = function (t, a) {
+					switch (this.name) {
+					case 'read':
+						return ExCommand.read(t, a, req.content, req.meta);
+					case 'edit':
+						return ExCommand.edit(t, a, req.content, req.meta);
+					}
+					return _('Invalid read handler.');
+				};
+				exCommandExecutor.runAsyncNext(read, exCommandExecutor.lastCommandArg);
+				break;
+			}
 		}
 	}
 
@@ -11072,7 +11565,6 @@ flag23_loop:
 				return getEditorCore().elm.childNodes.length;
 			},
 			get lastMessage () {
-				//ensureRunning();
 				return lastMessage;
 			},
 			get lastSimpleCommand () {
@@ -11089,7 +11581,7 @@ flag23_loop:
 
 			run: function (width, height) {
 				!getRunning() && install({
-					id:'demo',
+					id:'wasavi',
 					nodeName:'textarea',
 					value:'',
 					selectionStart:0,

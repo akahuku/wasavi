@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
-	frame page of wasavi for google chrome/opera/firefox extension
+	index page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: wasavi_frame.html 154 2012-07-16 10:26:45Z akahuku $
+	@version $Id: index.html 158 2012-07-16 18:29:00Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -26,9 +26,13 @@
 		<title>wasavi - online vi editor</title>
 		<link rel="shortcut icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
 		<link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
-		<style>body{margin:0;padding:0;overflow:hidden;}</style>
+		<style>body{margin:0;padding:0;overflow:hidden;visibility:hidden;}</style>
 		<style id="wasavi_global_styles"></style>
 		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				var wasaviPresent = document.documentElement.getAttribute('data-wasavi-present');
+				wasaviPresent != '1' && location.replace('http://appsweets.net/wasavi/');
+			}, false);
 			if (window.location.protocol == 'chrome-extension:' && window.chrome) {
 				document.write('<script src="extension_wrapper.js"></scr' + 'ipt>');
 				document.write('<script src="wasavi.js"></scr' + 'ipt>');
@@ -39,36 +43,5 @@
 			}
 		</script>
 	</head>
-	<body>
-		<div id="wasavi_container">
-			<div id="wasavi_editor"></div>
-			<div id="wasavi_footer">
-				<div id="wasavi_footer_modeline">
-					<table id="wasavi_footer_modeline_table">
-						<tr>
-							<td id="wasavi_footer_file_indicator"></td>
-							<td id="wasavi_footer_prefix_indicator"></td>
-						</tr>
-					</table>
-				</div>
-				<div id="wasavi_footer_alter">
-					<table id="wasavi_footer_alter_table">
-						<tr>
-							<td id="wasavi_footer_input_indicator"></td>
-							<td><input id="wasavi_footer_input" type="text" spellcheck="false"></td>
-						</tr>
-					</table>
-				</div>
-			</div>
-			<div id="wasavi_console_container">
-				<textarea id="wasavi_console" spellcheck="false"></textarea>
-			</div>
-			<div id="wasavi_multiline_scaler"></div>
-			<span id="wasavi_singleline_scaler"></div>
-			<div id="wasavi_console_scaler"></div>
-			<div id="wasavi_command_cursor"><span id="wasavi_command_cursor_inner"></span></div>
-			<textarea id="wasavi_edit_cursor" spellcheck="false"></textarea>
-			<div id="wasavi_cover" tabindex="0"></div>
-		</div>
-	</body>
+	<body></body>
 </html>
