@@ -38,6 +38,7 @@
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
 
 	var extensionChannel;
+	var wasaviFrame;
 
 	if (global.WasaviExtensionWrapper
 	&&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
@@ -48,13 +49,15 @@
 			function run (callback) {
 				if (document.readyState == 'interactive'
 				||  document.readyState == 'complete') {
-					document.body.innerHTML = req.wasaviFrame;
+					document.body.innerHTML = wasaviFrame;
+					delete wasaviFrame;
 					callback();
 				}
 				else {
 					document.addEventListener('DOMContentLoaded', function (e) {
 						document.removeEventListener(e.type, arguments.callee, false);
-						document.body.innerHTML = req.wasaviFrame;
+						document.body.innerHTML = wasaviFrame;
+						delete wasaviFrame;
 						callback();
 					}, false);
 				}
@@ -64,6 +67,7 @@
 				exrc = req.exrc;
 				fontFamily = req.fontFamily;
 				l10n = new L10n(req.messageCatalog);
+				wasaviFrame = req.wasaviFrame;
 				document.documentElement.setAttribute(
 					'lang', l10n.getMessage('wasavi_locale_code'));
 				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
@@ -7936,7 +7940,7 @@ flag23_loop:
 		return false;
 	}
 	function getFileNameString () {
-		if (WasaviExtensionWrapper.isTopFrame) {
+		if (extensionChannel && WasaviExtensionWrapper.isTopFrame) {
 			if (fileName == '') {
 				return _('*Untitled*');
 			}

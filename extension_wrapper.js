@@ -122,8 +122,8 @@
 	ExtensionWrapper.framePageUrl = {
 		internalAvailable:false,
 		internal:      framePageUrl,
-		external:      'http://wasavi.appsweets.net/?v=0.4',
-		externalSecure:'https://ss1.xrea.com/wasavi.appsweets.net/?v=0.4',
+		external:      'http://wasavi.appsweets.net/',
+		externalSecure:'https://ss1.xrea.com/wasavi.appsweets.net/',
 		eq: function (u1, u2) {
 			return u1.replace(/\?.*/, '') == u2.replace(/\?.*/, '');
 		},
@@ -143,7 +143,6 @@
 		try { result = !!!window.frameElement; } catch (e) {} 
 		return result;
 	})();
-
 
 
 

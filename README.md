@@ -26,6 +26,11 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 * vim からインクリメンタルサーチをポートしています:
   ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
 
+* <http://wasavi.appsweets.net/> は特別なアドレスです。wasavi をインストールした
+  ブラウザでこのアドレスを開くと、自動的に wasavi が起動します。
+  この状態では、dropbox に対するファイルの読み書きが可能です。
+  ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
+
 
 
 インストール
