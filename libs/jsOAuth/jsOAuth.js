@@ -4,6 +4,7 @@
  *  Copyright (c) 2010, 2011 Rob Griffiths (http://bytespider.eu)
  *  jsOAuth is freely distributable under the terms of an MIT-style license.
  */
+
 typeof window == 'object' && eval('var exports = this;');
 //var exports = exports || this;
 exports.OAuth = (function (global) {

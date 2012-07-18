@@ -62,13 +62,22 @@ Google Chrome において、github に公開されているソースを実行�
 使い方
 ------
 
+### textarea の拡張
+
 適当な web ページの textarea 要素にフォーカスがある状態で Ctrl+Enter、もしくは
 Insert を押下してください。言うまでもありませんが、終了するには ZZ、:q、:wq
 などを入力します。
 
+### 単体のテキストエディタとしての利用
+
+<http://wasavi.appsweets.net/> へアクセスします。自動的に wasavi が起動します。
+この状態では、ex コマンド edit、read、file、write が有効です。これらのコマンドは
+dropbox 上のファイルを読み書きすることができます。
+
 
 
 * * *
+
 
 
 実装済みコマンド
@@ -109,8 +118,8 @@ Insert を押下してください。言うまでもありませんが、終了�
 
 ### 以下の ex コマンド:
 
-* abbreviate copy delete global join k map mark marks move
-  options print put quit redo s & ~ set registers to
+* abbreviate copy delete edit file global join k map mark marks move
+  options print put quit read redo s & ~ set registers to
   unabbreviate undo unmap version v write wq xit yank
   > < @ &#42;
 

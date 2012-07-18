@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 154 2012-07-16 10:26:45Z akahuku $
+ * @version $Id: agent.js 160 2012-07-17 13:39:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -96,11 +96,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 			iframe.style.position = isFixed ? 'fixed' : 'absolute';
 			iframe.style.left = (
 				rect.left + 
-				(isFixed ? 0 : document.documentElement.scrollLeft)
+				(isFixed ? 0 : Math.max(document.documentElement.scrollLeft, document.body.scrollLeft))
 			) + 'px';
 			iframe.style.top = (
 				rect.top + 
-				(isFixed ? 0 : document.documentElement.scrollTop)
+				(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
 			) + 'px';
 			iframe.style.width = rect.width + 'px';
 			iframe.style.height = rect.height + 'px';

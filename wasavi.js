@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 154 2012-07-16 10:26:45Z akahuku $
+ * @version $Id: wasavi.js 162 2012-07-18 10:58:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -89,8 +89,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 154 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 154 2012-07-16 10:26:45Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 162 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 162 2012-07-18 10:58:39Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -3808,11 +3808,11 @@ flag23_loop:
 		this.lastError = undefined;
 		this.lastCommand = undefined;
 
-		var isRunning = false;
-		this.__defineGetter__('isRunning', function () {return isRunning;});
-		this.__defineSetter__('isRunning', function (v) {
-			if (v == isRunning) return;
-			isRunning = v;
+		var running = false;
+		this.__defineGetter__('running', function () {return running;});
+		this.__defineSetter__('running', function (v) {
+			if (v == running) return;
+			running = v;
 			$('wasavi_cover').className = v ? 'dim' : '';
 		});
 	}
@@ -3896,7 +3896,7 @@ flag23_loop:
 			else {
 				if (this.editLogLevel > 0) {
 					editLogger.close();
-					this.isRunning = false;
+					this.running = false;
 					this.editLogLevel--;
 				}
 				this.onFinish && this.onFinish(this);
@@ -3912,14 +3912,14 @@ flag23_loop:
 				//console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
 				if (this.editLogLevel == 0) {
 					editLogger.open('excommand');
-					this.isRunning = true;
+					this.running = true;
 
 					this.editLogLevel++;
 				}
 				this.runAsyncNext();
 			}
 			else {
-				this.isRunning = true;
+				this.running = true;
 				if (this.isRoot) {
 					editLogger.open('excommand');
 				}
@@ -3936,7 +3936,7 @@ flag23_loop:
 						this.onFinish && this.onFinish(this);
 					}
 					this.commands.length = 0;
-					this.isRunning = false;
+					this.running = false;
 				}
 				return true;
 			}
@@ -6437,7 +6437,7 @@ flag23_loop:
 			'  outline:none;',
 			'  resize:none;',
 			'  padding:0;',
-			'  left:-1px;',
+			'  left:-4px;',
 			'  top:0px;',
 			'  width:32px;',
 			'  height:32px;',
@@ -11308,10 +11308,10 @@ flag23_loop:
 			e.returnValue = false;
 		}
 
-		if (scroller.running) {
+		if (scroller.running || exCommandExecutor.running) {
 			return stop(e);
 		}
-		if (cursor.inComposition || exCommandExecutor.isRunning) {
+		if (cursor.inComposition) {
 			return;
 		}
 
@@ -11434,7 +11434,7 @@ flag23_loop:
 			break;
 		case 'authorize-response':
 			if (req.error) {
-				showMessage(req.error, true, false);
+				requestShowMessage(req.error, true, false);
 				exCommandExecutor.stop();
 				break;
 			}

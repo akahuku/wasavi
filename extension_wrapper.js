@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 153 2012-07-12 06:19:22Z akahuku $
+ * @version $Id: extension_wrapper.js 160 2012-07-17 13:39:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -139,9 +139,12 @@
 		}
 	};
 	ExtensionWrapper.isTopFrame = (function () {
+		return window.self == window.top;
+		/*
 		var result;
 		try { result = !!!window.frameElement; } catch (e) {} 
 		return result;
+		 */
 	})();
 
 

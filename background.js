@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 154 2012-07-16 10:26:45Z akahuku $
+ * @version $Id: background.js 162 2012-07-18 10:58:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -274,7 +274,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return new OperaTabWatcher;
 		}
 		else if (window.jetpack) {
-			return new JetpackTabWatcher;
+			return new FirefoxJetpackTabWatcher;
 		}
 		return new TabWatcher;
 	};
@@ -283,24 +283,29 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		var targets = {};
 
 		function handleTabUpdate (tabId, changeInfo, tab) {
-			if (targets[tabId] && changeInfo.url && targets[tabId].startUrl != tab.url) {
-				emit(targets[tabId].callback, tab.url);
+			if (!targets[tabId] || !changeInfo.url) return;
+			var target = targets[tabId];
+			var isStartUrl = baseUrl(tab.url) == baseUrl(target.startUrl);
+			if (tab.url == '' || target.state && !isStartUrl) {
+				emit(target.callback, tab.url);
 				delete targets[tabId];
 				if (countOf(targets) == 0) {
 					chrome.tabs.onUpdated.removeListener(handleTabUpdate);
 					chrome.tabs.onRemoved.removeListener(handleTabRemove);
 				}
 			}
+			else if (!target.state && isStartUrl) {
+				target.state = true;
+			}
 		}
 
 		function handleTabRemove (tabId, removeInfo) {
-			if (targets[tabId]) {
-				emit(targets[tabId].callback, null);
-				delete targets[tabId];
-				if (countOf(targets) == 0) {
-					chrome.tabs.onUpdated.removeListener(handleTabUpdate);
-					chrome.tabs.onRemoved.removeListener(handleTabRemove);
-				}
+			if (!targets[tabId]) return;
+			emit(targets[tabId].callback, '');
+			delete targets[tabId];
+			if (countOf(targets) == 0) {
+				chrome.tabs.onUpdated.removeListener(handleTabUpdate);
+				chrome.tabs.onRemoved.removeListener(handleTabRemove);
 			}
 		}
 
@@ -324,9 +329,17 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			timer = setInterval(function () {
 				var newTargets = [];
 				targets.forEach(function (target) {
-					var isStartUrl = baseUrl(target.tab.url) == baseUrl(target.startUrl);
-					if (target.tab.url == '' || target.state && !isStartUrl) {
-						emit(target.callback, target.tab.url);
+					var currentUrl;
+					try {
+						currentUrl = target.tab.url || '';
+					}
+					catch (e) {
+						currentUrl = '';
+					}
+
+					var isStartUrl = baseUrl(currentUrl) == baseUrl(target.startUrl);
+					if (currentUrl == '' || target.state && !isStartUrl) {
+						emit(target.callback, currentUrl);
 						target.callback = null;
 					}
 					else {
@@ -350,7 +363,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			opera.extension.tabs.getAll().some(function (tab) {
 				if (id instanceof MessagePort && tab.port == id
 				||  typeof id == 'number' && tab.id == id) {
-					targets.push({tab:tab, startUrl:tab.url, callback:callback});
+					targets.push({tab:tab, startUrl:url, callback:callback});
 					startTimer();
 					return true;
 				}
@@ -358,7 +371,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		};
 	}
 
-	function JetpackTabWatcher () {
+	function FirefoxJetpackTabWatcher () {
 		var targets = [];
 		var timer;
 
@@ -369,11 +382,12 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				targets.forEach(function (target) {
 					var currentUrl;
 					try {
-						currentUrl = target.tab.url;
+						currentUrl = target.tab.url || '';
 					}
 					catch (e) {
 						currentUrl = '';
 					}
+
 					var isStartUrl = baseUrl(currentUrl) == baseUrl(target.startUrl);
 					if (currentUrl == '' || target.state && !isStartUrl) {
 						emit(target.callback, currentUrl);
@@ -398,7 +412,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 		this.add = function (id, url, callback) {
 			// in this context, id is Tab object instance.
-			targets.push({tab:id, startUrl:id.url, callback:callback});
+			targets.push({tab:id, startUrl:url, callback:callback});
 			startTimer();
 			return true;
 		};
@@ -493,19 +507,23 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		};
 		this.openTabWithUrl = function (url, callback) {
 			chrome.tabs.create({url:url}, function (tab) {
-				emit(callback, tab.id, tab.url);
+				emit(callback, tab.id, url);
 			});
 		};
 		this.openTabWithFile = function (file, callback) {
 			chrome.tabs.create({url:chrome.self.getURL(file)}, function (tab) {
-				emit(callback, tab.id, tab.url);
+				emit(callback, tab.id, url);
 			});
 		};
 		this.closeTab = function (id) {
-			chrome.tabs.remove(id);
+			chrome.tabs.get(id, function () {
+				chrome.tabs.remove(id);
+			});
 		};
 		this.focusTab = function (id) {
-			chrome.tabs.update(id, {active:true});
+			chrome.tabs.get(id, function () {
+				chrome.tabs.update(id, {active:true});
+			});
 		};
 		this.createTransport = function () {
 			return new XMLHttpRequest;
@@ -622,13 +640,13 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		};
 		this.openTabWithUrl = function (url, callback) {
 			var tab = opera.extension.tabs.create({url:url, focused:true});
-			emit(callback, tab.id, tab.url);
+			emit(callback, tab.id, url);
 		};
 		this.openTabWithFile = function (file, callback) {
 			var tab = opera.extension.tabs.create({
 				url:location.href.replace(/\/[^\/]*$/, '/') + file, focused:true
 			});
-			emit(callback, tab.id, tab.url);
+			emit(callback, tab.id, url);
 		};
 		this.closeTab = function (id) {
 			// TODO: explicitly distinguish native ID and wasavi's tab ID
@@ -801,18 +819,24 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.openTabWithUrl = function (url, callback) {
 			tabs.open({
 				url:url,
-				onReady:function (tab) {emit(callback, tab, url);}
+				onReady:function (tab) {
+					callback && emit(callback, tab, url);
+					callback = null;
+				}
 			});
 		};
 		this.openTabWithFile = function (file, callback) {
 			tabs.open({
 				url:self.data.url(file),
-				onReady:function (tab) {emit(callback, tab, url);}
+				onReady:function (tab) {
+					callback && emit(callback, tab, url);
+					callback = null;
+				}
 			});
 		};
 		this.closeTab = function (id) {
 			if (typeof id.close == 'function') {
-				id.close();
+				try {id.close();} catch (e) {}
 			}
 			else {
 				getTabId(id, function (worker) {worker.tab.close();});
@@ -820,7 +844,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		};
 		this.focusTab = function (id) {
 			if (typeof id.activate == 'function') {
-				id.activate();
+				try {id.activate();} catch (e) {}
 			}
 			else {
 				getTabId(id, function (worker) {worker.activate();});
@@ -921,13 +945,15 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			if (isAuthorized()) {
 				if (!tabId || !operation) return;
 				data.type = 'fileio-' + operation + '-response';
-				extension.sendRequest(tabId, data);
 			}
 			else {
-				if (operationQueue.length == 0) return;
+				if (!tabId) {
+					if (operationQueue.length == 0) return;
+					tabId = operationQueue[0].tabId;
+				}
 				data.type = 'authorize-response';
-				extension.sendRequest(operationQueue[0].tabId, data);
 			}
+			extension.sendRequest(tabId, data);
 		}
 
 		function handleOAuthError (data) {
@@ -1068,7 +1094,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 							setQuery(oauthOpts.authorizationUrl, q),
 							function (id, url) {
 								extension.tabWatcher.add(id, url, function (newUrl) {
-									if (!newUrl) return;
+									//if (!newUrl) return;
 									if (state != 'confirming-user-authorization') return;
 
 									extension.closeTab(id);
@@ -1327,7 +1353,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.__defineGetter__('backend', function () {return backend;});
 		this.__defineGetter__('state', function () {return state;});
 
-		restoreAcessTokenPersistents();
+		//restoreAcessTokenPersistents();
 	}
 
 	/*
@@ -1707,7 +1733,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 	function handleLoad (e) {
 		window.removeEventListener && window.removeEventListener(e.type, arguments.callee, false);
-
 		resourceLoader = ResourceLoader.create();
 		extension = ExtensionWrapper.create();
 
