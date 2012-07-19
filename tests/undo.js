@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: undo.js 136 2012-06-15 17:54:45Z akahuku $
+ * @version $Id: undo.js 163 2012-07-19 09:04:26Z akahuku $
  */
 
 /**
@@ -37,6 +37,20 @@ function testInsert () {
 	Wasavi.send('\u0012');
 	assertEquals('#7-1', 'foo\nbar', Wasavi.value);
 	assert('#7-2', Wasavi.lastMessage != '');
+}
+
+function testInsertMultiLine () {
+	Wasavi.send('aa\nb\nc\n\u001b');
+	assertEquals('#1', 'normal', Wasavi.state);
+	assertEquals('#2', 'command', Wasavi.inputMode);
+
+	Wasavi.send('u');
+	assertEquals('#3', '1 operation have reverted.', Wasavi.lastMessage);
+	assertEquals('#4', '', Wasavi.value);
+
+	Wasavi.send('\u0012');
+	assertEquals('#5', '1 operation have executed again.', Wasavi.lastMessage);
+	assertEquals('#6', 'a\nb\nc\n', Wasavi.value);
 }
 
 function testInsertToIsolatedPosition () {

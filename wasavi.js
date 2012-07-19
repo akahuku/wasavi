@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 162 2012-07-18 10:58:39Z akahuku $
+ * @version $Id: wasavi.js 163 2012-07-19 09:04:26Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -89,8 +89,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 162 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 162 2012-07-18 10:58:39Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 163 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 163 2012-07-19 09:04:26Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -4861,6 +4861,7 @@ flag23_loop:
 			_init: function (p, d) {
 				if (p != undefined) this.position = p.clone();
 				if (d != undefined) this.data = d.replace(
+					// /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, function (a) {
 					/[\u0000-\u0008\u000b-\u001f\u007f]/g, function (a) {
 						return toVisibleControl(a.charCodeAt(0));
 					});
@@ -5904,7 +5905,13 @@ flag23_loop:
 	}
 	function toVisibleControl (code) {
 		// U+2400 - U+243F: Unicode Control Pictures
-		return String.fromCharCode(code == 0x7f ? 0x2421 : 0x2400 + code);
+		if (code == 0x7f) {
+			return String.fromCharCode(0x2421);
+		}
+		if (code >= 0x00 && code <= 0x1f) {
+			return String.fromCharCode(0x2400 + code);
+		}
+		return String.fromCharCode(code);
 	}
 	function toNativeControl (s) {
 		return s.replace(/[\u2400-\u243f]/g, function (a) {
@@ -7715,12 +7722,13 @@ flag23_loop:
 				editLogger.close();// edit-wrapper
 			}
 			else {
-				editedString += letter;
-				editedStringCurrent += letter;
+				var letterActual = code == 0x0d ? '\n' : letter;
+				editedString += letterActual;
+				editedStringCurrent += letterActual;
 
 				if (config.vars.showmatch) {
 					pairBracketsIndicator && pairBracketsIndicator.clear();
-					pairBracketsIndicator = PairBracketsIndicator.getObject(letter, editor);
+					pairBracketsIndicator = PairBracketsIndicator.getObject(letterActual, editor);
 				}
 				if (execEditMap(editor, mapkey, subkey, code)) {
 					//
@@ -7730,7 +7738,7 @@ flag23_loop:
 						editStartPosition = editor.selectionStart;
 					}
 
-					(inputMode == 'edit' ? insert : overwrite)(editor, letter);
+					(inputMode == 'edit' ? insert : overwrite)(editor, letterActual);
 					processAbbrevs(editor);
 
 					if (runLevel == 0) {
@@ -11273,6 +11281,12 @@ flag23_loop:
 				t.selectionEnd = t.selectionStart;
 			}
 			lineInputHistories.isInitial = true;
+		},
+		'<left>': function (c, t) {
+			t.selectionStart = t.selectionEnd = Math.max(0, t.selectionStart - 1);
+		},
+		'<right>': function (c, t) {
+			t.selectionStart = t.selectionEnd = Math.min(t.value.length, t.selectionEnd + 1);
 		}
 	};
 
