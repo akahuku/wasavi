@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 163 2012-07-19 09:04:26Z akahuku $
+ * @version $Id: wasavi.js 164 2012-07-19 12:39:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -70,6 +70,7 @@
 				wasaviFrame = req.wasaviFrame;
 				document.documentElement.setAttribute(
 					'lang', l10n.getMessage('wasavi_locale_code'));
+				console.log('isTopFrame: ' + WasaviExtensionWrapper.isTopFrame);
 				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
 				break;
 			case 'run':
@@ -89,8 +90,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 163 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 163 2012-07-19 09:04:26Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 164 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 164 2012-07-19 12:39:54Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -11457,7 +11458,6 @@ flag23_loop:
 		case 'fileio-write-response':
 			if (req.error) {
 				showMessage(req.error, true, false);
-				console.log(req.error.replace(/&/g, '\n&'));
 				//exCommandExecutor.stop();
 				break;
 			}

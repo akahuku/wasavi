@@ -1,12 +1,15 @@
 *.swp
 *~
 consumer_keys.json
+consumer_keys.bin
 specs/
 .svn/
 firefox/
 opera/
 jsunit/
 libs/jsOAuth/original/
+libs/blowfish/original/
+libs/sha1/original/
 !firefox/package.json
 !opera/config.xml
 Thumbs.db

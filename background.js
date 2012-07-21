@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 162 2012-07-18 10:58:39Z akahuku $
+ * @version $Id: background.js 165 2012-07-21 03:32:21Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -29,10 +29,15 @@
 if (typeof window == 'undefined') {
 	window = this;
 	window.jetpack = {};
-	require('./dummy-require');
 }
 if (typeof window.OAuth == 'undefined' && typeof require == 'function') {
 	OAuth = require("./jsOAuth").OAuth;
+}
+if (typeof window.SHA1 == 'undefined' && typeof require == 'function') {
+	SHA1 = require("./sha1").Blowfish;
+}
+if (typeof window.Blowfish == 'undefined' && typeof require == 'function') {
+	Blowfish = require("./blowfish").Blowfish;
 }
 if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	(function (global) {
@@ -151,16 +156,17 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 	function XhrResourceLoader () {
 		var data = {};
-		this.get = function (resourcePath, callback, noCache) {
+		this.get = function (resourcePath, callback, opts) {
+			opts || (opts = {});
 			if (resourcePath in data) {
 				emit(callback, data[resourcePath]);
 			}
 			else {
 				var xhr = new XMLHttpRequest;
 				xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, false);
-				xhr.overrideMimeType('text/plain;charset=UTF-8');
+				xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
 				xhr.onload = function () {
-					if (!noCache) {
+					if (!opts.noCache) {
 						data[resourcePath] = xhr.responseText;
 					}
 					emit(callback, xhr.responseText);
@@ -189,10 +195,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					content = self.data.load(resourcePath);
 				}
 				catch (e) {
-					content = '';
-					console.error(
-						'wasavi background: exception ocuured during' +
-						' self.data.load("' + resourcePath + '")');
+					content = false;
 				}
 				data[resourcePath] = content;
 				emit(callback, content);
@@ -986,7 +989,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 
 			lastError = backend + ': ' + lastError;
-			console.log(lastError);
+			console.error('wasavi background: file system error: ' + lastError);
 
 			var lastTabId;
 			while (operationQueue.length) {
@@ -1397,7 +1400,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		}
 		catch (e) {
 			console.error(
-				'background: an error occured inside callback:\n\t' + [
+				'wasavi background: an error occured inside callback:\n\t' + [
 					'message: ' + e.message,
 					'   line: ' + (e.line || e.lineNumber || '?'),
 					'  stack: ' + (e.stack || '?')
@@ -1456,7 +1459,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			for (var i in messageCatalog) {
 				delete messageCatalog[i].description;
 			}
-		}, true);
+		}, {noCache:true});
 	}
 
 	/*
@@ -1493,16 +1496,22 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			if (!(key in KEY_TABLE)) return;
 
 			var code = [];
+			var shiftSpecified = false;
+			var ctrlSpecified = false;
 			modifiers.forEach(function (m) {
-				switch (m) {
+				switch (m.toLowerCase()) {
 				case 's':
 					code.push('e.shiftKey');
+					shiftSpecified = true;
 					break;
 				case 'c':
 					code.push('e.ctrlKey');
+					ctrlSpecified = true;
 					break;
 				}
 			});
+			!shiftSpecified && code.push('!e.shiftKey');
+			!ctrlSpecified && code.push('!e.ctrlKey');
 			code.push('e.keyCode==' + KEY_TABLE[key]);
 
 			result.push(code.join('&&'));
@@ -1511,7 +1520,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		result = result.join('||');
 
 		if (result == '') {
-			result = arguments.callee('<c-enter>,<insert>');
+			result = arguments.callee('');
 		}
 
 		return 'return ' + result + ';';
@@ -1521,7 +1530,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	 * file system initializer
 	 */
 
-	function initFileSytem () {
+	function initFileSystem () {
 		/*
 		 * consumer_keys.json sample:
 		 *
@@ -1532,21 +1541,37 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		 *     }
 		 * }
 		 *
+		 * in production package, consumer_keys.json is encrypted.
 		 */
-		resourceLoader.get('consumer_keys.json', function (data) {
+		function initFileSystemCore (data) {
 			data = parseJson(data);
 			fstab = parseJson(extension.storage.getItem('fstab'));
 			for (var i in fstab) {
 				if (!data[i] || !data[i].key || !data[i].secret) continue;
 				fstab[i].isNull = false;
 				fstab[i].instance = FileSystemBase.create(i, data[i].key, data[i].secret);
+				console.info('wasavi background: file system driver initialized: ' + i);
 			}
 			fstab.nullFs = {
 				enabled:true,
 				isNull:true,
 				instance:new FileSystemBase
 			};
-		}, true);
+		}
+		resourceLoader.get('consumer_keys.bin', function (binkeys) {
+			if (binkeys === false) {
+				resourceLoader.get(
+					'consumer_keys.json', initFileSystemCore, {noCache:true}
+				);
+			}
+			else {
+				resourceLoader.get('wasavi.js', function (data) {
+					initFileSystemCore(
+						(new Blowfish(SHA1.calc(data))).decrypt64(binkeys)
+					);
+				}, {noCache:true});
+			}
+		}, {noCache:true, mimeType:'text/plain;charset=x-user-defined'});
 	}
 
 	function getFileSystem (path) {
@@ -1575,7 +1600,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				.replace(/\n/g, '')
 				.replace(/>\s+</g, '><')
 				.replace(/^\s+|\s+$/g, '');
-		});
+		}, {noCache:true});
 	}
 
 	/**
@@ -1664,7 +1689,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			if ('file' in req) {
 				resourceLoader.get(req.file, function (data) {
 					res({data:data || ''});
-				}, true);
+				}, {noCache:true});
 			}
 			else {
 				res();
@@ -1739,11 +1764,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		initStorage();
 		initMessageCatalog();
 		initShortcutKeyTable();
-		initFileSytem();
+		initFileSystem();
 		initWasaviFrame();
 		extension.addRequestListener(handleRequest);
 
-		console.log('wasavi background: running.');
+		console.info('wasavi background: running.');
 	}
 
 	window.addEventListener ?

@@ -1,0 +1,141 @@
+wasavi (VI editor for any web page)
+====================================
+
+What is it?
+-----------
+
+wasavi is an extension for Chrome, Opera, Firefox browser. wasavi extends 
+TEXTAREA element on any page. 
+
+wasavi supports almost all of vi commands and some ex commands, so you can edit
+a text with vi's interface.
+
+
+
+Screenshots
+-----------
+
+* there is native TEXTAREA element:
+  ![native textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
+
+* focus the TEXTAREA, and press Ctrl+Enter. then wasavi will be executed:
+  ![wasavi running](http://appsweets.net/wasavi/wasavi.jpg)
+
+* wasavi supports some ex commands. ":set all" command output is as follows:
+  ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
+
+* incremental-search ported from vim:
+  ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
+
+* <http://wasavi.appsweets.net/> is special address. open this address with the
+  browser which installed wasavi, wasavi will be executed automatically.
+  on this page, you can load and save from/to dropbox.
+  ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
+
+
+
+How to install
+--------------
+
+Currently, there are extension packages for the following browsers:
+
+* Google Chrome
+
+  <http://appsweets.net/wasavi/wasavi.crx>
+
+* Opera
+
+  <http://appsweets.net/wasavi/wasavi.oex>
+
+* Firefox
+
+  <http://appsweets.net/wasavi/wasavi.xpi>
+
+Click one of link above, and install in accordance with the standard manners
+of each browser.
+
+Opera note: since Opera does not support "DOM3 Composition Event", so the input
+via IME is not available.
+
+Source codes is hosted on <https://github.com/akahuku/wasavi>. 
+
+
+
+How to use
+----------
+
+### extend a textarea
+
+focus to TEXTAREA element of a web page, and press Ctrl+Enter. Of course, to
+quit wasavi, press ZZ / :q / :wq etc.
+
+### use as a independent text editor
+
+Browse <http://wasavi.appsweets.net/>. wasavi will be executed automaticaly.
+In this mode, ex command edit, read, file, write are available. these commands
+can save and load file on dropbox.
+
+
+
+* * *
+
+
+
+Commands implemented
+--------------------
+
+### following vi commands:
+
+* ([count] [operation])? [count] motion
+* [count] scroll-command
+* [count] edit-command
+* ex-command-prefix
+
+#### operation:
+
+* c cc C y yy Y d dd D &gt; &gt;&gt; &lt; &lt;&lt;
+
+#### motion:
+
+* &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
+  &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
+  j k h l ^N ^P ^H
+  &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
+  w W b B e E gg G H M L f F t T n N
+
+#### scroll-command:
+
+* ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
+  z&lt;enter&gt; z. zz z-
+
+#### edit-command:
+
+* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
+  a A i I o O & s S ZZ
+
+#### ex-command-prefix:
+
+* :
+
+### following ex commands:
+
+* abbreviate copy delete edit file global join k map mark marks move
+  options print put quit read redo s & ~ set registers to
+  unabbreviate undo unmap version v write wq xit yank
+  > < @ &#42;
+
+Specifying addresses in ex command is full supported: absolute line number,
+relative line number, regal expression. also, wasavi accepts offset.
+
+In addtion, wasavi supports multiple level undo/redo and incremental search.
+
+
+
+* * *
+
+I found the bug!
+----------------
+
+Please create an issue on GitHub.
+
+* <http://github.com/akahuku/wasavi/issues>

@@ -9,4 +9,12 @@ This product includes the following libraries:
 
 * jsOAuth - JavaScript OAuth library
 
-  <http://github.com/bytespider/jsOAuth>
+  <https://github.com/bytespider/jsOAuth>
+
+* blowfish - Javascript Blowfish Library
+
+  <https://github.com/takezoh/blowfish.js>
+
+* sha1.js
+
+  <http://labs.cybozu.co.jp/blog/mitsunari/sha1/>
