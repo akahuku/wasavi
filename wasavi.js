@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 164 2012-07-19 12:39:54Z akahuku $
+ * @version $Id: wasavi.js 167 2012-07-21 09:37:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -70,7 +70,6 @@
 				wasaviFrame = req.wasaviFrame;
 				document.documentElement.setAttribute(
 					'lang', l10n.getMessage('wasavi_locale_code'));
-				console.log('isTopFrame: ' + WasaviExtensionWrapper.isTopFrame);
 				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
 				break;
 			case 'run':
@@ -90,8 +89,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 164 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 164 2012-07-19 12:39:54Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 167 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 167 2012-07-21 09:37:39Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -6663,6 +6662,7 @@ flag23_loop:
 			delete targetElement.getAttribute;
 			delete targetElement.setAttribute;
 			targetElement.type = 'wasavi-terminated';
+			targetElement.isTopFrame = WasaviExtensionWrapper.isTopFrame;
 			extensionChannel.postMessage({
 				type:'notify-to-parent',
 				parentTabId:targetElement.parentTabId,
@@ -10682,7 +10682,7 @@ flag23_loop:
 			// . command repeats the last
 			// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 			//          a, c, d, i, o, p, r, s,    x, y,
-			// or ˜ command.
+			// or ~ command.
 			if (prefixInput.isEmptyOperation) {
 				if (lastSimpleCommand.length) {
 					if (prefixInput.isCountSpecified) {

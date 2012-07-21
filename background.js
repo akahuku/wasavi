@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 165 2012-07-21 03:32:21Z akahuku $
+ * @version $Id: background.js 167 2012-07-21 09:37:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -34,7 +34,7 @@ if (typeof window.OAuth == 'undefined' && typeof require == 'function') {
 	OAuth = require("./jsOAuth").OAuth;
 }
 if (typeof window.SHA1 == 'undefined' && typeof require == 'function') {
-	SHA1 = require("./sha1").Blowfish;
+	SHA1 = require("./sha1").SHA1;
 }
 if (typeof window.Blowfish == 'undefined' && typeof require == 'function') {
 	Blowfish = require("./blowfish").Blowfish;
@@ -435,6 +435,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.openTabWithUrl = function (url, callback) {};
 		this.openTabWithFile = function (file, callback) {};
 		this.closeTab = function (id) {};
+		this.closeTabByWasaviId = function (id) {};
 		this.focusTab = function (id) {};
 		this.createTransport = function () {};
 		this.storage = new StorageWrapper;
@@ -522,6 +523,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			chrome.tabs.get(id, function () {
 				chrome.tabs.remove(id);
 			});
+		};
+		this.closeTabByWasaviId = function (id) {
+			this.closeTab(id);
 		};
 		this.focusTab = function (id) {
 			chrome.tabs.get(id, function () {
@@ -652,7 +656,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			emit(callback, tab.id, url);
 		};
 		this.closeTab = function (id) {
-			// TODO: explicitly distinguish native ID and wasavi's tab ID
 			opera.extension.tabs.getAll().some(function (tab) {
 				if (id instanceof MessagePort && tab.port == id
 				||  typeof id == 'number' && tab.id == id) {
@@ -661,8 +664,10 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				}
 			});
 		};
+		this.closeTabByWasaviId = function (id) {
+			id in tabIds && this.closeTab(tabIds[id]);
+		};
 		this.focusTab = function (id) {
-			// TODO: explicitly distinguish native ID and wasavi's tab ID
 			opera.extension.tabs.getAll().some(function (tab) {
 				if (id instanceof MessagePort && tab.port == id
 				||  typeof id == 'number' && tab.id == id) {
@@ -844,6 +849,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			else {
 				getTabId(id, function (worker) {worker.tab.close();});
 			}
+		};
+		this.closeTabByWasaviId = function (id) {
+			id in tabIds && this.closeTab(tabIds[id].tab);
 		};
 		this.focusTab = function (id) {
 			if (typeof id.activate == 'function') {
@@ -1571,7 +1579,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					);
 				}, {noCache:true});
 			}
-		}, {noCache:true, mimeType:'text/plain;charset=x-user-defined'});
+		}, {noCache:true});
 	}
 
 	function getFileSystem (path) {
@@ -1725,6 +1733,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					if ('tabId' in req && 'path' in req.payload && req.payload.path != '') {
 						getFileSystem(req.payload.path)
 							.write(req.payload.path, req.payload.value, req.tabId);
+					}
+					break;
+				case 'wasavi-terminated':
+					if ('tabId' in req && req.payload && req.payload.isTopFrame) {
+						extension.closeTabByWasaviId(req.tabId);
 					}
 					break;
 				}
