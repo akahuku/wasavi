@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 160 2012-07-17 13:39:09Z akahuku $
+ * @version $Id: agent.js 169 2012-07-25 07:40:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -54,7 +54,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var shortcut;
 	var shortcutTester;
 	var fontFamily;
-	var messageCatalog;
+	var quickActivation;
 
 	var targetElement;
 	var wasaviFrame;
@@ -166,12 +166,12 @@ typeof WasaviExtensionWrapper != 'undefined'
 		document.body.appendChild(wasaviFrame);
 	}
 
-	function cleanup (value) {
+	function cleanup (value, isImplicit) {
 		if (targetElement) {
 			if (value !== undefined) {
 				targetElement.value = value;
 			}
-			targetElement.focus();
+			!isImplicit && targetElement.focus();
 			targetElement.removeAttribute(EXTENSION_CURRENT);
 			targetElement = null;
 		}
@@ -184,8 +184,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	function focusToFrame () {
 		if (wasaviFrame) {
 			try {
-				wasaviFrame.focus
-				&& wasaviFrame.focus();
+				wasaviFrame.focus && wasaviFrame.focus();
 			} catch (e) {}
 			try {
 				wasaviFrame.contentWindow
@@ -193,6 +192,46 @@ typeof WasaviExtensionWrapper != 'undefined'
 				&& wasaviFrame.contentWindow.focus();
 			} catch (e) {}
 		}
+	}
+
+	function blurFromFrame () {
+		if (wasaviFrame) {
+			try {
+				wasaviFrame.contentWindow
+				&& wasaviFrame.contentWindow.blur
+				&& wasaviFrame.contentWindow.blur();
+			} catch (e) {}
+			try {
+				wasaviFrame.blur && wasaviFrame.blur();
+			} catch (e) {}
+		}
+	}
+
+	function getFocusables () {
+		var ordered = [];
+		var unordered = [];
+		var nodes = document.evaluate([
+			'//a[@href]',
+			'//link[@href]',
+			'//button[not(@disabled)]',
+			'//input[not(@disabled)][@type!="hidden"]',
+			'//select[not(@disabled)]',
+			'//textarea[not(@disabled)]',
+			'//command[not(disalbed)]',
+			'//*[@tabIndex>=0]'
+		].join('|'), document.body, null, window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+		for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
+			var node = nodes.snapshotItem(i);
+			var s = document.defaultView.getComputedStyle(node, '');
+			if (s.visibility != 'visible') continue;
+			if (node == wasaviFrame) continue;
+
+			var ti = parseInt(node.getAttribute('tabIndex'));
+			(!isNaN(ti) && ti > 0 ? ordered : unordered).push(node);
+		}
+
+		return ordered.concat(unordered);
 	}
 
 	/**
@@ -228,6 +267,27 @@ typeof WasaviExtensionWrapper != 'undefined'
 			e.preventDefault();
 			run(e.target);
 		}
+	}
+
+	/**
+	 * focus handler
+	 * ----------------
+	 */
+
+	function handleTargetFocus (e) {
+		if (targetElement || !e || !e.target) return;
+		if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
+		if (!(e.target.type in ACCEPTABLE_TYPES) 
+		||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
+
+		var current = e.target.getAttribute(EXTENSION_CURRENT);
+		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
+		if (current !== null) return;
+		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+
+		e.target.setAttribute(EXTENSION_CURRENT, 'wasavi');
+		e.preventDefault();
+		run(e.target);
 	}
 
 	/**
@@ -274,8 +334,8 @@ typeof WasaviExtensionWrapper != 'undefined'
 				message = extension.getMessage(messageId) || fallbackMessage;
 			}
 			var nodes = document.evaluate(
-				'//*[.="__MSG_' + messageId + '__"]', document.documentElement, null,
-				XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+				'//*[text()="__MSG_' + messageId + '__"]', document.documentElement, null,
+				window.XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
 
 			for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
 				var node = nodes.snapshotItem(i);
@@ -290,9 +350,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 		replaceMessage('option_title');
 		replaceMessage('option_exrc_head');
 		replaceMessage('option_target_elements_head');
-		replaceMessage('option_shortcut_key_head');
+		replaceMessage('option_starting_type_head');
 		replaceMessage('option_font_family_head');
 		replaceMessage('option_exrc_desc');
+		replaceMessage('option_quick_activation_on');
+		replaceMessage('option_quick_activation_off');
 		replaceMessage('option_target_elements_desc', function (node, message) {
 			node.textContent = '';
 			var ul = node.appendChild(document.createElement('ul'));
@@ -303,6 +365,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 		});
 		replaceMessage('option_preferred_storage_head');
 		replaceMessage('option_save');
+
+		document.evaluate(
+			'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
+			document.body, null,
+			window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
 	}
 
 	/**
@@ -331,9 +398,9 @@ typeof WasaviExtensionWrapper != 'undefined'
 			items.push({key:'exrc', value:el.value});
 		}
 
-		var el = document.getElementById('shortcut');
-		if (el && el.nodeName == 'INPUT') {
-			items.push({key:'shortcut', value:el.value});
+		var el = document.querySelector('input[name="quick-activation"]:checked');
+		if (el) {
+			items.push({key:'quickActivation', value:el.value == '1' ? '1' : '0'});
 		}
 
 		var el = document.getElementById('font-family');
@@ -382,11 +449,16 @@ typeof WasaviExtensionWrapper != 'undefined'
 			handleOptionsPageLoaded(req);
 		}
 
-		window.addEventListener('keydown', handleKeydown, true);
+		if (quickActivation) {
+			window.addEventListener('focus', handleTargetFocus, true);
+		}
+		else {
+			window.addEventListener('keydown', handleKeydown, true);
+		}
 
 		if (WasaviExtensionWrapper.isTopFrame) {
 			document.querySelectorAll('textarea').length
-			&& console.log(
+			&& console.info(
 				'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
 		}
 	}
@@ -407,6 +479,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			shortcut = req.shortcut;
 			shortcutTester = createShortcutTester(req.shortcutCode);
 			fontFamily = req.fontFamily;
+			quickActivation = req.quickActivation;
 
 			if (window.chrome) {
 				WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
@@ -415,8 +488,8 @@ typeof WasaviExtensionWrapper != 'undefined'
 				handleAgentInitialized(req);
 			}
 			else {
-				document.addEventListener('DOMContentLoaded', function () {
-					document.removeEventListener('DOMContentLoaded', arguments.callee, false);
+				document.addEventListener('DOMContentLoaded', function (e) {
+					document.removeEventListener(e.type, arguments.callee, false);
 					handleAgentInitialized(req)
 				}, false);
 			}
@@ -440,6 +513,10 @@ typeof WasaviExtensionWrapper != 'undefined'
 				case 'shortcutCode':
 					shortcutTester = createShortcutTester(item.value);
 					break;
+
+				case 'quickActivate':
+					quickActivate = item.value;
+					break;
 				}
 			});
 			break;
@@ -450,6 +527,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			focusToFrame();
 			wasaviFrame.style.height = (req.height || targetElement.offsetHeight) + 'px';
 			wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
+			targetElement
 			console.info('wasavi started');
 			break;
 
@@ -477,9 +555,37 @@ typeof WasaviExtensionWrapper != 'undefined'
 			focusToFrame();
 			break;
 
+		case 'wasavi-focus-changed':
+			if (!wasaviFrame || !targetElement) break;
+			var focusables = getFocusables();
+			var index = focusables.indexOf(targetElement);
+			try {
+				if (index >= 0) {
+					var next = req.direction == 1 ?
+						(index + 1) % focusables.length :
+						(index + focusables.length - 1) % focusables.length;
+
+					blurFromFrame();
+
+					if (next == targetElement) {
+						document.body.focus();
+					}
+					else {
+						focusables[next].focus();
+					}
+				}
+				else {
+					document.body.focus();
+				}
+			}
+			catch (e) {
+				;
+			}
+			break;
+
 		case 'wasavi-terminated':
 			if (!wasaviFrame) break;
-			cleanup(req.value);
+			cleanup(req.value, req.isImplicit);
 			console.info('wasavi terminated');
 			break;
 

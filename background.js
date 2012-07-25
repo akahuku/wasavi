@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 167 2012-07-21 09:37:39Z akahuku $
+ * @version $Id: background.js 169 2012-07-25 07:40:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -177,7 +177,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					emit(callback, data[resourcePath]);
 					xhr = xhr.onload = xhr.onerror = null;
 				};
-				xhr.send(null);
+				try {
+					xhr.send(null);
+				}
+				catch (e) {
+				}
 			}
 		};
 	}
@@ -1364,7 +1368,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.__defineGetter__('backend', function () {return backend;});
 		this.__defineGetter__('state', function () {return state;});
 
-		//restoreAcessTokenPersistents();
+		restoreAcessTokenPersistents();
 	}
 
 	/*
@@ -1445,7 +1449,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			['fontFamily', defaultFont],
 			['fstab', JSON.stringify({
 				dropbox: {isDefault:true, enabled:true}
-			})]
+			})],
+			['quickActivation', false]
 		].forEach(function (item) {
 			if (extension.storage.getItem(item[0]) === null) {
 				extension.storage.setItem(item[0], typeof item[1] == 'function' ? item[1]() : item[1]);
@@ -1648,7 +1653,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				shortcutCode:extension.storage.getItem('shortcutCode'),
 				fontFamily:extension.storage.getItem('fontFamily'),
 				messageCatalog:messageCatalog,
-				wasaviFrame:wasaviFrame
+				wasaviFrame:wasaviFrame,
+				quickActivation:extension.storage.getItem('quickActivation') == '1'
 			});
 			break;
 
@@ -1673,7 +1679,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				var keys = [];
 				items.forEach(function (item) {
 					if ('key' in item && 'value' in item) {
-						if (item.key == 'font-family') {
+						if (item.key == 'fontFamily') {
 							if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
 								item.value = defaultFont;
 							}

@@ -2,7 +2,7 @@
 <!--
 	options page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: options.html 154 2012-07-16 10:26:45Z akahuku $
+	@version $Id: options.html 169 2012-07-25 07:40:43Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -68,8 +68,12 @@
 							"Courier",
 							monospace;
 			}
+			div.opt-unit-inner {
+				margin:0.5em 0 0 2em;
+			}
 			div.opt-unit label {
 				display:block;
+				margin:0 0 4px 0;
 			}
 			div.opt-unit2 {
 				background-color:#eaeef3;
@@ -148,10 +152,14 @@
 			<label><input type="checkbox" id="enableNumber"  >input[type=number]</label>
 		</div>
 		<hr>
-		<h2>__MSG_option_shortcut_key_head__</h2>
+		<h2>__MSG_option_starting_type_head__</h2>
 		<div class="opt-unit">
-			<label><input type="text" id="shortcut"></label>
-			<div class="tips">__MSG_option_target_elements_desc__</div>
+			<label><input type="radio" name="quick-activation" value="1"><span>__MSG_option_quick_activation_on__</span></label>
+			<label><input type="radio" name="quick-activation" value="0"><span>__MSG_option_quick_activation_off__</span></label>
+			<div class="opt-unit-inner">
+				<label><input type="text" id="shortcut"></label>
+				<div class="tips">__MSG_option_target_elements_desc__</div>
+			</div>
 		</div>
 		<hr>
 		<h2>__MSG_option_font_family_head__</h2>

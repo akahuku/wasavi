@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 167 2012-07-21 09:37:39Z akahuku $
+ * @version $Id: wasavi.js 169 2012-07-25 07:40:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -66,6 +66,7 @@
 			case 'init-response':
 				exrc = req.exrc;
 				fontFamily = req.fontFamily;
+				quickActivation = req.quickActivation;
 				l10n = new L10n(req.messageCatalog);
 				wasaviFrame = req.wasaviFrame;
 				document.documentElement.setAttribute(
@@ -89,8 +90,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 167 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 167 2012-07-21 09:37:39Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 169 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 169 2012-07-25 07:40:43Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -4155,6 +4156,10 @@ flag23_loop:
 				handler && handler(keyCode);
 				return;
 			}
+			if (quickActivation && inputMode == 'command' && keyCode == 9) {
+				handler && handler(keyCode);
+				return;
+			}
 			if (mapIndex != lastMapIndex) {
 				delayed && expandDelayed(delayed, 'delayed #2');
 				reset();
@@ -6613,7 +6618,7 @@ flag23_loop:
 			true, false);
 		document.dispatchEvent(ev);
 	}
-	function uninstall (editor, save) {
+	function uninstall (editor, save, implicit) {
 		var cnt = $(CONTAINER_ID);
 		var cover = $('wasavi_cover');
 
@@ -6662,7 +6667,9 @@ flag23_loop:
 			delete targetElement.getAttribute;
 			delete targetElement.setAttribute;
 			targetElement.type = 'wasavi-terminated';
-			targetElement.isTopFrame = WasaviExtensionWrapper.isTopFrame;
+			targetElement.tabId = extensionChannel.tabId;
+			targetElement.isTopFrame = !!WasaviExtensionWrapper.isTopFrame;
+			targetElement.isImplicit = !!implicit;
 			extensionChannel.postMessage({
 				type:'notify-to-parent',
 				parentTabId:targetElement.parentTabId,
@@ -9320,6 +9327,7 @@ flag23_loop:
 	var runType;
 	var exrc = '';
 	var fontFamily = 'monospace';
+	var quickActivation = false;
 	var substituteWorker;
 	var resizeHandlerInvokeTimer;
 	var regexConverter = new RegexConverter;
@@ -10617,6 +10625,20 @@ flag23_loop:
 		},
 
 		/*
+		 * special key
+		 */
+
+		'\u0009'/*tab*/: function (c, t, opts) {
+			if (extensionChannel && quickActivation) {
+				extensionChannel.postMessage({
+					type:'notify-to-parent',
+					parentTabId:targetElement.parentTabId,
+					payload:{type:'wasavi-focus-changed', direction:opts.e.shiftKey ? -1 : 1}
+				});
+			}
+		},
+
+		/*
 		 * edit commands
 		 */
 
@@ -11301,7 +11323,12 @@ flag23_loop:
 		handleCoverClick(e);
 	}
 	function handleWindowBlur (e) {
-		cursor.update({focused:false});
+		if (quickActivation) {
+			uninstall(getEditorCore(), true, true);
+		}
+		else {
+			cursor.update({focused:false});
+		}
 	}
 	function handleWindowResize (e) {
 		if (!resizeHandlerInvokeTimer && targetElement) {
