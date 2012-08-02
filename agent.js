@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 169 2012-07-25 07:40:43Z akahuku $
+ * @version $Id: agent.js 170 2012-07-30 11:47:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -401,6 +401,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 		var el = document.querySelector('input[name="quick-activation"]:checked');
 		if (el) {
 			items.push({key:'quickActivation', value:el.value == '1' ? '1' : '0'});
+		}
+
+		var el = document.getElementById('shortcut');
+		if (el) {
+			items.push({key:'shortcut', value:el.value});
 		}
 
 		var el = document.getElementById('font-family');
