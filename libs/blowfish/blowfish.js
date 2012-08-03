@@ -426,5 +426,4 @@ Blowfish.prototype.SBOX4=function(){return[
 	0xb74e6132,0xce77e25b,0x578fdfe3,0x3ac372e6
 ];};
 
-typeof window == 'object' && eval('var exports = this;');
 exports.Blowfish = Blowfish;

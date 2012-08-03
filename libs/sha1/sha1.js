@@ -466,5 +466,4 @@ new function() {
 	//CybozuLabs.SHA1.calc = navigator.userAgent.match(/Firefox/) ? CybozuLabs.SHA1.calc_Fx : CybozuLabs.SHA1.calc_std;
 };
 
-typeof window == 'object' && eval('var exports = this;');
 exports.SHA1 = CybozuLabs.SHA1;

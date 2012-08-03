@@ -28,16 +28,7 @@
 		<link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
 		<style>body{margin:0;padding:0;overflow:hidden;}</style>
 		<style id="wasavi_global_styles"></style>
-		<script>
-			if (window.location.protocol == 'chrome-extension:' && window.chrome) {
-				document.write('<script src="extension_wrapper.js"></scr' + 'ipt>');
-				document.write('<script src="wasavi.js"></scr' + 'ipt>');
-			}
-			else if (window.location.protocol == 'widget:' && window.opera) {
-				document.write('<script src="includes/001_extension_wrapper.js"></scr' + 'ipt>');
-				document.write('<script src="includes/wasavi.js"></scr' + 'ipt>');
-			}
-		</script>
+		<script src="wasavi_frame.js"></script>
 	</head>
 	<body>
 		<div id="wasavi_container">

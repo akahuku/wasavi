@@ -52,7 +52,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var enableList;
 	var exrc;
 	var shortcut;
-	var shortcutTester;
+	var shortcutCode;
 	var fontFamily;
 	var quickActivation;
 
@@ -262,7 +262,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 		if (current !== null) return;
 		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
 
-	    if (shortcutTester(e)) {
+		if (matchWithShortcut(e)) {
 			e.target.setAttribute(EXTENSION_CURRENT, 'wasavi');
 			e.preventDefault();
 			run(e.target);
@@ -432,15 +432,14 @@ typeof WasaviExtensionWrapper != 'undefined'
 	 * ----------------
 	 */
 
-	function createShortcutTester (code) {
-		var result;
-		try {
-			result = new Function('e', code);
-		}
-		catch (e) {
-			result = new Function('return false;');
-		}
-		return result;
+	function matchWithShortcut (e) {
+		return shortcutCode.some(function (code) {
+			for (var i in code) {
+				if (!(i in e)) return false;
+				if (e[i] !== code[i]) return false;
+			}
+			return true;
+		});
 	}
 
 	/**
@@ -482,7 +481,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			enableList = JSON.parse(req.targets);
 			exrc = req.exrc;
 			shortcut = req.shortcut;
-			shortcutTester = createShortcutTester(req.shortcutCode);
+			shortcutCode = JSON.parse(req.shortcutCode);
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
 
@@ -516,7 +515,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 					break;
 
 				case 'shortcutCode':
-					shortcutTester = createShortcutTester(item.value);
+					shortcutCode = JSON.parse(item.value);
 					break;
 
 				case 'quickActivate':

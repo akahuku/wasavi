@@ -502,7 +502,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			chrome.tabs.executeScript(tabId, options, callback);
 		};
 		this.addRequestListener = function (handler) {
-			typeof handler == 'function' && chrome.self.onRequest.addListener(function (req, sender, res) {
+			typeof handler == 'function' && chrome.extension.onRequest.addListener(function (req, sender, res) {
 				if (req && (req.type == 'init' || req.type == 'init-agent')) {
 					handler(req, sender.tab.id, function (reply) {
 						chrome.tabs.sendRequest(sender.tab.id, reply);
@@ -519,7 +519,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			});
 		};
 		this.openTabWithFile = function (file, callback) {
-			chrome.tabs.create({url:chrome.self.getURL(file)}, function (tab) {
+			chrome.tabs.create({url:chrome.extension.getURL(file)}, function (tab) {
 				emit(callback, tab.id, url);
 			});
 		};
@@ -1444,7 +1444,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			['exrc', '" exrc for wasavi'],
 			['shortcut', '<c-enter>, <insert>'],
 			['shortcutCode', function () {
-				return getShortcutCode(extension.storage.getItem('shortcut'));
+				return JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut')));
 			}],
 			['fontFamily', defaultFont],
 			['fstab', JSON.stringify({
@@ -1508,35 +1508,26 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			var key = modifiers.pop();
 			if (!(key in KEY_TABLE)) return;
 
-			var code = [];
-			var shiftSpecified = false;
-			var ctrlSpecified = false;
+			var codes = {keyCode:KEY_TABLE[key], shiftKey:false, ctrlKey:false};
 			modifiers.forEach(function (m) {
 				switch (m.toLowerCase()) {
 				case 's':
-					code.push('e.shiftKey');
-					shiftSpecified = true;
+					codes['shiftKey'] = true;
 					break;
 				case 'c':
-					code.push('e.ctrlKey');
-					ctrlSpecified = true;
+					codes['ctrlKey'] = true;
 					break;
 				}
 			});
-			!shiftSpecified && code.push('!e.shiftKey');
-			!ctrlSpecified && code.push('!e.ctrlKey');
-			code.push('e.keyCode==' + KEY_TABLE[key]);
 
-			result.push(code.join('&&'));
+			result.push(codes);
 		});
 
-		result = result.join('||');
-
-		if (result == '') {
+		if (result.length == 0) {
 			result = arguments.callee('');
 		}
 
-		return 'return ' + result + ';';
+		return result;
 	}
 
 	/**
@@ -1650,7 +1641,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				targets:extension.storage.getItem('targets'),
 				exrc:extension.storage.getItem('exrc'),
 				shortcut:extension.storage.getItem('shortcut'),
-				shortcutCode:extension.storage.getItem('shortcutCode'),
+				shortcutCode:JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut'))),
 				fontFamily:extension.storage.getItem('fontFamily'),
 				messageCatalog:messageCatalog,
 				wasaviFrame:wasaviFrame,
@@ -1690,7 +1681,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 						if (item.key == 'shortcut') {
 							keys.push('shortcutCode');
-							extension.storage.setItem('shortcutCode', getShortcutCode(item.value));
+							extension.storage.setItem(
+								'shortcutCode', 
+								JSON.stringify(getShortcutCode(item.value)));
 						}
 					}
 				});
