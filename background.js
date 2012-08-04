@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 169 2012-07-25 07:40:43Z akahuku $
+ * @version $Id: background.js 171 2012-08-03 07:39:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
