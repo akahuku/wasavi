@@ -40,15 +40,15 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 
 * Google Chrome
 
-  <http://appsweets.net/wasavi/wasavi.crx>
+  <https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe?hl=ja>
 
 * Opera
 
-  <http://appsweets.net/wasavi/wasavi.oex>
+  <https://addons.opera.com/ja/extensions/details/wasavi/>
 
 * Firefox
 
-  <http://appsweets.net/wasavi/wasavi.xpi>
+  <https://addons.mozilla.org/ja/firefox/addon/wasavi/>
 
 以上のブラウザ用のエクステンションの標準的なインストール方法に従って導入してく
 ださい。ただし、Opera 版は試験公開です。Opera が DOM3 Composition Event に対応
@@ -56,6 +56,9 @@ wasavi はほぼすべての vi コマンド、およびいくつかの ex コ�
 
 Google Chrome において、github に公開されているソースを実行する場合は、「パッ
 ケージ化されていない拡張機能を読み込む...」で manifest.json を与えてください。
+
+ソースコードは <https://github.com/akahuku/wasavi> で管理しています。
+最新の開発バージョンは <http://appsweets.net/wasavi/> にあります。
 
 
 

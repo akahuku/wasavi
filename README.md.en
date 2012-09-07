@@ -41,15 +41,15 @@ Currently, there are extension packages for the following browsers:
 
 * Google Chrome
 
-  <http://appsweets.net/wasavi/wasavi.crx>
+  <https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe>
 
 * Opera
 
-  <http://appsweets.net/wasavi/wasavi.oex>
+  <https://addons.opera.com/en/extensions/details/wasavi/>
 
 * Firefox
 
-  <http://appsweets.net/wasavi/wasavi.xpi>
+  <https://addons.mozilla.org/en-US/firefox/addon/wasavi/>
 
 Click one of link above, and install in accordance with the standard manners
 of each browser.
@@ -58,6 +58,7 @@ Opera note: since Opera does not support "DOM3 Composition Event", so the input
 via IME is not available.
 
 Source codes is hosted on <https://github.com/akahuku/wasavi>. 
+Latest develop version is hosted on <http://appsweets.net/wasavi/>.
 
 
 

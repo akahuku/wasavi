@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 171 2012-08-03 07:39:54Z akahuku $
+ * @version $Id: background.js 177 2012-09-07 08:59:20Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -73,6 +73,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		'f5':116, 'f6':117, 'f7':118, 'f8':119,
 		'f9':120, 'f10':121, 'f11':122, 'f12':123
 	};
+	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
 
 	/*
 	 * variables
@@ -1645,7 +1646,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				fontFamily:extension.storage.getItem('fontFamily'),
 				messageCatalog:messageCatalog,
 				wasaviFrame:wasaviFrame,
-				quickActivation:extension.storage.getItem('quickActivation') == '1'
+				quickActivation:extension.storage.getItem('quickActivation') == '1',
+				testMode:req.url == TEST_MODE_URL
 			});
 			break;
 

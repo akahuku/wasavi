@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 169 2012-07-25 07:40:43Z akahuku $
+ * @version $Id: wasavi.js 177 2012-09-07 08:59:20Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -29,7 +29,7 @@
 
 (function (global) {
 	/*
-	 * extension interface
+	 * extension interface {{{1
 	 * ----------------
 	 */
 
@@ -49,6 +49,15 @@
 			function run (callback) {
 				if (document.readyState == 'interactive'
 				||  document.readyState == 'complete') {
+					/*
+					 * an issue of security risk about innerHTML
+					 * =========================================
+					 * Assigning a string to innerHTML may cause security risk.
+					 * But in this code, 'wasaviFrame' content is the resource
+					 * within extension package at all the time, and not be manipulated
+					 * from the outside.
+					 * Thus we leave innerHTML.
+					 */
 					document.body.innerHTML = wasaviFrame;
 					delete wasaviFrame;
 					callback();
@@ -56,6 +65,9 @@
 				else {
 					document.addEventListener('DOMContentLoaded', function (e) {
 						document.removeEventListener(e.type, arguments.callee, false);
+						/*
+						 * an issue of innerHTML: see the comment above.
+						 */
 						document.body.innerHTML = wasaviFrame;
 						delete wasaviFrame;
 						callback();
@@ -74,6 +86,7 @@
 				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
 				break;
 			case 'run':
+				testMode = req.testMode;
 				req.dataset = {};
 				req.getAttribute = function (name) {return this.dataset[name];};
 				req.setAttribute = function (name, value) {this.dataset[name] = value;};
@@ -86,12 +99,12 @@
 
 
 	/*
-	 * application constants
+	 * application constants {{{1
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 169 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 169 2012-07-25 07:40:43Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 177 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 177 2012-09-07 08:59:20Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -131,7 +144,7 @@
 		'U+0009':  -9,
 		'U+000D':  -13,
 		'U+001B':  -27,
-		'Delete':  -127,
+		'U+007F':  -127,
 		'PageUp':  33,
 		'PageDown':34,
 		'End':     35,
@@ -184,7 +197,7 @@
 	/*const*/var LINE_NUMBER_MAX_WIDTH = 6;
 
 	/*
-	 * classes
+	 * classes {{{1
 	 * ----------------
 	 */
 
@@ -384,6 +397,31 @@
 			}
 			return result;
 		};
+		this.dumpData = function () {
+			var result = [];
+			var ab = reverseObject(abbrevs);
+			for (var i = 0; i < internals.length; i++) {
+				var v = internals[i];
+				var type = '';
+				switch (v.type) {
+				case 'b': type = 'boolean'; break;
+				case 'i': type = 'integer'; break;
+				case 'I': type = 'natural number'; break;
+				case 's': type = 'string'; break;
+				case 'r': type = 'string (regal expression)'; break;
+				}
+				var tmp = {
+					name:v.name,
+					type:type,
+					defaultValue:v.defaultValue
+				};
+				if (v.name in ab) {
+					tmp.abbrev = ab[v.name];
+				}
+				result.push(tmp);
+			}
+			return result;
+		};
 		this.__defineGetter__('vars', function () {return vars;});
 		init();
 	}
@@ -458,7 +496,7 @@
 		}
 	};
 
-	/*constructor*/function Registers (loadCallback) {
+	/*constructor*/function Registers (loadCallback, ignoreStorage) {
 		/*
 		 * available registers:
 		 *
@@ -510,7 +548,7 @@
 			unnamed = new RegisterItem();
 			named = {};
 			getLocalStorage(storageKey, function (value) {
-				restore(value || '');
+				!ignoreStorage && restore(value || '');
 				callback && callback();
 				callback = null;
 			});
@@ -602,6 +640,22 @@
 			a.unshift(_('*** registers ***'));
 			return a;
 		}
+		function dumpData () {
+			function dumpItem (name, item) {
+				return {
+					isLineOrient:item.isLineOrient,
+					name:name,
+					data:toNativeControl(item.data)
+				};
+			}
+			var a = [];
+			a.push(dumpItem('"', unnamed));
+			for (var i in named) {
+				named[i] && a.push(dumpItem(i, named[i]));
+			}
+			a.sort(function (a, b) {return a.name.localeCompare(b.name);});
+			return a;
+		}
 
 		this.__defineGetter__('storageKey', function () {return storageKey;});
 		this.set = set;
@@ -610,6 +664,7 @@
 		this.isReadable = isReadable;
 		this.exists = exists;
 		this.dump = dump;
+		this.dumpData = dumpData;
 		this.save = save;
 		this.load = load;
 
@@ -2297,19 +2352,17 @@
 
 			// setter properties
 			set value (v) {
-				var html =
-					'<div>' + v
-						.replace(/&/g, '&amp;')
-						.replace(/</g, '&lt;')
-						.replace(/>/g, '&gt;')
-						.replace(/\r\n/g, '\n')
-						.replace(/\u007f/g, '\u2421')
-						.replace(/[\u0000-\u0008\u000b-\u001f]/g, function (a) {
-							return String.fromCharCode(0x2400 + a.charCodeAt(0));
-						})
-						.replace(/\n/g, '\n</div><div>') +
-					'\n</div>';
-				this.elm.innerHTML = html;
+				emptyNodeContents(this.elm);
+				v = v
+					.replace(/\r\n/g, '\n')
+					.replace(/[\u0000-\u0008\u000b-\u001f]/g, function (a) {
+						return String.fromCharCode(0x2400 + a.charCodeAt(0));
+					})
+					.split('\n');
+				for (var i = 0, goal = v.length; i < goal; i++) {
+					var div = this.elm.appendChild(document.createElement('div'));
+					div.textContent = v[i] + '\n';
+				}
 			},
 			set selectionStart (v) {
 				if (typeof v == 'number') {
@@ -2382,6 +2435,7 @@
 						cursor.ensureVisible();
 						cursor.update({visible:true});
 						modeLine.style.display == '' && showPrefixInput(editor);
+						fireCommandCompleteEvent();
 						running = false;
 					}
 					else {
@@ -3030,7 +3084,7 @@ flag23_loop:
 			var result = [];
 			for (var i = 0, goal = items.length; i < goal; i++) {
 				if (items[i]) {
-					result.push(i + ': "' + toVisibleString(items[i].innerHTML) + '"');
+					result.push(i + ': "' + toVisibleString(items[i].textContent) + '"');
 				}
 				else {
 					result.push(i + ': null');
@@ -4296,7 +4350,7 @@ flag23_loop:
 			return Math.floor(con.offsetHeight / scaler.offsetHeight);
 		});
 		this.__defineGetter__('cols', function () {
-			scaler.innerHTML = '';
+			emptyNodeContents(scaler);
 			var span = scaler.appendChild(document.createElement('span'));
 			span.textContent = '0';
 			return Math.floor(con.offsetWidth / span.offsetWidth);
@@ -4739,7 +4793,7 @@ flag23_loop:
 		}
 	};
 
-	/*constructor*/function LineInputHistories (maxSize, names, loadCallback) {
+	/*constructor*/function LineInputHistories (maxSize, names, loadCallback, ignoreStorage) {
 		var s;
 		var name;
 		var storageKey = 'wasavi_lineinput_histories';
@@ -4779,7 +4833,7 @@ flag23_loop:
 				s[na] = {lines:[], current:-1};
 			});
 			getLocalStorage(storageKey, function (value) {
-				restore(value || '');
+				!ignoreStorage && restore(value || '');
 				callback && callback();
 				callback = null;
 			});
@@ -5568,7 +5622,7 @@ flag23_loop:
 	}
 
 	/*
-	 * utility functions
+	 * utility functions {{{1
 	 * ----------------
 	 */
 
@@ -6002,9 +6056,42 @@ flag23_loop:
 			return result;
 		};
 	})();
+	function emptyNodeContents (node) {
+		var r = document.createRange();
+		r.selectNodeContents($(node));
+		r.deleteContents();
+		r.detach();
+	}
+	function fireEvent (eventName, payload) {
+		if (!extensionChannel) return;
+		payload || (payload = {});
+		payload.type = 'wasavi-' + eventName;
+		extensionChannel.postMessage({
+			type:'notify-to-parent',
+			parentTabId:targetElement.parentTabId,
+			payload:payload
+		});
+	}
+	function fireCommandCompleteEvent (eventName) {
+		if (testMode) {
+			eventName || (eventName = 'command-completed');
+			fireEvent(eventName, {
+				state:{
+					inputMode:  Wasavi.inputMode,
+					lastMessage:Wasavi.lastMessage,
+					running:    Wasavi.running,
+					value:      Wasavi.value,
+					row:        Wasavi.row,
+					col:        Wasavi.col,
+					registers:  registers.dumpData(),
+					lines:      config.vars.lines
+				}
+			});
+		}
+	}
 
 	/*
-	 * low-level functions for application management
+	 * low-level functions for application management {{{1
 	 * ----------------
 	 */
 
@@ -6050,11 +6137,11 @@ flag23_loop:
 		}
 		if (extensionChannel) {
 			load(function () {
-				registers = new Registers(handleLoaded);
+				registers = new Registers(handleLoaded, testMode);
 			});
 			load(function () {
 				lineInputHistories = new LineInputHistories(
-					config.vars.history, ['/', ':'], handleLoaded
+					config.vars.history, ['/', ':'], handleLoaded, testMode
 				);
 			});
 			load(function () {
@@ -6594,11 +6681,7 @@ flag23_loop:
 		 */
 
 		if (extensionChannel) {
-			extensionChannel.postMessage({
-				type:'notify-to-parent',
-				parentTabId:x.parentTabId,
-				payload:{type:'wasavi-initialized', height:cnt.offsetHeight}
-			});
+			fireEvent('initialized', {height:cnt.offsetHeight});
 			extensionChannel.setMessageListener(handleExtensionChannelMessage);
 		}
 
@@ -6607,16 +6690,6 @@ flag23_loop:
 		 */
 
 		setupEventHandlers(true);
-
-		/*
-		 * notify wasavi started to document
-		 */
-
-		var ev = document.createEvent('Event');
-		ev.initEvent(
-			'wasavi' + (extensionChannel ? '_extension' : '') + '_start',
-			true, false);
-		document.dispatchEvent(ev);
 	}
 	function uninstall (editor, save, implicit) {
 		var cnt = $(CONTAINER_ID);
@@ -6659,32 +6732,20 @@ flag23_loop:
 
 		var globalStyles = $('wasavi_global_styles');
 		if (globalStyles) {
-			globalStyles.innerHTML = '';
+			emptyNodeContents(globalStyles);
 		}
 
 		//
 		if (extensionChannel) {
 			delete targetElement.getAttribute;
 			delete targetElement.setAttribute;
-			targetElement.type = 'wasavi-terminated';
 			targetElement.tabId = extensionChannel.tabId;
 			targetElement.isTopFrame = !!WasaviExtensionWrapper.isTopFrame;
 			targetElement.isImplicit = !!implicit;
-			extensionChannel.postMessage({
-				type:'notify-to-parent',
-				parentTabId:targetElement.parentTabId,
-				payload:targetElement
-			});
+			fireEvent('terminated', targetElement);
 			extensionChannel = null;
 		}
 		targetElement = null;
-
-		// fire terminate event
-		var ev = document.createEvent('Event');
-		ev.initEvent(
-			'wasavi' + (extensionChannel ? '_extension' : '') + '_terminate',
-			true, false);
-		document.dispatchEvent(ev);
 	}
 	function setupEventHandlers (install) {
 		var method = install ? 'addEventListener' : 'removeEventListener';
@@ -6907,7 +6968,7 @@ flag23_loop:
 		indp.textContent = '';
 		var pa = line;
 		if (emphasis) {
-			indf.innerHTML = '';
+			emptyNodeContents(indf);
 			var span = indf.appendChild(document.createElement('span'));
 			span.style.backgroundColor = '#f00';
 			span.textContent = message;
@@ -6917,7 +6978,7 @@ flag23_loop:
 			indf.textContent = message;
 		}
 		if (pseudoCursor) {
-			var blink = pa.appendChild(document.createElement('blink'));
+			var blink = indf.appendChild(document.createElement('blink'));
 			blink.textContent = '\u2588';
 		}
 		if (message != '' && !volatile_) {
@@ -7498,6 +7559,9 @@ flag23_loop:
 			}
 		}
 		function execCommandMap (t, key, subkey, code) {
+			fireEvent('command-start');
+			lastMessage = '';
+
 			var map = commandMap;
 			var ss = t.selectionStart;
 			var se = t.selectionEnd;
@@ -7527,6 +7591,10 @@ flag23_loop:
 					if (isSimpleCommandUpdateRequested) {
 						lastSimpleCommand = prefixInput.toString();
 						isSimpleCommandUpdateRequested = false;
+					}
+
+					if (!scroller.running) {
+						needEmitEvent = true;
 					}
 
 					prefixInput.reset();
@@ -7613,6 +7681,7 @@ flag23_loop:
 		var mapkey = chr(code, true);
 		var subkey = inputMode;
 		var result = false;
+		var needEmitEvent = false;
 
 		switch (inputModeSub) {
 		case 'wait-a-letter':
@@ -7728,6 +7797,7 @@ flag23_loop:
 				showMessage('');
 				requestShowPrefixInput();
 				editLogger.close();// edit-wrapper
+				needEmitEvent = true;
 			}
 			else {
 				var letterActual = code == 0x0d ? '\n' : letter;
@@ -7754,6 +7824,7 @@ flag23_loop:
 						cursor.update({visible:true});
 					}
 				}
+				needEmitEvent = 'notify-state';
 			}
 			result = true;
 			break;
@@ -7848,6 +7919,7 @@ flag23_loop:
 				}
 				requestedState.modeline = null;
 				config.vars.errorbells && requestRegisterNotice();
+				needEmitEvent = true;
 			}
 			if (requestedState.notice) {
 				if (requestedState.notice.play) {
@@ -7858,9 +7930,18 @@ flag23_loop:
 					console.log(requestedState.notice.message);
 				}
 				requestedState.notice = null;
+				needEmitEvent = true;
 			}
 			if (runLevel == 0 && state == 'normal' && (backlog.queued || backlog.visible)) {
 				backlog.write(false, messageUpdated);
+			}
+			if (needEmitEvent !== false) {
+				if (needEmitEvent === true) {
+					fireCommandCompleteEvent();
+				}
+				else if (typeof needEmitEvent == 'string') {
+					fireCommandCompleteEvent(needEmitEvent);
+				}
 			}
 		}
 
@@ -7918,16 +7999,9 @@ flag23_loop:
 		}
 		return result;
 	}
-	function incrementStrokeCount () {
-		++strokeCount == 1 && extensionChannel && extensionChannel.postMessage({
-			type:'notify-to-parent',
-			parentTabId:targetElement.parentTabId,
-			payload:{type:'wasavi-stroked'}
-		});
-	}
 
 	/*
-	 * low-level functions for editor functionality
+	 * low-level functions for editor functionality {{{1
 	 * ----------------
 	 */
 
@@ -8155,7 +8229,7 @@ flag23_loop:
 	}
 
 	/*
-	 * low-level functions for cursor motion
+	 * low-level functions for cursor motion {{{1
 	 * ----------------
 	 */
 
@@ -8906,7 +8980,7 @@ flag23_loop:
 	}
 
 	/*
-	 * low-level functions for text modification
+	 * low-level functions for text modification {{{1
 	 * ----------------
 	 */
 
@@ -9318,7 +9392,7 @@ flag23_loop:
 	}
 
 	/*
-	 * variables
+	 * variables {{{1
 	 * ----------------
 	 */
 
@@ -9328,6 +9402,7 @@ flag23_loop:
 	var exrc = '';
 	var fontFamily = 'monospace';
 	var quickActivation = false;
+	var testMode = false;
 	var substituteWorker;
 	var resizeHandlerInvokeTimer;
 	var regexConverter = new RegexConverter;
@@ -9540,7 +9615,7 @@ flag23_loop:
 	var lastMessage;
 
 	/*
-	 * editor functions mapping
+	 * editor functions mapping {{{1
 	 * ----------------
 	 */
 
@@ -11314,7 +11389,7 @@ flag23_loop:
 	};
 
 	/*
-	 * event handlers
+	 * event handlers {{{1
 	 * ----------------
 	 */
 
@@ -11344,12 +11419,20 @@ flag23_loop:
 	// editor (document)
 	function handleKeydown (e) {
 		//console.log([e.keyCode, e.charCode, e.which].join(', '));
+
 		function stop (e) {
 			e.preventDefault();
 			e.stopPropagation();
 			e.returnValue = false;
 		}
 
+		if (testMode) {
+			fireEvent('notify-keydown', {
+				keyCode:e.keyCode,
+				key:e.keyIdentifier || '',
+				eventType:e.type
+			});
+		}
 		if (scroller.running || exCommandExecutor.running) {
 			return stop(e);
 		}
@@ -11404,7 +11487,6 @@ flag23_loop:
 		}
 
 		isInteractive = true;
-		incrementStrokeCount();
 		(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
 			.call(extensionChannel, function () {
 				mapManager.process(keyCode, function (keyCode) {
@@ -11450,15 +11532,19 @@ flag23_loop:
 		e.returnValue = false;
 		switch (state) {
 		case 'normal':
-			var delta = 0;
-			if (e.wheelDelta) {
-				delta = 3 * (e.wheelDelta > 0 ? -1 : 1);
-			}
-			else if (e.detail) {
-				delta = e.detail;
-			}
-			if (delta) {
-				executeViCommand(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'), true);
+			switch (inputMode) {
+			case 'command':
+				var delta = 0;
+				if (e.wheelDelta) {
+					delta = 3 * (e.wheelDelta > 0 ? -1 : 1);
+				}
+				else if (e.detail) {
+					delta = e.detail;
+				}
+				if (delta) {
+					executeViCommand(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'), true);
+				}
+				break;
 			}
 			break;
 		}
@@ -11502,7 +11588,6 @@ flag23_loop:
 			//exCommandExecutor.runAsyncNext();
 			break;
 		case 'fileio-read-response':
-			//console.log('*** fileio-read-response ***\n' + JSON.stringify(req, null, ' '));
 			if (req.error) {
 				showMessage(req.error, true, false);
 				exCommandExecutor.stop();
@@ -11530,7 +11615,7 @@ flag23_loop:
 	}
 
 	/*
-	 * external interface
+	 * external interface {{{1
 	 * ----------------
 	 */
 
@@ -11554,6 +11639,9 @@ flag23_loop:
 			},
 			get vars () {
 				return config.vars;
+			},
+			get varData () {
+				return config.dumpData();
 			},
 			get state () {
 				ensureRunning();
@@ -11653,7 +11741,6 @@ flag23_loop:
 				args.push(true);
 				lastMessage = '';
 				isInteractive = false;
-				incrementStrokeCount();
 				executeViCommand.apply(null, args);
 			},
 			marks: function (name) {
@@ -11690,10 +11777,6 @@ flag23_loop:
 					}
 				});
 			},
-			dumpDom: function () {
-				ensureRunning();
-				return getEditorCore().elm.innerHTML;
-			},
 
 			/*
 			 * classes
@@ -11721,7 +11804,7 @@ flag23_loop:
 	};
 
 	/*
-	 * startup
+	 * startup {{{1
 	 * ----------------
 	 */
 
@@ -11731,4 +11814,4 @@ flag23_loop:
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
