@@ -1,7 +1,13 @@
 package WasaviTest;
 
 import org.junit.*;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
+
 import org.json.*;
+
+import java.util.ArrayList;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -30,7 +36,9 @@ class WasaviWrapper {
 
 	private WebDriver driver;
 	private JSONObject wasaviState;
-	private String inputModeOfWacthTarget = "command";
+	private final ArrayList<String> inputModeOfWacthTargetDefault =
+		new ArrayList<String>(java.util.Arrays.asList("command", "console-wait"));
+	private ArrayList<String> inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 
 	WasaviWrapper (WebDriver d) {
 		driver = d;
@@ -50,7 +58,7 @@ class WasaviWrapper {
 					try {
 						WebElement elm = d.findElement(By.id("wasavi_frame"));
 						if (elm.getAttribute("data-wasavi-command-state") == null &&
-							inputModeOfWacthTarget.equals(elm.getAttribute("data-wasavi-input-mode"))) {
+							inputModeOfWacthTarget.contains(elm.getAttribute("data-wasavi-input-mode"))) {
 							return elm;
 						}
 					}
@@ -100,6 +108,32 @@ class WasaviWrapper {
 		//System.out.println(getValue());
 	}
 
+	private int getInt (String name, int defaultValue) {
+		try {
+			return wasaviState.getInt(name);
+		}
+		catch (JSONException e) {
+		}
+		return defaultValue;
+	}
+
+	private int getInt (String name) {
+		return getInt(name, 0);
+	}
+
+	private String getString (String name, String defaultValue) {
+		try {
+			return wasaviState.getString(name);
+		}
+		catch (JSONException e) {
+		}
+		return defaultValue;
+	}
+
+	private String getString (String name) {
+		return getString(name, "");
+	}
+
 	public void send (CharSequence... strokes) {
 		for (CharSequence s: strokes) {
 			sendSetup();
@@ -110,12 +144,23 @@ class WasaviWrapper {
 			sendFinish(elm);
 		}
 
-		inputModeOfWacthTarget = "command";
+		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
 
-	public void setInputModeOfWatchTarget (String im) {
-		if ("command".equals(im) || "edit".equals(im) || "edit-overwrite".equals(im)) {
-			inputModeOfWacthTarget = im;
+	public void sendNoWait (CharSequence stroke) {
+		(new Actions(driver)).sendKeys(stroke).perform();
+	}
+
+	public void setInputModeOfWatchTarget (String... modes) {
+		inputModeOfWacthTarget = new ArrayList<String>();
+
+		for (String s: modes) {
+			if ("command".equals(s) ||
+					"edit".equals(s) ||
+					"edit-overwrite".equals(s)) {
+
+				inputModeOfWacthTarget.add(s);
+			}
 		}
 	}
 
@@ -136,7 +181,7 @@ class WasaviWrapper {
 		}
 	}
 
-	public int makeScrollableBuffer (int factor) {
+	public int makeScrollableBuffer (double factor) {
 		send("h");
 
 		int lines = getLines();
@@ -159,31 +204,48 @@ class WasaviWrapper {
 		return makeScrollableBuffer(1);
 	}
 
+	/*
+	 * state getters
+	 */
+
+	public String getState () {
+		return getString("state", "***Exception in getState***");
+	}
+
 	public String getValue () {
-		try {
-			return wasaviState.getString("value");
-		}
-		catch (JSONException e) {
-			return "**Exception in getValue***";
-		}
+		return getString("value", "***Exception in getValue***");
 	}
 
 	public String getLastMessage () {
-		try {
-			return wasaviState.getString("lastMessage");
-		}
-		catch (JSONException e) {
-			return "**Exception in getLastMessage***";
-		}
+		return getString("lastMessage", "***Exception in getLastMessage***");
 	}
 
 	public String getInputMode () {
-		try {
-			return wasaviState.getString("inputMode");
-		}
-		catch (JSONException e) {
-			return "**Exception in getMode***";
-		}
+		return getString("inputMode", "***Exception in getInputMode***");
+	}
+
+	public int getLines () {
+		return getInt("lines", 0);
+	}
+
+	public int getRowLength () {
+		return getInt("rowLength", 0);
+	}
+
+	public int getRow () {
+		return getInt("row", 0);
+	}
+
+	public int getCol () {
+		return getInt("col", 0);
+	}
+
+	public int getTopRow () {
+		return getInt("topRow", 0);
+	}
+
+	public int getTopCol () {
+		return getInt("topCol", 0);
 	}
 
 	public String getRegister (String name) {
@@ -202,15 +264,20 @@ class WasaviWrapper {
 		return "";
 	}
 
-	public int getLines () {
+	public int[] getMark (String name) {
 		try {
-			return wasaviState.getInt("lines");
+			int[] result = new int[2];
+			JSONObject mark = wasaviState.getJSONObject("marks").getJSONObject(name);
+			result[0] = mark.getInt("row");
+			result[1] = mark.getInt("col");
+			return result;
 		}
 		catch (JSONException e) {
-			return 0;
+			return null;
 		}
 	}
 }
+
 
 
 class WasaviUtils {
@@ -250,10 +317,24 @@ class WasaviAsserts {
 		wasaviState = ws;
 	}
 
-	public static void assertPos (String message, long row, long col) {
+	public static void assertEquals (String message, String expected, String actual) {
+		if (!expected.equals(actual)) {
+			org.junit.Assert.fail(
+					message +
+					String.format(
+						" expected:\n<<%s>>\n\nbut was:\n<<%s>>",
+						expected, actual));
+		}
+	}
+
+	public static void assertEqualst(String expected, String actual) {
+		assertEquals("", expected, actual);
+	}
+
+	public static void assertPos (String message, int row, int col) {
 		try {
-			long actualRow = wasaviState.getLong("row");
-			long actualCol = wasaviState.getLong("col");
+			int actualRow = wasaviState.getInt("row");
+			int actualCol = wasaviState.getInt("col");
 			if (row != actualRow || col != actualCol) {
 				org.junit.Assert.fail(
 						message +
@@ -268,7 +349,7 @@ class WasaviAsserts {
 		}
 	}
 
-	public static void assertPos (long row, long col) {
+	public static void assertPos (int row, int col) {
 		assertPos("", row, col);
 	}
 
@@ -298,6 +379,16 @@ class WasaviAsserts {
 public class WasaviTest {
 	protected static WebDriver driver;
 	protected static WasaviWrapper Wasavi;
+	protected String logText;
+
+	@Rule public TestRule watcher = new TestWatcher() {
+		protected void starting (Description d) {
+			System.out.println("Testcase: " + d.getMethodName());
+		}
+		protected void failed (Throwable e, Description d) {
+			System.out.println(d.getMethodName() + " FAILED\n" + logText);
+		}
+	};
 
 	private static WebDriver createDriver (String name) {
 		WebDriver driver = null;
@@ -391,13 +482,14 @@ public class WasaviTest {
 
 	@After
 	public void tearDown () {
-		//System.out.println("***\n" + driver.findElement(By.id("test-log")).getAttribute("value"));
+		logText = driver.findElement(By.id("test-log")).getAttribute("value");
+
 		Wasavi.js(
 			"var wasaviFrame = document.getElementById('wasavi_frame');" +
 			"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
 
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(1000);
 		}
 		catch (Exception e) {
 		}

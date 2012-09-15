@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 177 2012-09-07 08:59:20Z akahuku $
+ * @version $Id: agent.js 179 2012-09-15 14:49:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -258,13 +258,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	}
 
 	function log (eventType, keyCode, key) {
-		var line = [eventType, keyCode];
-
-		if (keyCode >= 32 && keyCode < 127) {
-			line.push(String.fromCharCode(keyCode));
-		}
-		line.push('(' + key + ')');
-		keyStrokeLog.unshift(line.join(' '));
+		keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
 	}
 
 	/**
@@ -644,6 +638,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 		/* helper blocks for functionality test */
 		case 'wasavi-notify-keydown':
 			if (!isTestFrame) break;
+			if (stateClearTimer) {
+				clearTimeout(stateClearTimer);
+				stateClearTimer = null;
+				log('notify-keydown: timer cleared', '', '');
+			}
 			log(req.eventType, req.keyCode, req.key);
 			break;
 
@@ -651,6 +650,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			if (!isTestFrame) break;
 			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
 			document.querySelector('h1').style.color = 'red';
+			log('command-start', '', '');
 			break;
 
 		case 'wasavi-notify-state':
@@ -664,7 +664,9 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 				stateClearTimer = null;
 				wasaviFrame.removeAttribute('data-wasavi-command-state');
+				log('notify-state: timer executed.', '', '');
 			}, 100);
+			log('notify-state: timer registered.', '', '');
 			break;
 			
 		case 'wasavi-command-completed':
@@ -676,16 +678,25 @@ typeof WasaviExtensionWrapper != 'undefined'
 				wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
 				wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
 
+				log('command-completed: timer executed.', '', '');
 				keyStrokeLog.unshift('*** sequence point ***');
 				document.querySelector('h1').style.color = '';
 				document.getElementById('test-log').value =
 					keyStrokeLog.join('\n') + '\n' + document.getElementById('test-log').value;
-				document.getElementById('state').textContent = req.state.lastMessage;
+
+				var state = document.getElementById('state');
+				state.textContent = '';
+				['running', 'state', 'inputMode', 'row', 'col', 'lastMessage'].forEach(function (p) {
+					state.appendChild(document.createElement('div')).textContent =
+						p + ': ' + req.state[p];
+				});
+
 				keyStrokeLog = [];
 
 				stateClearTimer = null;
 				wasaviFrame.removeAttribute('data-wasavi-command-state');
 			}, 100);
+			log('command-completed: timer registered.', '', '');
 			break;
 		}
 	});

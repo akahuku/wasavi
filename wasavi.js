@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 177 2012-09-07 08:59:20Z akahuku $
+ * @version $Id: wasavi.js 179 2012-09-15 14:49:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -103,8 +103,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 177 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 177 2012-09-07 08:59:20Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 179 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 179 2012-09-15 14:49:45Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -118,50 +118,6 @@
 		email:    true,
 		password: true,
 		number:   true
-	};
-	/*const*/var SPECIAL_KEYS = {
-		'-8': '<bs>',
-		'-9': '<tab>',
-		'-13': '<enter>',
-		'-27': '<esc>',
-		33:  '<pageup>',
-		34:  '<pagedown>',
-		35:  '<end>',
-		36:  '<home>',
-		37:  '<left>',
-		38:  '<up>',
-		39:  '<right>',
-		40:  '<down>',
-		45:  '<insert>',
-		46:  '<delete>',
-		112: '<f1>', 113:  '<f2>', 114:  '<f3>', 115:  '<f4>',
-		116: '<f5>', 117:  '<f6>', 118:  '<f7>', 119:  '<f8>',
-		120: '<f9>', 121: '<f10>', 122: '<f11>', 123: '<f12>'
-	};
-	/*const*/var SPECIAL_KEYS_REVERSED = reverseObject(SPECIAL_KEYS);
-	/*const*/var WEBKIT_KEY_IDENTIFIERS_REVERSED = {
-		'U+0008':  -8,
-		'U+0009':  -9,
-		'U+000D':  -13,
-		'U+001B':  -27,
-		'U+007F':  -127,
-		'PageUp':  33,
-		'PageDown':34,
-		'End':     35,
-		'Home':    36,
-		'Left':    37,
-		'Up':      38,
-		'Right':   39,
-		'Down':    40,
-		'Insert':  45,
-		'F1':112, 'F2': 113, 'F3': 114, 'F4': 115,
-		'F5':116, 'F6': 117, 'F7': 118, 'F8': 119,
-		'F9':120, 'F10':121, 'F11':122, 'F12':123
-	};
-	/*const*/var WEBKIT_CTRL_SPECIAL_KEYS_REVERSED = {
-		'U+00DB': 27, // ^[
-		'U+0036': 30, // ^^
-		'U+00BB': 31  // ^_
 	};
 	/*const*/var LATIN1_PROPS = [
 		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
@@ -200,6 +156,224 @@
 	 * classes {{{1
 	 * ----------------
 	 */
+
+	/*constructor*/function KeyManager () {
+		// consts
+		var specialKeys = {
+			8: 'bs',
+			9: 'tab',
+			13: 'enter',
+			27: 'esc',
+
+			33:'pageup', 34:'pagedown', 35:'end',  36:'home',   37:'left',
+			38:'up',     39:'right',    40:'down', 45:'insert', 46:'delete',
+
+			112: 'f1', 113:  'f2', 114:  'f3', 115:  'f4',
+			116: 'f5', 117:  'f6', 118:  'f7', 119:  'f8',
+			120: 'f9', 121: 'f10', 122: 'f11', 123: 'f12'
+		};
+		var specialKeyCodes = {
+			8:8,
+			9:9,
+			13:13,
+			27:27,
+			46:127
+		};
+		var translateTableWebkit = {
+			'u+0008':  8,  'backspace': 8,
+			'u+0009':  9,  'tab':       9,
+			'u+000d':  13, 'enter':     13,
+			'u+001b':  27, 'esc':       27,
+
+			'pageup':33, 'pagedown':34, 'end': 35, 'home':  36, 'left':  37,
+			'up':    38, 'right':   39, 'down':40, 'insert':45, 'u+007f':46,
+
+			'f1':112, 'f2': 113, 'f3': 114, 'f4': 115,
+			'f5':116, 'f6': 117, 'f7': 118, 'f8': 119,
+			'f9':120, 'f10':121, 'f11':122, 'f12':123
+		};
+
+		var specialKeyName;
+		var specialKeyCode;
+		var eventHandlers = [];
+		var bufferedStrokes = [];
+
+		function install (handler) {
+			addListener(handler);
+			document.addEventListener('keydown', handleKeydown, true);
+			document.addEventListener('keypress', handleKeypress, true);
+		}
+
+		function uninstall () {
+			document.removeEventListener('keydown', handleKeydown, true);
+			document.removeEventListener('keypress', handleKeypress, true);
+		}
+
+		function addListener (handler) {
+			if (typeof handler != 'function') return;
+			var index = eventHandlers.indexOf(handler);
+			if (index < 0) {
+				eventHandlers.push(handler);
+			}
+		}
+
+		function removeListener (handler) {
+			if (typeof handler != 'function') return;
+			var index = eventHandlers.indexOf(handler);
+			if (index >= 0) {
+				eventHandlers.splice(index, 1);
+			}
+		}
+
+		function dispose () {
+			eventHandlers = [];
+			uninstall();
+		}
+
+		function fire (e) {
+			eventHandlers.forEach(function (handler) {
+				handler(e);
+			});
+		}
+
+		function handleKeydown (e) {
+			if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
+			if (window.chrome) {
+				specialKeyName = false;
+
+				// special keys
+				if (specialKeyName === false) {
+					var translated = translateTableWebkit[e.keyIdentifier.toLowerCase()];
+					if (translated !== undefined) {
+						specialKeyName = specialKeys[translated] || false;
+						specialKeyCode = specialKeyCodes[translated] || -translated;
+					}
+				}
+
+				// ctrl code shortcuts: ctrl + *
+				if (specialKeyName === false) {
+					if (e.ctrlKey && (
+						e.keyCode >= 64 && e.keyCode <= 95 ||
+						e.keyCode >= 96 && e.keyCode <= 127 ||
+						e.keyCode == 219)
+					) {
+						handleKeypress({
+							shiftKey:e.shiftKey,
+							ctrlKey:e.ctrlKey,
+							keyCode:e.keyCode & 0x1f,
+							preventDefault:function () {
+								e.preventDefault();
+							}
+						});
+					}
+				}
+
+				if (specialKeyName !== false) {
+					handleKeypress(e);
+				}
+			}
+			else {
+				specialKeyName = e.keyCode == e.which && specialKeys[e.keyCode] ?
+					specialKeys[e.keyCode] : false;
+				specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
+			}
+		}
+
+		function handleKeypress (e) {
+			e.preventDefault();
+
+			var c = [];
+			var baseKeyName;
+			var logicalCharCode;
+
+			if (specialKeyName) {
+				e.shiftKey && c.push('s');
+				e.ctrlKey  && c.push('c');
+				baseKeyName = specialKeyName;
+				c.push(specialKeyName);
+				logicalCharCode = specialKeyCode;
+			}
+			else {
+				var keyCode = e.keyCode || e.charCode;
+
+				// ctrl code shortcuts: ctrl + *
+				if (e.ctrlKey && keyCode >= 64 && keyCode <= 127) {
+					baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
+					c.push(baseKeyName);
+					logicalCharCode = keyCode & 0x1f;
+				}
+				// printable chars
+				else if (keyCode >= 32 && keyCode <= 127) {
+					baseKeyName = String.fromCharCode(keyCode);
+					c.push(baseKeyName);
+					logicalCharCode = keyCode;
+				}
+				// ctrl code directly
+				else if (keyCode >= 0 && keyCode <= 31) {
+					baseKeyName = '^' + String.fromCharCode(keyCode + 64);
+					c.push(baseKeyName);
+					logicalCharCode = keyCode;
+				}
+				// others
+				else {
+					baseKeyName = keyCode;
+					c.push(baseKeyName);
+					logicalCharCode = keyCode;
+				}
+			}
+
+			fire({
+				code:             logicalCharCode,
+				identifier:       baseKeyName,
+				fullIdentifier:   c.join('-'),
+				shift:            e.shiftKey,
+				ctrl:             e.ctrlKey,
+				nativeKeyCode:    e.keyCode,
+				nativeCharCode:   e.charCode,
+				nativeIdentifier: e.keyIdentifier
+			});
+		}
+
+		function code2letter (c, useSpecial) {
+			if (typeof c != 'number') return '';
+			if (c >= 0) return String.fromCharCode(c);
+			if (useSpecial && specialKeys[-c]) return '<' + specialKeys[-c] + '>';
+			return '';
+		}
+
+		function keyName2code (name) {
+			name = name.replace(/^<|>$/g, '').toLowerCase();
+
+			for (var i in specialKeys) {
+				if (specialKeys[i] == name) {
+					return specialKeyCodes[i] || -i;
+				}
+			}
+		}
+
+		function push (e) {
+			bufferedStrokes.push(e);
+		}
+
+		function sweep () {
+			if (bufferedStrokes.length == 0) return;
+
+			var e;
+			var bs = bufferedStrokes.slice(0);
+			bufferedStrokes.length = 0;
+			while (bs.length) {
+				fire(bs.shift());
+			}
+		}
+
+		this.install = install;
+		this.uninstall = uninstall;
+		this.code2letter = code2letter;
+		this.keyName2code = keyName2code;
+		this.push = push;
+		this.sweep = sweep;
+		this.dispose = dispose;
+	}
 
 	/*constructor*/function VariableItem (name, type, defaultValue, subSetter) {
 		this.name = name;
@@ -1329,7 +1503,7 @@
 		this.getDefaultOption = getDefaultOption;
 	}
 
-	/*constructor*/function Marks (editor) {
+	/*constructor*/function Marks (editor, ignoreStorage) {
 		var marks = {};
 
 		function serialize () {
@@ -1484,6 +1658,16 @@
 			}
 			return a;
 		}
+		function dumpData () {
+			var result = {};
+			for (var i in marks) {
+				result[i] = {
+					row:marks[i].row,
+					col:marks[i].col
+				};
+			}
+			return result;
+		}
 		function dispose () {
 			editor = null;
 		}
@@ -1491,12 +1675,13 @@
 		this.get = get;
 		this.update = update;
 		this.dump = dump;
+		this.dumpData = dumpData;
 		this.save = save;
 		this.isValidName = isValidName;
 		this.clear = clear;
 		this.dispose = dispose;
 
-		restore(dataset(targetElement, 'wasaviMarks') || '');
+		restore(!ignoreStorage && dataset(targetElement, 'wasaviMarks') || '');
 	}
 
 	/*constructor*/function RegexFinderInfo () {
@@ -2425,6 +2610,7 @@
 
 					if (!targetElement || !cursor || !modeLine) {
 						running = false;
+						keyManager.sweep();
 						return;
 					}
 
@@ -2437,6 +2623,7 @@
 						modeLine.style.display == '' && showPrefixInput(editor);
 						fireCommandCompleteEvent();
 						running = false;
+						keyManager.sweep();
 					}
 					else {
 						editor.scrollTop = parseInt(y);
@@ -3958,10 +4145,11 @@ flag23_loop:
 				var e = document.createEvent('UIEvent');
 				e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
 				processInput(0, e);
+				keyManager.sweep();
 			}
 		},
 		run: function () {
-			if (this.commands.length == 0) return;
+			if (this.commands.length == 0) return true;
 
 			if (this.isAsync && this.isRoot && isInteractive) {
 				//console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
@@ -4028,20 +4216,21 @@ flag23_loop:
 					else if (s.charAt(i) == '<') {
 						var re = /<[^>]+>/.exec(s.substring(i));
 						if (re) {
-							var key = re[0].toLowerCase()
-							if (key in SPECIAL_KEYS_REVERSED) {
-								result.push(-SPECIAL_KEYS_REVERSED[key]);
+							var code = keyManager.keyName2code(re[0]);
+							if (code != undefined) {
+								result.push(code);
 								i += re[0].length - 1;
 								continue;
 							}
 						}
 					}
+					// function key name
 					else if (s.charAt(i) == '#') {
 						var re = /#(\d{1,2})/.exec(s.substring(i));
 						if (re) {
-							var key = '<f' + re[1] + '>';
-							if (key in SPECIAL_KEYS_REVERSED) {
-								result.push(-SPECIAL_KEYS_REVERSED[key]);
+							var code = keyManager.keyName2code('<f' + re[1] + '>');
+							if (code != undefined) {
+								result.push(code);
 								i += re[0].length - 1;
 								continue;
 							}
@@ -5549,7 +5738,7 @@ flag23_loop:
 		timer = setTimeout(init, 1);
 	}
 	PairBracketsIndicator.getObject = function (c, t) {
-		if (BRACKETS.substring(BRACKETS.length / 2).indexOf(c) >= 0) {
+		if (c != '' && BRACKETS.substring(BRACKETS.length / 2).indexOf(c) >= 0) {
 			var result = motionFindMatchedBracket('', t, 1, c);
 			if (result) {
 				return new PairBracketsIndicator(c, t, result);
@@ -5610,7 +5799,7 @@ flag23_loop:
 		};
 		this.getPluralNoun = function (word, n) {
 			var suffix = getPluralSuffix(n - 0);
-			var id = '_plural_' + (suffix == '' ? '' : ('@' + suffix));
+			var id = '_plural_' + word + (suffix == '' ? '' : ('@' + suffix));
 			if (catalog) {
 				return id in catalog ? catalog[id].message : word;
 			}
@@ -5735,33 +5924,6 @@ flag23_loop:
 		for (var i in styles) {
 			src.style[i] = styles[i];
 		}
-	}
-	function chr (c, useSpecial) {
-		if (typeof c != 'number') {
-			return '';
-		}
-		if (c >= 0) {
-			return String.fromCharCode(c);
-		}
-		if (useSpecial && SPECIAL_KEYS[-c]) {
-			return SPECIAL_KEYS[-c];
-		}
-		return '';
-	}
-	function keyName (c) {
-		if (typeof c == 'string') {
-			c = c.charCodeAt(0);
-		}
-		if (typeof c != 'number') {
-			return c;
-		}
-		if (c >= 0 && c <= 0x1f) {
-			return '^' + String.fromCharCode('@'.charCodeAt(0) + c);
-		}
-		if (SPECIAL_KEYS[-c]) {
-			return SPECIAL_KEYS[-c];
-		}
-		return String.fromCharCode(c);
 	}
 	function getUnicodeBlock (cp) {
 		if (cp >= 0x0000 && cp <= 0x007f) return   1;	// Basic Latin
@@ -6075,15 +6237,21 @@ flag23_loop:
 	function fireCommandCompleteEvent (eventName) {
 		if (testMode) {
 			eventName || (eventName = 'command-completed');
+			var pt = Wasavi.positionTop;
 			fireEvent(eventName, {
 				state:{
+					running:    Wasavi.running,
+					state:      Wasavi.state,
 					inputMode:  Wasavi.inputMode,
 					lastMessage:Wasavi.lastMessage,
-					running:    Wasavi.running,
 					value:      Wasavi.value,
 					row:        Wasavi.row,
 					col:        Wasavi.col,
+					topRow:     pt.row,
+					topCol:     pt.col,
+					rowLength:  Wasavi.rowLength,
 					registers:  registers.dumpData(),
+					marks:      marks.dumpData(),
 					lines:      config.vars.lines
 				}
 			});
@@ -6654,7 +6822,7 @@ flag23_loop:
 		editor.selectionStart = x.selectionStart || 0;
 		editor.selectionEnd = x.selectionEnd || 0;
 
-		marks = new Marks(editor);
+		marks = new Marks(editor, testMode);
 		cursor = new CursorUI(editor, cc, ec);
 		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
@@ -6730,6 +6898,9 @@ flag23_loop:
 		editLogger.dispose();
 		editLogger = null;
 
+		keyManager.dispose();
+		keyManager = null;
+
 		var globalStyles = $('wasavi_global_styles');
 		if (globalStyles) {
 			emptyNodeContents(globalStyles);
@@ -6755,9 +6926,13 @@ flag23_loop:
 		window[method]('blur', handleWindowBlur, false);
 		window[method]('resize', handleWindowResize, false);
 
+		// key manager
+		install ? keyManager.install(handleKeydown2) :
+				  keyManager.uninstall();
+
 		// document
-		window.chrome && document[method]('keydown', handleKeydown, true);
-						 document[method]('keypress', handleKeydown, true);
+		//window.chrome && document[method]('keydown', handleKeydown, true);
+		//				 document[method]('keypress', handleKeydown, true);
 
 		var editor = $(EDITOR_CORE_ID);
 		if (editor) {
@@ -7677,22 +7852,22 @@ flag23_loop:
 
 		var editor = getEditorCore();
 		var input = $(LINE_INPUT_ID);
-		var letter = chr(code);
-		var mapkey = chr(code, true);
+		var letter = keyManager.code2letter(code);
+		var mapkey = keyManager.code2letter(code, true);
 		var subkey = inputMode;
 		var result = false;
 		var needEmitEvent = false;
 
 		switch (inputModeSub) {
 		case 'wait-a-letter':
-			mapkey = chr(lastKeyCode, true);
+			mapkey = keyManager.code2letter(lastKeyCode, true);
 			subkey = inputModeSub;
 			inputModeSub = '';
 			break;
 
 		case 'wait-register':
 			if (registers.isReadable(letter)) {
-				mapkey = chr(lastKeyCode, true);
+				mapkey = keyManager.code2letter(lastKeyCode, true);
 				subkey = inputModeSub;
 				inputModeSub = '';
 			}
@@ -7741,6 +7916,7 @@ flag23_loop:
 				cursor.ensureVisible();
 				cursor.update({visible:true});
 			}
+			fireCommandCompleteEvent();
 			return true;
 
 		default:
@@ -7847,7 +8023,7 @@ flag23_loop:
 			}
 			else if (subkey == inputMode && (code == 0x0d || code == 0x0a)) {
 				var line = toNativeControl(input.value);
-				prefixInput.trailer = line + chr(code);
+				prefixInput.trailer = line + keyManager.code2letter(code);
 				mapkey = prefixInput.motion || prefixInput.operation;
 				execMap(
 					editor, e, commandMap,
@@ -8016,12 +8192,12 @@ flag23_loop:
 			switch (typeof map[key]) {
 			case 'function':
 				if (subkey == '' || subkey == inputMode) {
-					return map[key].call(map, chr(code) || code, t, opts);
+					return map[key].call(map, keyManager.code2letter(code) || code, t, opts);
 				}
 				break;
 			case 'object':
 				if (subkey != '' && subkey in map[key]) {
-					return map[key][subkey].call(map, chr(code) || code, t, opts);
+					return map[key][subkey].call(map, keyManager.code2letter(code) || code, t, opts);
 				}
 				break;
 			}
@@ -8202,7 +8378,7 @@ flag23_loop:
 	}
 	function inputEscape () {
 		if (arguments.length) {
-			requestRegisterNotice(_('{0} canceled.', toVisibleString(keyName(arguments[0]))));
+			requestRegisterNotice(_('{0} canceled.', arguments[0]));
 		}
 		else {
 			inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
@@ -8215,7 +8391,7 @@ flag23_loop:
 		prefixInput.appendCount(c);
 		requestShowPrefixInput();
 	}
-	function operationDefault (c, t) {
+	function operationDefault (c, t, o) {
 		if (prefixInput.isEmptyOperation) {
 			prefixInput.operation = c;
 			requestShowPrefixInput();
@@ -8224,7 +8400,7 @@ flag23_loop:
 			return true;
 		}
 		else {
-			inputEscape(c);
+			inputEscape(o.e.fullIdentifier);
 		}
 	}
 
@@ -9358,7 +9534,7 @@ flag23_loop:
 			return false;
 		}
 		else {
-			inputEscape(c);
+			inputEscape(opts.e.fullIdentifier);
 		}
 	}
 	function openLine (c, t, after) {
@@ -9398,13 +9574,13 @@ flag23_loop:
 
 	// persistent variables
 
-	var runType;
 	var exrc = '';
 	var fontFamily = 'monospace';
 	var quickActivation = false;
 	var testMode = false;
 	var substituteWorker;
 	var resizeHandlerInvokeTimer;
+	var keyManager = new KeyManager;
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
 	var textBlockRegex = new TextBlockRegex;
@@ -9634,14 +9810,14 @@ flag23_loop:
 
 		// register specifier
 		'"': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmpty) {
 					inputModeSub = 'wait-register';
 					prefixInput.register = c;
-					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', keyName(c)));
+					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', o.e.fullIdentifier));
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-register': function (c, t) {
@@ -9870,7 +10046,7 @@ flag23_loop:
 		 */
 
 		// C: change to the end of the line (equivalents to c$)
-		'C': function (c, t) {
+		'C': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				this['$']('', t);
 				isVerticalMotion = false;
@@ -9878,11 +10054,11 @@ flag23_loop:
 				return this['c']['@op'].call(this, '', t);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// D: delete the characters to the end of the line (equivalents to d$)
-		'D': function (c, t) {
+		'D': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				this['$']('', t);
 				isVerticalMotion = false;
@@ -9890,18 +10066,18 @@ flag23_loop:
 				return this['d']['@op'].call(this, '', t);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// Y: yank the lines (equivalents to yy)
-		'Y': function (c, t) {
+		'Y': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
 				return this['y']['@op'].call(this, c, t);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 
@@ -9910,10 +10086,10 @@ flag23_loop:
 		 */
 
 		// backwards lines, to first non-white character
-		'-': function (c, t) {
+		'-': function (c, t, o) {
 			var n = t.selectionStart;
 			if (n.row == 0) {
-				return inputEscape(c);
+				return inputEscape(o.e.fullIdentifier);
 			}
 			n.row = Math.max(n.row - prefixInput.count, 0);
 			t.selectionStart = t.getLineTopOffset2(n);
@@ -9921,10 +10097,10 @@ flag23_loop:
 			prefixInput.motion = c;
 			return true;
 		},
-		'+': function (c, t) {
+		'+': function (c, t, o) {
 			var n = t.selectionEnd;
 			if (n.row >= t.rowLength - 1) {
-				return inputEscape(c);
+				return inputEscape(o.e.fullIdentifier);
 			}
 			n.row = Math.min(n.row + prefixInput.count, t.rowLength - 1);
 			t.selectionEnd = t.getLineTopOffset2(n);
@@ -9951,7 +10127,7 @@ flag23_loop:
 			return this['$'].apply(this, arguments);
 		},
 		// jump to matching <, (, {, or [
-		'%': function (c, t) {
+		'%': function (c, t, o) {
 			var result = motionFindMatchedBracket(c, t, prefixInput.count);
 			if (result) {
 				marks.set('\'', t.selectionStart);
@@ -9961,7 +10137,7 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// direct jump to specified column
@@ -10147,12 +10323,12 @@ flag23_loop:
 		},
 		// return to line specified by following mark, first white position on line, line orient motion
 		"'": {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: return to mark', keyName(c)));
+				requestShowPrefixInput(_('{0}: return to mark', o.e.fullIdentifier));
 			},
-			'wait-a-letter': function (c, t) {
+			'wait-a-letter': function (c, t, o) {
 				prefixInput.appendMotion(c);
 				var offset = marks.get(c);
 				if (offset != undefined) {
@@ -10166,19 +10342,19 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
 			}
 		},
 		// return to marked line at remembered column, character orient motion
 		'`': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: return to mark', keyName(c)));
+				requestShowPrefixInput(_('{0}: return to mark', o.e.fullIdentifier));
 			},
-			'wait-a-letter': function (c, t) {
+			'wait-a-letter': function (c, t, o) {
 				prefixInput.appendMotion(c);
 				var offset = marks.get(c);
 				if (offset != undefined) {
@@ -10190,7 +10366,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 					requestShowMessage(_('Mark {0} is not set.', c), true);
 				}
 			}
@@ -10324,7 +10500,7 @@ flag23_loop:
 			return motionRight(c, t, prefixInput.count);
 		},
 		' ': function (c, t, opts) {
-			return this[opts.e.shiftKey ? 'h' : 'l'].apply(this, arguments);
+			return this[opts.e.shift ? 'h' : 'l'].apply(this, arguments);
 		},
 		'<right>': function (c, t) {
 			return this['l'].apply(this, arguments);
@@ -10374,10 +10550,10 @@ flag23_loop:
 			return motionNextWord(c, t, prefixInput.count, true, true);
 		},
 		'g': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(keyName(c));
+				requestShowPrefixInput(o.e.fullIdentifier);
 			},
 			'wait-a-letter': function (c, t) {
 				var result = false;
@@ -10458,10 +10634,10 @@ flag23_loop:
 			return true;
 		},
 		'f': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: find forward', keyName(c)));
+				requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
 			},
 			'wait-a-letter': function (c, t) {
 				prefixInput.trailer = c;
@@ -10469,10 +10645,10 @@ flag23_loop:
 			}
 		},
 		'F': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: find backward', keyName(c)));
+				requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
 			},
 			'wait-a-letter': function (c, t) {
 				prefixInput.trailer = c;
@@ -10480,10 +10656,10 @@ flag23_loop:
 			}
 		},
 		't': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: find forward', keyName(c)));
+				requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
 			},
 			'wait-a-letter': function (c, t) {
 				prefixInput.trailer = c;
@@ -10491,10 +10667,10 @@ flag23_loop:
 			}
 		},
 		'T': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: find backward', keyName(c)));
+				requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
 			},
 			'wait-a-letter': function (c, t) {
 				prefixInput.trailer = c;
@@ -10535,7 +10711,7 @@ flag23_loop:
 		 */
 
 		// scroll up half (height of screen) lines
-		'\u0015'/*^U*/: function (c, t) {
+		'\u0015'/*^U*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
 					if (config.vars.scroll > 0) {
@@ -10547,11 +10723,11 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// scroll down half (height of screen) lines
-		'\u0004'/*^D*/: function (c, t) {
+		'\u0004'/*^D*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
 					if (config.vars.scroll > 0) {
@@ -10563,11 +10739,11 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// scroll up 1 line
-		'\u0019'/*^Y*/: function (c, t) {
+		'\u0019'/*^Y*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var ss = config.vars.smooth;
 				config.vars.smooth = false;
@@ -10579,11 +10755,11 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// scroll down 1 line
-		'\u0005'/*^E*/: function (c, t) {
+		'\u0005'/*^E*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var ss = config.vars.smooth;
 				config.vars.smooth = false;
@@ -10595,32 +10771,32 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// scroll up (height of screen - 2) lines
-		'\u0002'/*^B*/: function (c, t) {
+		'\u0002'/*^B*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
 					return -Math.max(v.lines - 2, 1) * prefixInput.count;
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		'<pageup>': function (c, t) {
 			return this['\u0002'].apply(this, arguments);
 		},
 		// scroll down (height of screen - 2) lines
-		'\u0006'/*^F*/: function (c, t) {
+		'\u0006'/*^F*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				return scrollView(c, t, function (v) {
 					return Math.max(parseInt(v.lines - 2), 1) * prefixInput.count;
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		'<pagedown>': function (c, t) {
@@ -10632,14 +10808,14 @@ flag23_loop:
 		//   zz
 		//   z-    (bottom of the screen)
 		'z': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput('{0}: screen adjustment', keyName(c));
+					requestShowPrefixInput('{0}: screen adjustment', o.e.fullIdentifier);
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -10708,7 +10884,7 @@ flag23_loop:
 				extensionChannel.postMessage({
 					type:'notify-to-parent',
 					parentTabId:targetElement.parentTabId,
-					payload:{type:'wasavi-focus-changed', direction:opts.e.shiftKey ? -1 : 1}
+					payload:{type:'wasavi-focus-changed', direction:opts.e.shift ? -1 : 1}
 				});
 			}
 		},
@@ -10717,30 +10893,30 @@ flag23_loop:
 		 * edit commands
 		 */
 
-		'x': function (c, t) {
+		'x': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
 				return deleteChars(t, prefixInput.count, true);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		'\u007f'/*delete*/: function (c, t) {
 			return this['x'].apply(this, arguments);
 		},
-		'X': function (c, t) {
+		'X': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
 				return deleteChars(t, prefixInput.count, false);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'p': function (c, t) {
+		'p': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -10750,10 +10926,10 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'P': function (c, t) {
+		'P': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -10762,20 +10938,20 @@ flag23_loop:
 				});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'J': function (c, t) {
+		'J': function (c, t, o) {
 			if (prefixInput.isEmptyOperation && t.selectionStartRow + prefixInput.count <= t.rowLength - 1) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
 				return joinLines(t, prefixInput.count);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'.': function (c, t) {
+		'.': function (c, t, o) {
 			// . command repeats the last
 			// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 			//          a, c, d, i, o, p, r, s,    x, y,
@@ -10798,10 +10974,10 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'u': function (c, t) {
+		'u': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.undo();
 				if (result === false) {
@@ -10814,10 +10990,10 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'\u0012'/*^R*/: function (c, t) {
+		'\u0012'/*^R*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.redo();
 				if (result === false) {
@@ -10830,49 +11006,49 @@ flag23_loop:
 				}
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		'U': null,
-		'~': function (c, t) {
+		'~': function (c, t, o) {
 			if (prefixInput.isEmptyOperation && !t.selected) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
 				return toggleCase(t, prefixInput.count);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// clear screen
-		'\u000c'/*^L*/: function (c, t) {
+		'\u000c'/*^L*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				$(CONTAINER_ID).style.display = 'none';
 				setTimeout(function () {$(CONTAINER_ID).style.display = '';}, 100);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// display file information
-		'\u0007'/*^G*/: function (c, t) {
+		'\u0007'/*^G*/: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestShowMessage(getFileInfo(t));
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// marks
 		'm': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput(_('{0}: mark', keyName(c)));
+					requestShowPrefixInput(_('{0}: mark', o.e.fullIdentifier));
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -10886,14 +11062,14 @@ flag23_loop:
 		},
 		// execute register contents as vi command
 		'@': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					inputModeSub = 'wait-a-letter';
 					prefixInput.operation = c;
-					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', keyName(c)));
+					requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', o.e.fullIdentifier));
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -10927,14 +11103,14 @@ flag23_loop:
 			}
 		},
 		'r': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput(_('{0}: replace a char', keyName(c)));
+					requestShowPrefixInput(_('{0}: replace a char', o.e.fullIdentifier));
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -10945,65 +11121,65 @@ flag23_loop:
 				return true;
 			}
 		},
-		'a': function (c, t) {
+		'a': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAppend:true, repeatCount:prefixInput.count});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'A': function (c, t) {
+		'A': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAppend:true, isAlter:true, repeatCount:prefixInput.count});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'i': function (c, t) {
+		'i': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {repeatCount:prefixInput.count});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'I': function (c, t) {
+		'I': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				editLogger.open('edit-wrapper');
 				return startEdit(c, t, {isAlter:true, repeatCount:prefixInput.count});
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'o': function (c, t) {
+		'o': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				return openLine(c, t, true);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'O': function (c, t) {
+		'O': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				return openLine(c, t, false);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'R': function (c, t) {
+		'R': function (c, t, o) {
 			if (prefixInput.isEmptyOperation && !t.selected) {
 				requestInputMode('edit-overwrite');
 				cursor.update({type:'edit-overwrite'});
@@ -11018,11 +11194,11 @@ flag23_loop:
 				requestSimpleCommandUpdate();
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// equivalents to :& (repeat last executed :s)
-		'&': function (c, t) {
+		'&': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var range = [];
 				range.push(t.selectionStartRow + 1);
@@ -11032,22 +11208,22 @@ flag23_loop:
 				return true;
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// S: substitute text for whole lines (equivalents to cc)
-		'S': function (c, t) {
+		'S': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
 				return this['c']['@op'].call(this, c, t);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// s: substitute characters
-		's': function (c, t) {
+		's': function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				editLogger.open('substitute');
 				deleteChars(t, prefixInput.count, true);
@@ -11055,20 +11231,20 @@ flag23_loop:
 				return startEdit(c, t);
 			}
 			else {
-				inputEscape(c);
+				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// equivalents to :x
 		//   ZZ
 		'Z': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					inputModeSub = 'wait-a-letter';
 					requestShowPrefixInput();
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'wait-a-letter': function (c, t) {
@@ -11150,14 +11326,14 @@ flag23_loop:
 		 * O           >                 [2addr] >[> ...][count][flags]
 		 */
 		':': {
-			'command': function (c, t) {
+			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					lineInputHistories.defaultName = ':';
 					requestInputMode('line-input', '', config.vars.prompt ? c : '');
 				}
 				else {
-					inputEscape(c);
+					inputEscape(o.e.fullIdentifier);
 				}
 			},
 			'line-input': function (c, t) {
@@ -11219,13 +11395,13 @@ flag23_loop:
 			cursor.update();
 		},
 		'\u0016'/*^V*/: {
-			'edit': function (c, t) {
+			'edit': function (c, t, o) {
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: literal input', keyName(c)));
+				requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 			},
-			'edit-overwrite': function (c, t) {
+			'edit-overwrite': function (c, t, o) {
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: literal input', keyName(c)));
+				requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 			},
 			'wait-a-letter': function (c, t) {
 				var code = c.charCodeAt(0);
@@ -11417,80 +11593,24 @@ flag23_loop:
 	}
 
 	// editor (document)
-	function handleKeydown (e) {
-		//console.log([e.keyCode, e.charCode, e.which].join(', '));
-
-		function stop (e) {
-			e.preventDefault();
-			e.stopPropagation();
-			e.returnValue = false;
-		}
-
-		if (testMode) {
-			fireEvent('notify-keydown', {
-				keyCode:e.keyCode,
-				key:e.keyIdentifier || '',
-				eventType:e.type
-			});
-		}
+	function handleKeydown2 (e) {
 		if (scroller.running || exCommandExecutor.running) {
-			return stop(e);
+			keyManager.push(e);
+			return;
 		}
 		if (cursor.inComposition) {
 			return;
 		}
-
-		var keyCode;
-		function fixCtrl (code) {
-			if (code != undefined) {
-				keyCode = code;
-			}
-			if (e.ctrlKey && keyCode >= 64 && keyCode <= 95) {
-				keyCode -= 64;
-				return true;
-			}
-			else if (e.ctrlKey && keyCode >= 96 && keyCode <= 127) {
-				keyCode -= 96;
-				return true;
-			}
-			return false;
-		}
-		if (window.chrome && 'keyIdentifier' in e) {
-			if (e.type == 'keydown') {
-				if (e.keyCode >= 16 && e.keyCode <= 18) {
-					return stop(e);
-				}
-				if (e.keyIdentifier != '' && WEBKIT_KEY_IDENTIFIERS_REVERSED[e.keyIdentifier]) {
-					keyCode = -WEBKIT_KEY_IDENTIFIERS_REVERSED[e.keyIdentifier];
-				}
-				else if (e.ctrlKey && WEBKIT_CTRL_SPECIAL_KEYS_REVERSED[e.keyIdentifier]) {
-					keyCode = WEBKIT_CTRL_SPECIAL_KEYS_REVERSED[e.keyIdentifier];
-				}
-				else if (!fixCtrl(e.keyCode)) {
-					return;
-				}
-			}
-			else {
-				fixCtrl(e.charCode);
-			}
-		}
-		else {
-			if (SPECIAL_KEYS[e.keyCode] && e.which != e.keyCode) {
-				keyCode = e.keyCode == 46 ? 127 : -e.keyCode;
-			}
-			else if (e.keyCode >= 127 && e.which === 0) {
-				return stop(e);
-			}
-			else {
-				fixCtrl(e.charCode || e.keyCode);
-			}
-		}
-
 		isInteractive = true;
 		(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
 			.call(extensionChannel, function () {
-				mapManager.process(keyCode, function (keyCode) {
-					processInput(keyCode, e) && stop(e);
+				mapManager.process(e.code, function (code) {
+					testMode && fireEvent('notify-keydown', {
+						keyCode:e.code,
+						key:e.fullIdentifier,
+						eventType:''
+					});
+					processInput(code, e);
 				});
 			});
 	}
@@ -11675,20 +11795,6 @@ flag23_loop:
 				ensureRunning();
 				return new Position(getCurrentViewPositionIndices(getEditorCore()).top, 0);
 			},
-			get exrc () {
-				return exrc;
-			},
-			set exrc (v) {
-				exrc = String(v);
-			},
-			get runType () {
-				return runType;
-			},
-			set runType (v) {
-				if (runType == undefined) {
-					runType = v;
-				}
-			},
 			get value () {
 				ensureRunning();
 				return getEditorCore().value;
@@ -11703,9 +11809,6 @@ flag23_loop:
 			get lastSimpleCommand () {
 				ensureRunning();
 				return lastSimpleCommand;
-			},
-			get events () {
-				return eventHandlers;
 			},
 
 			/*
@@ -11735,14 +11838,6 @@ flag23_loop:
 					setAttribute: function (name, value) {this.dataset[name] = value;}
 				});
 			},
-			send: function () {
-				ensureRunning();
-				var args = Array.prototype.slice.call(arguments);
-				args.push(true);
-				lastMessage = '';
-				isInteractive = false;
-				executeViCommand.apply(null, args);
-			},
 			marks: function (name) {
 				ensureRunning();
 				return marks.get(name);
@@ -11760,45 +11855,6 @@ flag23_loop:
 				else {
 					return registers.dump();
 				}
-			},
-			kill: function () {
-				ensureRunning();
-				uninstall(getEditorCore(), false);
-			},
-			notifyUpdateStorage: function (keys) {
-				keys.forEach(function (key) {
-					switch (key) {
-					case registers.storageKey:
-						registers && registers.load();
-						break;
-					case lineInputHistories.storageKey:
-						lineInputHistories && lineInputHistories.load();
-						break;
-					}
-				});
-			},
-
-			/*
-			 * classes
-			 */
-
-			classes:{
-				Position:Position
-			},
-
-			/*
-			 * constants
-			 */
-
-			SPECIAL_KEYS: new function () {
-				var result = {};
-				for (var i in SPECIAL_KEYS_REVERSED) {
-					result[i.replace(/^<|>$/g, '').toUpperCase()] = -SPECIAL_KEYS_REVERSED[i];
-				}
-				result.ENTER = 13;
-				result.ESCAPE = 27;
-				result.DELETE = 127;
-				return result;
 			}
 		};
 	};

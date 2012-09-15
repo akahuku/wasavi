@@ -294,7 +294,7 @@ public class EditingTest extends WasaviTest {
 	@Test
 	public void testRepetitionInsertWithControlChar () {
 		Wasavi.send("ifoo\u001b");
-		Wasavi.send("ibax", Keys.BACK_SPACE, "r\u001b");
+		Wasavi.send(String.format("ibax%sr\u001b", Keys.BACK_SPACE));
 
 		assertEquals("#1-1", "fobaro", Wasavi.getValue());
 		assertEquals("#1-2", "bax\u0008r", Wasavi.getRegister("."));
@@ -828,7 +828,7 @@ public class EditingTest extends WasaviTest {
 	@Test
 	public void testZZ () {
 		Wasavi.send("ifoobar\u001b");
-		Wasavi.send("ZZ");
+		Wasavi.sendNoWait("ZZ");
 
 		Boolean vanished = Wasavi.waitTerminate();
 		assertTrue("wasaviFrame must not be exist.", vanished);

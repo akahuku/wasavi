@@ -78,7 +78,7 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send(a);
 		assertPos("#4", 2, 2);
-		assertTrue("error check #4", Wasavi.getLastMessage() != "");
+		assertTrue("error check #4", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send(":2\n");
 		assertPos("#5", 1, 1);
@@ -268,12 +268,12 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("0");
 		Wasavi.send("fX");
 		assertPos("#3", 0, 0);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("0");
 		Wasavi.send("2fX");
 		assertPos("#4", 0, 0);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
@@ -291,12 +291,12 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("$");
 		Wasavi.send("FX");
 		assertPos("#3", 0, 33);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("$");
 		Wasavi.send("2FX");
 		assertPos("#4", 0, 33);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
@@ -314,12 +314,12 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("0");
 		Wasavi.send("tX");
 		assertPos("#3", 0, 0);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("0");
 		Wasavi.send("2tX");
 		assertPos("#4", 0, 0);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
@@ -338,12 +338,12 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("$");
 		Wasavi.send("TX");
 		assertPos("#3", 0, 33);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("$");
 		Wasavi.send("2TX");
 		assertPos("#4", 0, 33);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
@@ -359,7 +359,7 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send(",");
 		assertPos("#3", 0, 13);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("$2,");
 		assertPos("#4", 0, 13);
@@ -373,7 +373,7 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send(",");
 		assertPos("#3", 0, 30);
-		assertTrue(Wasavi.getLastMessage() != "");
+		assertTrue(Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("^2,");
 		assertPos("#4", 0, 30);
@@ -535,7 +535,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("2G", "0madd");
 		assertValue("#3-1", "foo\nfoo\n");
 		Wasavi.send("`a");
-		assertTrue("#3-2", Wasavi.getLastMessage() != "");
+		assertTrue("#3-2", Wasavi.getLastMessage().length() > 0);
 	}
 
 	/*
@@ -866,7 +866,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 0, 1);
 
 		Wasavi.send("gx");
-		assertTrue("#4", Wasavi.getLastMessage() != "");
+		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
@@ -929,7 +929,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("ifirst\n\tsecond\nthird\nthird\u001b");
 
 		Wasavi.send("n");
-		assertTrue("#1", Wasavi.getLastMessage() != "");
+		assertTrue("#1", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("gg", "/third\n");
 		assertPos("#2", 2, 0);
@@ -940,7 +940,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send(":set nows\n");
 		Wasavi.send("n");
 		assertPos("#4", 3, 0);
-		assertTrue("#5", Wasavi.getLastMessage() != "");
+		assertTrue("#5", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send(":set ws\n");
 		Wasavi.send("n");
@@ -953,7 +953,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("ifirst\n\tsecond\nthird\nthird\u001b");
 
 		Wasavi.send("N");
-		assertTrue("#1", Wasavi.getLastMessage() != "");
+		assertTrue("#1", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("gg", "/third\n");
 		assertPos("#2", 2, 0);
@@ -961,7 +961,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send(":set nows\n");
 		Wasavi.send("N");
 		assertPos("#3", 2, 0);
-		assertTrue("#4", Wasavi.getLastMessage() != "");
+		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send(":set ws\n");
 		Wasavi.send("N");
@@ -978,7 +978,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#1", 3, 4);
 
 		Wasavi.send("n");
-		assertTrue("#2", Wasavi.getLastMessage() != "");
+		assertTrue("#2", Wasavi.getLastMessage().length() > 0);
 		assertPos("#3", 3, 4);
 
 		Wasavi.send("?first\n");
@@ -990,7 +990,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send(":set nows\n");
 		Wasavi.send("n");
 		assertPos("#4", 0, 0);
-		assertTrue("#5", Wasavi.getLastMessage() != "");
+		assertTrue("#5", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send(":set ws\n");
 		Wasavi.send("n");
@@ -1003,7 +1003,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("ifirst\nfirst\nsecond\nthird\u001b");
 
 		Wasavi.send("N");
-		assertTrue("#1", Wasavi.getLastMessage() != "");
+		assertTrue("#1", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("?first\n");
 		assertPos("#2", 1, 0);
@@ -1011,7 +1011,7 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send(":set nows\n");
 		Wasavi.send("N");
 		assertPos("#3", 1, 0);
-		assertTrue("#4", Wasavi.getLastMessage() != "");
+		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send(":set ws\n");
 		Wasavi.send("N");

@@ -17,7 +17,7 @@ public class BasicsTest extends WasaviTest {
 
 	@Test
 	public void wasaviTermination () {
-		Wasavi.send(":q\n");
+		Wasavi.sendNoWait(":q\n");
 
 		Boolean vanished = Wasavi.waitTerminate();
 		assertTrue("wasaviFrame must not be exist.", vanished);
