@@ -8,6 +8,11 @@ import org.junit.runner.Description;
 import org.json.*;
 
 import java.util.ArrayList;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -302,6 +307,26 @@ class WasaviUtils {
 			sb.append(s);
 		}
 		return sb.toString();
+	}
+
+	public static String getClipboardText () {
+		Clipboard cb = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+		try {
+			return (String)cb.getData(DataFlavor.stringFlavor);
+		}
+		catch (UnsupportedFlavorException e) {
+			return null;
+		}
+		catch (java.io.IOException e) {
+			return null;
+		}
+	}
+
+	public static void setClipboardText (String s) {
+		Clipboard cb = Toolkit.getDefaultToolkit().getSystemClipboard();
+		StringSelection ss = new StringSelection(s);
+		cb.setContents(ss, ss);
 	}
 }
 

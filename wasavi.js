@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 179 2012-09-15 14:49:45Z akahuku $
+ * @version $Id: wasavi.js 180 2012-09-16 16:47:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -103,8 +103,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 179 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 179 2012-09-15 14:49:45Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 180 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 180 2012-09-16 16:47:34Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -734,7 +734,15 @@
 			return /^["1-9a-z@.:*\/]$/.test(name);
 		}
 		function exists (name) {
-			return isReadable(name) && (name == '"' || named[name]);
+			if (!isReadable(name)) {
+				return false;
+			}
+			switch (name) {
+			case "*":
+				return extensionChannel && typeof extensionChannel.clipboardData == 'string';
+			default:
+				return name == '"' || named[name];
+			}
 		}
 		function findItem (name) {
 			if (name == '"') {
@@ -795,7 +803,7 @@
 			name = name.toLowerCase();
 			if (isReadable(name)) {
 				var item = findItem(name);
-				name == '*' && extensionChannel && item.set(extensionChannel.clipboardData, true);
+				name == '*' && extensionChannel && item.set(extensionChannel.clipboardData);
 				return item;
 			}
 			return new RegisterItem();
@@ -4017,6 +4025,7 @@ flag23_loop:
 		}),
 		new ExCommand('yank', 'ya', 'bca', 2, function (t, a) {
 			var p = t.selectionStart;
+			t.setSelectionRange(new Position(a.range[0], 0));
 			yank(t, a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
 			t.setSelectionRange(p);
 		}),
@@ -7776,6 +7785,9 @@ flag23_loop:
 					requestShowPrefixInput();
 				}
 			}
+			else {
+				needEmitEvent = true;
+			}
 		}
 		function execEditMap (t, key, subkey, code) {
 			if (editMap[key]) {
@@ -7888,6 +7900,7 @@ flag23_loop:
 					return true;
 				}
 				else if (letter == ':') {
+					backlog.clear();
 					popInputMode();
 					subkey = inputMode;
 					inputModeSub = '';
@@ -9956,6 +9969,10 @@ flag23_loop:
 		'y': {
 			'command': operationDefault,
 			'@op': function (c, t) {
+				var ss = t.selectionStart;
+				var se = t.selectionEnd;
+				var origin = ss.lt(se) ? ss : se;
+
 				if (c == prefixInput.operation) {
 					this['_'].apply(this, arguments);
 				}
@@ -9963,9 +9980,6 @@ flag23_loop:
 					return;
 				}
 
-				var ss = t.selectionStart;
-				var se = t.selectionEnd;
-				var origin = ss.lt(se) ? ss : se;
 				var isLineOrient = c == prefixInput.operation || isVerticalMotion;
 				var actualCount = Math.abs(t.selectionEndRow - t.selectionStartRow) + 1;
 				var yanked = 0;
@@ -11596,6 +11610,11 @@ flag23_loop:
 	function handleKeydown2 (e) {
 		if (scroller.running || exCommandExecutor.running) {
 			keyManager.push(e);
+			testMode && fireEvent('notify-keydown', {
+				keyCode:e.code,
+				key:e.fullIdentifier,
+				eventType:'busy now.'
+			});
 			return;
 		}
 		if (cursor.inComposition) {

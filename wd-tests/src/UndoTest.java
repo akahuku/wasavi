@@ -12,7 +12,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 public class UndoTest extends WasaviTest {
-	//@Test
+	@Test
 	public void testInsert () {
 		Wasavi.send("afoo\u001b");
 		assertValue("#1-1", "foo");
@@ -28,7 +28,7 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("u");
 		assertValue("#5-1", "");
-		assertTrue("#5-2", Wasavi.getLastMessage() != "");
+		assertTrue("#5-2", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("\u0012");
 		assertValue("#6-1", "foo");
@@ -38,10 +38,10 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("\u0012");
 		assertValue("#7-1", "foo\nbar");
-		assertTrue("#7-2", Wasavi.getLastMessage() != "");
+		assertTrue("#7-2", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testInsertMultiLine () {
 		Wasavi.send("aa\nb\nc\n\u001b");
 		assertEquals("#1", "normal", Wasavi.getState());
@@ -56,7 +56,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#6", "a\nb\nc\n");
 	}
 
-	//@Test
+	@Test
 	public void testInsertToIsolatedPosition () {
 		Wasavi.send("ifoobarbaz\u001b");
 
@@ -80,7 +80,7 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("u");
 		assertValue("#5-1", "");
-		assertTrue("#5-2", Wasavi.getLastMessage() != "");
+		assertTrue("#5-2", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("\u0012");
 		assertValue("#6-1", "foobarbaz");
@@ -93,10 +93,10 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("\u0012");
 		assertValue("#8-1", "fooFOObarBAR\nBAZbaz");
-		assertTrue("#8-2", Wasavi.getLastMessage() != "");
+		assertTrue("#8-2", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testOverwrite () {
 		Wasavi.send("Rfoo\u001b");
 		assertValue("#1-1", "foo");
@@ -112,7 +112,7 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("u");
 		assertValue("#5-1", "");
-		assertTrue("#5-2", Wasavi.getLastMessage() != "");
+		assertTrue("#5-2", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("\u0012");
 		assertValue("#6-1", "foo");
@@ -121,7 +121,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#7-1", "barbaz");
 	}
 
-	//@Test
+	@Test
 	public void testOverwriteToIsolatedPosition () {
 		Wasavi.send("ifoobarbaz\u001b");
 
@@ -145,7 +145,7 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("u");
 		assertValue("#5-1", "");
-		assertTrue("#5-2", Wasavi.getLastMessage() != "");
+		assertTrue("#5-2", Wasavi.getLastMessage().length() > 0);
 
 		Wasavi.send("\u0012");
 		assertValue("#6-1", "foobarbaz");
@@ -158,10 +158,10 @@ public class UndoTest extends WasaviTest {
 
 		Wasavi.send("\u0012");
 		assertValue("#8-1", "FOObarB\nAR");
-		assertTrue("#8-2", Wasavi.getLastMessage() != "");
+		assertTrue("#8-2", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testOpenForwardToMiddleOfText () {
 		Wasavi.send("afoo\nbar\u001bgg");
 		assertValue("#1-1", "foo\nbar");
@@ -182,7 +182,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#6-1", "foo\nbaz\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testOpenForwardToTailOfText () {
 		Wasavi.send("ofoo\u001b");
 		assertValue("#1-1", "\nfoo");
@@ -194,7 +194,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "\nfoo");
 	}
 
-	//@Test
+	@Test
 	public void testOpenCurrentToMiddleOfText () {
 		Wasavi.send("afoo\nbar\u001b");
 		assertValue("#1-1", "foo\nbar");
@@ -215,7 +215,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#6-1", "foo\nbaz\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testOpenCurrentToTopOfText () {
 		Wasavi.send("Ofoo\u001b");
 		assertValue("#1-1", "foo\n");
@@ -227,7 +227,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "foo\n");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteCharsForward () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("03x");
@@ -240,7 +240,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "bar");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteCharsBackward () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("3X");
@@ -253,7 +253,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "for");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLine () {
 		Wasavi.send("i1\n2\u001b");
 
@@ -267,7 +267,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "2");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLines () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -281,7 +281,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "3");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineLast () {
 		Wasavi.send("i1\u001b");
 
@@ -295,7 +295,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLinesLast () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -327,7 +327,7 @@ public class UndoTest extends WasaviTest {
 		assertPos("#3-3", 1, 0);
 	}
 
-	//@Test
+	@Test
 	public void testChange () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -341,7 +341,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "1\nfoo\nbar\n3");
 	}
 
-	//@Test
+	@Test
 	public void testChangeLast () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -355,7 +355,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "1\n2\nfoo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testSubst () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -369,7 +369,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "baz\noo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testShift () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send(":set sw=8\n");
@@ -384,7 +384,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "\t1\n\t2\n3");
 	}
 
-	//@Test
+	@Test
 	public void testUnshift () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i1\n\t2\n\t3\u001b");
@@ -400,7 +400,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "1\n2\n3");
 	}
 
-	//@Test
+	@Test
 	public void testPasteCharsForward () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -416,7 +416,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "ffoooo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testPasteCharsCurrent () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -431,7 +431,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "foofoo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testPastCharsForwardToTailOfBuffer () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -446,7 +446,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "foo\nbarfoo");
 	}
 
-	//@Test
+	@Test
 	public void testPasteCharsCurrentToTailOfBuffer () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -461,7 +461,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "foo\nbafoor");
 	}
 
-	//@Test
+	@Test
 	public void testPasteLineForward () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -486,7 +486,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#6-1", "foo\nbar\nfoo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testPasteLineCurrent () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -511,7 +511,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#4-1", "bar\nfoo\nfoo\nbar");
 	}
 
-	//@Test
+	@Test
 	public void testPasteLineForwardToTailOfBuffer () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -526,7 +526,7 @@ public class UndoTest extends WasaviTest {
 		assertValue("#3-1", "foo\nbar\nfoo");
 	}
 
-	//@Test
+	@Test
 	public void testToggleCase () {
 		Wasavi.send("ifoo12#$bar\u001b");
 

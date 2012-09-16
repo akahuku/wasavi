@@ -1084,6 +1084,11 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#4-1", "foo\nfoo\nbar\nfoo\nbar");
 		assertPos("#4-2", 2, 0);
 		assertEquals("#4-3", "put: Register z is empty.", Wasavi.getLastMessage());
+
+		setClipboardText("clipboard text");
+		Wasavi.send("G", ":0pu *\n");
+		assertValue("#5-1", "clipboard text\nfoo\nfoo\nbar\nfoo\nbar");
+		assertPos("#5-2", 0, 0);
 	}
 
 	@Test
@@ -1399,10 +1404,11 @@ public class ExCommandsTest extends WasaviTest {
 
 	@Test
 	public void testSet () {
-		Wasavi.send(":set\n\n");
+		Wasavi.send(":set\n");
+		System.out.println(Wasavi.getLastMessage());
 		assertTrue("#1-1", Wasavi.getLastMessage().indexOf("*** options ***\n") == 0);
 
-		Wasavi.send(":set all\n\n");
+		Wasavi.send(":set all\n");
 		assertTrue("#2-1", Wasavi.getLastMessage().indexOf("*** options ***\n") == 0);
 
 		Wasavi.send(":set foobar\n");
@@ -1633,21 +1639,26 @@ public class ExCommandsTest extends WasaviTest {
 	@Test
 	public void testYank () {
 		Wasavi.send(":set noai\n");
-		Wasavi.send("i\t1\n2\n3\u001b");
-		Wasavi.send("1G", "1|");
-		assertPos("#1-1", 0, 0);
+		Wasavi.send("i\t1.\n2.\n3.\u001b");
+		Wasavi.send("1G", "$");
+		assertPos("#1-1", 0, 2);
 
 		Wasavi.send(":yank\n");
-		assertEquals("#2-1", "\t1\n", Wasavi.getRegister("\""));
-		assertPos("#2-2", 0, 0);
+		assertEquals("#2-1", "\t1.\n", Wasavi.getRegister("\""));
+		assertPos("#2-2", 0, 2);
 
 		Wasavi.send(":1,2yan a\n");
-		assertEquals("#3-1", "\t1\n2\n", Wasavi.getRegister("a"));
-		assertPos("#3-2", 0, 0);
+		assertEquals("#3-1", "\t1.\n2.\n", Wasavi.getRegister("a"));
+		assertPos("#3-2", 0, 2);
+
+		Wasavi.send(":2,3yan *\n");
+		assertEquals("#4-1", "2.\n3.\n", Wasavi.getRegister("*"));
+		assertEquals("#4-2", "2.\n3.\n", getClipboardText());
+		assertPos("#4-3", 0, 2);
 
 		Wasavi.send(":ya10\n");
-		assertEquals("#4-1", "\t1\n2\n3\n", Wasavi.getRegister("\""));
-		assertPos("#4-2", 0, 0);
+		assertEquals("#5-1", "\t1.\n2.\n3.\n", Wasavi.getRegister("\""));
+		assertPos("#5-2", 0, 2);
 	}
 
 	@Test

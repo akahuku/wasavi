@@ -12,18 +12,6 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
-/*
-%s/^\tfunction/\t@\Test	public void/g
-%s/'\(\(\\'\|[^']\)*\)'/"\1"/g
-%s/Wasavi\.value/Wasavi.getValue()/g
-%s/Wasavi\.lastMessage/Wasavi.getLastMessage()/g
-%s/Wasavi\.registers/Wasavi.getRegister/g
-%s/Wasavi\.inputMode/Wasavi.getInputMode()/g
-%s/assert(/assertTrue(/g
-%s/Wasavi\.SPECIAL_KEYS/Keys/g
-g/assertPos/s/\[\(\d\+,\s*\d\+\)\]/\1/g
- */
-
 public class OpDeleteTest extends WasaviTest {
 	@Test
 	public void testDelete () {

@@ -1,6 +1,7 @@
 package WasaviTest;
 
 import static WasaviTest.WasaviAsserts.*;
+import static WasaviTest.WasaviUtils.*;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -124,6 +125,13 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send("G", "2P");
 		assertEquals("#7", "foo\nfoo\nfoo\nfoo\nfoo\nfoo\nfoo\nbar", Wasavi.getValue());
 		assertPos("#8", 5, 0);
+	}
+
+	@Test
+	public void testPasteFromClipboard () {
+		setClipboardText("clipboard text");
+		Wasavi.send("\"*P");
+		assertEquals("#1", "clipboard text", Wasavi.getValue());
 	}
 
 	@Test

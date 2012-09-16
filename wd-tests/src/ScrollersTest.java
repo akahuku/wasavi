@@ -12,12 +12,6 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
-/*
-	//@Test	public void/g
-%s/"\(\(\\'\|[^"]\)*\)'/"\1"/g
-%s/assertTrue(/assertTrue(/g
- */
-
 public class ScrollersTest extends WasaviTest {
 	@Test
 	public void testScrollUpHalfOfView () {
@@ -42,7 +36,7 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#4", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
-	//@Test
+	@Test
 	public void testScrollDownHalfOfView () {
 		int lines = Wasavi.makeScrollableBuffer(2.5);
 
@@ -65,7 +59,7 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#4", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
-	//@Test
+	@Test
 	public void testScrollUp1Line () {
 		int lines = Wasavi.makeScrollableBuffer(2.5);
 
@@ -82,7 +76,7 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#3", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
-	//@Test
+	@Test
 	public void testScrollDown1Line () {
 		int lines = Wasavi.makeScrollableBuffer(2.5);
 
@@ -115,12 +109,12 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#3", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
-	//@Test
+	@Test
 	public void testScrollUpAlmostView () {
 		_testScrollUpAlmostView("\u0002");
 	}
 
-	//@Test
+	@Test
 	public void testScrollUpAlmostViewPageup () {
 		_testScrollUpAlmostView(Keys.PAGE_UP);
 	}
@@ -141,17 +135,17 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#3", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
-	//@Test
+	@Test
 	public void testScrollDownAlmostView () {
 		_testScrollDownAlmostView("\u0006");
 	}
 
-	//@Test
+	@Test
 	public void testScrollDownAlmostViewPagedown () {
 		_testScrollDownAlmostView(Keys.PAGE_DOWN);
 	}
 
-	//@Test
+	@Test
 	public void testScreenAdjustTop () {
 		int lines = Wasavi.makeScrollableBuffer(2);
 		Wasavi.send("gg10G");
@@ -175,17 +169,17 @@ public class ScrollersTest extends WasaviTest {
 		assertTrue("#2", Math.abs(idealTopRow - actualTopRow) <= 1);
 	}
 
-	//@Test
+	@Test
 	public void testScreenAdjustCenter () {
 		_testScreenAdjustCenter(".");
 	}
 
-	//@Test
+	@Test
 	public void testScreenAdjustCenterZ () {
 		_testScreenAdjustCenter("z");
 	}
 
-	//@Test
+	@Test
 	public void testScreenAdjustBottom () {
 		int lines = Wasavi.makeScrollableBuffer(2);
 		Wasavi.send("gg", "20G");
@@ -195,7 +189,7 @@ public class ScrollersTest extends WasaviTest {
 		assertEquals("#2", Wasavi.getTopRow(), Wasavi.getRow() - (lines - 1));
 	}
 
-	//@Test
+	@Test
 	public void testScreenAdjustOther () {
 		int lines = Wasavi.makeScrollableBuffer();
 		int rowBefore = Wasavi.getRow();
