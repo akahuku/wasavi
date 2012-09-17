@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 180 2012-09-16 16:47:34Z akahuku $
+ * @version $Id: wasavi.js 181 2012-09-17 09:38:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -79,6 +79,7 @@
 				exrc = req.exrc;
 				fontFamily = req.fontFamily;
 				quickActivation = req.quickActivation;
+				fstab = req.fstab;
 				l10n = new L10n(req.messageCatalog);
 				wasaviFrame = req.wasaviFrame;
 				document.documentElement.setAttribute(
@@ -103,8 +104,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 180 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 180 2012-09-16 16:47:34Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 181 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 181 2012-09-17 09:38:39Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -3953,6 +3954,19 @@ flag23_loop:
 			lastSubstituteInfo = {};
 			requestShowMessage('Whassup?');
 		}),
+		new ExCommand('storage', 'st', '', 0, function (t, a) {
+			var list = [];
+			if (fstab.length) {
+				list.push('*** available storages ***');
+				fstab.forEach(function (fs) {
+					list.push((fs.isDefault ? '*' : ' ') + fs.name);
+				})
+			}
+			else {
+				list.push('*** no available storages. ***');
+			}
+			backlog.push(list);
+		}),
 		new ExCommand('registers', 'reg', '', 0, function (t, a) {
 			backlog.push(registers.dump());
 		}),
@@ -6895,6 +6909,7 @@ flag23_loop:
 		lastSubstituteInfo = null;
 		requestedState = null;
 
+		marks.save();
 		marks.dispose();
 		marks = null;
 
@@ -6938,10 +6953,6 @@ flag23_loop:
 		// key manager
 		install ? keyManager.install(handleKeydown2) :
 				  keyManager.uninstall();
-
-		// document
-		//window.chrome && document[method]('keydown', handleKeydown, true);
-		//				 document[method]('keypress', handleKeydown, true);
 
 		var editor = $(EDITOR_CORE_ID);
 		if (editor) {
@@ -8057,10 +8068,10 @@ flag23_loop:
 				}, 1);
 			}
 			else {
-				if (code >= 0 && code < 32) {
+				/*if (code >= 0 && code < 32) {
 					letter = toVisibleControl(code);
 					code = letter.charCodeAt(0);
-				}
+				}*/
 				if (code >= 32) {
 					lineInputHistories.isInitial = true;
 					input.value =
@@ -9591,6 +9602,7 @@ flag23_loop:
 	var fontFamily = 'monospace';
 	var quickActivation = false;
 	var testMode = false;
+	var fstab;
 	var substituteWorker;
 	var resizeHandlerInvokeTimer;
 	var keyManager = new KeyManager;
@@ -9655,7 +9667,10 @@ flag23_loop:
 			new VariableItem('history', 'i', 20),         // O
 			new VariableItem('monospace', 'i', 20),       // O
 			new VariableItem('fullscreen', 'b', false, function (v) {
-				targetElement && extensionChannel && extensionChannel.postMessage({
+				!isStandAlone &&
+				targetElement &&
+				extensionChannel &&
+				extensionChannel.postMessage({
 					type:'notify-to-parent',
 					parentTabId:targetElement.parentTabId,
 					payload:{
@@ -9748,7 +9763,7 @@ flag23_loop:
 		var result;
 		try { result = !!!window.frameElement; } catch (e) {} 
 		return result;
-	});
+	})();
 
 	// extension depend objects
 	var registers;
@@ -11473,7 +11488,19 @@ flag23_loop:
 	};
 
 	var lineInputEditMap = {
-		'\u0008'/*backspace*/: function (c, t) {
+		'\u0001'/*^A*/: function (c, t) {
+			t.selectionStart = t.selectionEnd = 0;
+		},
+		'\u0002'/*^B*/: function (c, t) {
+			t.selectionStart = t.selectionEnd = Math.max(0, t.selectionStart - 1);
+		},
+		'\u0005'/*^E*/: function (c, t) {
+			t.selectionStart = t.selectionEnd = t.value.length;
+		},
+		'\u0006'/*^F*/: function (c, t) {
+			t.selectionStart = t.selectionEnd = Math.min(t.value.length, t.selectionEnd + 1);
+		},
+		'\u0008'/*^H, backspace*/: function (c, t) {
 			if (t.selectionStart == t.selectionEnd) {
 				var n = Math.max(t.selectionStart - 1, 0);
 				t.value = t.value.substring(0, n) + t.value.substring(t.selectionEnd);
@@ -11485,7 +11512,7 @@ flag23_loop:
 			}
 			lineInputHistories.isInitial = true;
 		},
-		'\u0009'/*tab*/: function (c, t) {
+		'\u0009'/*^I, tab*/: function (c, t) {
 			// TODO: some completion?
 			lineInputHistories.isInitial = true;
 		},
@@ -11570,11 +11597,23 @@ flag23_loop:
 			}
 			lineInputHistories.isInitial = true;
 		},
-		'<left>': function (c, t) {
-			t.selectionStart = t.selectionEnd = Math.max(0, t.selectionStart - 1);
+		'<left>': function () {
+			this['\u0002'].apply(this, arguments);
 		},
 		'<right>': function (c, t) {
-			t.selectionStart = t.selectionEnd = Math.min(t.value.length, t.selectionEnd + 1);
+			this['\u0005'].apply(this, arguments);
+		},
+		'<up>': function () {
+			this['\u0010'].apply(this, arguments);
+		},
+		'<down>': function () {
+			this['\u000e'].apply(this, arguments);
+		},
+		'<home>': function () {
+			this['\u0001'].apply(this, arguments);
+		},
+		'<end>': function () {
+			this['\u0005'].apply(this, arguments);
 		}
 	};
 
@@ -11596,13 +11635,24 @@ flag23_loop:
 		}
 	}
 	function handleWindowResize (e) {
-		if (!resizeHandlerInvokeTimer && targetElement) {
-			resizeHandlerInvokeTimer = setTimeout(function () {
-				targetElement.rect.width = document.documentElement.clientWidth;
-				targetElement.rect.height = document.documentElement.clientHeight;
+		function relocate () {
+			if (targetElement) {
+				targetElement.rect.width =
+					document.documentElement.clientWidth;
+				targetElement.rect.height =
+					document.documentElement.clientHeight -
+					(isStandAlone ? 0 : $('wasavi_footer').offsetHeight);
 				setGeometory();
-				resizeHandlerInvokeTimer = null;
-			}, 100);
+			}
+			resizeHandlerInvokeTimer = null;
+		}
+		if (isStandAlone) {
+			if (!resizeHandlerInvokeTimer) {
+				resizeHandlerInvokeTimer = setTimeout(relocate, 100);
+			}
+		}
+		else {
+			relocate();
 		}
 	}
 

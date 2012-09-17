@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 177 2012-09-07 08:59:20Z akahuku $
+ * @version $Id: background.js 181 2012-09-17 09:38:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1598,6 +1598,16 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		return preferred || defaultFs || nullFs;
 	}
 
+	function getFileSystemInfo () {
+		var result = [];
+		for (var i in fstab) {
+			var fs = fstab[i];
+			if (fs.isNull) continue;
+			result.push({name:i, isDefault:fs.isDefault});
+		}
+		return result;
+	}
+
 	function initWasaviFrame () {
 		resourceLoader.get('wasavi_frame.html', function (data) {
 			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
@@ -1647,7 +1657,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				messageCatalog:messageCatalog,
 				wasaviFrame:wasaviFrame,
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
-				testMode:req.url == TEST_MODE_URL
+				testMode:req.url == TEST_MODE_URL,
+				fstab:getFileSystemInfo()
 			});
 			break;
 

@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 179 2012-09-15 14:49:45Z akahuku $
+ * @version $Id: agent.js 181 2012-09-17 09:38:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -58,8 +58,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 	var targetElement;
 	var wasaviFrame;
+	var extraHeight;
 	var isTestFrame;
+	var isFullscreen;
 	var stateClearTimer;
+	var targetElementResizedTimer;
 	var keyStrokeLog = [];
 
 	/**
@@ -67,7 +70,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	 * ----------------
 	 */
 
-	function locate (iframe, target, isFullscreen) {
+	function locate (iframe, target, isFullscreen, extraHeight) {
 		function isFixedPosition (element) {
 			var isFixed = false;
 			for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
@@ -105,7 +108,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 				(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
 			) + 'px';
 			iframe.style.width = rect.width + 'px';
-			iframe.style.height = rect.height + 'px';
+			iframe.style.height = rect.height + (extraHeight || 0) + 'px';
 		}
 		return rect;
 	}
@@ -186,6 +189,9 @@ typeof WasaviExtensionWrapper != 'undefined'
 			wasaviFrame.parentNode.removeChild(wasaviFrame);
 			wasaviFrame = null;
 		}
+
+		window.removeEventListener('resize', handleTargetResize, false);
+		extraHeight = 0;
 	}
 
 	function focusToFrame () {
@@ -454,6 +460,17 @@ typeof WasaviExtensionWrapper != 'undefined'
 		);
 	}
 
+	function handleTargetResize (e) {
+		if (!targetElementResizedTimer) {
+			targetElementResizedTimer = setTimeout(function () {
+				if (wasaviFrame && targetElement) {
+					locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
+				}
+				targetElementResizedTimer = null;
+			}, 100);
+		}
+	}
+
 	/**
 	 * shortcut key testing function factory
 	 * ----------------
@@ -513,10 +530,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 			shortcutCode = JSON.parse(req.shortcutCode);
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
+			extraHeight = 0;
 
-			/*if (window.chrome) {
+			if (window.chrome && !isTestFrame) {
 				WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
-			}*/
+			}
 			if (document.readyState == 'interactive' || document.readyState == 'complete') {
 				handleAgentInitialized(req);
 			}
@@ -558,9 +576,13 @@ typeof WasaviExtensionWrapper != 'undefined'
 			if (!wasaviFrame) break;
 			wasaviFrame.style.visibility = 'visible';
 			focusToFrame();
-			wasaviFrame.style.height = (req.height || targetElement.offsetHeight) + 'px';
+			var currentHeight = wasaviFrame.offsetHeight;
+			var newHeight = req.height || targetElement.offsetHeight;
+			extraHeight = newHeight - currentHeight;
+			wasaviFrame.style.height = newHeight + 'px';
 			wasaviFrame.style.boxShadow = '0 1px 8px 4px #444';
 			wasaviFrame.setAttribute('data-wasavi-state', 'running');
+			window.addEventListener('resize', handleTargetResize, false);
 
 			if (isTestFrame) {
 				wasaviFrame.id = 'wasavi_frame';
@@ -575,11 +597,12 @@ typeof WasaviExtensionWrapper != 'undefined'
 			switch (req.state) {
 			case 'maximized':
 			case 'normal':
-				var rect = locate(wasaviFrame, targetElement, req.state == 'maximized');
-				extension.postMessage({type:'notify-to-child', childTabId:req.tabId, payload:{
+				isFullscreen = req.state == 'maximized';
+				locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
+				/*extension.postMessage({type:'notify-to-child', childTabId:req.tabId, payload:{
 					type:'relocate',
 					rect:{width:rect.width, height:rect.height - req.modelineHeight}
-				}});
+					}});*/
 				break;
 			}
 			break;
