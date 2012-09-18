@@ -4642,7 +4642,7 @@ flag23_loop:
 	/*constructor*/function SubstituteWorker () {
 		this.patternString = '';
 		this.pattern = null;
-		this.replFn = null;
+		this.replOpcodes = null;
 		this.isGlobal = false;
 		this.isConfirm = false;
 		this.text = '';
@@ -4660,7 +4660,7 @@ flag23_loop:
 			pattern || (pattern = '');
 			repl || (repl = '');
 			options || (options = '');
-			var count, re, tildeUsed, replFn;
+			var count, re, tildeUsed;
 
 			// pattern and replacemnt
 			if (pattern == '' && repl == '') {
@@ -4723,8 +4723,8 @@ flag23_loop:
 			this.pattern = getFindRegex(pattern);
 			this.pattern.lastIndex = 0;
 			registers.set('/', lastRegexFindCommand.pattern);
-			this.replFn = this.getReplacements(repl);
-			if (!this.replFn) {
+			this.replOpcodes = this.compileReplacer(repl);
+			if (!this.replOpcodes) {
 				return _('Internal Error: invalid replace function');
 			}
 
@@ -4841,7 +4841,7 @@ flag23_loop:
 					return true;
 				}
 				else {
-					this.re = this.pattern = this.replFn =
+					this.re = this.pattern = this.replOpcodes =
 					this.text = this.currentPos = this.prevOffset = this.prevPos.row = null;
 					popInputMode();
 					cursor.ensureVisible();
@@ -4852,7 +4852,7 @@ flag23_loop:
 			}
 		},
 		doSubstitute: function (t, re, row, col) {
-			var replaced = this.replFn(re);
+			var replaced = this.executeReplacer(re);
 			t.selectionStart = new Position(row, col);
 			t.selectionEnd = t.offsetBy(t.selectionStart, re[0].length);
 			insert(t, replaced);
@@ -4873,10 +4873,48 @@ flag23_loop:
 		showNotFound: function () {
 			requestShowMessage(_('Pattern not found: {0}', this.patternString));
 		},
-		nullString: function () {
-			return '';
+		executeReplacer: function (re, opcodes) {
+			opcodes || (opcodes = this.replOpcodes);
+			if (!opcodes) return '';
+
+			var result = [];
+			for (var i = 0, goal = opcodes.length; i < goal; i++) {
+				switch (opcodes[i].x) {
+				case 0:
+					result.push(opcodes[i].v);
+					break;
+				case 1:
+					result.push(re[opcodes[i].v] || '');
+					break;
+				case 2:
+					if (result.length) {
+						var tmp = result[result.length - 1];
+						tmp = tmp.charAt(0).toUpperCase() + tmp.substring(1);
+						result[result.length - 1] = tmp;
+					}
+					break;
+				case 3:
+					if (result.length) {
+						var tmp = result[result.length - 1];
+						tmp = tmp.charAt(0).toLowerCase() + tmp.substring(1);
+						result[result.length - 1] = tmp;
+					}
+					break;
+				case 4:
+					if (result.length) {
+						result[result.length - 1] = result[result.length - 1].toUpperCase();
+					}
+					break;
+				case 5:
+					if (result.length) {
+						result[result.length - 1] = result[result.length - 1].toLowerCase();
+					}
+					break;
+				}
+			}
+			return result.join('');
 		},
-		getReplacements: function (repl) {
+		compileReplacer: function (repl) {
 			/*
 			 * Meta characters in replacement string are:
 			 *
@@ -4896,24 +4934,23 @@ flag23_loop:
 			 *
 			 * \e, \E   end of \u, \l, \U, \L
 			 */
-			if (repl == '') {
-				return this.nullString;
-			}
-			var result = undefined, codes = [];
-			var specialEscapes = {'n':'\\n', 't':'\\t'};
-			var specialLetters = {'"':'\\"', '\\':'\\\\', '\r':'\\n'};
-			loop(0, 0, 0);
-			try {
-				var code = 'return ' + codes.join(' ') + ';';
-				result = new Function('_', code);
-			}
-			catch (e) {
-				result = null;
-			}
 
+			if (repl == '') return [];
+
+			var result, stack = [];
+			var specialEscapes = {'\\':'\\', 'n':'\n', 't':'\t'};
+			var specialLetters = {'\r':'\n'};
 			function loop (callDepth, interruptMode, start) {
+				/*
+				 * opcodes:
+				 *   0: literal
+				 *   1: backref
+				 *   2: upper first
+				 *   3: lower first
+				 *   4: upper
+				 *   5: lower
+				 */
 				var newOperand = true;
-				var operator = '';
 				for (var i = start; i < repl.length; i++) {
 					var ch = repl.charAt(i);
 					var ate = false;
@@ -4927,43 +4964,33 @@ flag23_loop:
 					case '&': case '\\&':
 						if (ch == '&'   && config.vars.magic
 						||  ch == '\\&' && !config.vars.magic) {
-							codes.push(operator, '_[0]');
-							operator = '+';
-							ate = true;
+							stack.push({x:1, v:0});
+							ate = newOperand = true;
 						}
 						break;
 					case '\\0': case '\\1': case '\\2': case '\\3': case '\\4':
 					case '\\5': case '\\6': case '\\7': case '\\8': case '\\9':
-						codes.push(operator, '(_[' + ch.charAt(1) + ']||"")');
-						operator = '+';
+						stack.push({x:1, v:ch.charAt(1)});
 						ate = newOperand = true;
 						break;
 					case '\\u':
-						codes.push(operator, '(');
 						i = loop(callDepth + 1, 1, i + 1);
-						codes.push(').replace(/^./,function(_){return _.toUpperCase()})');
-						operator = '+';
+						stack.push({x:2});
 						ate = newOperand = true;
 						break;
 					case '\\l':
-						codes.push(operator, '(');
 						i = loop(callDepth + 1, 1, i + 1);
-						codes.push(').replace(/^./,function(_){return _.toLowerCase()})');
-						operator = '+';
+						stack.push({x:3});
 						ate = newOperand = true;
 						break;
 					case '\\U':
-						codes.push(operator, 'String.prototype.toUpperCase.call(');
 						i = loop(callDepth + 1, 2, i + 1);
-						codes.push(')');
-						operator = '+';
+						stack.push({x:4});
 						ate = newOperand = true;
 						break;
 					case '\\L':
-						codes.push(operator, 'String.prototype.toLowerCase.call(');
 						i = loop(callDepth + 1, 2, i + 1);
-						codes.push(')');
-						operator = '+';
+						stack.push({x:5});
 						ate = newOperand = true;
 						break;
 					case '\\e': case '\\E':
@@ -4984,24 +5011,22 @@ flag23_loop:
 						|| code == 0x7f) {
 							ch = toVisibleControl(code);
 						}
-						if (newOperand || codes.length == 0) {
-							codes.push(operator, '"' + ch + '"');
+						if (newOperand || stack.length == 0) {
+							stack.push({x:0, v:ch});
 							newOperand = false;
-							operator = '+';
 						}
-						else {
-							var last = codes[codes.length - 1];
-							last = last.substring(0, last.length - 1) + ch + last.substr(-1);
-							codes[codes.length - 1] = last;
+						else if (stack.length && stack[stack.length - 1].x == 0) {
+							stack[stack.length - 1].v += ch;
 						}
-						if (callDepth && interruptMode == 1) {
-							return i;
-						}
+					}
+					if (callDepth && interruptMode == 1) {
+						return i;
 					}
 				}
 				return i;
 			}
-			return result;
+			loop(0, 0, 0);
+			return stack;
 		}
 	};
 
@@ -5774,8 +5799,7 @@ flag23_loop:
 	};
 
 	/*constructor*/function L10n (catalog) {
-		var PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
-		var getPluralSuffix;
+		var pluralFunctions;
 
 		function getId (m) {
 			return m.toLowerCase()
@@ -5784,23 +5808,38 @@ flag23_loop:
 				.replace(/[^A-Za-z0-9_@ ]/g, '')
 				.replace(/ +/g, '_');
 		}
+		function compile (expr) {
+			pluralFunctions = [];
 
-		if (catalog && PLURAL_FUNCTION_SIGNATURE in catalog) {
-			getPluralSuffix = catalog[PLURAL_FUNCTION_SIGNATURE].message;
-		}
-		if (!getPluralSuffix && extensionChannel) {
-			getPluralSuffix = extensionChannel.getMessage(PLURAL_FUNCTION_SIGNATURE);
-		}
-		if (getPluralSuffix) {
-			try {
-				getPluralSuffix = new Function('n', 'return ' + getPluralSuffix);
-			}
-			catch (e) {
-				getPluralSuffix = undefined;
+			var nodes = (expr || '').split(/\s*,\s*/);
+			for (var i = 0, goal = nodes.length; i < goal; i++) {
+				var re = /^(\w+)\(([^)]+)\)$/.exec(nodes[i]);
+				if (!re) continue;
+				pluralFunctions.push({name:re[1], value:re[2]});
 			}
 		}
-		if (!getPluralSuffix) {
-			getPluralSuffix = function () {return '';};
+		function getPluralSuffix (n) {
+			for (var i = 0, goal = pluralFunctions.length; i < goal; i++) {
+				switch (pluralFunctions[i].name) {
+				case 'isone':
+					if (n == 1) return pluralFunctions[i].value;
+					break;
+				}
+			}
+			return '';
+		}
+		function init () {
+			var PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
+			var expressionString;
+
+			if (catalog && PLURAL_FUNCTION_SIGNATURE in catalog) {
+				expressionString = catalog[PLURAL_FUNCTION_SIGNATURE].message;
+			}
+			if (!expressionString && extensionChannel) {
+				expressionString = extensionChannel.getMessage(PLURAL_FUNCTION_SIGNATURE);
+			}
+
+			compile(expressionString);
 		}
 
 		this.getMessage = function (messageId) {
@@ -5831,6 +5870,8 @@ flag23_loop:
 			}
 			return word;
 		};
+
+		init();
 	}
 
 	/*

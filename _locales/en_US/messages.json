@@ -54,7 +54,7 @@
 		"description": "preferred storage"
 	},
 	"_plural_rule@function": {
-		"message": "n==1?'one':''"
+		"message": "isone(one)"
 	},
 	"_plural_line": {
 		"message": "lines"
