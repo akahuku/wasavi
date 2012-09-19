@@ -1,1 +1,0 @@
-JsUnit is here: http://www.jsunit.net
