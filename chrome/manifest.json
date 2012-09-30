@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "wasavi",
-  "version": "0.3.147",
+  "version": "0.0.1",
   "description": "__MSG_wasavi_desc__",
   "default_locale": "en_US",
   "icons": {

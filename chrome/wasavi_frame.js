@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi_frame.js 175 2012-08-17 16:51:33Z akahuku $
+ * @version $Id: wasavi_frame.js 182 2012-09-19 09:14:13Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

@@ -29,14 +29,14 @@ public class MotionsTest extends WasaviTest {
 		"\n" +
 		".IP\n" +
 		"\n" +
-		"\twhat is sentence?  this is a sentence.  and this is second sentence.\n" +
-		"\tand this is second sentence (again.)  this is fourth sentence.\n" +
+		"\tLorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod\n" +
+		"\ttempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\n" +
 		"\n" +
 		".H \n" + // * 20
 		"dummy line\n" +
 		""; // * 22
 
-	@Test
+	//@Test
 	public void testUpLine () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("iline1\n\tline2\n\t\tline3\u001b");
@@ -87,12 +87,12 @@ public class MotionsTest extends WasaviTest {
 		assertEquals("error cheeck #7", "", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testDownLine () {
 		_testDownLine("+");
 	}
 
-	@Test
+	//@Test
 	public void testDownEnter () {
 		_testDownLine(Keys.ENTER);
 	}
@@ -109,17 +109,17 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 1, 2);
 	}
 
-	@Test
+	//@Test
 	public void testFirstNonWhiteCharOfLine () {
 		_testFirstNonWhiteCharOfLine("^");
 	}
 
-	@Test
+	//@Test
 	public void testHome () {
 		_testFirstNonWhiteCharOfLine(Keys.HOME);
 	}
 
-	@Test
+	//@Test
 	public void testTopOfLine () {
 		Wasavi.send("i\t\tline\u001b");
 
@@ -146,17 +146,17 @@ public class MotionsTest extends WasaviTest {
 		assertEquals("error cheeck #5", "", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testTailOfLine () {
 		_testTailOfLine("$");
 	}
 
-	@Test
+	//@Test
 	public void testEnd () {
 		_testTailOfLine(Keys.END);
 	}
 
-	@Test
+	//@Test
 	public void testDirectColumn () {
 		Wasavi.send("i0123456789\u001b");
 
@@ -170,7 +170,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testJumpToMatchedParenthes () {
 		String openBrackets = "([{<";
 		String closeBrackets = ")]}>";
@@ -229,7 +229,7 @@ public class MotionsTest extends WasaviTest {
 		}
 	}
 
-	@Test
+	//@Test
 	public void testSearchForward () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst line\n\tsecond line\n\tthird line\u001b", "gg");
@@ -241,7 +241,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#2", 2, 1);
 	}
 
-	@Test
+	//@Test
 	public void testSearchBackward () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst line\n\tsecond line\n\tthird line\u001b", "G", "$");
@@ -253,7 +253,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#2", 1, 1);
 	}
 
-	@Test
+	//@Test
 	public void testFindForward () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -276,7 +276,7 @@ public class MotionsTest extends WasaviTest {
 		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
-	@Test
+	//@Test
 	public void testFindBackward () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -299,7 +299,7 @@ public class MotionsTest extends WasaviTest {
 		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
-	@Test
+	//@Test
 	public void testFindForwardBeforeStop () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -322,7 +322,7 @@ public class MotionsTest extends WasaviTest {
 		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
-	@Test
+	//@Test
 	public void testFindBackwardBeforeStop () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -346,7 +346,7 @@ public class MotionsTest extends WasaviTest {
 		assertTrue(Wasavi.getLastMessage().length() > 0);
 	}
 
-	@Test
+	//@Test
 	public void testFindInvert () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -379,7 +379,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 0, 30);
 	}
 
-	@Test
+	//@Test
 	public void testFindRepeat () {
 		Wasavi.send("ifind the char4cter in current 4ine\u001b");
 
@@ -402,7 +402,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 0, 13);
 	}
 
-	@Test
+	//@Test
 	public void testDownLineOrient () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\t\ttest string\n\t\ttest string\u001b", "gg", "$");
@@ -419,7 +419,7 @@ public class MotionsTest extends WasaviTest {
 		assertEquals("error cheeck #5", "", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testMark () {
 		Wasavi.send("iHi there. This is great.\u001b");
 
@@ -440,7 +440,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#6", 0, 18);
 	}
 
-	@Test
+	//@Test
 	public void testMarkLineOrient () {
 		Wasavi.send("iFirst\nHi there.\nThis is great.\u001b");
 
@@ -452,7 +452,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 1, 0);
 	}
 
-	@Test
+	//@Test
 	public void testMarkTracksItsPosition () {
 		Wasavi.send("i", "foo1bar2baz3bax", "\u001b");
 
@@ -500,7 +500,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#5-2", 0, 7);
 	}
 
-	@Test
+	//@Test
 	public void testMarkTracksItsPositionLineOrient () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("3ifoo\n\u001b");
@@ -538,13 +538,13 @@ public class MotionsTest extends WasaviTest {
 		assertTrue("#3-2", Wasavi.getLastMessage().length() > 0);
 	}
 
-	/*
 	@Test
 	public void testSectionForward () {
-		Wasavi.send(":set noai\n");
-		Wasavi.send(
-			"i" + SECTION_TEST_TEXT.replaceAll("\\f", "\u0016$0") + "\u001bgg");
-		assertValue("#1", SECTION_TEST_TEXT);
+		/*
+		 * in section, paragraph, sentence command:
+		 * to act this behavior on vim, :set cpo+={J
+		 */
+		Wasavi.send("gg");
 
 		Wasavi.send("]]");
 		assertPos("#2", 3, 0);
@@ -560,15 +560,11 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send("]]");
 		assertPos("#6", 21, 0);
-	}*/
+	}
 
-	/*
 	@Test
 	public void testSectionBackward () {
-		Wasavi.send(":set noai\n");
-		Wasavi.send(
-			"i" + SECTION_TEST_TEXT.replaceAll("\\f", "\u0016$0") + "\u001bG");
-		assertValue("#1", SECTION_TEST_TEXT);
+		Wasavi.send("G");
 
 		Wasavi.send("[[");
 		assertPos("#2", 19, 0);
@@ -584,49 +580,89 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send("[[");
 		assertPos("#6", 0, 1);
-	}*/
+	}
 
-	/*
 	@Test
 	public void testParagraphForward () {
-		Wasavi.send(":set noai\n");
-		Wasavi.send(
-			"i" + SECTION_TEST_TEXT.replaceAll("\\f", "\u0016$0") + "\u001bgg");
+		Wasavi.send("gg");
 
-		int[] rows = {2, 3, 6, 10, 11, 13, 14, 15, 18, 19, 21};
+		int[] rows = {2, 3, 6, 7, 10, 11, 13, 14, 15, 18, 19, 21};
 		int i = 0;
 		for (int row: rows) {
 			Wasavi.send("}");
 			assertPos(String.format("#%d", ++i), row, 0);
 		}
-	}*/
+	}
 
-	/*
 	@Test
 	public void testParagraphBackward () {
-		Wasavi.send(":set noai\n");
-		Wasavi.send(
-			"i" + SECTION_TEST_TEXT.replaceAll("\\f", "\u0016$0") + "\u001bG");
+		Wasavi.send("G");
 
-		int[] rows = {19, 18, 15, 14, 13, 11, 10, 6, 3, 2, 0};
+		int[] rows = {19, 18, 15, 14, 13, 11, 10, 7, 6, 3, 2, 0};
 		int i = 0;
 		for (int row: rows) {
 			Wasavi.send("{");
 			assertPos(String.format("#%d", ++i), row, 0);
 		}
-	}*/
+	}
 
-	/*
 	@Test
 	public void testSentenceForward () {
-		// TBD
-	}*/
+		Wasavi.send("gg1|");
 
-	/*
+		int[] positions = {
+			 2, 0,
+			 3, 0,
+			 4, 1,
+			 6, 0,
+			 7, 0,
+			10, 0,
+			11, 0,
+			12, 0,
+			13, 0,
+			14, 0,
+			15, 0,
+			16, 1,
+			16, 60,
+			18, 0,
+			19, 0,
+			20, 0,
+			21, 0
+		};
+		for (int i = 0, goal = positions.length; i < goal; i += 2) {
+			Wasavi.send(")");
+			assertPos(String.format("#%d", (int)(i / 2) + 1), positions[i], positions[i + 1]);
+		}
+	}
+
 	@Test
 	public void testSentenceBackward () {
-		// TBD
-	}*/
+		Wasavi.send("G1|");
+
+		int[] positions = {
+			 0, 0,
+			 2, 0,
+			 3, 0,
+			 4, 1,
+			 6, 0,
+			 7, 0,
+			10, 0,
+			11, 0,
+			12, 0,
+			13, 0,
+			14, 0,
+			15, 0,
+			16, 1,
+			16, 60,
+			18, 0,
+			19, 0,
+			20, 0
+		};
+		for (int i = positions.length - 2; i >= 0; i -= 2) {
+			Wasavi.send("(");
+			assertPos(String.format("#%d", (int)(i / 2) + 1), positions[i], positions[i + 1]);
+		}
+	}
 
 	private void _testDown (CharSequence a) {
 		Wasavi.send(":set noai\n");
@@ -643,17 +679,17 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 2, 1);
 	}
 
-	@Test
+	//@Test
 	public void testDown () {
 		_testDown("j");
 	}
 
-	@Test
+	//@Test
 	public void testDownCtrlN () {
 		_testDown("\u000e");
 	}
 
-	@Test
+	//@Test
 	public void testDownDown () {
 		_testDown(Keys.ARROW_DOWN);
 	}
@@ -673,17 +709,17 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 0, 1);
 	}
 
-	@Test
+	//@Test
 	public void testUp () {
 		_testUp("k");
 	}
 
-	@Test
+	//@Test
 	public void testUpCtrlP () {
 		_testUp("\u0010");
 	}
 
-	@Test
+	//@Test
 	public void testUpUp () {
 		_testUp(Keys.ARROW_UP);
 	}
@@ -701,17 +737,17 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testLeft () {
 		_testLeft("h");
 	}
 
-	@Test
+	//@Test
 	public void testLeftCtrlH () {
 		_testLeft("\u0008");
 	}
 
-	@Test
+	//@Test
 	public void testLeftLeft () {
 		_testLeft(Keys.ARROW_LEFT);
 	}
@@ -729,22 +765,22 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 0, 11);
 	}
 
-	@Test
+	//@Test
 	public void testRight () {
 		_testRight("l");
 	}
 
-	@Test
+	//@Test
 	public void testRightSpace () {
 		_testRight(" ");
 	}
 
-	@Test
+	//@Test
 	public void testRightRight () {
 		_testRight(Keys.ARROW_RIGHT);
 	}
 
-	@Test
+	//@Test
 	public void testWordForward () {
 		Wasavi.send(":set noai\n");
 		String base = "first second\n\tthird word";
@@ -765,7 +801,17 @@ public class MotionsTest extends WasaviTest {
 		assertValue("#5", base.replaceFirst("^first", "FIRST"));
 	}
 
-	@Test
+	//@Test
+	public void testWordForwardLast () {
+		Wasavi.send("iabc   def   ghi\u001b");
+		Wasavi.send("13|");
+		Wasavi.send("w");
+
+		assertPos("#1", 0, 14);
+		assertEquals("#2", "", Wasavi.getLastMessage());
+	}
+
+	//@Test
 	public void testWordBackward () {
 		Wasavi.send("ifirst second\n\tthird word\u001b");
 
@@ -781,7 +827,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testBigwordForward () {
 		String base = "fir#t sec$nd\n\tthi%d wor^";
 		Wasavi.send(":set noai\n");
@@ -802,7 +848,17 @@ public class MotionsTest extends WasaviTest {
 		assertValue("#5", base.replaceFirst("^fir#t", "FIRST"));
 	}
 
-	@Test
+	//@Test
+	public void testBigwordForwardLast () {
+		Wasavi.send("ia#c   d$f   g%i\u001b");
+		Wasavi.send("13|");
+		Wasavi.send("W");
+
+		assertPos("#1", 0, 14);
+		assertEquals("#2", "", Wasavi.getLastMessage());
+	}
+
+	//@Test
 	public void testBigwordBackward () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifir#t sec$nd\n\tthi%d wor^\u001b");
@@ -819,7 +875,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testWordEnd () {
 		String base = "first second\n\tthird word";
 		Wasavi.send(":set noai\n");
@@ -835,7 +891,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 1, 10);
 	}
 
-	@Test
+	//@Test
 	public void testBigwordEnd () {
 		String base = "fir#t sec$nd\n\tthi%d wor^";
 		Wasavi.send(":set noai\n");
@@ -851,7 +907,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 1, 10);
 	}
 
-	@Test
+	//@Test
 	public void testGotoPrefix () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
@@ -869,7 +925,7 @@ public class MotionsTest extends WasaviTest {
 		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
 	}
 
-	@Test
+	//@Test
 	public void testTopOfView () {
 		int lines = Wasavi.makeScrollableBuffer();
 
@@ -883,7 +939,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", lines - 1, 0);
 	}
 
-	@Test
+	//@Test
 	public void testMiddleOfView () {
 		int lines = Wasavi.makeScrollableBuffer();
 
@@ -891,7 +947,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#1", (int)(lines / 2), 0);
 	}
 
-	@Test
+	//@Test
 	public void testBottomOfView () {
 		int lines = Wasavi.makeScrollableBuffer();
 
@@ -905,7 +961,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#3", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testGoto () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst\n\tsecond\nthird\u001b");
@@ -923,7 +979,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#4", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testSearchForwardNext () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst\n\tsecond\nthird\nthird\u001b");
@@ -947,7 +1003,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#6", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testSearchFowardPrev () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst\n\tsecond\nthird\nthird\u001b");
@@ -971,7 +1027,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#6", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testSearchBackwardNext () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst\nfirst\nsecond\nthird\u001b");
@@ -997,7 +1053,7 @@ public class MotionsTest extends WasaviTest {
 		assertPos("#6", 1, 0);
 	}
 
-	@Test
+	//@Test
 	public void testSearchBackwardPrev () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst\nfirst\nsecond\nthird\u001b");

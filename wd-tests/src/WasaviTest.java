@@ -405,10 +405,12 @@ public class WasaviTest {
 	protected static WebDriver driver;
 	protected static WasaviWrapper Wasavi;
 	protected String logText;
+	protected Boolean isSectionTest;
 
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
 			System.out.println("Testcase: " + d.getMethodName());
+			isSectionTest = d.getMethodName().matches(".*(Sentence|Paragraph|Section).*");
 		}
 		protected void failed (Throwable e, Description d) {
 			System.out.println(d.getMethodName() + " FAILED\n" + logText);
@@ -457,12 +459,23 @@ public class WasaviTest {
 	}
 
 	private void invokeWasavi () {
-		WebElement reset = driver.findElement(By.id("reset-button"));
-		if (reset == null) {
-			System.out.println("reset button not found.");
+		if (isSectionTest) {
+			WebElement sectionInitializer = driver.findElement(By.id("init-section-button"));
+			if (sectionInitializer == null) {
+				System.out.println("section initializer not found.");
+			}
+			else {
+				sectionInitializer.click();
+			}
 		}
 		else {
-			reset.click();
+			WebElement reset = driver.findElement(By.id("reset-button"));
+			if (reset == null) {
+				System.out.println("reset button not found.");
+			}
+			else {
+				reset.click();
+			}
 		}
 
 		WebElement t2 = driver.findElement(By.id("t2"));
