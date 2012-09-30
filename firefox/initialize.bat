@@ -30,7 +30,7 @@ mkdir lib
 pushd lib
 mklink blowfish.js ..\..\chrome\libs\blowfish\blowfish.js
 mklink jsOAuth.js ..\..\chrome\libs\jsOAuth\jsOAuth.js
-mklink background.js ..\..\chrome\background.js
+mklink main.js ..\..\chrome\background.js
 mklink sha1.js ..\..\chrome\libs\sha1\sha1.js
 popd
 

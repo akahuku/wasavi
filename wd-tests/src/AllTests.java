@@ -6,16 +6,17 @@ import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class) @SuiteClasses({
-//	BasicsTest.class
-//	,EditingTest.class
-//	,MotionsTest.class
-//	,UndoTest.class
-	ExCommandsTest.class
-//	,ScrollersTest.class
-//	,OpChangeTest.class
-//	,OpDeleteTest.class
-//	,OpYankTest.class
-//	,OpShiftTest.class
+	BasicsTest.class
+	,EditingTest.class
+	,MotionsTest.class
+	,UndoTest.class
+	,ExCommandsTest.class
+	,ScrollersTest.class
+	,OpChangeTest.class
+	,OpDeleteTest.class
+	,OpYankTest.class
+	,OpShiftTest.class
+	,RangeSymbolsTest.class
 })
 public class AllTests {
 	public static void main (String[] args) {

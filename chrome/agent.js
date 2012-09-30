@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 181 2012-09-17 09:38:39Z akahuku $
+ * @version $Id: agent.js 185 2012-09-27 04:51:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -64,11 +64,6 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var stateClearTimer;
 	var targetElementResizedTimer;
 	var keyStrokeLog = [];
-
-	/**
-	 * wasavi runner
-	 * ----------------
-	 */
 
 	function locate (iframe, target, isFullscreen, extraHeight) {
 		function isFixedPosition (element) {
@@ -324,7 +319,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	}
 
 	/**
-	 * DOMContentLoaded on options page handler
+	 * DOMContentLoaded handler on options page
 	 * ----------------
 	 */
 
@@ -460,6 +455,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 		);
 	}
 
+	/**
+	 * resize handler for target element
+	 * ----------------
+	 */
+
 	function handleTargetResize (e) {
 		if (!targetElementResizedTimer) {
 			targetElementResizedTimer = setTimeout(function () {
@@ -472,7 +472,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	}
 
 	/**
-	 * shortcut key testing function factory
+	 * shortcut key tester
 	 * ----------------
 	 */
 
@@ -487,7 +487,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	}
 
 	/**
-	 * agent initializer handler
+	 * agent initializer
 	 * ----------------
 	 */
 
@@ -599,10 +599,6 @@ typeof WasaviExtensionWrapper != 'undefined'
 			case 'normal':
 				isFullscreen = req.state == 'maximized';
 				locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
-				/*extension.postMessage({type:'notify-to-child', childTabId:req.tabId, payload:{
-					type:'relocate',
-					rect:{width:rect.width, height:rect.height - req.modelineHeight}
-					}});*/
 				break;
 			}
 			break;
@@ -658,7 +654,10 @@ typeof WasaviExtensionWrapper != 'undefined'
 			try {targetElement.value = req.value;} catch (e) {;}
 			break;
 
-		/* helper blocks for functionality test */
+		/*
+		 * following cases are for functionality test.
+		 * available only on http://wasavi.appsweets.net/test_frame.html
+		 */
 		case 'wasavi-notify-keydown':
 			if (!isTestFrame) break;
 			if (stateClearTimer) {
@@ -691,7 +690,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			}, 100);
 			log('notify-state: timer registered.', '', '');
 			break;
-			
+
 		case 'wasavi-command-completed':
 			if (!isTestFrame) break;
 			if (stateClearTimer) {

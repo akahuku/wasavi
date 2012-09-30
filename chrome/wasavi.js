@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 181 2012-09-17 09:38:39Z akahuku $
+ * @version $Id: wasavi.js 186 2012-09-30 14:49:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -104,12 +104,13 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 181 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 181 2012-09-17 09:38:39Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 186 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 186 2012-09-30 14:49:47Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
-	/*const*/var BRACKETS = '[{(<>)}]';
+	/*const*/var BRACKETS = '[{(<"\'``\'">)}]';
+	/*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 	/*const*/var ACCEPTABLE_TYPES = {
 		textarea: true,
 		text:     true,
@@ -125,18 +126,18 @@
 		'Cc', 'Zs', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
 		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
 		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-		'Zs', 'Po', 'Po', 'Po', 'Sc', 'Po', 'Po', 'Po',
-		'Ps', 'Pe', 'Po', 'Sm', 'Po', 'Pd', 'Po', 'Po',
-		'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld',
-		'Ld', 'Ld', 'Po', 'Po', 'Sm', 'Sm', 'Sm', 'Po',
-		'Po', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
-		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
-		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu',
-		'Lu', 'Lu', 'Lu', 'Ps', 'Po', 'Pe', 'Sk', 'Pc',
-		'Sk', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
-		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
-		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll',
-		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'
+		'Zs', 'Po', 'Po', 'Po', 'Sc', 'Po', 'Po', 'Po', //  !"#$%&'
+		'Ps', 'Pe', 'Po', 'Sm', 'Po', 'Pd', 'Po', 'Po', // ()*+,-./
+		'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', // 01234567
+		'Ld', 'Ld', 'Po', 'Po', 'Sm', 'Sm', 'Sm', 'Po', // 89:;<=>?
+		'Po', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // @ABCDEFG
+		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // HIJKLMNO
+		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // PQRSTUVW
+		'Lu', 'Lu', 'Lu', 'Ps', 'Po', 'Pe', 'Sk', 'Pc', // XYZ[\]^_
+		'Sk', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // `abcdefg
+		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // hijklmno
+		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // pqrstuvw
+		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'  // xyz{|}~
 	];
 	/*const*/var EXFLAGS = {
 		addr2All: 1<<2,
@@ -2010,6 +2011,52 @@
 				}
 				return result;
 			},
+			// vim compatible cursor iterators
+			inc: function (pos) {
+				var p = pos || this.selectionStart;
+				try {
+					var s = this.rows(p);
+					if (p.col < s.length) {
+						p.col++;
+						return p.col < s.length ? 0 : 2;
+					}
+					if (p.row < this.rowLength - 1) {
+						p.col = 0;
+						p.row++;
+						return 1;
+					}
+					return -1;
+				}
+				finally {
+					!pos && this.setSelectionRange(p);
+				}
+			},
+			dec: function (pos) {
+				var p = pos || this.selectionStart;
+				try {
+					if (p.col > 0) {
+						p.col--;
+						return 0;
+					}
+					if (p.row > 0) {
+						p.row--;
+						p.col = this.rows(p.row).length;
+						return 1;
+					}
+					return -1;
+				}
+				finally {
+					!pos && this.setSelectionRange(p);
+				}
+			},
+			incl: function (pos) {
+				var r = this.inc(pos);
+				return r >= 1 && pos.col ? this.inc(pos) : r;
+			},
+			decl: function (pos) {
+				var r = this.dec(pos);
+				return r == 1 && pos.col ? this.dec(pos) : r;
+			},
 
 			// setter
 			setRow: function (arg, text) {
@@ -2427,11 +2474,13 @@
 				var r = document.createRange();
 
 				if (s.row == e.row) {
-					r.setStart(this.elm.childNodes[s.row].firstChild, s.col);
-					r.setEnd(this.elm.childNodes[s.row].firstChild, e.col);
+					setRange.call(this, r, s);
+					setRange.call(this, r, e, true);
 					r.surroundContents(createSpan());
 				}
 				else {
+					// TODO: may use setRange instead of native method of 'r'.
+
 					// start
 					r.setStart(this.elm.childNodes[s.row].firstChild, s.col);
 					r.setEnd(this.elm.childNodes[s.row].firstChild, this.elm.childNodes[s.row].textContent.length);
@@ -5646,97 +5695,6 @@ flag23_loop:
 		};
 	};
 
-	/*constructor*/function TextBlockRegex () {
-		var paragraphs;
-		var sections;
-		var sentenceForwardRegex =  /[.!?][)\]"']*(?:[ \t]+|\n)|[^\n]\n(?=\n+)|\n\s*(?=\S)|$/g;
-		var sentenceBackwardRegex = /[.!?][)\]"']*(?:[ \t]+|\n)|[^\n]\n(?=\n+)|\n\s*(?=\S)|^/g;
-		var paragraphForwardRegex;
-		var paragraphBackwardRegex;
-		var sectionForwardRegex;
-		var sectionBackwardRegex;
-
-		function getRegexFragment (m) {
-			var result = [];
-			m.replace(/..?/g, function ($0) {
-				result.push($0.replace(/^\s+|\s+$/g, ''));
-				return $0;
-			})
-			return result.join('|');
-		}
-
-		function getSentenceForward () {
-			return sentenceForwardRegex;
-		}
-		function getSentenceBackward () {
-			return sentenceBackwardRegex;
-		}
-		function getParagraphForward () {
-			if (!paragraphForwardRegex) {
-				// /[^\n]\n(?=\n+)|\n(?=\.(?:IP|LP|PP|QP|P|LI|pp|lp|ip|bp)\b)|$/g;
-				var section = getSectionForward();
-				var s = getRegexFragment(paragraphs);
-				var r = '[^\\n]\\n(?=\\n+)|\\n(?=\\.(?:' + s + ')\\b)|' + section.source;
-				paragraphForwardRegex = new RegExp(r, 'g');
-			}
-			return paragraphForwardRegex;
-		}
-		function getParagraphBackward () {
-			if (!paragraphBackwardRegex) {
-				// /[^\n](?:\n+)(?=\n)|\n(?=\.(?:IP|LP|PP|QP|P|LI|pp|lp|ip|bp)\b)|^/g;
-				var section = getSectionBackward();
-				var s = getRegexFragment(paragraphs);
-				var r = '[^\\n](?:\\n+)(?=\\n)|\\n(?=\\.(?:' + s + ')\\b)|' + section.source;
-				paragraphBackwardRegex = new RegExp(r, 'g');
-			}
-			return paragraphBackwardRegex;
-		}
-		function getSectionForward () {
-			if (!sectionForwardRegex) {
-				// /\n(?=\f|\{)|\n(?=\.(?:NH|SH|H|HU|nh|sh)\b)|$/g
-				var s = getRegexFragment(sections);
-				var r = '\\n(?=\\f|\\{)|\\n(?=\\.(?:' + s + ')\\b)|$';
-				sectionForwardRegex = new RegExp(r, 'g');
-			}
-			return sectionForwardRegex;
-		}
-		function getSectionBackward () {
-			if (!sectionBackwardRegex) {
-				// /\n(?=\f|\{)|\n(?=\.(?:NH|SH|H|HU|nh|sh)\b)|^/g
-				var s = getRegexFragment(sections);
-				var r = '\\n(?=\\f|\\{)|\\n(?=\\.(?:' + s + ')\\b)|^';
-				sectionBackwardRegex = new RegExp(r, 'g');
-			}
-			return sectionBackwardRegex;
-		}
-
-		function setParagraphMacros (m) {
-			if (!/^[a-zA-Z ]+$/.test(m)) {
-				throw new Error(_('Invalid paragraph format: {0}', m));
-			}
-			paragraphs = m;
-			paragraphForwardRegex = paragraphBackwardRegex =
-			sectionForwardRegex = sectionBackwardRegex = null;
-		}
-		function setSectionMacros (m) {
-			if (!/^[a-zA-Z ]+$/.test(m)) {
-				throw new Error(_('Invalid section format: {0}', m));
-			}
-			sections = m;
-			sectionForwardRegex = sectionBackwardRegex = null;
-		}
-
-		this.__defineGetter__('sentenceForward', getSentenceForward);
-		this.__defineGetter__('sentenceBackward', getSentenceBackward);
-		this.__defineGetter__('paragraphForward', getParagraphForward);
-		this.__defineGetter__('paragraphBackward', getParagraphBackward);
-		this.__defineGetter__('sectionForward', getSectionForward);
-		this.__defineGetter__('sectionBackward', getSectionBackward);
-
-		this.setParagraphMacros = setParagraphMacros;
-		this.setSectionMacros = setSectionMacros;
-	}
-
 	/*constructor*/function PairBracketsIndicator (c, t, n) {
 		var timer;
 		var count;
@@ -5786,14 +5744,16 @@ flag23_loop:
 		timer = setTimeout(init, 1);
 	}
 	PairBracketsIndicator.getObject = function (c, t) {
-		if (c != '' && BRACKETS.substring(BRACKETS.length / 2).indexOf(c) >= 0) {
+		if (c != '' && CLOSE_BRACKETS.indexOf(c) >= 0) {
 			var result = motionFindMatchedBracket('', t, 1, c);
 			if (result) {
 				return new PairBracketsIndicator(c, t, result);
 			}
+			/*
 			else {
 				requestRegisterNotice(_('Cannot find pair bracket.'));
 			}
+			*/
 		}
 		return null;
 	};
@@ -5872,6 +5832,545 @@ flag23_loop:
 		};
 
 		init();
+	}
+
+	// almost methods in this class are ported from search.c of vim.
+	/*constructor*/function SearchUtils (editor) {
+		var spaces = /[ \t]/;
+		var paragraphs;
+		var sections;
+
+		function findNextQuote (line, col, quoteChar, escapeChar) {
+			for (var goal = line.length; col < goal; col++) {
+				var c = line.charAt(col);
+				if (c == escapeChar) {
+					col++;
+				}
+				else if (c == quoteChar) {
+					return col;
+				}
+			}
+			return -1;
+		}
+		function findPrevQuote (line, col, quoteChar, escapeChar) {
+			while (col-- > 0) {
+				var n = 0;
+				while (col - n > 0 && line.charAt(col - n - 1) == escapeChar) {
+					n++;
+				}
+				if (n & 1) {
+					col -= n;
+				}
+				else if (line.charAt(col) == quoteChar) {
+					return col;
+				}
+			}
+			return 0;
+		}
+		function getSimpleCharClass (n, bigword) {
+			n || (n = editor.selectionStart);
+			var c = editor.charAt(n);
+			if (spaces.test(c)) return 0;
+			if (bigword) return 1;
+			if (config.vars.iskeyword.test(c)) return 2;
+			return editor.charClassAt(n);
+		}
+		function backToBoundary (bigword) {
+			var n = editor.selectionStart;
+			var sclass = getSimpleCharClass(n, bigword);
+			while (true) {
+				if (n.col == 0) break;
+				n.col--;
+				if (getSimpleCharClass(n, bigword) != sclass) {
+					n.col++;
+					break;
+				}
+			}
+			editor.setSelectionRange(n);
+		}
+		function findFirstBlank (pos) {
+			while (editor.decl(pos) != -1) {
+				if (spaces.test(editor.charAt(pos || editor.selectionStart))) {
+					editor.incl(pos);
+					break;
+				}
+			}
+		}
+		function findSentenceForward (count, atStartSent) {
+			while (count--) {
+				findSentenceBoundary(1, true);
+				if (atStartSent) {
+					findFirstBlank();
+				}
+				if (count == 0 || atStartSent) {
+					editor.decl();
+				}
+				atStartSent = !atStartSent;
+			}
+		}
+		function isInMacro (macros, s) {
+			for (var i = 0, goal = macros.length; i < goal; i++) {
+				var macro = macros[i];
+				if (macro == '') continue;
+
+				var s0 = s.charAt(1);
+				var s1 = s.charAt(2);
+				var matched1  = macro.charAt(0) == s0;
+				var matched1s = macro.charAt(0) == ' ' && /^ ?$/.test(s0);
+				var matched2  = macro.charAt(1) == s1;
+				var matched2s = /^ ?$/.test(macro.charAt(1)) && (s0 == '' || /^ ?$/.test(s1));
+				if ((matched1 || matched1s) || (matched2 || matched2s)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		function isStartOfParagraphOrSection (pos, para, both) {
+			var s = editor.rows(pos);
+			para || (para = '');
+			both = !!both;
+			switch (s.charAt(0)) {
+			case para: case '\u240c'/*form-feed-picture*/:
+				return true;
+			case '}':
+				return both;
+			case '.':
+				return isInMacro(getSections(), s)
+					|| !para && isInMacro(getParagraphs(), s);
+			}
+			return false;
+		}
+		function isWhiteCharOnly (pos) {
+			return /^[ \t]*$/.test(editor.rows(pos));
+		}
+		function getSections () {
+			if (!sections) {
+				try {
+					setSectionMacros(config.vars.sections);
+				}
+				catch (e) {
+					sections = [];
+				}
+			}
+			return sections;
+		}
+		function getParagraphs () {
+			if (!paragraphs) {
+				try {
+					setParagraphMacros(config.vars.paragraphs);
+				}
+				catch (e) {
+					paragraphs = [];
+				}
+			}
+			return paragraphs;
+		}
+
+		/*
+		 * public methods
+		 */
+
+		function findSentenceBoundary (count, isForward, isFindOnly) {
+			var pos = editor.selectionStart;
+			var iter = isForward ? editor.incl : editor.decl;
+			var noSkip = false;
+
+			while (count--) {
+loop:			do {
+					if (editor.isNewline(pos)) {
+						do {
+							if (iter.call(editor, pos) == -1) break;
+						} while (editor.isNewline(pos));
+						if (isForward) break loop;
+					}
+					else if (isForward && pos.col == 0 && isStartOfParagraphOrSection(pos, null, false)) {
+						if (pos.row >= editor.rowLength - 1) {
+							return false;
+						}
+						pos.row++;
+						break loop;
+					}
+					else if (!isForward) {
+						editor.decl(pos);
+					}
+
+					var foundDot = false;
+					while (true) {
+						var c = editor.charAt(pos);
+						if (spaces.test(c) || (!isForward && /[.!?)\]"']/.test(editor.charAt(pos)))) {
+							if (/[.!?]/.test(c)) {
+								if (foundDot) break;
+								foundDot = true;
+							}
+							if (editor.decl(pos) == -1) break;
+							if (editor.isNewline(pos) && isForward) {
+								editor.incl(pos);
+								break loop;
+							}
+						}
+						else {
+							break;
+						}
+					}
+
+					//
+					var startRow = pos.row;
+					var cpo_J = true;
+					while (true) {
+						var c = editor.charAt(pos);
+						if (editor.isNewline(pos)
+						|| pos.col == 0 && isStartOfParagraphOrSection(pos, null, false)) {
+							if (!isForward && pos.row != startRow) {
+								pos.row++;
+							}
+							break;
+						}
+						if (/[.!?]/.test(c)) {
+							var tpos = pos.clone();
+							while (true) {
+								c = editor.inc(tpos);
+								if (c == -1) break;
+								c = editor.charAt(tpos);
+								if (!/[)\]"']/.test(c)) break;
+							}
+
+							if (c === -1 || editor.isNewline(tpos)
+							|| !cpo_J && spaces.test(c)
+							|| cpo_J && (c == ' ' && editor.inc(tpos) >= 0 && editor.charAt(tpos) == ' ')) {
+								pos = tpos;
+								editor.isNewline(pos) && editor.inc(pos);
+								break;
+							}
+						}
+						if (iter.call(editor, pos) == -1) {
+							if (count) return false;
+							noSkip = true;
+							break;
+						}
+					}
+				} while (false);
+
+				//
+				if (!noSkip) {
+					while (spaces.test(editor.charAt(pos))) {
+						if (editor.incl(pos) == -1) break;
+					}
+				}
+			}
+
+			!isFindOnly && editor.setSelectionRange(pos);
+			return pos;
+		}
+		function findParagraphBoundary (count, isForward, isFindOnly, what, both) {
+			var pos = editor.selectionStart;
+			var posix = true;
+			var dir = isForward ? 1 : -1;
+			pos.col = 0;
+			while (count--) {
+				var skipped = false;
+				for (var first = true; ; first = false) {
+					if (!editor.isNewline(pos)) {
+						skipped = true;
+					}
+					if (!first && skipped) {
+						if (isStartOfParagraphOrSection(pos, what, both)
+						||  posix && !what && editor.rows(pos).charAt(0) == '{') {
+							break;
+						}
+					}
+					pos.row += dir;
+					if (pos.row < 0 || pos.row >= editor.rowLength) {
+						if (count) return false;
+						pos.row -= dir;
+						break;
+					}
+				}
+			}
+			if (both && editor.rows(pos).charAt(0) == '}') {
+				pos.row++;
+			}
+			if (pos.row >= editor.rowLength - 1 && what != '}') {
+				pos.col = editor.rows(pos).length;
+				if (pos.col != 0) {
+					pos.col--;
+				}
+			}
+			else {
+				pos.col = 0;
+			}
+
+			!isFindOnly && editor.setSelectionRange(pos);
+			return pos;
+		}
+		function quote (count, quoteChar, includeAnchor, escapeChar) {
+			var line = editor.rows(editor.selectionStartRow);
+			var colStart = editor.selectionStartCol;
+			var colEnd;
+			if (line.charAt(colStart) == quoteChar) {
+				var firstCol = colStart;
+				colStart = 0;
+				while (true) {
+					colStart = findNextQuote(line, colStart, quoteChar);
+					if (colStart < 0 || colStart > firstCol) return false;
+
+					colEnd = findNextQuote(line, colStart + 1, quoteChar, escapeChar);
+					if (colEnd < 0) return false;
+
+					if (colStart <= firstCol && firstCol <= colEnd) break;
+
+					colStart = colEnd + 1;
+				}
+			}
+			else {
+				colStart = findPrevQuote(line, colStart, quoteChar, escapeChar);
+				if (line.charAt(colStart) != quoteChar) {
+					colStart = findNextQuote(line, colStart, quoteChar);
+					if (colStart < 0) return false;
+				}
+
+				colEnd = findNextQuote(line, colStart + 1, quoteChar, escapeChar);
+				if (colEnd < 0) return false;
+			}
+			if (includeAnchor) {
+				if (spaces.test(line.charAt(colEnd + 1))) {
+					while (spaces.test(line.charAt(colEnd + 1))) {
+						colEnd++;
+					}
+				}
+				else {
+					while (colStart > 0 && spaces.test(line.charAt(colStart - 1))) {
+						colStart--;
+					}
+				}
+			}
+			if (!includeAnchor && count < 2) {
+				colStart++;
+			}
+			if (includeAnchor || count >= 2) {
+				colEnd++;
+			}
+			var row = editor.selectionStartRow;
+			editor.setSelectionRange(new Position(row, colStart), new Position(row, colEnd));
+			return true;
+		}
+		function word (count, bigword, includeAnchor) {
+			bigword = bigword == 'W';
+			backToBoundary(bigword);
+			if (includeAnchor) {
+				if (getSimpleCharClass(null, bigword) == 0) {
+					motionNextWord('', editor, count, bigword, true);
+					motionRight('', editor, 1);
+				}
+				else {
+					motionNextWord('', editor, count, bigword);
+				}
+			}
+			else {
+				if (getSimpleCharClass(null, bigword) == 0) {
+					motionNextWord('', editor, 1);
+					editor.setSelectionRange(editor.selectionEnd);
+				}
+				motionNextWord('', editor, count, bigword, true);
+				if (editor.selectionStartRow != editor.selectionEndRow
+				||  editor.selectionEndCol - editor.selectionStartCol != 1) {
+					motionRight('', editor, 1);
+				}
+			}
+			return true;
+		}
+		function block (count, what, over, includeAnchor) {
+			if (editor.charAt(editor.selectionStart) == what) {
+				motionRight('', editor, 1);
+				editor.setSelectionRange(editor.selectionEnd);
+			}
+			var origPos = editor.selectionStart;
+			var startPos, endPos;
+			do {
+				startPos = motionFindMatchedBracket('', editor, count, over);
+				if (!startPos) break;
+
+				editor.setSelectionRange(startPos);
+				endPos = motionFindMatchedBracket('', editor, count);
+				if (!endPos) break;
+
+				if (includeAnchor) {
+					endPos = editor.rightPos(endPos);
+				}
+				else {
+					startPos = editor.rightPos(startPos);
+				}
+			} while (false);
+
+			if (startPos && endPos) {
+				editor.setSelectionRange(startPos, endPos);
+				return true;
+			}
+			else {
+				editor.setSelectionRange(origPos);
+				return false;
+			}
+		}
+		function sentence (count, includeAnchor) {
+			var startPos = editor.selectionStart;
+			var pos = startPos.clone();
+			var startBlank;
+
+			findSentenceBoundary(1, true);
+
+			while (spaces.test(editor.charAt(pos))) {
+				editor.incl(pos);
+			}
+
+			if (pos.eq(editor.selectionStart)) {
+				startBlank = true;
+				findFirstBlank(startPos);
+			}
+			else {
+				startBlank = false;
+				findSentenceBoundary(1, false);
+				startPos = editor.selectionStart;
+			}
+
+			var nCount = includeAnchor ? count * 2 : (count - (startBlank ? 1 : 0));
+			if (nCount > 0) {
+				findSentenceForward(nCount, true);
+			}
+			else {
+				editor.decl();
+			}
+
+			if (includeAnchor) {
+				if (startBlank) {
+					findFirstBlank();
+					if (spaces.test(editor.charAt(editor.selectionStart))) {
+						editor.decl();
+					}
+				}
+				else if (!spaces.test(editor.charAt(editor.selectionStart))) {
+					findFirstBlank(startPos);
+				}
+			}
+
+			editor.incl();
+			editor.setSelectionRange(startPos, editor.selectionStart);
+			return true;
+		}
+		function paragraph (count, includeAnchor) {
+			var startPos = new Position(editor.selectionStartRow, 0);
+			var whiteInFront = isWhiteCharOnly(startPos);
+
+			while (startPos.row > 0) {
+				var prevPos = new Position(startPos.row - 1, 0);
+				if (whiteInFront) {
+					if (!isWhiteCharOnly(prevPos)) break;
+				}
+				else {
+					if (isWhiteCharOnly(prevPos)
+					||  isStartOfParagraphOrSection(startPos, null, false)) break;
+				}
+				startPos.row--;
+				prevPos.row--;
+			}
+
+			var endPos = startPos.clone();
+			while (endPos.row < editor.rowLength && isWhiteCharOnly(endPos)) {
+				endPos.row++;
+			}
+			endPos.row--;
+
+			var nextPos = new Position(endPos.row + 1, 0);
+			for (var i = count - (!includeAnchor && whiteInFront ? 1 : 0); i--; ) {
+				var doWhite = false;
+
+				if (endPos.row >= editor.rowLength - 1) return false;
+				if (!includeAnchor) {
+					doWhite = isWhiteCharOnly(nextPos);
+				}
+				if (includeAnchor || !doWhite) {
+					endPos.row++;
+					nextPos.row++;
+					while (endPos.row < editor.rowLength - 1
+					&& !isWhiteCharOnly(nextPos)
+					&& !isStartOfParagraphOrSection(nextPos, null, false)) {
+						endPos.row++;
+						nextPos.row++;
+					}
+				}
+				if (i == 0 && whiteInFront && includeAnchor) break;
+				if (includeAnchor || doWhite) {
+					while (endPos.row < editor.rowLength - 1
+					&& isWhiteCharOnly(nextPos)) {
+						endPos.row++;
+						nextPos.row++;
+					}
+				}
+			}
+
+			if (!whiteInFront && !isWhiteCharOnly(endPos) && includeAnchor) {
+				var prevPos = new Position(startPos.row - 1, 0);
+				while (startPos.row > 0 && isWhiteCharOnly(prevPos)) {
+					startPos.row--;
+					prevPos.row--;
+				}
+			}
+
+			editor.setSelectionRange(startPos, endPos);
+			return true;
+		}
+		function dispatchRangeSymbol (count, targetChar, includeAnchor, escapeChar) {
+			switch (targetChar) {
+			case '"': case "'": case '`':
+				return quote.apply(null, arguments);
+
+			case '[': case ']':
+				return block(count, '[', ']', includeAnchor);
+			case '{': case '}': case 'B':
+				return block(count, '{', '}', includeAnchor);
+			case '<': case '>':
+				return block(count, '<', '>', includeAnchor);
+			case '(': case ')': case 'b':
+				return block(count, '(', ')', includeAnchor);
+
+			case 'w': case 'W':
+				return word.apply(null, arguments);
+
+			case 'p':
+				return paragraph(count, includeAnchor);
+			case 's':
+				return sentence(count, includeAnchor);
+			case 't':
+				return false; // not implemented
+			}
+		}
+		function setParagraphMacros (m) {
+			if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {
+				throw new Error(_('Invalid paragraph format: {0}', m));
+			}
+			paragraphs = [];
+			m.replace(/../g, function (a) {paragraphs.push(a);});
+		}
+		function setSectionMacros (m) {
+			if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {
+				throw new Error(_('Invalid section format: {0}', m));
+			}
+			sections = [];
+			m.replace(/../g, function (a) {sections.push(a);});
+		}
+		function dispose () {
+			editor = null;
+		}
+
+		this.quote = quote;
+		this.word = word;
+		this.block = block;
+		this.sentence = sentence;
+		this.paragraph = paragraph;
+		this.dispatchRangeSymbol = dispatchRangeSymbol;
+		this.setParagraphMacros = setParagraphMacros;
+		this.setSectionMacros = setSectionMacros;
+		this.findSentenceBoundary = findSentenceBoundary;
+		this.findParagraphBoundary = findParagraphBoundary;
+		this.dispose = dispose;
 	}
 
 	/*
@@ -6199,7 +6698,7 @@ flag23_loop:
 		return String.fromCharCode(code);
 	}
 	function toNativeControl (s) {
-		return s.replace(/[\u2400-\u243f]/g, function (a) {
+		return s.replace(/[\u2400-\u241f]/g, function (a) {
 			return String.fromCharCode(a.charCodeAt(0) & 0x00ff);
 		}).replace(/\u2421/g, '\u007f');
 	}
@@ -6287,39 +6786,6 @@ flag23_loop:
 		r.selectNodeContents($(node));
 		r.deleteContents();
 		r.detach();
-	}
-	function fireEvent (eventName, payload) {
-		if (!extensionChannel) return;
-		payload || (payload = {});
-		payload.type = 'wasavi-' + eventName;
-		extensionChannel.postMessage({
-			type:'notify-to-parent',
-			parentTabId:targetElement.parentTabId,
-			payload:payload
-		});
-	}
-	function fireCommandCompleteEvent (eventName) {
-		if (testMode) {
-			eventName || (eventName = 'command-completed');
-			var pt = Wasavi.positionTop;
-			fireEvent(eventName, {
-				state:{
-					running:    Wasavi.running,
-					state:      Wasavi.state,
-					inputMode:  Wasavi.inputMode,
-					lastMessage:Wasavi.lastMessage,
-					value:      Wasavi.value,
-					row:        Wasavi.row,
-					col:        Wasavi.col,
-					topRow:     pt.row,
-					topCol:     pt.col,
-					rowLength:  Wasavi.rowLength,
-					registers:  registers.dumpData(),
-					marks:      marks.dumpData(),
-					lines:      config.vars.lines
-				}
-			});
-		}
 	}
 
 	/*
@@ -6867,7 +7333,6 @@ flag23_loop:
 		inputModeSub = '';
 		prefixInput = new PrefixInput;
 		idealWidthPixels = -1;
-		backlog = new Backlog(conwincnt, conwin, conscaler);
 		isTextDirty = false;
 		isEditCompleted = false;
 		isVerticalMotion = false;
@@ -6891,6 +7356,8 @@ flag23_loop:
 		scroller = new Scroller(editor, cursor, footerDefault);
 		editLogger = new EditLogger(editor, config.vars.undolevels);
 		exCommandExecutor = new ExCommandExecutor(editor, true);
+		backlog = new Backlog(conwincnt, conwin, conscaler);
+		searchUtils = new SearchUtils(editor);
 		config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 		refreshIdealWidthPixels(editor);
@@ -6944,6 +7411,9 @@ flag23_loop:
 
 		backlog.dispose();
 		backlog = null;
+
+		searchUtils.dispose();
+		searchUtils = null;
 
 		lastHorzFindCommand = null;
 		lastRegexFindCommand = null;
@@ -8240,6 +8710,39 @@ flag23_loop:
 		}
 		return result;
 	}
+	function fireEvent (eventName, payload) {
+		if (!extensionChannel) return;
+		payload || (payload = {});
+		payload.type = 'wasavi-' + eventName;
+		extensionChannel.postMessage({
+			type:'notify-to-parent',
+			parentTabId:targetElement.parentTabId,
+			payload:payload
+		});
+	}
+	function fireCommandCompleteEvent (eventName) {
+		if (testMode) {
+			eventName || (eventName = 'command-completed');
+			var pt = Wasavi.positionTop;
+			fireEvent(eventName, {
+				state:{
+					running:    Wasavi.running,
+					state:      Wasavi.state,
+					inputMode:  Wasavi.inputMode,
+					lastMessage:Wasavi.lastMessage,
+					value:      Wasavi.value,
+					row:        Wasavi.row,
+					col:        Wasavi.col,
+					topRow:     pt.row,
+					topCol:     pt.col,
+					rowLength:  Wasavi.rowLength,
+					registers:  registers.dumpData(),
+					marks:      marks.dumpData(),
+					lines:      config.vars.lines
+				}
+			});
+		}
+	}
 
 	/*
 	 * low-level functions for editor functionality {{{1
@@ -8794,36 +9297,54 @@ flag23_loop:
 			var depth = 0;
 			var prevn = n;
 			n = t.rightPos(n);
-			while (!t.isEndOfText(n) && n.ne(prevn)) {
-				switch (t.charAt(n)) {
-				case current:
-					depth++;
-					break;
-				case match:
-					if (depth == 0) return n;
-					depth--;
-					break;
+			if (current == match) {
+				while (!t.isEndOfText(n) && n.ne(prevn)) {
+					if (t.charAt(n) == match) return n;
+					prevn = n;
+					n = t.rightPos(n);
 				}
-				prevn = n;
-				n = t.rightPos(n);
+			}
+			else {
+				while (!t.isEndOfText(n) && n.ne(prevn)) {
+					switch (t.charAt(n)) {
+					case current:
+						depth++;
+						break;
+					case match:
+						if (depth == 0) return n;
+						depth--;
+						break;
+					}
+					prevn = n;
+					n = t.rightPos(n);
+				}
 			}
 		}
 		function findMatchBackward (current, match) {
 			var depth = 0;
 			var prevn = n;
 			n = t.leftPos(n);
-			while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
-				switch (t.charAt(n)) {
-				case current:
-					depth++;
-					break;
-				case match:
-					if (depth == 0) return n;
-					depth--;
-					break;
+			if (current == match) {
+				while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
+					if (t.charAt(n) == match) return n;
+					prevn = n;
+					n = t.leftPos(n);
 				}
-				prevn = n;
-				n = t.leftPos(n);
+			}
+			else {
+				while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
+					switch (t.charAt(n)) {
+					case current:
+						depth++;
+						break;
+					case match:
+						if (depth == 0) return n;
+						depth--;
+						break;
+					}
+					prevn = n;
+					n = t.leftPos(n);
+				}
 			}
 		}
 
@@ -8834,9 +9355,9 @@ flag23_loop:
 		var currentIndex;
 
 		if (closeBracket) {
-			currentIndex = BRACKETS.indexOf(closeBracket);
-			if (currentIndex < BRACKETS.length / 2) {
-				currentIndex = -1;
+			currentIndex = BRACKETS.substring(BRACKETS.length / 2).indexOf(closeBracket);
+			if (currentIndex >= 0) {
+				currentIndex += BRACKETS.length / 2;
 			}
 		}
 		else {
@@ -9649,7 +10170,6 @@ flag23_loop:
 	var keyManager = new KeyManager;
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
-	var textBlockRegex = new TextBlockRegex;
 	var abbrevs = {};
 	var eventHandlers = {onSaved:null};
 	var config = new Configurator(
@@ -9669,7 +10189,7 @@ flag23_loop:
 			new VariableItem('mesg', 'b', true),          // not used
 			new VariableItem('number', 'b', false),       // O
 			new VariableItem('paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
-				textBlockRegex.setParagraphMacros(v);
+				searchUtils && searchUtils.setParagraphMacros(v);
 				return v;
 			}),                                           // O
 			new VariableItem('prompt', 'b', true),        // O
@@ -9679,7 +10199,7 @@ flag23_loop:
 			new VariableItem('report', 'i', 5),           // O
 			new VariableItem('scroll', 'i', 0),           // O
 			new VariableItem('sections', 's', 'NHSHH HUnhsh', function (v) {
-				textBlockRegex.setSectionMacros(v);
+				searchUtils && searchUtils.setSectionMacros(v);
 				return v;
 			}),                                           // O
 			new VariableItem('shell', 's', '/bin/sh'),    // not used
@@ -9734,6 +10254,7 @@ flag23_loop:
 				}
 				return v;
 			}),                                           // O
+			new VariableItem('quoteescape', 's', '\\'),   // O
 
 			/* defined by nvi */
 			//new VariableItem('altwerase', 'b', false),
@@ -9797,6 +10318,12 @@ flag23_loop:
 			wi: 'window',			wl: 'wraplen',		wm: 'wrapmargin',
 			ws: 'wrapscan',
 
+			isk: 'iskeyword',
+			incsearch: 'searchincr', is: 'searchincr',
+			scs: 'smartcase',
+			ul: 'undolevels',
+			qe: 'quoteescape',
+
 			fs: 'fullscreen'
 		}
 	);
@@ -9842,6 +10369,7 @@ flag23_loop:
 	var backlog;
 	var pairBracketsIndicator;
 	var exCommandExecutor;
+	var searchUtils;
 
 	var isTextDirty;
 	var isEditCompleted;
@@ -9899,11 +10427,11 @@ flag23_loop:
 		 * operators
 		 */
 
-		'c': {
+		c: {
 			'command': operationDefault,
 			'@op': function (c, t) {
 				if (c == prefixInput.operation) {
-					this['_'].apply(this, arguments);
+					this._.apply(this, arguments);
 				}
 				if (requestedState.notice) {
 					return;
@@ -9969,11 +10497,11 @@ flag23_loop:
 				return startEdit(c, t);
 			}
 		},
-		'd': {
+		d: {
 			'command': operationDefault,
 			'@op': function (c, t) {
 				if (c == prefixInput.operation) {
-					this['_'].apply(this, arguments);
+					this._.apply(this, arguments);
 				}
 				if (requestedState.notice) {
 					return;
@@ -10022,7 +10550,7 @@ flag23_loop:
 				return true;
 			}
 		},
-		'y': {
+		y: {
 			'command': operationDefault,
 			'@op': function (c, t) {
 				var ss = t.selectionStart;
@@ -10030,7 +10558,7 @@ flag23_loop:
 				var origin = ss.lt(se) ? ss : se;
 
 				if (c == prefixInput.operation) {
-					this['_'].apply(this, arguments);
+					this._.apply(this, arguments);
 				}
 				if (requestedState.notice) {
 					return;
@@ -10058,7 +10586,7 @@ flag23_loop:
 			'command': operationDefault,
 			'@op': function (c, t) {
 				if (c == prefixInput.operation) {
-					this['_'].apply(this, arguments);
+					this._.apply(this, arguments);
 				}
 				if (requestedState.notice) {
 					return;
@@ -10086,7 +10614,7 @@ flag23_loop:
 			'command': operationDefault,
 			'@op': function (c, t, opts) {
 				if (c == prefixInput.operation) {
-					this['_'].apply(this, arguments);
+					this._.apply(this, arguments);
 				}
 				if (requestedState.notice) {
 					return;
@@ -10116,35 +10644,35 @@ flag23_loop:
 		 */
 
 		// C: change to the end of the line (equivalents to c$)
-		'C': function (c, t, o) {
+		C: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
-				this['$']('', t);
+				this.$('', t);
 				isVerticalMotion = false;
 				prefixInput.operation = c;
-				return this['c']['@op'].call(this, '', t);
+				return this.c['@op'].call(this, '', t);
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// D: delete the characters to the end of the line (equivalents to d$)
-		'D': function (c, t, o) {
+		D: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
-				this['$']('', t);
+				this.$('', t);
 				isVerticalMotion = false;
 				prefixInput.operation = c;
-				return this['d']['@op'].call(this, '', t);
+				return this.d['@op'].call(this, '', t);
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// Y: yank the lines (equivalents to yy)
-		'Y': function (c, t, o) {
+		Y: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
-				return this['y']['@op'].call(this, c, t);
+				return this.y['@op'].call(this, c, t);
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
@@ -10194,7 +10722,7 @@ flag23_loop:
 			return motionLineEnd(c, t);
 		},
 		'<end>': function (c, t) {
-			return this['$'].apply(this, arguments);
+			return this.$.apply(this, arguments);
 		},
 		// jump to matching <, (, {, or [
 		'%': function (c, t, o) {
@@ -10268,7 +10796,7 @@ flag23_loop:
 			return result;
 		},
 		// down, line orient
-		'_': function (c, t) {
+		_: function (c, t) {
 			var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
 			count > 1 && motionDown(c, t, count - 1);
 			t.extendSelectionTo(t.getLineTopOffset2(t.selectionEnd));
@@ -10444,43 +10972,56 @@ flag23_loop:
 		// back an sentence
 		'(': function (c, t) {
 			prefixInput.motion = c;
-			marks.set('\'', t.selectionStart);
-			motionBackwardBlock(
-				c, t, prefixInput.count,
-				textBlockRegex.sentenceBackward
-			);
-			return true;
+			var pos = searchUtils.findSentenceBoundary(prefixInput.count, false, true);
+			if (pos) {
+				marks.set('\'', t.selectionStart);
+				t.selectionStart = pos;
+				return true;
+			}
+			else {
+				inputEscape(prefixInput.motion);
+			}
 		},
 		// forward an sentence
 		')': function (c, t) {
 			prefixInput.motion = c;
-			marks.set('\'', t.selectionStart);
-			motionForwardBlock(
-				c, t, prefixInput.count,
-				textBlockRegex.sentenceForward
-			);
-			return true;
+			var pos = searchUtils.findSentenceBoundary(prefixInput.count, true, true);
+			if (pos) {
+				marks.set('\'', t.selectionStart);
+				t.selectionEnd = pos;
+				return true;
+			}
+			else {
+				inputEscape(prefixInput.motion);
+			}
 		},
 		// back an paragraph
 		'{': function (c, t) {
 			prefixInput.motion = c;
-			motionBackwardBlock(
-				c, t, prefixInput.count,
-				textBlockRegex.paragraphBackward,
-				prefixInput.isEmptyOperation
-			);
-			return true;
+			var pos = searchUtils.findParagraphBoundary(prefixInput.count, false, true);
+			if (pos) {
+				marks.set('\'', t.selectionStart);
+				t.selectionStart = pos;
+				isVerticalMotion = prefixInput.isEmptyOperation;
+				return true;
+			}
+			else {
+				inputEscape(prefixInput.motion);
+			}
 		},
 		// forward an paragraph
 		'}': function (c, t) {
 			prefixInput.motion = c;
-			marks.set('\'', t.selectionStart);
-			motionForwardBlock(
-				c, t, prefixInput.count,
-				textBlockRegex.paragraphForward,
-				prefixInput.isEmptyOperation
-			);
-			return true;
+			var pos = searchUtils.findParagraphBoundary(prefixInput.count, true, true);
+			if (pos) {
+				marks.set('\'', t.selectionStart);
+				t.selectionEnd = pos;
+				isVerticalMotion = prefixInput.isEmptyOperation;
+				return true;
+			}
+			else {
+				inputEscape(prefixInput.motion);
+			}
 		},
 		// move to previous section
 		'[': {
@@ -10492,17 +11033,16 @@ flag23_loop:
 			'wait-a-letter': function (c, t) {
 				if (c == prefixInput.motion) {
 					prefixInput.appendMotion(c);
-					marks.set('\'', t.selectionStart);
-					motionBackwardBlock(
-						c, t, prefixInput.count,
-						textBlockRegex.sectionBackward,
-						prefixInput.isEmptyOperation
-					);
-					return true;
+					var pos = searchUtils.findParagraphBoundary(
+						prefixInput.count, false, true, '{', false);
+					if (pos) {
+						marks.set('\'', t.selectionStart);
+						t.selectionStart = t.getLineTopOffset2(pos);
+						isVerticalMotion = prefixInput.isEmptyOperation;
+						return true;
+					}
 				}
-				else {
-					inputEscape(prefixInput.motion);
-				}
+				inputEscape(prefixInput.motion);
 			}
 		},
 		// move to next section
@@ -10515,17 +11055,16 @@ flag23_loop:
 			'wait-a-letter': function (c, t) {
 				if (c == prefixInput.motion) {
 					prefixInput.appendMotion(c);
-					marks.set('\'', t.selectionStart);
-					motionForwardBlock(
-						c, t, prefixInput.count,
-						textBlockRegex.sectionForward,
-						prefixInput.isEmptyOperation
-					);
-					return true;
+					var pos = searchUtils.findParagraphBoundary(
+						prefixInput.count, true, true, '{', !prefixInput.isEmptyOperation);
+					if (pos) {
+						marks.set('\'', t.selectionStart);
+						t.selectionEnd = t.getLineTopOffset2(pos);
+						isVerticalMotion = prefixInput.isEmptyOperation;
+						return true;
+					}
 				}
-				else {
-					inputEscape(prefixInput.motion);
-				}
+				inputEscape(prefixInput.motion);
 			}
 		},
 		'\u000d'/*enter*/: function (c, t) {
@@ -10539,43 +11078,43 @@ flag23_loop:
 				return inputDigit(c, t);
 			}
 		},
-		'j': function (c, t) {
+		j: function (c, t) {
 			return motionDown(c, t, prefixInput.count);
 		},
 		'\u000e'/*^N*/: function (c, t) {
-			return this['j'].apply(this, arguments);
+			return this.j.apply(this, arguments);
 		},
 		'<down>': function (c, t) {
-			return this['j'].apply(this, arguments);
+			return this.j.apply(this, arguments);
 		},
-		'k': function (c, t) {
+		k: function (c, t) {
 			return motionUp(c, t, prefixInput.count);
 		},
 		'\u0010'/*^P*/: function (c, t) {
-			return this['k'].apply(this, arguments);
+			return this.k.apply(this, arguments);
 		},
 		'<up>': function (c, t) {
-			return this['k'].apply(this, arguments);
+			return this.k.apply(this, arguments);
 		},
-		'h': function (c, t) {
+		h: function (c, t) {
 			return motionLeft(c, t, prefixInput.count);
 		},
 		'<left>': function (c, t) {
-			return this['h'].apply(this, arguments);
+			return this.h.apply(this, arguments);
 		},
 		'\u0008'/*^H*/: function (c, t) {
-			return this['h'].apply(this, arguments);
+			return this.h.apply(this, arguments);
 		},
-		'l': function (c, t) {
+		l: function (c, t) {
 			return motionRight(c, t, prefixInput.count);
 		},
 		' ': function (c, t, opts) {
 			return this[opts.e.shift ? 'h' : 'l'].apply(this, arguments);
 		},
 		'<right>': function (c, t) {
-			return this['l'].apply(this, arguments);
+			return this.l.apply(this, arguments);
 		},
-		'w': function (c, t) {
+		w: function (c, t) {
 			if (prefixInput.operation == 'c') {
 				motionNextWord(c, t, prefixInput.count, false, true);
 				if (!t.isNewline(t.selectionEnd)) {
@@ -10587,7 +11126,7 @@ flag23_loop:
 				return motionNextWord(c, t, prefixInput.count, false);
 			}
 		},
-		'W': function (c, t) {
+		W: function (c, t) {
 			if (prefixInput.operation == 'c') {
 				motionNextWord(c, t, prefixInput.count, true, true);
 				if (!t.isNewline(t.selectionEnd)) {
@@ -10599,27 +11138,27 @@ flag23_loop:
 				return motionNextWord(c, t, prefixInput.count, true);
 			}
 		},
-		'b': function (c, t) {
+		b: function (c, t) {
 			motionPrevWord(c, t, prefixInput.count, false);
 			if (prefixInput.operation == 'c' && t.selectionEndCol == 0) {
 				t.selectionEnd = t.leftPos(t.selectionEnd);
 			}
 			return true;
 		},
-		'B': function (c, t) {
+		B: function (c, t) {
 			motionPrevWord(c, t, prefixInput.count, true);
 			if (prefixInput.operation == 'c' && t.selectionEndCol == 0) {
 				t.selectionEnd = t.leftPos(t.selectionEnd);
 			}
 			return true;
 		},
-		'e': function (c, t) {
+		e: function (c, t) {
 			return motionNextWord(c, t, prefixInput.count, false, true);
 		},
-		'E': function (c, t) {
+		E: function (c, t) {
 			return motionNextWord(c, t, prefixInput.count, true, true);
 		},
-		'g': {
+		g: {
 			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
@@ -10653,7 +11192,7 @@ flag23_loop:
 				return result;
 			}
 		},
-		'H': function (c, t) {
+		H: function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
 			var index = Math.min(v.top + prefixInput.count - 1, v.bottom, t.rowLength - 1);
 			marks.set('\'', t.selectionStart);
@@ -10663,7 +11202,7 @@ flag23_loop:
 			prefixInput.motion = c;
 			return true;
 		},
-		'M': function (c, t) {
+		M: function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
 			var index = v.top + parseInt(v.lines / 2);
 			marks.set('\'', t.selectionStart);
@@ -10673,7 +11212,7 @@ flag23_loop:
 			prefixInput.motion = c;
 			return true;
 		},
-		'L': function (c, t) {
+		L: function (c, t) {
 			var v = getCurrentViewPositionIndices(t);
 			var index = Math.max(v.bottom - prefixInput.count + 1, v.top, 0);
 			marks.set('\'', t.selectionStart);
@@ -10683,7 +11222,7 @@ flag23_loop:
 			prefixInput.motion = c;
 			return true;
 		},
-		'G': function (c, t) {
+		G: function (c, t) {
 			var index = prefixInput.isCountSpecified ?
 				Math.max(Math.min(prefixInput.count, t.rowLength), 1) : t.rowLength;
 			var n = new Position(index - 1, 0);
@@ -10703,7 +11242,7 @@ flag23_loop:
 			prefixInput.motion = c;
 			return true;
 		},
-		'f': {
+		f: {
 			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
@@ -10714,7 +11253,7 @@ flag23_loop:
 				return motionFindForward(c, t, prefixInput.count);
 			}
 		},
-		'F': {
+		F: {
 			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
@@ -10725,7 +11264,7 @@ flag23_loop:
 				return motionFindBackward(c, t, prefixInput.count);
 			}
 		},
-		't': {
+		t: {
 			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
@@ -10736,7 +11275,7 @@ flag23_loop:
 				return motionFindForward(c, t, prefixInput.count, true);
 			}
 		},
-		'T': {
+		T: {
 			'command': function (c, t, o) {
 				prefixInput.motion = c;
 				inputModeSub = 'wait-a-letter';
@@ -10748,7 +11287,7 @@ flag23_loop:
 			}
 		},
 		// search next match for current pattern
-		'n': function (c, t) {
+		n: function (c, t) {
 			if (registers.exists('/')) {
 				prefixInput.motion = c;
 				isSmoothScrollRequested = true;
@@ -10762,7 +11301,7 @@ flag23_loop:
 			}
 		},
 		// search previous match for current pattern
-		'N': function (c, t) {
+		N: function (c, t) {
 			if (registers.exists('/')) {
 				prefixInput.motion = c;
 				isSmoothScrollRequested = true;
@@ -10877,7 +11416,7 @@ flag23_loop:
 		//   z.    (center of the screen)
 		//   zz
 		//   z-    (bottom of the screen)
-		'z': {
+		z: {
 			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
@@ -10963,7 +11502,7 @@ flag23_loop:
 		 * edit commands
 		 */
 
-		'x': function (c, t, o) {
+		x: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -10974,9 +11513,9 @@ flag23_loop:
 			}
 		},
 		'\u007f'/*delete*/: function (c, t) {
-			return this['x'].apply(this, arguments);
+			return this.x.apply(this, arguments);
 		},
-		'X': function (c, t, o) {
+		X: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -10986,7 +11525,7 @@ flag23_loop:
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'p': function (c, t, o) {
+		p: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -10999,7 +11538,7 @@ flag23_loop:
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'P': function (c, t, o) {
+		P: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -11011,7 +11550,7 @@ flag23_loop:
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'J': function (c, t, o) {
+		J: function (c, t, o) {
 			if (prefixInput.isEmptyOperation && t.selectionStartRow + prefixInput.count <= t.rowLength - 1) {
 				prefixInput.operation = c;
 				requestSimpleCommandUpdate();
@@ -11047,7 +11586,7 @@ flag23_loop:
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'u': function (c, t, o) {
+		u: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				var result = editLogger.undo();
 				if (result === false) {
@@ -11079,7 +11618,7 @@ flag23_loop:
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'U': null,
+		U: null,
 		'~': function (c, t, o) {
 			if (prefixInput.isEmptyOperation && !t.selected) {
 				prefixInput.operation = c;
@@ -11110,7 +11649,7 @@ flag23_loop:
 			}
 		},
 		// marks
-		'm': {
+		m: {
 			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
@@ -11172,7 +11711,7 @@ flag23_loop:
 				return true;
 			}
 		},
-		'r': {
+		r: {
 			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
@@ -11191,65 +11730,72 @@ flag23_loop:
 				return true;
 			}
 		},
-		'a': function (c, t, o) {
+		a: {
+			'command': function (c, t, o) {
+				if (prefixInput.isEmptyOperation) {
+					requestSimpleCommandUpdate();
+					editLogger.open('edit-wrapper');
+					return startEdit(c, t, {
+						isAppend:c == 'a',
+						repeatCount:prefixInput.count});
+				}
+				else {
+					prefixInput.motion = c;
+					inputModeSub = 'wait-a-letter';
+					requestShowPrefixInput(_('{0}: range symbol', o.e.fullIdentifier));
+				}
+			},
+			'wait-a-letter': function (c, t, o) {
+				var result = searchUtils.dispatchRangeSymbol(
+					prefixInput.count, c,
+					prefixInput.motion == 'a',
+					config.vars.quoteescape);
+				if (result) {
+					prefixInput.appendMotion(c);
+				}
+				else {
+					inputEscape(o.e.fullIdentifier);
+				}
+				return result;
+			}
+		},
+		A: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
 				editLogger.open('edit-wrapper');
-				return startEdit(c, t, {isAppend:true, repeatCount:prefixInput.count});
+				return startEdit(c, t, {
+					isAppend:c == 'A',
+					isAlter:true,
+					repeatCount:prefixInput.count});
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'A': function (c, t, o) {
+		i: {
+			'command': function (c, t, o) {
+				return this.a.command.apply(this, arguments);
+			},
+			'wait-a-letter': function () {
+				return this.a['wait-a-letter'].apply(this, arguments);
+			}
+		},
+		I: function (c, t, o) {
+			return this.A.apply(this, arguments);
+		},
+		o: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				requestSimpleCommandUpdate();
-				editLogger.open('edit-wrapper');
-				return startEdit(c, t, {isAppend:true, isAlter:true, repeatCount:prefixInput.count});
+				return openLine(c, t, c == 'o');
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
-		'i': function (c, t, o) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				editLogger.open('edit-wrapper');
-				return startEdit(c, t, {repeatCount:prefixInput.count});
-			}
-			else {
-				inputEscape(o.e.fullIdentifier);
-			}
+		O: function (c, t, o) {
+			return this.o.apply(this, arguments);
 		},
-		'I': function (c, t, o) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				editLogger.open('edit-wrapper');
-				return startEdit(c, t, {isAlter:true, repeatCount:prefixInput.count});
-			}
-			else {
-				inputEscape(o.e.fullIdentifier);
-			}
-		},
-		'o': function (c, t, o) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return openLine(c, t, true);
-			}
-			else {
-				inputEscape(o.e.fullIdentifier);
-			}
-		},
-		'O': function (c, t, o) {
-			if (prefixInput.isEmptyOperation) {
-				requestSimpleCommandUpdate();
-				return openLine(c, t, false);
-			}
-			else {
-				inputEscape(o.e.fullIdentifier);
-			}
-		},
-		'R': function (c, t, o) {
+		R: function (c, t, o) {
 			if (prefixInput.isEmptyOperation && !t.selected) {
 				requestInputMode('edit-overwrite');
 				cursor.update({type:'edit-overwrite'});
@@ -11282,18 +11828,18 @@ flag23_loop:
 			}
 		},
 		// S: substitute text for whole lines (equivalents to cc)
-		'S': function (c, t, o) {
+		S: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				isVerticalMotion = true;
-				return this['c']['@op'].call(this, c, t);
+				return this.c['@op'].call(this, c, t);
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
 		},
 		// s: substitute characters
-		's': function (c, t, o) {
+		s: function (c, t, o) {
 			if (prefixInput.isEmptyOperation) {
 				editLogger.open('substitute');
 				deleteChars(t, prefixInput.count, true);
@@ -11306,7 +11852,7 @@ flag23_loop:
 		},
 		// equivalents to :x
 		//   ZZ
-		'Z': {
+		Z: {
 			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
@@ -11331,70 +11877,6 @@ flag23_loop:
 				prefixInput.appendOperation(c);
 			}
 		},
-
-		/*
-		 * ex commands prefix
-		 *
-		 * adopted
-		 * for wasavi  full spell        syntax
-		 * ==========  ================  ========================
-		 * O           abbreviate        ab[breviate] [lhs rhs]
-		 * ?           append            [1addr] a[ppend][!]
-		 *             args              [ar]gs
-		 *             cd                cd[!][directory]
-		 * ?           change            [2addr] c[hange][!]
-		 *             chdir             chd[ir][!][directory]
-		 * O           copy              [2addr] co[py] 1addr [flags]
-		 * O           delete            [2addr] d[elete][buffer][count][flags]
-		 *             edit              e[edit]![+command][file]
-		 *             ex                ex[!][+command][file]
-		 *             file              f[ile][file]
-		 * O           global            [2addr] g[lobal] /pattern/ [commands]
-		 * ?           insert            [1addr] i[nsert][!]
-		 * O           join              [2addr] j[oin][!][count][flags]
-		 * O           k                 [1addr] k character
-		 *             list              [2addr] l[ist][count][flags]
-		 * O           map               map[!][lhs rhs]
-		 * O           mark              [1addr] ma[rk] character
-		 * O           move              [2addr] m[ove] 1addr [flags]
-		 *             next              n[ext][!][+command][file ...]
-		 *             open              [1addr] o[open] /pattern/ [flags]
-		 *             preserve          pre[serve]
-		 * O           print             [2addr] p[rint][count][flags]
-		 * O           put               [1addr] pu[t][buffer]
-		 * O           quit              q[uit][!]
-		 *             read              [1addr] r[ead][!][file]
-		 *             recover           rec[over][!] file
-		 *             rewind            rew[ind][!]
-		 * O           set               se[t][option[=[value]] ...][nooption ...][option? ...][all]
-		 *             shell             sh[ell]
-		 *             source            so[urce] file
-		 *             stop              st[op][!]
-		 *             suspend           su[spend][!]
-		 * O           substitute        [2addr] s[ubstitute][/pattern/repl/[options][count][flags]]
-		 * O           &                 [2addr] &[options][count][flags]
-		 * O           ~                 [2addr] ~[options][count][flags]
-		 * O           to                [2addr] t[o] 1addr [flags]
-		 * O           unabbreviate      una[bbrev] lhs
-		 * O           undo              u[ndo]
-		 * O           unmap             unm[ap][!] lhs
-		 * O           v                 [2addr] v /pattern/ [commands]
-		 * O           version           ve[rsion]
-		 *             visual            [1addr] vi[sual][type][count][flags]
-		 * O           write             [2addr] w[rite][!][>>][file]
-		 * O           wq                [2addr] wq[!][>>][file]
-		 * O           xit               [2addr] x[it][!][file]
-		 * O           yank              [2addr] ya[nk][buffer][count]
-		 *             z                 [1addr] z[!][type ...][count][flags]
-		 * O           @                 [2addr] @ buffer
-		 * O           *                 [2addr] * buffer
-		 * O           |                 command separator
-		 * O           "                 comment
-		 *             =                 [1addr] =[flags]
-		 *             !                 [addr]! command
-		 * O           <                 [2addr] <[< ...][count][flags]
-		 * O           >                 [2addr] >[> ...][count][flags]
-		 */
 		':': {
 			'command': function (c, t, o) {
 				if (prefixInput.isEmptyOperation) {
