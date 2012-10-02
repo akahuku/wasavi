@@ -348,6 +348,10 @@
 		"message": "{1} 行内を {0} 回置換しました。",
 		"description": "{0} {substitution:0} on {1} {line:1}."
 	},
+	"cannot_find_pair_bracket": {
+		"message": "対応するかっこが見つかりません。",
+		"description": "Cannot find pair bracket."
+	},
 	"invalid_paragraph_format_@0": {
 		"message": "段落の書式が不正: {0}",
 		"description": "Invalid paragraph format: {0}"
@@ -355,10 +359,6 @@
 	"invalid_section_format_@0": {
 		"message": "セクションの書式が不正: {0}",
 		"description": "Invalid section format: {0}"
-	},
-	"cannot_find_pair_bracket": {
-		"message": "対応するかっこが見つかりません。",
-		"description": "Cannot find pair bracket."
 	},
 	"all": {
 		"message": "全て",
@@ -527,6 +527,10 @@
 	"@0_replace_a_char": {
 		"message": "{0}: 1 文字置き換え",
 		"description": "{0}: replace a char"
+	},
+	"@0_range_symbol": {
+		"message": "{0}: レンジシンボル",
+		"description": "{0}: range symbol"
 	},
 	"overwrite": {
 		"message": "--上書きモード--",

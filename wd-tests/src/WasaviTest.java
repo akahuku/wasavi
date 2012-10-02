@@ -410,7 +410,7 @@ public class WasaviTest {
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
 			System.out.println("Testcase: " + d.getMethodName());
-			isSectionTest = d.getMethodName().matches(".*(Sentence|Paragraph|Section).*");
+			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
 		}
 		protected void failed (Throwable e, Description d) {
 			System.out.println(d.getMethodName() + " FAILED\n" + logText);

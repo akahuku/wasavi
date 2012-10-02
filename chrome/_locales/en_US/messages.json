@@ -348,6 +348,10 @@
 		"message": "{0} {substitution:0} on {1} {line:1}.",
 		"description": "{0} {substitution:0} on {1} {line:1}."
 	},
+	"cannot_find_pair_bracket": {
+		"message": "Cannot find pair bracket.",
+		"description": "Cannot find pair bracket."
+	},
 	"invalid_paragraph_format_@0": {
 		"message": "Invalid paragraph format: {0}",
 		"description": "Invalid paragraph format: {0}"
@@ -355,10 +359,6 @@
 	"invalid_section_format_@0": {
 		"message": "Invalid section format: {0}",
 		"description": "Invalid section format: {0}"
-	},
-	"cannot_find_pair_bracket": {
-		"message": "Cannot find pair bracket.",
-		"description": "Cannot find pair bracket."
 	},
 	"all": {
 		"message": "All",
@@ -527,6 +527,10 @@
 	"@0_replace_a_char": {
 		"message": "{0}: replace a char",
 		"description": "{0}: replace a char"
+	},
+	"@0_range_symbol": {
+		"message": "{0}: range symbol",
+		"description": "{0}: range symbol"
 	},
 	"overwrite": {
 		"message": "--OVERWRITE--",

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 186 2012-09-30 14:49:47Z akahuku $
+ * @version $Id: wasavi.js 188 2012-10-02 08:41:40Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -104,8 +104,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 186 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 186 2012-09-30 14:49:47Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 188 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 188 2012-10-02 08:41:40Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -205,12 +205,10 @@
 			document.addEventListener('keydown', handleKeydown, true);
 			document.addEventListener('keypress', handleKeypress, true);
 		}
-
 		function uninstall () {
 			document.removeEventListener('keydown', handleKeydown, true);
 			document.removeEventListener('keypress', handleKeypress, true);
 		}
-
 		function addListener (handler) {
 			if (typeof handler != 'function') return;
 			var index = eventHandlers.indexOf(handler);
@@ -218,7 +216,6 @@
 				eventHandlers.push(handler);
 			}
 		}
-
 		function removeListener (handler) {
 			if (typeof handler != 'function') return;
 			var index = eventHandlers.indexOf(handler);
@@ -226,18 +223,15 @@
 				eventHandlers.splice(index, 1);
 			}
 		}
-
 		function dispose () {
 			eventHandlers = [];
 			uninstall();
 		}
-
 		function fire (e) {
 			eventHandlers.forEach(function (handler) {
 				handler(e);
 			});
 		}
-
 		function handleKeydown (e) {
 			if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
 			if (window.chrome) {
@@ -280,7 +274,6 @@
 				specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
 			}
 		}
-
 		function handleKeypress (e) {
 			e.preventDefault();
 
@@ -335,14 +328,12 @@
 				nativeIdentifier: e.keyIdentifier
 			});
 		}
-
 		function code2letter (c, useSpecial) {
 			if (typeof c != 'number') return '';
 			if (c >= 0) return String.fromCharCode(c);
 			if (useSpecial && specialKeys[-c]) return '<' + specialKeys[-c] + '>';
 			return '';
 		}
-
 		function keyName2code (name) {
 			name = name.replace(/^<|>$/g, '').toLowerCase();
 
@@ -352,11 +343,9 @@
 				}
 			}
 		}
-
 		function push (e) {
 			bufferedStrokes.push(e);
 		}
-
 		function sweep () {
 			if (bufferedStrokes.length == 0) return;
 
@@ -2051,11 +2040,13 @@
 			},
 			incl: function (pos) {
 				var r = this.inc(pos);
-				return r >= 1 && pos.col ? this.inc(pos) : r;
+				return r >= 1 && (pos && pos.col || !pos && this.selectionStartCol) ?
+					this.inc(pos) : r;
 			},
 			decl: function (pos) {
 				var r = this.dec(pos);
-				return r == 1 && pos.col ? this.dec(pos) : r;
+				return r == 1 && (pos && pos.col || !pos && this.selectionStartCol) ?
+					this.dec(pos) : r;
 			},
 
 			// setter
@@ -5890,7 +5881,7 @@ flag23_loop:
 		}
 		function findFirstBlank (pos) {
 			while (editor.decl(pos) != -1) {
-				if (spaces.test(editor.charAt(pos || editor.selectionStart))) {
+				if (!spaces.test(editor.charAt(pos || editor.selectionStart))) {
 					editor.incl(pos);
 					break;
 				}
@@ -5919,7 +5910,7 @@ flag23_loop:
 				var matched1s = macro.charAt(0) == ' ' && /^ ?$/.test(s0);
 				var matched2  = macro.charAt(1) == s1;
 				var matched2s = /^ ?$/.test(macro.charAt(1)) && (s0 == '' || /^ ?$/.test(s1));
-				if ((matched1 || matched1s) || (matched2 || matched2s)) {
+				if ((matched1 || matched1s) && (matched2 || matched2s)) {
 					return true;
 				}
 			}
@@ -6212,25 +6203,31 @@ loop:			do {
 		}
 		function sentence (count, includeAnchor) {
 			var startPos = editor.selectionStart;
-			var pos = startPos.clone();
-			var startBlank;
+			var startBlank = false;
 
+			//
 			findSentenceBoundary(1, true);
 
+			//
+			var pos = startPos.clone();
 			while (spaces.test(editor.charAt(pos))) {
 				editor.incl(pos);
 			}
-
 			if (pos.eq(editor.selectionStart)) {
-				startBlank = true;
-				findFirstBlank(startPos);
+				if (includeAnchor) {
+					startBlank = true;
+					findFirstBlank(startPos);
+				}
+				else {
+					startPos = editor.selectionStart;
+				}
 			}
 			else {
-				startBlank = false;
 				findSentenceBoundary(1, false);
 				startPos = editor.selectionStart;
 			}
 
+			//
 			var nCount = includeAnchor ? count * 2 : (count - (startBlank ? 1 : 0));
 			if (nCount > 0) {
 				findSentenceForward(nCount, true);
@@ -6239,6 +6236,7 @@ loop:			do {
 				editor.decl();
 			}
 
+			//
 			if (includeAnchor) {
 				if (startBlank) {
 					findFirstBlank();
@@ -6251,16 +6249,19 @@ loop:			do {
 				}
 			}
 
+			//
 			editor.incl();
 			editor.setSelectionRange(startPos, editor.selectionStart);
 			return true;
 		}
 		function paragraph (count, includeAnchor) {
+			var origPos = editor.selectionStart;
 			var startPos = new Position(editor.selectionStartRow, 0);
 			var whiteInFront = isWhiteCharOnly(startPos);
 
+			//
+			var prevPos = new Position(startPos.row - 1, 0);
 			while (startPos.row > 0) {
-				var prevPos = new Position(startPos.row - 1, 0);
 				if (whiteInFront) {
 					if (!isWhiteCharOnly(prevPos)) break;
 				}
@@ -6268,52 +6269,62 @@ loop:			do {
 					if (isWhiteCharOnly(prevPos)
 					||  isStartOfParagraphOrSection(startPos, null, false)) break;
 				}
-				startPos.row--;
-				prevPos.row--;
+				startPos.row--, prevPos.row--;
 			}
 
+			//
+			if (!includeAnchor && isWhiteCharOnly(startPos)) {
+				whiteInFront = false;
+				while (startPos.row < editor.rowLength - 1
+				&& isWhiteCharOnly(startPos)) {
+					startPos.row++;
+				}
+			}
+
+			//
 			var endPos = startPos.clone();
 			while (endPos.row < editor.rowLength && isWhiteCharOnly(endPos)) {
 				endPos.row++;
 			}
 			endPos.row--;
 
+			//
+			var doWhite = false;
 			var nextPos = new Position(endPos.row + 1, 0);
 			for (var i = count - (!includeAnchor && whiteInFront ? 1 : 0); i--; ) {
-				var doWhite = false;
-
 				if (endPos.row >= editor.rowLength - 1) return false;
 				if (!includeAnchor) {
 					doWhite = isWhiteCharOnly(nextPos);
 				}
 				if (includeAnchor || !doWhite) {
-					endPos.row++;
-					nextPos.row++;
+					endPos.row++, nextPos.row++;
 					while (endPos.row < editor.rowLength - 1
 					&& !isWhiteCharOnly(nextPos)
 					&& !isStartOfParagraphOrSection(nextPos, null, false)) {
-						endPos.row++;
-						nextPos.row++;
+						endPos.row++, nextPos.row++;
 					}
 				}
-				if (i == 0 && whiteInFront && includeAnchor) break;
+				if (i == 0 && whiteInFront && includeAnchor) {
+					break;
+				}
 				if (includeAnchor || doWhite) {
 					while (endPos.row < editor.rowLength - 1
 					&& isWhiteCharOnly(nextPos)) {
-						endPos.row++;
-						nextPos.row++;
+						endPos.row++, nextPos.row++;
 					}
 				}
 			}
 
+			//
 			if (!whiteInFront && !isWhiteCharOnly(endPos) && includeAnchor) {
 				var prevPos = new Position(startPos.row - 1, 0);
 				while (startPos.row > 0 && isWhiteCharOnly(prevPos)) {
-					startPos.row--;
-					prevPos.row--;
+					startPos.row--, prevPos.row--;
 				}
 			}
 
+			//
+			isVerticalMotion = true;
 			editor.setSelectionRange(startPos, endPos);
 			return true;
 		}
@@ -6977,105 +6988,104 @@ loop:			do {
 		// style
 		var styleElement = $('wasavi_global_styles');
 		styleElement.appendChild(document.createTextNode([
-			'body { visibility:visible; }',
-			'#wasavi_container {',
-			'  background-color:transparent;',
-			'  line-height:1;',
-			'  text-align:left;',
-			'  text-indent:0;',
-			'  text-decoration:none;',
-			'  text-shadow:none;',
-			'}',
-			'#wasavi_editor {',
-			'  display:block;',
-			'  margin:0;',
-			paddingStyle,
-			borderStyles,
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			fontStyle,
-			'  background:#fff url(' + otm + ') left top repeat-y;',
-			'  background-origin:content-box;',
-			'  overflow-x:hidden;',
-			'  overflow-y:scroll;',
-			'  counter-reset:n;',
-			'}',
-			'#wasavi_multiline_scaler {',
-			'  position:fixed;',
-			'  overflow:scroll;',
-			paddingStyle,
-			borderStyles,
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			fontStyle,
-			'  text-decoration:none;',
-			'  text-shadow:none;',
-			'  left:0px;',
-			'  bottom:0px;',
-			'  white-space:pre-wrap;',
-			'  overflow-x:auto;',
-			'  overflow-y:scroll;',
-			'  visibility:hidden;',
-			'  background-color:white;',
-			'}',
-			'#wasavi_singleline_scaler {',
-			'  position:fixed;',
-			'  margin:0;',
-			'  padding:0;',
-			fontStyle,
-			'  text-decoration:none;',
-			'  text-shadow:none;',
-			'  white-space:pre;',
-			'  color:#fff;',
-			'  background-color:#000;',
-			'  left:0px;',
-			'  top:0px;',
-			'  visibility:hidden',
-			'}',
-			'#wasavi_console_scaler {',
-			'  position:fixed;',
-			'  padding:0;',
-			'  border:none;',
-			'  font-family:' + fontFamily + ';',
-			'  font-size:10pt;',
-			'  left:0;',
-			'  top:0;',
-			'  white-space:pre-wrap;',
-			'  overflow-x:auto;',
-			'  color:#fff;',
-			'  background-color:#000;',
-			'  line-height:1;',
-			'  visibility:hidden',
-			'}',
-			'#wasavi_editor > div {',
-			'  margin:0;',
-			'  padding:0;',
-			'  min-height:' + lineHeight + 'px;',
-			'  white-space:pre-wrap;',
-			'  background-color:#fff;',
-			'  color:#000;',
-			'}',
-			'#wasavi_editor > div:nth-child(odd) {',
-			'  background-color:rgb(248,248,248);',
-			'}',
-			'#wasavi_editor > div > span.wasavi_em {',
-			'  color:highlighttext;',
-			'  background-color:highlight;',
-			'}',
-			'#wasavi_editor > div > span.wasavi_composition {',
-			'  color:#ffffee;',
-			'  background-color:#ffffee;',
-			'}',
-			'#wasavi_editor.n > div:before {',
-			'  display:block;',
-			'  float:left;',
-			'  margin:0;',
-			'  padding:0 ' + charWidth + 'px 0 0;',
-			'  text-align:right;',
-			'  color:#c00;',
-			'  background-color:#fff;',
-			fontStyle,
-			'  counter-increment:n;',
-			'  content:counter(n);',
-			'}',
+'body { visibility:visible; } \
+#wasavi_container { \
+  background-color:transparent; \
+  line-height:1; \
+  text-align:left; \
+  text-indent:0; \
+  text-decoration:none; \
+  text-shadow:none; \
+} \
+#wasavi_editor { \
+  display:block; \
+  margin:0; \
+' + paddingStyle + borderStyles + ' \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+' + fontStyle + ' \
+  background:#fff url(' + otm + ') left top repeat-y; \
+  background-origin:content-box; \
+  overflow-x:hidden; \
+  overflow-y:scroll; \
+  counter-reset:n; \
+} \
+#wasavi_multiline_scaler { \
+  position:fixed; \
+  overflow:scroll; \
+' + paddingStyle + borderStyles + ' \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+' + fontStyle + ' \
+  text-decoration:none; \
+  text-shadow:none; \
+  left:0px; \
+  bottom:0px; \
+  white-space:pre-wrap; \
+  overflow-x:auto; \
+  overflow-y:scroll; \
+  visibility:hidden; \
+  background-color:white; \
+} \
+#wasavi_singleline_scaler { \
+  position:fixed; \
+  margin:0; \
+  padding:0; \
+' + fontStyle + ' \
+  text-decoration:none; \
+  text-shadow:none; \
+  white-space:pre; \
+  color:#fff; \
+  background-color:#000; \
+  left:0px; \
+  top:0px; \
+  visibility:hidden \
+} \
+#wasavi_console_scaler { \
+  position:fixed; \
+  padding:0; \
+  border:none; \
+  font-family:' + fontFamily + '; \
+  font-size:10pt; \
+  left:0; \
+  top:0; \
+  white-space:pre-wrap; \
+  overflow-x:auto; \
+  color:#fff; \
+  background-color:#000; \
+  line-height:1; \
+  visibility:hidden \
+} \
+#wasavi_editor > div { \
+  margin:0; \
+  padding:0; \
+  min-height:' + lineHeight + 'px; \
+  white-space:pre-wrap; \
+  background-color:#fff; \
+  color:#000; \
+} \
+#wasavi_editor > div:nth-child(odd) { \
+  background-color:rgb(248,248,248); \
+} \
+#wasavi_editor > div > span.wasavi_em { \
+  color:highlighttext; \
+  background-color:highlight; \
+} \
+#wasavi_editor > div > span.wasavi_composition { \
+  color:#ffffee; \
+  background-color:#ffffee; \
+} \
+#wasavi_editor.n > div:before { \
+  display:block; \
+  float:left; \
+  margin:0; \
+  padding:0 ' + charWidth + 'px 0 0; \
+  text-align:right; \
+  color:#c00; \
+  background-color:#fff; \
+' + fontStyle + ' \
+  counter-increment:n; \
+  content:counter(n); \
+}',
+
 			(function () {
 				var result = [];
 				for (var i = 1; i <= LINE_NUMBER_MAX_WIDTH; i++) {
@@ -7093,154 +7103,158 @@ loop:			do {
 				}
 				return result.join('\n');
 			})(),
-			'#wasavi_footer {',
-			'  color:#fff;',
+
+'#wasavi_footer { \
+  color:#fff;',
+
 			window.chrome ? '  background:-webkit-' + modeLineGradient : '',
 			window.opera  ? '  background:-o-'      + modeLineGradient : '',
 			IS_GECKO	  ? '  background:-moz-'    + modeLineGradient : '',
 			//'  background:' + modeLineGradient,
-			'  padding:2px 2px 1px 2px;',
-			'  font-family:' + fontFamily + ';',
-			'  font-size:10pt;',
-			'  line-height:1;',
-			'  overflow:hidden;',
-			'  ' + boxSizingPrefix + 'box-sizing:content-box;',
-			'}',
-			'#wasavi_footer_modeline {',
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'}',
-			'#wasavi_footer_alter {',
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'}',
-			'#wasavi_footer_modeline_table,#wasavi_footer_alter_table {',
-			'  padding:0;',
-			'  margin:0;',
-			'  border-collapse:collapse;',
-			'  border:none;',
-			'  background-color:transparent',
-			'}',
-			'#wasavi_footer_modeline>table td,#wasavi_footer_alter>table td {',
-			'  border:none;',
-			'  padding:0;',
-			'  line-height:1;',
-			'  white-space:pre;',
-			'}',
-			'#wasavi_footer_file_indicator {',
-			'  padding:0;',
-			'  line-height:1;',
-			'  text-align:left;',
-			'}',
-			'#wasavi_footer_prefix_indicator {',
-			'  width:1px;',
-			'  padding:0;',
-			'  line-height:1;',
-			'  text-align:right;',
-			'}',
-			'#wasavi_footer_input_indicator {',
-			'  width:1px;',
-			'  padding:0;',
-			'  line-height:1;',
-			'  background-color:rgba(0,0,0,0.5)',
-			'}',
-			'#wasavi_footer_input_container {',
-			'  padding:0;',
-			'  background-color:transparent',
-			'}',
-			'#wasavi_footer_input {',
-			'  display:block;',
-			'  margin:0;',
-			'  padding:0;',
-			'  border:none;',
-			'  outline:none;',
-			'  color:#fff;',
-			'  background-color:rgba(0,0,0,0.5);',
-			'  font-family:' + fontFamily + ';',
-			'  font-size:10pt;',
-			'  line-height:1;',
-			'  width:100%',
-			'}',
-			'#wasavi_console_container {',
-			'  visibility:hidden;',
-			'  position:absolute;',
-			'  margin:0;',
-			'  padding:6px;',
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'  border:none;',
-			'  border-radius:8px;',
-			'  background-color:rgba(0,0,0,0.8);',
-			'}',
-			'#wasavi_console {',
-			'  margin:0;',
-			'  padding:0;',
-			'  border:none;',
-			'  outline:none;',
-			'  color:#fff;',
-			'  background-color:transparent;',
-			'  width:100%;',
-			'  font-family:' + fontFamily + ';',
-			'  font-size:10pt;',
-			'  overflow-y:hidden;',
-			'  white-space:pre-wrap;',
-			'  resize:none;',
-			'  line-height:1;',
-			'}',
-			'#wasavi_command_cursor {',
-			'  position:absolute;',
-			'  margin:0;',
-			'  padding:0;',
-			fontStyle,
-			'  text-decoration:none;',
-			'  text-shadow:none;',
-			'  color:#fff;',
-			'  background-color:#000;',
-			'  left:0px;',
-			'  top:0px;',
-			'}',
-			'#wasavi_command_cursor_inner {',
-			'  margin:0;',
-			'  padding:0;',
-			'  white-space:pre',
-			'}',
-			'#wasavi_edit_cursor {',
-			'  position:absolute;',
-			'  display:none;',
-			'  margin:0;',
-			'  padding:0;',
-			'  ' + boxSizingPrefix + 'box-sizing:border-box;',
-			'  border:none;',
-			'  background-color:transparent;',
-			fontStyle,
-			'  text-decoration:none;',
-			'  text-shadow:none;',
-			'  overflow-y:hidden;',
-			'  resize:none;',
-			'  outline:none;',
-			//'  background-color:rgba(192, 0, 0, 0.5);',
-			'}',
-			'#wasavi_cover {',
-			'  position:fixed;',
-			'  left:0; top:0; right:0; bottom:0;',
-			'  background-color:rgba(0,0,0,0.0)',
-			'}',
-			'#wasavi_cover.dim {',
+
+'  padding:2px 2px 1px 2px; \
+  font-family:' + fontFamily + '; \
+  font-size:10pt; \
+  line-height:1; \
+  overflow:hidden; \
+  ' + boxSizingPrefix + 'box-sizing:content-box; \
+} \
+#wasavi_footer_modeline { \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+} \
+#wasavi_footer_alter { \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+} \
+#wasavi_footer_modeline_table,#wasavi_footer_alter_table { \
+  padding:0; \
+  margin:0; \
+  border-collapse:collapse; \
+  border:none; \
+  background-color:transparent \
+} \
+#wasavi_footer_modeline>table td,#wasavi_footer_alter>table td { \
+  border:none; \
+  padding:0; \
+  line-height:1; \
+  white-space:pre; \
+} \
+#wasavi_footer_file_indicator { \
+  padding:0; \
+  line-height:1; \
+  text-align:left; \
+} \
+#wasavi_footer_prefix_indicator { \
+  width:1px; \
+  padding:0; \
+  line-height:1; \
+  text-align:right; \
+} \
+#wasavi_footer_input_indicator { \
+  width:1px; \
+  padding:0; \
+  line-height:1; \
+  background-color:rgba(0,0,0,0.5) \
+} \
+#wasavi_footer_input_container { \
+  padding:0; \
+  background-color:transparent \
+} \
+#wasavi_footer_input { \
+  display:block; \
+  margin:0; \
+  padding:0; \
+  border:none; \
+  outline:none; \
+  color:#fff; \
+  background-color:rgba(0,0,0,0.5); \
+  font-family:' + fontFamily + '; \
+  font-size:10pt; \
+  line-height:1; \
+  width:100% \
+} \
+#wasavi_console_container { \
+  visibility:hidden; \
+  position:absolute; \
+  margin:0; \
+  padding:6px; \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+  border:none; \
+  border-radius:8px; \
+  background-color:rgba(0,0,0,0.8); \
+} \
+#wasavi_console { \
+  margin:0; \
+  padding:0; \
+  border:none; \
+  outline:none; \
+  color:#fff; \
+  background-color:transparent; \
+  width:100%; \
+  font-family:' + fontFamily + '; \
+  font-size:10pt; \
+  overflow-y:hidden; \
+  white-space:pre-wrap; \
+  resize:none; \
+  line-height:1; \
+} \
+#wasavi_command_cursor { \
+  position:absolute; \
+  margin:0; \
+  padding:0; \
+' + fontStyle + ' \
+  text-decoration:none; \
+  text-shadow:none; \
+  color:#fff; \
+  background-color:#000; \
+  left:0px; \
+  top:0px; \
+} \
+#wasavi_command_cursor_inner { \
+  margin:0; \
+  padding:0; \
+  white-space:pre \
+} \
+#wasavi_edit_cursor { \
+  position:absolute; \
+  display:none; \
+  margin:0; \
+  padding:0; \
+  ' + boxSizingPrefix + 'box-sizing:border-box; \
+  border:none; \
+  background-color:transparent; \
+' + fontStyle + ' \
+  text-decoration:none; \
+  text-shadow:none; \
+  overflow-y:hidden; \
+  resize:none; \
+  outline:none; \
+} \
+#wasavi_cover { \
+  position:fixed; \
+  left:0; top:0; right:0; bottom:0; \
+  background-color:rgba(0,0,0,0.0) \
+} \
+#wasavi_cover.dim {',
+
 			window.chrome ? '  -webkit-transition:background-color 0.5s linear 0s;' : '',
 			window.opera  ? '       -o-transition:background-color 0.5s linear 0s;' : '',
 			IS_GECKO	  ? '     -moz-transition:background-color 0.5s linear 0s;' : '',
-			'  background-color:rgba(0,0,0,0.25);',
-			'}',
-			'#wasavi_focus_holder {',
-			'  position:fixed;',
-			'  border:none;',
-			'  outline:none;',
-			'  resize:none;',
-			'  padding:0;',
-			'  left:-4px;',
-			'  top:0px;',
-			'  width:32px;',
-			'  height:32px;',
-			'  background-color:transparent;',
-			'  ime-mode:disabled;',
-			'}'
+
+'  background-color:rgba(0,0,0,0.25); \
+} \
+#wasavi_focus_holder { \
+  position:fixed; \
+  border:none; \
+  outline:none; \
+  resize:none; \
+  padding:0; \
+  left:-4px; \
+  top:0px; \
+  width:32px; \
+  height:32px; \
+  background-color:transparent; \
+  ime-mode:disabled; \
+}'
 		].join('')));
 
 		// focus holder
@@ -9537,65 +9551,6 @@ loop:			do {
 		idealWidthPixels = -1;
 		wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
 		return {offset:n, matchLength:len};
-	}
-	function motionForwardBlock (c, t, count, regex, isLineOrient) {
-		var opts = regexConverter.getDefaultOption();
-		opts.wrapscan = false;
-		opts.includeCurrentChar = true;
-
-		var result = motionFindByRegexForward(regex, t, count, opts);
-		if (result) {
-			var n = t.linearPositionToBinaryPosition(result.offset + result.matchLength);
-			var n2 = t.getLineTopOffset2(n);
-			n.col = Math.max(n.col, n2.col);
-			isLineOrient ? t.setSelectionRange(n2) : t.extendSelectionTo(n);
-			isSmoothScrollRequested = true;
-			isVerticalMotion = true;
-		}
-
-		return result;
-	}
-	function motionBackwardBlock (c, t, count, regex, isLineOrient) {
-
-		function doit () {
-			var n = t.binaryPositionToLinearPosition(t.selectionStart);
-			var result;
-			for (var i = 0; i < 2; i++) {
-				result = motionFindByRegexBackward(regex, t, 1, opts);
-				if (!result) {
-					break;
-				}
-				if (i == 1 || result.offset + result.matchLength < n) {
-					t.extendSelectionTo(result.offset + result.matchLength);
-					break;
-				}
-				t.selectionStart = result.offset;
-			}
-			return result;
-		}
-
-		var startn = t.selectionStart;
-		var result;
-		var opts = regexConverter.getDefaultOption();
-		opts.wrapscan = false;
-
-		for (var i = 0; i < count; i++) {
-			result = doit();
-			if (!result) {
-				t.selectionStart = startn;
-				break;
-			}
-		}
-		if (result) {
-			var n = t.linearPositionToBinaryPosition(result.offset + result.matchLength);
-			var n2 = t.getLineTopOffset2(n);
-			n.col = Math.max(n.col, n2.col);
-			isLineOrient ? t.setSelectionRange(n2) : t.extendSelectionTo(n);
-			isSmoothScrollRequested = true;
-			isVerticalMotion = true;
-		}
-
-		return result;
 	}
 	function motionReplaceOne (c, t, count) {
 		count || (count = 1);

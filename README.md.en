@@ -130,7 +130,18 @@ Commands implemented
 Specifying addresses in ex command is full supported: absolute line number,
 relative line number, regal expression. also, wasavi accepts offset.
 
-In addtion, wasavi supports multiple level undo/redo and incremental search.
+
+
+* * *
+
+vim-compatible functionalities
+----------------
+
+* multiple leveled undo/redo
+* incremental searching
+* range symbols (aka, text objects in vim)
+* register ", :, *, /
+* options: iskeyword, incsearch, smartcase, undolevels, quoteescape
 
 
 
