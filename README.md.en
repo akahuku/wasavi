@@ -120,7 +120,7 @@ Commands implemented
 * x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
   a A i I o O & s S ZZ
 
-### ex-command:
+#### ex-command:
 
 * abbreviate copy delete edit file global join k map mark marks move
   options print put quit read redo s & ~ set registers to

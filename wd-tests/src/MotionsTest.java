@@ -454,7 +454,7 @@ public class MotionsTest extends WasaviTest {
 
 	@Test
 	public void testMarkTracksItsPosition () {
-		Wasavi.send("i", "foo1bar2baz3bax", "\u001b");
+		Wasavi.send("ifoo1bar2baz3bax\u001b");
 
 		Wasavi.send("F2ma");
 		assertPos("#1-1", 0, 7);

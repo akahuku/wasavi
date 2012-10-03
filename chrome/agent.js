@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 185 2012-09-27 04:51:02Z akahuku $
+ * @version $Id: agent.js 189 2012-10-03 12:38:41Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -55,6 +55,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var shortcutCode;
 	var fontFamily;
 	var quickActivation;
+	var devMode;
 
 	var targetElement;
 	var wasaviFrame;
@@ -255,7 +256,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			clearTimeout(stateClearTimer);
 			stateClearTimer = null;
 		}
-		console.error('wasavi terminated abnormally.');
+		devMode && console.error('wasavi terminated abnormally.');
 	}
 
 	function log (eventType, keyCode, key) {
@@ -506,11 +507,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 			window.addEventListener('keydown', handleKeydown, true);
 		}
 
-		if (WasaviExtensionWrapper.isTopFrame) {
-			document.querySelectorAll('textarea').length
-			&& console.info(
-				'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
-		}
+		devMode
+		&& WasaviExtensionWrapper.isTopFrame
+		&& document.querySelectorAll('textarea').length
+		&& console.info(
+			'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
 	}
 
 	/**
@@ -531,6 +532,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
 			extraHeight = 0;
+			devMode = req.devMode;
 
 			if (window.chrome && !isTestFrame) {
 				WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
@@ -589,7 +591,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 				document.getElementById('test-log').value = '';
 			}
 
-			console.info('wasavi started');
+			devMode && console.info('wasavi started');
 			break;
 
 		case 'wasavi-window-state':
@@ -646,7 +648,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 				document.querySelector('h1').style.color = '';
 			}
 			cleanup(req.value, req.isImplicit);
-			console.info('wasavi terminated');
+			devMode && console.info('wasavi terminated');
 			break;
 
 		case 'wasavi-saved':

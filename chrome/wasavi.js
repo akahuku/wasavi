@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 188 2012-10-02 08:41:40Z akahuku $
+ * @version $Id: wasavi.js 189 2012-10-03 12:38:41Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -82,6 +82,8 @@
 				fstab = req.fstab;
 				l10n = new L10n(req.messageCatalog);
 				wasaviFrame = req.wasaviFrame;
+				testMode = req.testMode;
+				devMode = req.devMode;
 				document.documentElement.setAttribute(
 					'lang', l10n.getMessage('wasavi_locale_code'));
 				WasaviExtensionWrapper.isTopFrame && run(function() {global.Wasavi.run();});
@@ -104,8 +106,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 188 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 188 2012-10-02 08:41:40Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 189 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 189 2012-10-03 12:38:41Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -1079,6 +1081,10 @@
 	}
 
 	/*constructor*/function CursorUI (editor, comCursor, editCursor) {
+		var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
+		var BLINK_ACTIVE_FOREGROUND = 'white';
+		var BLINK_ACTIVE_BACKGROUND = 'black';
+		var BLINK_ACTIVE_BLUR = 'gray';
 		var cursorType = 'command';
 		var locked = false;
 		var focused = false;
@@ -1093,18 +1099,30 @@
 		/*constructor*/function CommandWrapper (mode) {
 			var cursorBlinkTimer;
 
+			function getCursorSpan () {
+				return document.querySelector('#wasavi_editor > div > span.' + CURSOR_SPAN_CLASS);
+			}
 			function handleBlink () {
-				if (comCursor) {
-					var s = document.defaultView.getComputedStyle(comCursor, '');
-					if (s.visibility == 'visible') {
-						comCursor.style.visibility = 'hidden';
+				if (!comCursor) {
+					stopBlink();
+					return;
+				}
+
+				var span = getCursorSpan();
+				if (span) {
+					if (span.getAttribute('data-blink-active') == '1') {
+						span.style.color = span.style.backgroundColor = '';
+						span.setAttribute('data-blink-active', '0');
 					}
 					else {
-						comCursor.style.visibility = 'visible';
+						span.style.color = BLINK_ACTIVE_FOREGROUND;
+						span.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
+						span.setAttribute('data-blink-active', '1');
 					}
 				}
 				else {
-					stopBlink();
+					var s = document.defaultView.getComputedStyle(comCursor, '');
+					comCursor.style.visibility = s.visibility == 'visible' ? 'hidden' : 'visible';
 				}
 			}
 			function startBlink () {
@@ -1116,39 +1134,52 @@
 				cursorBlinkTimer = null;
 			}
 			this.hide = function () {
+				editor.unEmphasis(CURSOR_SPAN_CLASS);
 				comCursor.style.display = 'none';
 				stopBlink();
 			};
 			this.show = function () {
-				comCursor.style.display = 'block';
-				comCursor.style.visibility = 'visible';
-
-				var c = ' ';
-				if (!editor.isEndOfText(editor.selectionStart)
-				&& !editor.isNewline(editor.selectionStart)
-				&&  editor.charAt(editor.selectionStart) != '\t') {
-					c = editor.charAt(editor.selectionStart);
+				var ch = editor.charAt(editor.selectionStart);
+				if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
+					comCursor.style.display = 'none';
+					editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS);
+					var span = getCursorSpan();
+					if (span) {
+						span.style.color = BLINK_ACTIVE_FOREGROUND;
+						span.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
+						span.setAttribute('data-blink-active', '1');
+					}
 				}
-				comCursor.childNodes[0].textContent = c;
-
-				var coord = getCommandCursorCoord();
-				if (fixed) {
-					coord.left -= docScrollLeft();
-					coord.top -= docScrollTop();
+				else {
+					editor.unEmphasis(CURSOR_SPAN_CLASS);
+					comCursor.style.display = 'block';
+					comCursor.style.visibility = 'visible';
+					comCursor.childNodes[0].textContent = ' ';
+					var coord = getCommandCursorCoord();
+					coord.left -= fixed ? docScrollLeft() : 0;
+					coord.top -= fixed ? docScrollTop() : 0;
+					comCursor.style.left = (coord.left - editor.elm.scrollLeft) + 'px';
+					comCursor.style.top = (coord.top - editor.elm.scrollTop) + 'px';
+					comCursor.style.height = lineHeight + 'px';
+					comCursor.style.color = BLINK_ACTIVE_FOREGROUND;
+					comCursor.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
 				}
-				comCursor.style.left = (coord.left - editor.elm.scrollLeft) + 'px';
-				comCursor.style.top = (coord.top - editor.elm.scrollTop) + 'px';
-				comCursor.style.height = lineHeight + 'px';
-				comCursor.style.color = 'white';
-				comCursor.style.backgroundColor = 'black';
+				editor.adjustBackgroundImage();
 				startBlink();
 			};
 			this.lostFocus = function () {
 				stopBlink();
-				comCursor.style.display = 'block';
-				comCursor.style.visibility = 'visible';
-				comCursor.style.backgroundColor = 'gray';
-				comCursor.style.color = 'white';
+				var span = getCursorSpan();
+				if (span) {
+					span.style.background = BLINK_ACTIVE_BLUR;
+					span.style.color = BLINK_ACTIVE_FOREGROUND;
+				}
+				else {
+					comCursor.style.display = 'block';
+					comCursor.style.visibility = 'visible';
+					comCursor.style.color = BLINK_ACTIVE_FOREGROUND;
+					comCursor.style.backgroundColor = BLINK_ACTIVE_BLUR;
+				}
 			};
 			this.dispose = function () {
 				stopBlink();
@@ -1732,7 +1763,7 @@
 	/*constructor*/function Editor (element) {
 		this.elm = $(element);
 		if (!this.elm) {
-			console.error('*** wasavi: Editor constructor: invalid element: ' + element);
+			devMode && console.error('*** wasavi: Editor constructor: invalid element: ' + element);
 		}
 		this.isLineOrientSelection = false;
 	}
@@ -2086,6 +2117,17 @@
 			// method
 			focus: function () {
 				return $('wasavi_focus_holder').focus();
+			},
+			adjustBackgroundImage: function () {
+				var y = lineHeight;
+				if (this.elm.childNodes.length) {
+					var last = this.elm.childNodes[this.elm.childNodes.length - 1];
+					y = last.offsetTop + last.offsetHeight;
+				}
+				var desc = '100% ' + y + 'px';
+				if (this.elm.style.backgroundSize != desc) {
+					this.elm.style.backgroundSize = desc;
+				}
 			},
 			insertChars: function (arg, text) {
 				var iter = document.createNodeIterator(
@@ -2445,7 +2487,7 @@
 				r.detach();
 				return result;
 			},
-			emphasis: function (s, length) {
+			emphasis: function (s, length, className) {
 				if (s == undefined) {
 					s = this.selectionStart;
 				}
@@ -2461,7 +2503,7 @@
 					e = tmp;
 				}
 
-				this.unEmphasis();
+				this.unEmphasis(className);
 				var r = document.createRange();
 
 				if (s.row == e.row) {
@@ -2493,12 +2535,12 @@
 
 				function createSpan () {
 					var span = document.createElement('span');
-					span.className = 'wasavi_em';
+					span.className = className || 'wasavi_em';
 					return span;
 				}
 			},
-			unEmphasis: function () {
-				var nodes = document.querySelectorAll('span.wasavi_em');
+			unEmphasis: function (className) {
+				var nodes = document.querySelectorAll('span.' + (className || 'wasavi_em'));
 				if (nodes.length) {
 					var r = document.createRange();
 					for (var i = 0; i < nodes.length; i++) {
@@ -3326,7 +3368,6 @@ flag23_loop:
 					result.push(i + ': null');
 				}
 			}
-			console.info((title || 'dump') + '\n' + result.join('\n'));
 		}
 
 		// pass 2
@@ -4215,7 +4256,7 @@ flag23_loop:
 			if (this.commands.length == 0) return true;
 
 			if (this.isAsync && this.isRoot && isInteractive) {
-				//console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
+				//devMode && console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
 				if (this.editLogLevel == 0) {
 					editLogger.open('excommand');
 					this.running = true;
@@ -5255,7 +5296,7 @@ flag23_loop:
 			},
 			undo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.error(this.toString() + '#undo: bad position!');
+					devMode && console.error(this.toString() + '#undo: bad position!');
 					return 0;
 				}
 
@@ -5271,7 +5312,7 @@ flag23_loop:
 				}
 
 				if (t.getSelection(ss, se) != this.data) {
-					console.error([
+					devMode && console.error([
 						this.toString() + '#undo: bad consistency!',
 						' position: ' + this.position,
 						'position2: ' + (this.position2 || '(N/A)'),
@@ -5295,7 +5336,7 @@ flag23_loop:
 			},
 			redo: function (t, isClusterMember) {
 				if (!this._ensureValidPositionForAppend(t, this.position)) {
-					console.error([
+					devMode && console.error([
 						this.toString() + '#redo: bad position!',
 						'this.position: ' + this.position,
 						'  t.rowLength: ' + t.rowLength
@@ -5448,7 +5489,7 @@ flag23_loop:
 			},
 			undo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.error(this.toString() + '#undo: bad position!');
+					devMode && console.error(this.toString() + '#undo: bad position!');
 					return 0;
 				}
 				var s = this;
@@ -5464,7 +5505,7 @@ flag23_loop:
 			},
 			redo: function (t, isClusterMember) {
 				if (!this._ensureValidPosition(t, this.position)) {
-					console.error(this.toString() + '#redo: bad position!');
+					devMode && console.error(this.toString() + '#redo: bad position!');
 					return 0;
 				}
 				var s = this;
@@ -5640,7 +5681,7 @@ flag23_loop:
 							this.currentPosition = this.logs.length - 1;
 						}
 						this.cluster = null;
-						//console.log('*** editLogger dump ***\n' + this.logs.dump());
+						//devMode && console.log('*** editLogger dump ***\n' + this.logs.dump());
 					}
 				}
 				else {
@@ -6825,7 +6866,7 @@ loop:			do {
 	function getEditorCore () {
 		var result = new Editor(EDITOR_CORE_ID);
 		if (!result || !result.elm) {
-			console.error('*** getEditorCore: editor object or editor element cannot retrieve');
+			devMode && console.error('*** getEditorCore: editor object or editor element cannot retrieve');
 		}
 		return result;
 	}
@@ -6864,29 +6905,43 @@ loop:			do {
 			installCore(x);
 		}
 	}
-	function installCore (x) {
-		function getOverTextMarker (cnt, font, forecolor, backcolor) {
-			var result = '';
-			var canvas = cnt.appendChild(document.createElement('canvas'));
-			try {
-				canvas.height = lineHeight;
-				var ctx = canvas.getContext('2d');
-				ctx.font = font;
-				canvas.width = ctx.measureText('~').width;
-				ctx.fillStyle = backcolor;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-				ctx.fillStyle = forecolor;
-				ctx.textBaseline = 'top';
-				ctx.textAlign = 'left';
-				ctx.fillText('~', 0, 0);
-				result = canvas.toDataURL('image/png');
-			}
-			finally {
-				canvas.parentNode.removeChild(canvas);
-			}
-			return result;
+	function createOverTextMarker (cnt, font, forecolor, backcolor) {
+		var result = '';
+		var canvas = cnt.appendChild(document.createElement('canvas'));
+		try {
+			canvas.height = lineHeight;
+			var ctx = canvas.getContext('2d');
+			ctx.font = font;
+			canvas.width = ctx.measureText('~').width;
+			ctx.fillStyle = backcolor;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = forecolor;
+			ctx.textBaseline = 'top';
+			ctx.textAlign = 'left';
+			ctx.fillText('~', 0, 0);
+			result = canvas.toDataURL('image/png');
 		}
-
+		finally {
+			canvas.parentNode.removeChild(canvas);
+		}
+		return result;
+	}
+	function createBackgroundImage (cnt, backcolor) {
+		var result = '';
+		var canvas = cnt.appendChild(document.createElement('canvas'));
+		try {
+			canvas.width = canvas.height = 8;
+			var ctx = canvas.getContext('2d');
+			ctx.fillStyle = backcolor;
+			ctx.fillRect(0, 0, canvas.width, canvas.height);
+			result = canvas.toDataURL('image/png');
+		}
+		finally {
+			canvas.parentNode.removeChild(canvas);
+		}
+		return result;
+	}
+	function installCore (x) {
 		// hack for opera: ensure repaint
 		if (window.opera) {
 			window.scrollBy(0, 1);
@@ -6979,18 +7034,18 @@ loop:			do {
 		scaler.textContent = '0';
 		lineHeight = scaler.offsetHeight;
 		charWidth = scaler.offsetWidth;
-
 		scaler.parentNode.removeChild(scaler);
 
-		// over text marker
-		var otm = getOverTextMarker(cnt, x.fontStyle, '#000', '#fff');
+		//
+		var otm = createOverTextMarker(cnt, x.fontStyle, '#000', '#fff');
+		var bgImage = createBackgroundImage(cnt, '#fff');
 
 		// style
 		var styleElement = $('wasavi_global_styles');
 		styleElement.appendChild(document.createTextNode([
 'body { visibility:visible; } \
 #wasavi_container { \
-  background-color:transparent; \
+  background:#fff url(' + otm + ') left top repeat-y; \
   line-height:1; \
   text-align:left; \
   text-indent:0; \
@@ -7003,8 +7058,7 @@ loop:			do {
 ' + paddingStyle + borderStyles + ' \
   ' + boxSizingPrefix + 'box-sizing:border-box; \
 ' + fontStyle + ' \
-  background:#fff url(' + otm + ') left top repeat-y; \
-  background-origin:content-box; \
+  background: url(' + bgImage + ') left top no-repeat; \
   overflow-x:hidden; \
   overflow-y:scroll; \
   counter-reset:n; \
@@ -7386,6 +7440,12 @@ loop:			do {
 		isInteractive = false;
 		var result = executeExCommand(editor, exrc, true);
 		typeof result == 'string' && showMessage(result, true);
+		exrc = '';
+
+		/*
+		 * show cursor
+		 */
+
 		cursor.ensureVisible();
 		cursor.update({type:inputMode, focused:true, visible:true});
 
@@ -7744,9 +7804,14 @@ loop:			do {
 		}
 		return message;
 	}
-	function requestInputMode (mode, modeSub, initial) {
+	function requestInputMode (mode, modeSub, initial, updateCursor) {
 		if (!requestedState.inputMode) {
-			requestedState.inputMode = {mode:mode, modeSub:modeSub || '', initial:initial || ''};
+			requestedState.inputMode = {
+				mode:mode,
+				modeSub:modeSub || '',
+				initial:initial || '',
+				updateCursor:updateCursor
+			};
 		}
 	}
 	function logEditing (t, connect) {
@@ -8279,7 +8344,7 @@ loop:			do {
 			}
 		}
 		function execCommandMap (t, key, subkey, code) {
-			fireEvent('command-start');
+			testMode && fireEvent('command-start');
 			lastMessage = '';
 
 			var map = commandMap;
@@ -8474,6 +8539,7 @@ loop:			do {
 
 		switch (inputMode) {
 		case 'command':
+			cursor.update({visible:false});
 			execCommandMap(editor, mapkey, subkey, code);
 			result = true;
 			break;
@@ -8620,10 +8686,9 @@ loop:			do {
 		}
 		else {
 			if (requestedState.inputMode) {
-				pushInputMode(
-					requestedState.inputMode.mode,
-					requestedState.inputMode.modeSub,
-					requestedState.inputMode.initial);
+				var im = requestedState.inputMode;
+				pushInputMode(im.mode, im.modeSub, im.initial);
+				im.updateCursor && cursor.update({focused:true, visible:true});
 				requestedState.inputMode = null;
 			}
 			var messageUpdated = false;
@@ -8652,7 +8717,7 @@ loop:			do {
 				}
 				if (requestedState.notice.message) {
 					lastMessage = toNativeControl(requestedState.notice.message);
-					console.log(requestedState.notice.message);
+					devMode && console.log(requestedState.notice.message);
 				}
 				requestedState.notice = null;
 				needEmitEvent = true;
@@ -10038,7 +10103,7 @@ loop:			do {
 	}
 	function startEdit (c, t, opts, isAppend, isAlter) {
 		if (!t.selected) {
-			requestInputMode('edit');
+			requestInputMode('edit', '', '', true);
 
 			opts || (opts = {});
 			var isAppend = !!opts.isAppend;
@@ -10119,6 +10184,7 @@ loop:			do {
 	var fontFamily = 'monospace';
 	var quickActivation = false;
 	var testMode = false;
+	var devMode = false;
 	var fstab;
 	var substituteWorker;
 	var resizeHandlerInvokeTimer;
@@ -10283,9 +10349,9 @@ loop:			do {
 		}
 	);
 	var isStandAlone = (function () {
-		var result;
-		try { result = !!!window.frameElement; } catch (e) {} 
-		return result;
+		try {
+			return window.chrome ? window.parent == window : !!!window.frameElement;
+		} catch (e) {}
 	})();
 
 	// extension depend objects
@@ -12411,7 +12477,7 @@ loop:			do {
 	 * ----------------
 	 */
 
-	console.log(
+	devMode && console.log(
 		'wasavi.js (' + VERSION_DESC + '):' +
 		'\n\trunning on ' + window.location.href.replace(/[?#].*$/, ''));
 

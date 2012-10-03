@@ -4,17 +4,17 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 181 2012-09-17 09:38:39Z akahuku $
+ * @version $Id: background.js 189 2012-10-03 12:38:41Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -449,6 +449,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.extensionId = '';
 		this.lastRegisteredTab = '';
 		this.messageCatalogPath = '';
+		this.isDev = false;
 	}
 	ExtensionWrapper.create = function () {
 		if (window.chrome) {
@@ -549,6 +550,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			lastRegisteredTab = undefined;
 			return result;
 		});
+		(function (self) {
+			resourceLoader.get('manifest.json', function (data) {
+				self.isDev = JSON.parse(data).version == '0.0.1';
+			}, {noCache:true});
+		})(this);
 	}
 
 	/**
@@ -694,6 +700,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return result;
 		});
 		this.messageCatalogPath = 'messages.json';
+		this.isDev = widget.version == '0.0.1';
 	}
 
 	/**
@@ -901,6 +908,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 			return 'xlocale/' + result + '/messages.json';
 		})();
+		this.isDev = require('self').version == '0.0.1';
 	}
 
 	/**
@@ -1002,7 +1010,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 
 			lastError = backend + ': ' + lastError;
-			console.error('wasavi background: file system error: ' + lastError);
+			extension.isDev && console.error('wasavi background: file system error: ' + lastError);
 
 			var lastTabId;
 			while (operationQueue.length) {
@@ -1412,7 +1420,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			fn.apply(null, args);
 		}
 		catch (e) {
-			console.error(
+			extension.isDev && console.error(
 				'wasavi background: an error occured inside callback:\n\t' + [
 					'message: ' + e.message,
 					'   line: ' + (e.line || e.lineNumber || '?'),
@@ -1427,7 +1435,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 	function initStorage () {
 		extension.storage.setItem(
-			'start_at', 
+			'start_at',
 			(new Date).toLocaleDateString() + ' ' + (new Date).toLocaleTimeString()
 		);
 
@@ -1555,7 +1563,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				if (!data[i] || !data[i].key || !data[i].secret) continue;
 				fstab[i].isNull = false;
 				fstab[i].instance = FileSystemBase.create(i, data[i].key, data[i].secret);
-				console.info('wasavi background: file system driver initialized: ' + i);
+				extension.isDev && console.info('wasavi background: file system driver initialized: ' + i);
 			}
 			fstab.nullFs = {
 				enabled:true,
@@ -1658,6 +1666,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				wasaviFrame:wasaviFrame,
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
 				testMode:req.url == TEST_MODE_URL,
+				devMode:extension.isDev,
 				fstab:getFileSystemInfo()
 			});
 			break;
@@ -1695,7 +1704,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 						if (item.key == 'shortcut') {
 							keys.push('shortcutCode');
 							extension.storage.setItem(
-								'shortcutCode', 
+								'shortcutCode',
 								JSON.stringify(getShortcutCode(item.value)));
 						}
 					}
@@ -1704,7 +1713,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 			res();
 			break;
-		
+
 		case 'bell':
 			if ('file' in req) {
 				resourceLoader.get(req.file, function (data) {
@@ -1763,7 +1772,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 			res();
 			break;
-		
+
 		case 'get-clipboard':
 			res({data:extension.clipboard.get()});
 			break;
@@ -1793,7 +1802,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		initWasaviFrame();
 		extension.addRequestListener(handleRequest);
 
-		console.info('wasavi background: running.');
+		extension.isDev && console.info('wasavi background: running.');
 	}
 
 	window.addEventListener ?

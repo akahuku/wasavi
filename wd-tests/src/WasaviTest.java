@@ -527,7 +527,7 @@ public class WasaviTest {
 			"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
 
 		try {
-			Thread.sleep(1000);
+			Thread.sleep(500);
 		}
 		catch (Exception e) {
 		}
