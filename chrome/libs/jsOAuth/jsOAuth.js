@@ -353,9 +353,9 @@ if (typeof data != 'object') return false;
 
                 appendQueryString = options.appendQueryString ? options.appendQueryString : false;
 
-                if (oauth.enablePrivilege) {
+                /*if (oauth.enablePrivilege) {
                     netscape.security.PrivilegeManager.enablePrivilege('UniversalBrowserRead UniversalBrowserWrite');
-                }
+                }*/
 
                 xhr = typeof this.requestTransport == 'function' && this.requestTransport() || Request();
 typeof this.onModifyTransport == 'function' && this.onModifyTransport(xhr);

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi_frame.js 182 2012-09-19 09:14:13Z akahuku $
+ * @version $Id: wasavi_frame.js 190 2012-10-04 06:55:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -23,6 +23,12 @@
  */
 
 (function () {
+	/*
+	 * Currently, only chrome can show the file in an extension package
+	 * as content of iframe. Opera and Firefox(Add-on SDK) can not.
+	 * Therefore, it is safe even if the following function become an
+	 * error at the validation process of extension for Firefox.
+	 */
 	function load () {
 		var head = document.getElementsByTagName('head')[0];
 		Array.prototype.forEach.call(arguments, function (path) {

@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 189 2012-10-03 12:38:41Z akahuku $
+ * @version $Id: agent.js 191 2012-10-04 17:47:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -65,6 +65,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 	var stateClearTimer;
 	var targetElementResizedTimer;
 	var keyStrokeLog = [];
+	var mutationObserver;
 
 	function locate (iframe, target, isFullscreen, extraHeight) {
 		function isFixedPosition (element) {
@@ -166,9 +167,20 @@ typeof WasaviExtensionWrapper != 'undefined'
 			extension.postMessage({type:'notify-to-child', payload:payload});
 		};
 
-		wasaviFrame.addEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
-
 		document.body.appendChild(wasaviFrame);
+
+		var mo = window.MutationObserver
+		|| window.WebKitMutationObserver
+		|| window.OMutationObserver
+		|| window.MozMutationObserver;
+		if (mo) {
+			mutationObserver = new mo(handleWasaviFrameMutation);
+			mutationObserver.observe(wasaviFrame.parentNode, {childList:true});
+		}
+		else {
+			mutationObserver = null;
+			wasaviFrame.addEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
+		}
 	}
 
 	function cleanup (value, isImplicit) {
@@ -185,7 +197,14 @@ typeof WasaviExtensionWrapper != 'undefined'
 			wasaviFrame.parentNode.removeChild(wasaviFrame);
 			wasaviFrame = null;
 		}
-
+		if (mutationObserver) {
+			mutationObserver.disconnect();
+			mutationObserver = null;
+		}
+		if (stateClearTimer) {
+			clearTimeout(stateClearTimer);
+			stateClearTimer = null;
+		}
 		window.removeEventListener('resize', handleTargetResize, false);
 		extraHeight = 0;
 	}
@@ -243,24 +262,27 @@ typeof WasaviExtensionWrapper != 'undefined'
 		return ordered.concat(unordered);
 	}
 
-	function handleWasaviFrameRemoved (e) {
-		if (targetElement) {
-			targetElement.removeAttribute(EXTENSION_CURRENT);
-			targetElement = null;
-		}
-		if (wasaviFrame) {
-			wasaviFrame.removeEventListener(e.type, arguments.callee, false);
-			wasaviFrame = null;
-		}
-		if (stateClearTimer) {
-			clearTimeout(stateClearTimer);
-			stateClearTimer = null;
-		}
-		devMode && console.error('wasavi terminated abnormally.');
-	}
-
 	function log (eventType, keyCode, key) {
 		keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
+	}
+
+	/**
+	 * unexpected wasavi frame deletion handler
+	 * ----------------
+	 */
+
+	function handleWasaviFrameMutation (records) {
+		wasaviFrame
+		&& records.some(function (r) {
+			return r.removedNodes && Array.prototype.indexOf.call(r.removedNodes, wasaviFrame) >= 0;
+		})
+		&& handleWasaviFrameRemoved();
+	}
+
+	function handleWasaviFrameRemoved (e) {
+		wasaviFrame = null;
+		cleanup();
+		devMode && console.error('wasavi terminated abnormally.');
 	}
 
 	/**
@@ -653,7 +675,21 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 		case 'wasavi-saved':
 			if (!wasaviFrame) break;
-			try {targetElement.value = req.value;} catch (e) {;}
+			try {
+				targetElement.value = req.value;
+				extension.postMessage({
+					type:'notify-to-child',
+					childTabId:req.childTabId,
+					payload:{
+						type:'fileio-write-response',
+						state:'complete',
+						meta:{
+							path:req.value.path,
+							charLength:req.value.length
+						}
+					}
+				});
+			} catch (e) {;}
 			break;
 
 		/*

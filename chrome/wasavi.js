@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 189 2012-10-03 12:38:41Z akahuku $
+ * @version $Id: wasavi.js 191 2012-10-04 17:47:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -106,8 +106,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 189 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 189 2012-10-03 12:38:41Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 191 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 191 2012-10-04 17:47:04Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -3504,9 +3504,6 @@ flag23_loop:
 					value:content.replace(/\n/g, preferredNewline)
 				}
 			});
-		}
-		if (typeof eventHandlers.onSaved == 'function') {
-			eventHandlers.onSaved({value:content});
 		}
 		if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == targetElement) {
 			isTextDirty = false;
@@ -10192,7 +10189,6 @@ loop:			do {
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
 	var abbrevs = {};
-	var eventHandlers = {onSaved:null};
 	var config = new Configurator(
 		[
 			/* defined by POSIX */

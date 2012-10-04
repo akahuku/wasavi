@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 189 2012-10-03 12:38:41Z akahuku $
+ * @version $Id: background.js 191 2012-10-04 17:47:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -164,7 +164,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 			else {
 				var xhr = new XMLHttpRequest;
-				xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, false);
+				xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, true);
 				xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
 				xhr.onload = function () {
 					if (!opts.noCache) {
@@ -1733,6 +1733,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		case 'notify-to-child':
 			var childTabId = 'childTabId' in req ? req.childTabId : extension.lastRegisteredTab;
 			if (childTabId !== undefined && extension.isExistsTabId(childTabId)) {
+				'tabId' in req && (req.payload.parentTabId = req.tabId);
 				extension.sendRequest(childTabId, req.payload);
 			}
 			res();
@@ -1740,6 +1741,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 		case 'notify-to-parent':
 			if ('parentTabId' in req && req.parentTabId != undefined) {
+				'tabId' in req && (req.payload.childTabId = req.tabId);
 				extension.sendRequest(req.parentTabId, req.payload);
 			}
 			else {
