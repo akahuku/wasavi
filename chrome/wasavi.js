@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 191 2012-10-04 17:47:04Z akahuku $
+ * @version $Id: wasavi.js 192 2012-10-07 04:22:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -106,8 +106,8 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 191 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 191 2012-10-04 17:47:04Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 192 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 192 2012-10-07 04:22:04Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -155,11 +155,218 @@
 	};
 	/*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
 	/*const*/var LINE_NUMBER_MAX_WIDTH = 6;
+	/*const*/var COMPOSITION_CLASS = 'wasavi_composition';
+	/*const*/var MARK_CLASS = 'wasavi_mark';
+	/*const*/var EMPHASIS_CLASS = 'wasavi_em';
 
 	/*
 	 * classes {{{1
 	 * ----------------
 	 */
+
+	/*constructor*/function Theme () {
+		var container;
+		var fontStyle;
+		var lineHeight;
+		var colors = {
+			statusHue:-1,
+			background:'',
+			overTextMarkerFg:'',
+			warnedStatusFg:'', warnedStatusBg:'',
+			invertFg:'', invertBg:'',
+			blurFg:'', blurBg:'',
+
+			rowBgOdd:['#wasavi_editor>div:nth-child(odd)', ''],
+			editCursorFg:['#wasavi_edit_cursor', ''],
+			statusFg:['#wasavi_footer', ''],
+			lineNumberFg:['#wasavi_editor.n>div:before', ''],
+			lineNumberBg:['#wasavi_editor.n>div:before', ''],
+			rowFg:['#wasavi_editor>div', ''],
+			rowBg:['#wasavi_editor>div', ''],
+			highlightFg:['#wasavi_editor>div>span.' + EMPHASIS_CLASS, ''],
+			highlightBg:['#wasavi_editor>div>span.' + EMPHASIS_CLASS, ''],
+			lineInputFg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
+			lineInputBg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
+			consoleFg:['#wasavi_console', ''],
+			consoleBg:['#wasavi_console_container', '']
+		};
+		var colorSets = {
+			blight: {
+				statusHue:-1,
+				background:'white',
+				overTextMarkerFg:'#888',
+				warnedStatusFg:'white', warnedStatusBg:'#f00',
+				invertFg:'white', invertBg:'black',
+				blurFg:'white', blurBg:'gray',
+
+				rowBgOdd:'#f3f6fa',
+				editCursorFg:'black',
+				statusFg:'white',
+				lineNumberFg:'#888', lineNumberBg:'#fff',
+				rowFg:'black', rowBg:'white',
+				highlightFg:'highlighttext', highlightBg:'highlight',
+				lineInputFg:'white', lineInputBg:'rgba(0,0,0,0.5)',
+				consoleFg:'white', consoleBg:'rgba(0,0,0,0.8)'
+			},
+			charcoal: {
+				statusHue:'#c2bfa5',
+				background:'#333',
+				overTextMarkerFg:'#add8e6',
+				warnedStatusFg:'white', warnedStatusBg:'#f00',
+				invertFg:'#333', invertBg:'#f0e68c',
+				blurFg:'white', blurBg:'gray',
+
+				rowBgOdd:'#444',
+				editCursorFg:'white',
+				statusFg:'black',
+				lineNumberFg:'#ff0', lineNumberBg:'#333',
+				rowFg:'#fff', rowBg:'#333',
+				highlightFg:'highlight', highlightBg:'highlighttext',
+				lineInputFg:'black', lineInputBg:'rgba(255,255,255,0.5)',
+				consoleFg:'black', consoleBg:'rgba(159,205,74,0.8)'
+			}
+		};
+
+		function getCSSRules () {
+			var pieces = {};
+			for (var i in colors) {
+				if (!(colors[i] instanceof Array)) continue;
+				var selector = colors[i][0];
+				var rule = colors[i][1];
+				(pieces[selector] || (pieces[selector] = []))
+					.push((/Fg$/.test(i) ? 'color' : 'background-color') + ':' + rule);
+			}
+
+			var buffer = [];
+			for (var i in pieces) {
+				buffer.push(i + '{', pieces[i].join(';') + ';', '}');
+			}
+
+			return buffer;
+		}
+		function getImageFromCanvas (callback) {
+			var result = '';
+			var canvas = container.appendChild(document.createElement('canvas'));
+			try {
+				callback(canvas, canvas.getContext('2d'));
+				result = canvas.toDataURL('image/png');
+			}
+			finally {
+				canvas.parentNode.removeChild(canvas);
+			}
+			return result;
+		}
+		function getOverTextMarker (forecolor, backcolor) {
+			return getImageFromCanvas(function (canvas, ctx) {
+				canvas.height = lineHeight;
+				ctx.fontStyle = fontStyle;
+				canvas.width = ctx.measureText('~').width;
+				ctx.fillStyle = backcolor;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				ctx.fillStyle = forecolor;
+				ctx.textBaseline = 'top';
+				ctx.textAlign = 'left';
+				ctx.fillText('~', 0, 0);
+			});
+		}
+		function getBackgroundImage (backcolor) {
+			return getImageFromCanvas(function (canvas, ctx) {
+				canvas.width = canvas.height = 8;
+				ctx.fillStyle = backcolor;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			});
+		}
+		function getMirror () {
+			var result = {};
+			for (var i in colors) {
+				result[i] = colors[i] instanceof Array ? colors[i][1] : colors[i];
+			}
+			return result;
+		}
+		function getStyleElement () {
+			return $('wasavi_theme_styles');
+		}
+		function getStatuslineBackground (key) {
+			switch (typeof key) {
+			case 'number':
+				var n = new Date;
+				key = key - 0 || 0;
+				key = key < 0 ?
+					Math.floor((n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds()) / 240) :
+					key % 360;
+				var hsl = 'hsl(' + [key, '100%', '33%'].join(',') + ')';
+				var prefix = window.chrome ? '-webkit-' :
+					window.opera ? '-o-' :
+					IS_GETCKO ? '-moz-' :
+					'';
+				var rule = 'linear-gradient(top,' + hsl + ' 0%,#000 100%);';
+				return prefix + rule;
+			case 'string':
+				return key;
+			}
+			return '#888';
+		}
+		function select (colorSet) {
+			if (typeof colorSet == 'object') {
+				var newColors = {};
+				for (var i in colors) {
+					if (!(i in colorSet)) return;
+					newColors[i] = colors[i] instanceof Array ?
+						[colors[i][0], colorSet[i]] : colorSet[i];
+				}
+				colors = newColors;
+				return true;
+			}
+			else {
+				colorSet || (colorSet = '');
+				if (colorSet == '' || !(colorSet in colorSets)) {
+					colorSet = 'blight';
+				}
+				return arguments.callee(colorSets[colorSet]);
+			}
+		}
+		function update () {
+			if (!container || !colors || colors.background == '') return;
+
+			var styles = getCSSRules();
+
+			var otm = getOverTextMarker(colors.overTextMarkerFg, colors.background);
+			styles.push(
+				'#wasavi_container{',
+				'background:' + colors.background + ' url(' + otm + ') left top repeat-y;',
+				'}');
+
+			var bgImage = getBackgroundImage(colors.rowBg[1]);
+			styles.push(
+				'#wasavi_editor{',
+				'background:url(' + bgImage + ') left top no-repeat;',
+				'}');
+
+			var statuslineBackground = getStatuslineBackground(colors.statusHue);
+			styles.push(
+				'#wasavi_footer{',
+				'background:' + statuslineBackground,
+				'}');
+
+			var node = getStyleElement();
+			emptyNodeContents(node);
+			node.appendChild(document.createTextNode(styles.join('\n')));
+
+			this.colors = getMirror();
+		}
+		function dispose () {
+			container = null;
+			emptyNodeContents(getStyleElement());
+		}
+
+		this.select = select;
+		this.update = update;
+		this.dispose = dispose;
+
+		this.__defineSetter__('container', function (v) {container = v;});
+		this.__defineSetter__('fontStyle', function (v) {fontStyle = v;});
+		this.__defineSetter__('lineHeight', function (v) {lineHeight = v;});
+	}
 
 	/*constructor*/function KeyManager () {
 		// consts
@@ -1082,9 +1289,6 @@
 
 	/*constructor*/function CursorUI (editor, comCursor, editCursor) {
 		var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
-		var BLINK_ACTIVE_FOREGROUND = 'white';
-		var BLINK_ACTIVE_BACKGROUND = 'black';
-		var BLINK_ACTIVE_BLUR = 'gray';
 		var cursorType = 'command';
 		var locked = false;
 		var focused = false;
@@ -1100,7 +1304,8 @@
 			var cursorBlinkTimer;
 
 			function getCursorSpan () {
-				return document.querySelector('#wasavi_editor > div > span.' + CURSOR_SPAN_CLASS);
+				var spans = editor.getSpans(CURSOR_SPAN_CLASS);
+				return spans.length ? spans[0] : null;
 			}
 			function handleBlink () {
 				if (!comCursor) {
@@ -1115,8 +1320,8 @@
 						span.setAttribute('data-blink-active', '0');
 					}
 					else {
-						span.style.color = BLINK_ACTIVE_FOREGROUND;
-						span.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
+						span.style.color = theme.colors.invertFg;
+						span.style.backgroundColor = theme.colors.invertBg;
 						span.setAttribute('data-blink-active', '1');
 					}
 				}
@@ -1145,8 +1350,8 @@
 					editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS);
 					var span = getCursorSpan();
 					if (span) {
-						span.style.color = BLINK_ACTIVE_FOREGROUND;
-						span.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
+						span.style.color = theme.colors.invertFg;
+						span.style.backgroundColor = theme.colors.invertBg;
 						span.setAttribute('data-blink-active', '1');
 					}
 				}
@@ -1161,8 +1366,8 @@
 					comCursor.style.left = (coord.left - editor.elm.scrollLeft) + 'px';
 					comCursor.style.top = (coord.top - editor.elm.scrollTop) + 'px';
 					comCursor.style.height = lineHeight + 'px';
-					comCursor.style.color = BLINK_ACTIVE_FOREGROUND;
-					comCursor.style.backgroundColor = BLINK_ACTIVE_BACKGROUND;
+					comCursor.style.color = theme.colors.invertFg;
+					comCursor.style.backgroundColor = theme.colors.invertBg;
 				}
 				editor.adjustBackgroundImage();
 				startBlink();
@@ -1171,14 +1376,14 @@
 				stopBlink();
 				var span = getCursorSpan();
 				if (span) {
-					span.style.background = BLINK_ACTIVE_BLUR;
-					span.style.color = BLINK_ACTIVE_FOREGROUND;
+					span.style.color = theme.colors.blurFg;
+					span.style.backgroundColor = theme.colors.blurBg;
 				}
 				else {
 					comCursor.style.display = 'block';
 					comCursor.style.visibility = 'visible';
-					comCursor.style.color = BLINK_ACTIVE_FOREGROUND;
-					comCursor.style.backgroundColor = BLINK_ACTIVE_BLUR;
+					comCursor.style.color = theme.colors.blurFg;
+					comCursor.style.backgroundColor = theme.colors.blurBg;
 				}
 			};
 			this.dispose = function () {
@@ -1192,50 +1397,31 @@
 			var leading;
 
 			function getCompositionSpan () {
-				return document.querySelector('#wasavi_editor > div > span.wasavi_composition');
+				var spans = editor.getSpans(COMPOSITION_CLASS);
+				return spans.length ? spans[0] : null;
 			}
 			function createCompositionSpan () {
+				var n = editor.selectionStart;
 				var span = getCompositionSpan();
 				if (!span) {
-					span = document.createElement('span');
-					span.className = 'wasavi_composition';
-
-					var n = editor.selectionStart;
-					var r = document.createRange();
-					var node = editor.rowTextNodes(n);
-
-					if (node.nodeValue.length == 0) {
-						throw new Error('createCompositionSpan: nodeValue is empty.');
+					if (n.col == 0) {
+						span = document.createElement('span');
+						span.className = COMPOSITION_CLASS;
+						var node = editor.rowNodes(n);
+						node.insertBefore(span, node.firstChild);
 					}
-					if (node.nodeValue.length < n.col) {
-						throw new Error(
-							'createCompositionSpan: nodeValue length less than ' + n.col + '.' +
-							' nodeValue: "' + node.nodeValue + '"'
-						);
+					else {
+						span = editor.emphasis(
+							new Position(n.row, 0), n.col, COMPOSITION_CLASS)[0];
 					}
-
-					r.setStart(node, 0);
-					r.setEnd(node, n.col);
-					r.surroundContents(span);
-					r.detach();
 				}
+				var s = document.defaultView.getComputedStyle(span, '');
+				span.style.color = s.backgroundColor;
+				span.style.backgroundColor = s.backgroundColor;
 				return span;
 			}
 			function removeCompositionSpan () {
-				var span = getCompositionSpan();
-				if (span) {
-					var length = span.textContent.length;
-					var r = document.createRange();
-					var pa = span.parentNode;
-					r.selectNodeContents(span);
-					var f = r.extractContents();
-					r.setStartBefore(span);
-					r.insertNode(f);
-					r.selectNode(span);
-					r.deleteContents();
-					pa.normalize();
-					r.detach();
-				}
+				editor.unEmphasis(COMPOSITION_CLASS);
 			}
 			this.compositionUpdate = function (data) {
 				var span = getCompositionSpan();
@@ -1318,8 +1504,8 @@
 			r.detach();
 
 			span.id = 'wasavi_caret';
-			span.style.color = 'HighlightText';
-			span.style.backgroundColor = 'Highlight';
+			span.style.color = theme.colors.highlightFg;
+			span.style.backgroundColor = theme.colors.highlightBg;
 			if (/^[\r\n\t]?$/.test(span.textContent)) {
 				span.textContent = ' ';
 			}
@@ -1604,7 +1790,7 @@
 								r.setStart(node, m.col - totalLength);
 								r.setEnd(node, m.col - totalLength);
 								var span = document.createElement('span');
-								span.className = 'wasavi_mark';
+								span.className = MARK_CLASS;
 								dataset(span, 'index', i);
 								r.insertNode(span);
 								break;
@@ -1616,7 +1802,7 @@
 				return usedMarks;
 			}
 			function releaseMarks (usedMarks) {
-				var nodes = document.querySelectorAll('#wasavi_editor > div > span.wasavi_mark');
+				var nodes = editor.getSpans(MARK_CLASS);
 				for (var i = 0, goal = nodes.length; i < goal; i++) {
 					var span = nodes[i];
 					var index = dataset(span, 'index');
@@ -1651,7 +1837,7 @@
 				return result;
 			}
 			function registerFoldedMark (fragment) {
-				var marks = fragment.querySelectorAll('span.wasavi_mark');
+				var marks = fragment.querySelectorAll('span.' + MARK_CLASS);
 				for (var i = 0, goal = marks.length; i < goal; i++) {
 					var index = dataset(marks[i], 'index');
 					foldedMarks[index] = true;
@@ -2031,6 +2217,10 @@
 				}
 				return result;
 			},
+			getSpans: function (className) {
+				return document.querySelectorAll(
+					'#wasavi_editor>div>span' + (className ? ('.' + className) : ''));
+			},
 			// vim compatible cursor iterators
 			inc: function (pos) {
 				var p = pos || this.selectionStart;
@@ -2145,7 +2335,7 @@
 						if (index == 0
 						&&  pnode
 						&&  pnode.nodeName == 'SPAN'
-						&&  pnode.className == 'wasavi_mark') {
+						&&  pnode.className == MARK_CLASS) {
 							pnode.parentNode.insertBefore(document.createTextNode(text), pnode);
 						}
 						else {
@@ -2495,52 +2685,57 @@
 					s = this.linearPositionToBinaryPosition(s);
 				}
 
-				var e = this.offsetBy(s, length);
-
-				if (s.row > e.row || s.row == e.row && s.col > e.col) {
-					var tmp = s;
-					s = e;
-					e = tmp;
-				}
-
-				this.unEmphasis(className);
+				var isInRange = false;
+				var offset = 0;
 				var r = document.createRange();
-
-				if (s.row == e.row) {
-					setRange.call(this, r, s);
-					setRange.call(this, r, e, true);
-					r.surroundContents(createSpan());
-				}
-				else {
-					// TODO: may use setRange instead of native method of 'r'.
-
-					// start
-					r.setStart(this.elm.childNodes[s.row].firstChild, s.col);
-					r.setEnd(this.elm.childNodes[s.row].firstChild, this.elm.childNodes[s.row].textContent.length);
-					r.surroundContents(createSpan());
-
-					// middle
-					for (var i = s.row + 1; i < e.row; i++) {
-						r.selectNodeContents(this.elm.childNodes[i]);
-						r.surroundContents(createSpan());
-					}
-
-					// end
-					r.setStart(this.elm.childNodes[e.row].firstChild, 0);
-					r.setEnd(this.elm.childNodes[e.row].firstChild, e.col);
-					r.surroundContents(createSpan());
-				}
-
-				r.detach();
+				var result = [];
+				className || (className = EMPHASIS_CLASS);
 
 				function createSpan () {
 					var span = document.createElement('span');
-					span.className = className || 'wasavi_em';
+					span.className = className;
+					result.push(span);
 					return span;
 				}
+whole:
+				for (; length > 0 && s.row < this.elm.childNodes.length; s.row++) {
+					var iter = document.createNodeIterator(
+						this.elm.childNodes[s.row], window.NodeFilter.SHOW_TEXT, null, false);
+					var totalLength = 0;
+					var node;
+					while ((node = iter.nextNode())) {
+						if (!isInRange) {
+							var next = totalLength + node.nodeValue.length;
+							if (totalLength <= s.col && s.col < next) {
+								offset = s.col - totalLength;
+								isInRange = true;
+							}
+							totalLength = next;
+						}
+						if (isInRange) {
+							if (offset + length <= node.nodeValue.length) {
+								r.setStart(node, offset);
+								r.setEnd(node, offset + length);
+								r.surroundContents(createSpan());
+								length = 0;
+								break whole;
+							}
+							else {
+								r.setStart(node, offset);
+								r.setEnd(node, node.nodeValue.length);
+								r.surroundContents(createSpan());
+								length -= node.nodeValue.length - offset;
+								offset = 0;
+							}
+						}
+					}
+				}
+
+				r.detach();
+				return result;
 			},
 			unEmphasis: function (className) {
-				var nodes = document.querySelectorAll('span.' + (className || 'wasavi_em'));
+				var nodes = this.getSpans(className || EMPHASIS_CLASS);
 				if (nodes.length) {
 					var r = document.createRange();
 					for (var i = 0; i < nodes.length; i++) {
@@ -5749,16 +5944,12 @@ flag23_loop:
 			}
 		}
 		function setColor () {
-			var nodes = document.querySelectorAll('span.wasavi_em');
+			var nodes = t.getSpans(EMPHASIS_CLASS);
+			var fg = visible ? theme.colors.highlightFg : '';
+			var bg = visible ? theme.colors.highlightBg : '';
 			for (var i = 0; i < nodes.length; i++) {
-				if (visible) {
-					nodes[i].style.color = 'white';
-					nodes[i].style.backgroundColor = 'black';
-				}
-				else {
-					nodes[i].style.color = 'black';
-					nodes[i].style.backgroundColor = 'transparent';
-				}
+				nodes[i].style.color = fg;
+				nodes[i].style.backgroundColor = bg;
 			}
 		}
 		function clear () {
@@ -5772,17 +5963,12 @@ flag23_loop:
 		this.dispose = clear;
 		timer = setTimeout(init, 1);
 	}
-	PairBracketsIndicator.getObject = function (c, t) {
+	PairBracketsIndicator.getObject = function (c, t, n) {
 		if (c != '' && CLOSE_BRACKETS.indexOf(c) >= 0) {
-			var result = motionFindMatchedBracket('', t, 1, c);
+			var result = searchUtils.findMatchedBracket(1, c, n);
 			if (result) {
 				return new PairBracketsIndicator(c, t, result);
 			}
-			/*
-			else {
-				requestRegisterNotice(_('Cannot find pair bracket.'));
-			}
-			*/
 		}
 		return null;
 	};
@@ -5869,7 +6055,8 @@ flag23_loop:
 		var paragraphs;
 		var sections;
 
-		function findNextQuote (line, col, quoteChar, escapeChar) {
+		function findNextQuote (line, col, quoteChar) {
+			var escapeChar = config.vars.quoteescape;
 			for (var goal = line.length; col < goal; col++) {
 				var c = line.charAt(col);
 				if (c == escapeChar) {
@@ -5881,7 +6068,8 @@ flag23_loop:
 			}
 			return -1;
 		}
-		function findPrevQuote (line, col, quoteChar, escapeChar) {
+		function findPrevQuote (line, col, quoteChar) {
+			var escapeChar = config.vars.quoteescape;
 			while (col-- > 0) {
 				var n = 0;
 				while (col - n > 0 && line.charAt(col - n - 1) == escapeChar) {
@@ -5999,6 +6187,21 @@ flag23_loop:
 		 * public methods
 		 */
 
+		function findQuoteRange (line, firstCol, quoteChar) {
+			var colStart = 0, colEnd;
+			while (true) {
+				colStart = findNextQuote(line, colStart, quoteChar);
+				if (colStart < 0 || colStart > firstCol) return false;
+
+				colEnd = findNextQuote(line, colStart + 1, quoteChar);
+				if (colEnd < 0) return false;
+
+				if (colStart <= firstCol && firstCol <= colEnd) break;
+
+				colStart = colEnd + 1;
+			}
+			return {start:colStart, end:colEnd};
+		}
 		function findSentenceBoundary (count, isForward, isFindOnly) {
 			var pos = editor.selectionStart;
 			var iter = isForward ? editor.incl : editor.decl;
@@ -6131,33 +6334,96 @@ loop:			do {
 			!isFindOnly && editor.setSelectionRange(pos);
 			return pos;
 		}
-		function quote (count, quoteChar, includeAnchor, escapeChar) {
+		function findMatchedBracket (count, bracketSpecified, initialPos) {
+			function findBracket () {
+				var i = 0;
+				while (!editor.isEndOfText(n) && !editor.isNewline(n)) {
+					var index = BRACKETS.indexOf(editor.charAt(n));
+					if (index != -1 && ++i == count) {
+						return index;
+					}
+					n = editor.rightPos(n);
+				}
+				return -1;
+			}
+			function findMatchForward (current, match) {
+				var depth = 0;
+				var prevn = n;
+				n = editor.rightPos(n);
+				while (!editor.isEndOfText(n) && n.ne(prevn)) {
+					switch (editor.charAt(n)) {
+					case current:
+						depth++;
+						break;
+					case match:
+						if (depth == 0) return n;
+						depth--;
+						break;
+					}
+					prevn = n;
+					n = editor.rightPos(n);
+				}
+			}
+			function findMatchBackward (current, match) {
+				var depth = 0;
+				var prevn = n;
+				n = editor.leftPos(n);
+				while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
+					switch (editor.charAt(n)) {
+					case current:
+						depth++;
+						break;
+					case match:
+						if (depth == 0) return n;
+						depth--;
+						break;
+					}
+					prevn = n;
+					n = editor.leftPos(n);
+				}
+			}
+
+			var n = initialPos || editor.selectionStart;
+			var currentIndex = bracketSpecified ?
+				BRACKETS.indexOf(bracketSpecified) :
+				findBracket();
+			if (currentIndex <= -1) return;
+
+			var baseChar = BRACKETS.charAt(currentIndex);
+			var matchChar = BRACKETS.charAt(BRACKETS.length - 1 - currentIndex);
+			count || (count = 1);
+			if (baseChar == matchChar) {
+				var range = findQuoteRange(editor.rows(n), n.col, baseChar);
+				if (!range) return;
+				n.col = n.col == range.start ? range.end : range.start;
+				return n;
+			}
+			else {
+				var dir = currentIndex >= BRACKETS.length / 2 ? -1 : 1;
+				switch (dir) {
+				case -1: return findMatchBackward(baseChar, matchChar);
+				case  1: return findMatchForward(baseChar, matchChar);
+				}
+			}
+		}
+		function quote (count, quoteChar, includeAnchor) {
 			var line = editor.rows(editor.selectionStartRow);
 			var colStart = editor.selectionStartCol;
 			var colEnd;
 			if (line.charAt(colStart) == quoteChar) {
-				var firstCol = colStart;
-				colStart = 0;
-				while (true) {
-					colStart = findNextQuote(line, colStart, quoteChar);
-					if (colStart < 0 || colStart > firstCol) return false;
-
-					colEnd = findNextQuote(line, colStart + 1, quoteChar, escapeChar);
-					if (colEnd < 0) return false;
-
-					if (colStart <= firstCol && firstCol <= colEnd) break;
-
-					colStart = colEnd + 1;
-				}
+				var range = findQuoteRange(line, colStart, quoteChar);
+				if (!range) return;
+				colStart = range.start;
+				colEnd = range.end;
 			}
 			else {
-				colStart = findPrevQuote(line, colStart, quoteChar, escapeChar);
+				colStart = findPrevQuote(line, colStart, quoteChar);
 				if (line.charAt(colStart) != quoteChar) {
 					colStart = findNextQuote(line, colStart, quoteChar);
 					if (colStart < 0) return false;
 				}
 
-				colEnd = findNextQuote(line, colStart + 1, quoteChar, escapeChar);
+				colEnd = findNextQuote(line, colStart + 1, quoteChar);
 				if (colEnd < 0) return false;
 			}
 			if (includeAnchor) {
@@ -6215,11 +6481,11 @@ loop:			do {
 			var origPos = editor.selectionStart;
 			var startPos, endPos;
 			do {
-				startPos = motionFindMatchedBracket('', editor, count, over);
+				startPos = findMatchedBracket(count, over);
 				if (!startPos) break;
 
 				editor.setSelectionRange(startPos);
-				endPos = motionFindMatchedBracket('', editor, count);
+				endPos = findMatchedBracket(count);
 				if (!endPos) break;
 
 				if (includeAnchor) {
@@ -6366,7 +6632,7 @@ loop:			do {
 			editor.setSelectionRange(startPos, endPos);
 			return true;
 		}
-		function dispatchRangeSymbol (count, targetChar, includeAnchor, escapeChar) {
+		function dispatchRangeSymbol (count, targetChar, includeAnchor) {
 			switch (targetChar) {
 			case '"': case "'": case '`':
 				return quote.apply(null, arguments);
@@ -6409,6 +6675,10 @@ loop:			do {
 			editor = null;
 		}
 
+		this.findQuoteRange = findQuoteRange;
+		this.findSentenceBoundary = findSentenceBoundary;
+		this.findParagraphBoundary = findParagraphBoundary;
+		this.findMatchedBracket = findMatchedBracket;
 		this.quote = quote;
 		this.word = word;
 		this.block = block;
@@ -6417,8 +6687,6 @@ loop:			do {
 		this.dispatchRangeSymbol = dispatchRangeSymbol;
 		this.setParagraphMacros = setParagraphMacros;
 		this.setSectionMacros = setSectionMacros;
-		this.findSentenceBoundary = findSentenceBoundary;
-		this.findParagraphBoundary = findParagraphBoundary;
 		this.dispose = dispose;
 	}
 
@@ -6831,8 +7099,10 @@ loop:			do {
 		};
 	})();
 	function emptyNodeContents (node) {
+		node = $(node);
+		if (!node) return;
 		var r = document.createRange();
-		r.selectNodeContents($(node));
+		r.selectNodeContents(node);
 		r.deleteContents();
 		r.detach();
 	}
@@ -6902,49 +7172,7 @@ loop:			do {
 			installCore(x);
 		}
 	}
-	function createOverTextMarker (cnt, font, forecolor, backcolor) {
-		var result = '';
-		var canvas = cnt.appendChild(document.createElement('canvas'));
-		try {
-			canvas.height = lineHeight;
-			var ctx = canvas.getContext('2d');
-			ctx.font = font;
-			canvas.width = ctx.measureText('~').width;
-			ctx.fillStyle = backcolor;
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-			ctx.fillStyle = forecolor;
-			ctx.textBaseline = 'top';
-			ctx.textAlign = 'left';
-			ctx.fillText('~', 0, 0);
-			result = canvas.toDataURL('image/png');
-		}
-		finally {
-			canvas.parentNode.removeChild(canvas);
-		}
-		return result;
-	}
-	function createBackgroundImage (cnt, backcolor) {
-		var result = '';
-		var canvas = cnt.appendChild(document.createElement('canvas'));
-		try {
-			canvas.width = canvas.height = 8;
-			var ctx = canvas.getContext('2d');
-			ctx.fillStyle = backcolor;
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
-			result = canvas.toDataURL('image/png');
-		}
-		finally {
-			canvas.parentNode.removeChild(canvas);
-		}
-		return result;
-	}
 	function installCore (x) {
-		// hack for opera: ensure repaint
-		if (window.opera) {
-			window.scrollBy(0, 1);
-			window.scrollBy(0, -1);
-		}
-
 		/*
 		 * DOM structure:
 		 *
@@ -7007,12 +7235,6 @@ loop:			do {
 		if (!cnt) throw new Error('wasavi container not found');
 
 		//
-		var n = new Date;
-		var hue = config.vars.modelinehue < 0 ?
-			Math.floor((n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds()) / 240) :
-			config.vars.modelinehue;
-		var hsl = 'hsl(' + [hue, '100%', '33%'].join(',') + ')';
-		var modeLineGradient = 'linear-gradient(top, ' + hsl + ' 0%,#000 100%);';
 		var borderStyles = 'border:none;';
 		var paddingStyle = 'padding:0;';
 		var fontStyle = 'font:' + x.fontStyle + ';';
@@ -7033,16 +7255,11 @@ loop:			do {
 		charWidth = scaler.offsetWidth;
 		scaler.parentNode.removeChild(scaler);
 
-		//
-		var otm = createOverTextMarker(cnt, x.fontStyle, '#000', '#fff');
-		var bgImage = createBackgroundImage(cnt, '#fff');
-
 		// style
 		var styleElement = $('wasavi_global_styles');
 		styleElement.appendChild(document.createTextNode([
 'body { visibility:visible; } \
 #wasavi_container { \
-  background:#fff url(' + otm + ') left top repeat-y; \
   line-height:1; \
   text-align:left; \
   text-indent:0; \
@@ -7055,7 +7272,6 @@ loop:			do {
 ' + paddingStyle + borderStyles + ' \
   ' + boxSizingPrefix + 'box-sizing:border-box; \
 ' + fontStyle + ' \
-  background: url(' + bgImage + ') left top no-repeat; \
   overflow-x:hidden; \
   overflow-y:scroll; \
   counter-reset:n; \
@@ -7074,7 +7290,7 @@ loop:			do {
   overflow-x:auto; \
   overflow-y:scroll; \
   visibility:hidden; \
-  background-color:white; \
+  background-color:#fff; \
 } \
 #wasavi_singleline_scaler { \
   position:fixed; \
@@ -7110,19 +7326,12 @@ loop:			do {
   padding:0; \
   min-height:' + lineHeight + 'px; \
   white-space:pre-wrap; \
-  background-color:#fff; \
-  color:#000; \
 } \
 #wasavi_editor > div:nth-child(odd) { \
-  background-color:rgb(248,248,248); \
 } \
 #wasavi_editor > div > span.wasavi_em { \
-  color:highlighttext; \
-  background-color:highlight; \
 } \
 #wasavi_editor > div > span.wasavi_composition { \
-  color:#ffffee; \
-  background-color:#ffffee; \
 } \
 #wasavi_editor.n > div:before { \
   display:block; \
@@ -7130,8 +7339,6 @@ loop:			do {
   margin:0; \
   padding:0 ' + charWidth + 'px 0 0; \
   text-align:right; \
-  color:#c00; \
-  background-color:#fff; \
 ' + fontStyle + ' \
   counter-increment:n; \
   content:counter(n); \
@@ -7156,14 +7363,7 @@ loop:			do {
 			})(),
 
 '#wasavi_footer { \
-  color:#fff;',
-
-			window.chrome ? '  background:-webkit-' + modeLineGradient : '',
-			window.opera  ? '  background:-o-'      + modeLineGradient : '',
-			IS_GECKO	  ? '  background:-moz-'    + modeLineGradient : '',
-			//'  background:' + modeLineGradient,
-
-'  padding:2px 2px 1px 2px; \
+  padding:2px 2px 1px 2px; \
   font-family:' + fontFamily + '; \
   font-size:10pt; \
   line-height:1; \
@@ -7216,8 +7416,6 @@ loop:			do {
   padding:0; \
   border:none; \
   outline:none; \
-  color:#fff; \
-  background-color:rgba(0,0,0,0.5); \
   font-family:' + fontFamily + '; \
   font-size:10pt; \
   line-height:1; \
@@ -7231,14 +7429,12 @@ loop:			do {
   ' + boxSizingPrefix + 'box-sizing:border-box; \
   border:none; \
   border-radius:8px; \
-  background-color:rgba(0,0,0,0.8); \
 } \
 #wasavi_console { \
   margin:0; \
   padding:0; \
   border:none; \
   outline:none; \
-  color:#fff; \
   background-color:transparent; \
   width:100%; \
   font-family:' + fontFamily + '; \
@@ -7255,8 +7451,6 @@ loop:			do {
 ' + fontStyle + ' \
   text-decoration:none; \
   text-shadow:none; \
-  color:#fff; \
-  background-color:#000; \
   left:0px; \
   top:0px; \
 } \
@@ -7307,6 +7501,13 @@ loop:			do {
   ime-mode:disabled; \
 }'
 		].join('')));
+
+		// theme
+		theme.container = cnt;
+		theme.fontStyle = fontStyle;
+		theme.lineHeight = lineHeight;
+		theme.select('charcoal');
+		theme.update();
 
 		// focus holder
 		var focusHolder = document.createElement('textarea');
@@ -7462,9 +7663,6 @@ loop:			do {
 		setupEventHandlers(true);
 	}
 	function uninstall (editor, save, implicit) {
-		var cnt = $(CONTAINER_ID);
-		var cover = $('wasavi_cover');
-
 		// apply the edited content to target textarea
 		if (save && isTextDirty) {
 			targetElement.value = editor.value;
@@ -7473,44 +7671,25 @@ loop:			do {
 		// remove all event handlers
 		setupEventHandlers(false);
 
-		// clear all objects and arrays
-		inputModeStack = null;
-		prefixInput = null;
-
+		// clear all objects
+		inputModeStack = undefined;
+		prefixInput = undefined;
 		pairBracketsIndicator && pairBracketsIndicator.dispose();
-		pairBracketsIndicator = null;
-
-		backlog.dispose();
-		backlog = null;
-
-		searchUtils.dispose();
-		searchUtils = null;
-
-		lastHorzFindCommand = null;
-		lastRegexFindCommand = null;
-		lastSubstituteInfo = null;
-		requestedState = null;
-
+		pairBracketsIndicator = undefined;
+		backlog = backlog.dispose();
+		searchUtils = searchUtils.dispose();
+		lastHorzFindCommand = undefined;
+		lastRegexFindCommand = undefined;
+		lastSubstituteInfo = undefined;
+		requestedState = undefined;
 		marks.save();
-		marks.dispose();
-		marks = null;
-
-		cursor.dispose();
-		cursor = null;
-
-		scroller.dispose();
-		scroller = null;
-
-		editLogger.dispose();
-		editLogger = null;
-
-		keyManager.dispose();
-		keyManager = null;
-
-		var globalStyles = $('wasavi_global_styles');
-		if (globalStyles) {
-			emptyNodeContents(globalStyles);
-		}
+		marks = marks.dispose();
+		cursor = cursor.dispose();
+		scroller = scroller.dispose();
+		editLogger = editLogger.dispose();
+		keyManager = keyManager.dispose();
+		theme = theme.dispose();
+		emptyNodeContents($('wasavi_global_styles'));
 
 		//
 		if (extensionChannel) {
@@ -7747,7 +7926,8 @@ loop:			do {
 		if (emphasis) {
 			emptyNodeContents(indf);
 			var span = indf.appendChild(document.createElement('span'));
-			span.style.backgroundColor = '#f00';
+			span.style.color = theme.colors.warnedStatusFg;
+			span.style.backgroundColor = theme.colors.warnedStatusBg;
 			span.textContent = message;
 			pa = span;
 		}
@@ -8586,16 +8766,15 @@ loop:			do {
 				requestShowPrefixInput();
 				editLogger.close();// edit-wrapper
 				needEmitEvent = true;
+				idealWidthPixels = -1;
 			}
 			else {
 				var letterActual = code == 0x0d ? '\n' : letter;
+				var prevPos = editor.selectionStart;
 				editedString += letterActual;
 				editedStringCurrent += letterActual;
+				config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
 
-				if (config.vars.showmatch) {
-					pairBracketsIndicator && pairBracketsIndicator.clear();
-					pairBracketsIndicator = PairBracketsIndicator.getObject(letterActual, editor);
-				}
 				if (execEditMap(editor, mapkey, subkey, code)) {
 					//
 				}
@@ -8611,6 +8790,10 @@ loop:			do {
 						cursor.ensureVisible();
 						cursor.update({visible:true});
 					}
+				}
+				if (config.vars.showmatch) {
+					pairBracketsIndicator = PairBracketsIndicator.getObject(
+						letterActual, editor, prevPos);
 				}
 				needEmitEvent = 'notify-state';
 			}
@@ -9357,97 +9540,6 @@ loop:			do {
 		idealWidthPixels = -1;
 		return true;
 	}
-	function motionFindMatchedBracket (c, t, count, closeBracket) {
-		function findBracket () {
-			var i = 0;
-			while (!t.isEndOfText(n) && !t.isNewline(n)) {
-				var index = BRACKETS.indexOf(t.charAt(n));
-				if (index != -1 && ++i == count) {
-					return index;
-				}
-				n = t.rightPos(n);
-			}
-			return -1;
-		}
-		function findMatchForward (current, match) {
-			var depth = 0;
-			var prevn = n;
-			n = t.rightPos(n);
-			if (current == match) {
-				while (!t.isEndOfText(n) && n.ne(prevn)) {
-					if (t.charAt(n) == match) return n;
-					prevn = n;
-					n = t.rightPos(n);
-				}
-			}
-			else {
-				while (!t.isEndOfText(n) && n.ne(prevn)) {
-					switch (t.charAt(n)) {
-					case current:
-						depth++;
-						break;
-					case match:
-						if (depth == 0) return n;
-						depth--;
-						break;
-					}
-					prevn = n;
-					n = t.rightPos(n);
-				}
-			}
-		}
-		function findMatchBackward (current, match) {
-			var depth = 0;
-			var prevn = n;
-			n = t.leftPos(n);
-			if (current == match) {
-				while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
-					if (t.charAt(n) == match) return n;
-					prevn = n;
-					n = t.leftPos(n);
-				}
-			}
-			else {
-				while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
-					switch (t.charAt(n)) {
-					case current:
-						depth++;
-						break;
-					case match:
-						if (depth == 0) return n;
-						depth--;
-						break;
-					}
-					prevn = n;
-					n = t.leftPos(n);
-				}
-			}
-		}
-
-		count || (count = 1);
-		prefixInput.motion = c;
-
-		var n = t.selectionStart;
-		var currentIndex;
-
-		if (closeBracket) {
-			currentIndex = BRACKETS.substring(BRACKETS.length / 2).indexOf(closeBracket);
-			if (currentIndex >= 0) {
-				currentIndex += BRACKETS.length / 2;
-			}
-		}
-		else {
-			currentIndex = findBracket();
-		}
-
-		if (currentIndex > -1) {
-			var matchChar = BRACKETS.charAt(BRACKETS.length - 1 - currentIndex);
-			var result = currentIndex >= BRACKETS.length / 2 ?
-				findMatchBackward(BRACKETS.charAt(currentIndex), matchChar) :
-				findMatchForward(BRACKETS.charAt(currentIndex), matchChar);
-			return result;
-		}
-	}
 	function motionFindByRegexFacade (pattern, t, count, direction, verticalOffset) {
 		var result;
 		switch (direction) {
@@ -9770,7 +9862,7 @@ loop:			do {
 		(isSubseq ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
 			marks.update(t.selectionStart, function (foldedMarkRegisterer) {
 				result = t.deleteRange(function (content, fragment) {
-					var deleteMarks = fragment.querySelectorAll('span.wasavi_mark');
+					var deleteMarks = fragment.querySelectorAll('span.' + MARK_CLASS);
 					var deleteMarksDest = {};
 					for (var i = 0; i < deleteMarks.length; i++) {
 						var name = deleteMarks[i].getAttribute('data-index');
@@ -10188,6 +10280,7 @@ loop:			do {
 	var keyManager = new KeyManager;
 	var regexConverter = new RegexConverter;
 	var mapManager = new MapManager;
+	var theme = new Theme;
 	var abbrevs = {};
 	var config = new Configurator(
 		[
@@ -10239,7 +10332,10 @@ loop:			do {
 			new VariableItem('writeany', 'b', false),     // not used
 
 			/* defined by wasavi */
-			new VariableItem('modelinehue', 'I', -1),     // O
+			new VariableItem('theme', 's', '', function (v) {
+				theme.select(v) && theme.update();
+				return v;
+			}),											  // O
 			new VariableItem('smooth', 'b', true),        // O
 			new VariableItem('bellvolume', 'i', 25),      // O
 			new VariableItem('history', 'i', 20),         // O
@@ -10743,7 +10839,8 @@ loop:			do {
 		},
 		// jump to matching <, (, {, or [
 		'%': function (c, t, o) {
-			var result = motionFindMatchedBracket(c, t, prefixInput.count);
+			prefixInput.motion = c;
+			var result = searchUtils.findMatchedBracket(prefixInput.count);
 			if (result) {
 				marks.set('\'', t.selectionStart);
 				t.extendSelectionTo(result);
@@ -11438,7 +11535,7 @@ loop:			do {
 				if (prefixInput.isEmptyOperation) {
 					prefixInput.operation = c;
 					inputModeSub = 'wait-a-letter';
-					requestShowPrefixInput('{0}: screen adjustment', o.e.fullIdentifier);
+					requestShowPrefixInput(_('{0}: screen adjustment', o.e.fullIdentifier));
 				}
 				else {
 					inputEscape(o.e.fullIdentifier);
@@ -11764,9 +11861,7 @@ loop:			do {
 			},
 			'wait-a-letter': function (c, t, o) {
 				var result = searchUtils.dispatchRangeSymbol(
-					prefixInput.count, c,
-					prefixInput.motion == 'a',
-					config.vars.quoteescape);
+					prefixInput.count, c, prefixInput.motion == 'a');
 				if (result) {
 					prefixInput.appendMotion(c);
 				}
