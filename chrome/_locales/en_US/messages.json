@@ -348,10 +348,6 @@
 		"message": "{0} {substitution:0} on {1} {line:1}.",
 		"description": "{0} {substitution:0} on {1} {line:1}."
 	},
-	"cannot_find_pair_bracket": {
-		"message": "Cannot find pair bracket.",
-		"description": "Cannot find pair bracket."
-	},
 	"invalid_paragraph_format_@0": {
 		"message": "Invalid paragraph format: {0}",
 		"description": "Invalid paragraph format: {0}"
@@ -511,6 +507,10 @@
 	"@0_find_backward": {
 		"message": "{0}: find backward",
 		"description": "{0}: find backward"
+	},
+	"@0_screen_adjustment": {
+		"message": "{0}: screen adjustment",
+		"description": "{0}: screen adjustment"
 	},
 	"unknown_adjust_command": {
 		"message": "Unknown adjust command.",

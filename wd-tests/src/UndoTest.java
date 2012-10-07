@@ -554,6 +554,19 @@ public class UndoTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#3-4", "foo12#$BAR");
 	}
+
+	@Test
+	public void join () {
+		Wasavi.send("ifoo\nbar\u001b");
+
+		Wasavi.send("1GJ");
+		assertValue("#1-1", "foo bar");
+		assertPos("#1-2", 0, 3);
+		Wasavi.send("u");
+		assertValue("#1-3", "foo\nbar");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "foo bar");
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

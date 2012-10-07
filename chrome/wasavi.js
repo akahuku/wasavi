@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 192 2012-10-07 04:22:04Z akahuku $
+ * @version $Id: wasavi.js 193 2012-10-07 09:15:48Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -106,13 +106,15 @@
 	 * ---------------------
 	 */
 
-	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 192 $') || [1])[0];
-	/*const*/var VERSION_DESC = '$Id: wasavi.js 192 2012-10-07 04:22:04Z akahuku $';
+	/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 193 $') || [1])[0];
+	/*const*/var VERSION_DESC = '$Id: wasavi.js 193 2012-10-07 09:15:48Z akahuku $';
 	/*const*/var CONTAINER_ID = 'wasavi_container';
 	/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 	/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
 	/*const*/var BRACKETS = '[{(<"\'``\'">)}]';
 	/*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
+	/*const*/var CSS_PREFIX = window.chrome ? '-webkit-' :
+		window.opera ? '-o-' : IS_GECKO ? '-moz-' : '';
 	/*const*/var ACCEPTABLE_TYPES = {
 		textarea: true,
 		text:     true,
@@ -294,13 +296,7 @@
 				key = key < 0 ?
 					Math.floor((n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds()) / 240) :
 					key % 360;
-				var hsl = 'hsl(' + [key, '100%', '33%'].join(',') + ')';
-				var prefix = window.chrome ? '-webkit-' :
-					window.opera ? '-o-' :
-					IS_GETCKO ? '-moz-' :
-					'';
-				var rule = 'linear-gradient(top,' + hsl + ' 0%,#000 100%);';
-				return prefix + rule;
+				return CSS_PREFIX + 'linear-gradient(top,hsl(' + key + ',100%,33%) 0%,#000 100%);';
 			case 'string':
 				return key;
 			}
@@ -7479,13 +7475,9 @@ loop:			do {
   left:0; top:0; right:0; bottom:0; \
   background-color:rgba(0,0,0,0.0) \
 } \
-#wasavi_cover.dim {',
-
-			window.chrome ? '  -webkit-transition:background-color 0.5s linear 0s;' : '',
-			window.opera  ? '       -o-transition:background-color 0.5s linear 0s;' : '',
-			IS_GECKO	  ? '     -moz-transition:background-color 0.5s linear 0s;' : '',
-
-'  background-color:rgba(0,0,0,0.25); \
+#wasavi_cover.dim { \
+  ' + (CSS_PREFIX ? CSS_PREFIX + 'transition:background-color 0.5s linear 0s;' : '') + ' \
+  background-color:rgba(0,0,0,0.25); \
 } \
 #wasavi_focus_holder { \
   position:fixed; \
@@ -7506,7 +7498,7 @@ loop:			do {
 		theme.container = cnt;
 		theme.fontStyle = fontStyle;
 		theme.lineHeight = lineHeight;
-		theme.select('charcoal');
+		theme.select();
 		theme.update();
 
 		// focus holder
@@ -9874,7 +9866,7 @@ loop:			do {
 						EditLogger.ITEM_TYPE.DELETE,
 						t.selectionStart, content,
 						t.selectionEnd, t.isLineOrientSelection,
-						t.selectionEndRow == t.rowLength - 1,
+						t.selectionEndRow == t.rowLength - 1 && t.selectionEndCol > 0,
 						deleteMarksDest
 					);
 				});
