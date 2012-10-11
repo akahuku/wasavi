@@ -113,6 +113,11 @@ Commands implemented
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
   w W b B e E gg G H M L f F t T n N
 
+#### range-symbol (also known as "text object" in vim):
+
+* a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
+* i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
+
 #### scroll-command:
 
 * ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;

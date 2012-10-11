@@ -91,6 +91,7 @@ dropbox 上のファイルを読み書きすることができます。
 ### 以下の形式の vi コマンド:
 
 * [count] operation [count] motion
+* [count] operation [count] range-symbol
 * [count] operation-alias
 * [count] motion
 * [count] scroll-command
@@ -112,6 +113,11 @@ dropbox 上のファイルを読み書きすることができます。
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
   w W b B e E gg G H M L f F t T n N
+
+#### range-symbol（vim の "テキストオブジェクト"）:
+
+* a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
+* i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
 
 #### scroll-command:
 

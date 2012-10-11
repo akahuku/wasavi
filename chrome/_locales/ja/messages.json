@@ -217,7 +217,7 @@
 		"description": "Element to be written has readonly attribute (use \"!\" to override)."
 	},
 	"cannot_open_@0": {
-		"message": "Cannot open \"{0}\".",
+		"message": "\"{0}\" を開けません。",
 		"description": "Cannot open \"{0}\"."
 	},
 	"no_previous_execution": {
@@ -373,7 +373,7 @@
 		"description": "{0}: extra range specified."
 	},
 	"@0_unknown_syntax_error": {
-		"message": "{0}: unknown syntax error.",
+		"message": "{0}: 不明な文法エラーです。",
 		"description": "{0}: unknown syntax error."
 	},
 	"cannot_use_the_global_or_v_command_recursively": {
