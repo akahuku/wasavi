@@ -177,15 +177,15 @@ tips
 * :abbreviate syntax is:
 	+ `:abbreviate` displays all the abbreviations currently registered.
 	+ `:abbreviate [clear]` clears all the abbreviations.
-	+ `:abbreviate <i>lhs</i>` displays the abbreviation corresponding to lhs.
-	+ `:abbreviate <i>lhs</i> <i>rhs</i>` registers a abbreviation which
+	+ `:abbreviate lhs` displays the abbreviation corresponding to lhs.
+	+ `:abbreviate lhs rhs` registers a abbreviation which
 	  expands lhs to rhs.
 * :map syntax is:
 	+ `:map` displays all the mappings currently registered.
 	+ `:map [clear]` clears all the mappings.
-	+ `:map <i>lhs</i> <i>rhs</i>` registers a rule which translates lhs to rhs.
+	+ `:map lhs rhs` registers a rule which translates lhs to rhs.
 	  its translation is recursive.
-	+ `:map [noremap] <i>lhs</i> <i>rhs</i>` is also registers, but it is
+	+ `:map [noremap] lhs rhs` also registers, but it is
 	  non-recursive.
 	+ `:map` targets the normal mode mappings. on the other hand,
 	  `:map!` targets the insert mode.
