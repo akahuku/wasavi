@@ -73,6 +73,13 @@ Google Chrome において、github に公開されているソースを実行�
 Insert を押下してください。言うまでもありませんが、終了するには ZZ、:q、:wq
 などを入力します。
 
+### Firefox で、vimperator の環境下で使う
+
+<https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js>
+を vimperator のプラグインディレクトリ（~/.vimperator/plugin、もしくは
+%HOME%\vimperator\plugin）に置いてください。このプラグインは wasavi の状態に
+従って vimperator のパススルーモードを制御します。
+
 ### 単体のテキストエディタとしての利用
 
 <http://wasavi.appsweets.net/> へアクセスします。自動的に wasavi が起動します。
@@ -149,7 +156,7 @@ vim 互換の機能
 * 多段 undo/redo
 * インクリメンタルサーチ
 * レンジシンボル（vim で言うところのテキストオブジェクト）
-* レジスタ "、:、*、/
+* レジスタ "、:、*、/（特に * はクリップボードとのアクセスを行うので重要です）
 * オプション iskeyword、incsearch、smartcase、undolevels、quoteescape
 
 
@@ -166,6 +173,20 @@ tips
   各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
   （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを
   編集する
+* :abbreviate の文法は:
+	+ `:abbreviate` は、登録されている全ての略語を表示します
+	+ `:abbreviate [clear]` は、全ての略語を削除します
+	+ `:abbreviate <i>lhs</i>` は、lhs に対応する略語を表示します
+	+ `:abbreviate <i>lhs</i> <i>rhs</i>` は、lhs を rhs に展開する
+	  略語を登録します
+* :map の文法は:
+	+ `:map` は、登録されている全てのマップを表示します
+	+ `:map [clear]` は、全てのマップを削除します
+	+ `:map <i>lhs</i> <i>rhs</i>` は、lhs を rhs に変換するマップを登録します。
+	  この変換は再帰します
+	+ `:map [noremap] <i>lhs</i> <i>rhs</i>` も登録しますが、こちらは再帰しません
+	+ `:map` はノーマルモード用のマップを対象とします。一方、
+	  `:map!` は挿入モード用です
 
 
 

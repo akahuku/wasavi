@@ -73,6 +73,14 @@ How to use
 focus to TEXTAREA element of a web page, and press Ctrl+Enter. Of course, to
 quit wasavi, press ZZ / :q / :wq etc.
 
+### use under environment of vimperator on Firefox
+
+put
+<https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js>
+into your vimperator plugin directory (~/.vimperator/plugin or %HOME%\vimperator\plugin).
+this plugin controls the pass-through mode of vimperator according to the state
+of wasavi.
+
 ### use as a independent text editor
 
 Browse <http://wasavi.appsweets.net/>. wasavi will be executed automaticaly.
@@ -91,6 +99,7 @@ Commands implemented
 ### following vi commands:
 
 * [count] operation [count] motion
+* [count] operation [count] range-symbol
 * [count] operation-alias
 * [count] motion
 * [count] scroll-command
@@ -148,7 +157,8 @@ vim-compatible functionalities
 * multiple leveled undo/redo
 * incremental searching
 * range symbols (aka, text objects in vim)
-* register ", :, *, /
+* register ", :, *, / (especially * is important since it accesses to system
+  clipboard)
 * options: iskeyword, incsearch, smartcase, undolevels, quoteescape
 
 
@@ -164,6 +174,21 @@ tips
 * to modify initial settings:
   open preference page of wasavi via extension management functionality
   of each browser (or enter `:options` on wasavi), and edit "exrc" textbox.
+* :abbreviate syntax is:
+	+ `:abbreviate` displays all the abbreviations currently registered.
+	+ `:abbreviate [clear]` clears all the abbreviations.
+	+ `:abbreviate <i>lhs</i>` displays the abbreviation corresponding to lhs.
+	+ `:abbreviate <i>lhs</i> <i>rhs</i>` registers a abbreviation which
+	  expands lhs to rhs.
+* :map syntax is:
+	+ `:map` displays all the mappings currently registered.
+	+ `:map [clear]` clears all the mappings.
+	+ `:map <i>lhs</i> <i>rhs</i>` registers a rule which translates lhs to rhs.
+	  its translation is recursive.
+	+ `:map [noremap] <i>lhs</i> <i>rhs</i>` is also registers, but it is
+	  non-recursive.
+	+ `:map` targets the normal mode mappings. on the other hand,
+	  `:map!` targets the insert mode.
 
 
 

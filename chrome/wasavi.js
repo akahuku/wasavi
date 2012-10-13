@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 194 2012-10-11 04:16:48Z akahuku $
+ * @version $Id: wasavi.js 196 2012-10-13 07:30:22Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -107,8 +107,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 194 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 194 2012-10-11 04:16:48Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 196 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 196 2012-10-13 07:30:22Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -1336,21 +1336,21 @@ RegisterItem.prototype = {
 			cursorBlinkTimer = null;
 		}
 		this.hide = function () {
+			stopBlink();
 			editor.unEmphasis(CURSOR_SPAN_CLASS);
 			comCursor.style.display = 'none';
-			stopBlink();
 		};
 		this.show = function () {
 			var ch = editor.charAt(editor.selectionStart);
 			if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
 				comCursor.style.display = 'none';
-				editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS);
 				var span = getCursorSpan();
-				if (span) {
-					span.style.color = theme.colors.invertFg;
-					span.style.backgroundColor = theme.colors.invertBg;
-					span.setAttribute('data-blink-active', '1');
+				if (!span) {
+					span = editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS)[0];
 				}
+				span.style.color = theme.colors.invertFg;
+				span.style.backgroundColor = theme.colors.invertBg;
+				span.setAttribute('data-blink-active', '1');
 			}
 			else {
 				editor.unEmphasis(CURSOR_SPAN_CLASS);
@@ -2131,6 +2131,12 @@ Editor.prototype = new function () {
 			}
 
 			return cp <= 0x7f ? getLatin1Prop(cp).charAt(0) : getUnicodeBlock(cp);
+		},
+		charRectAt: function () {
+			var a = arg2pos(arguments);
+			var result = this.emphasis(a, 1)[0].getBoundingClientRect();
+			this.unEmphasis();
+			return result;
 		},
 		getSelection: function () {
 			if (this.isLineOrientSelection) {
@@ -7591,7 +7597,7 @@ ime-mode:disabled; \
 	inputMode = 'command';
 	inputModeSub = '';
 	prefixInput = new PrefixInput;
-	idealWidthPixels = -1;
+	idealWidthPixels = idealDenotativeWidthPixels = -1;
 	isTextDirty = false;
 	isEditCompleted = false;
 	isVerticalMotion = false;
@@ -9112,12 +9118,16 @@ function getLogicalColumn (t) {
 }
 function refreshIdealWidthPixels (t) {
 	if (idealWidthPixels < 0) {
-		var line = t.rows(t.selectionStartRow).substr(0, t.selectionStartCol);
+		var n = t.selectionStart;
+		var line = t.rows(n).substr(0, n.col);
 		var textspan = $('wasavi_singleline_scaler');
 		if (textspan.textContent != line) {
 			textspan.textContent = line;
 		}
 		idealWidthPixels = textspan.offsetWidth;
+
+		var curRect = t.charRectAt(n);
+		idealDenotativeWidthPixels = curRect.left + parseInt((curRect.right - curRect.left) / 2);
 	}
 }
 function getCurrentViewPositionIndices (t) {
@@ -9196,6 +9206,13 @@ function getCurrentViewPositionIndices (t) {
 
 	return result;
 }
+function isDenotativeState () {
+	return prefixInput.motion == 'g' && !config.vars.jkdenotative
+		|| prefixInput.motion != 'g' &&  config.vars.jkdenotative;
+}
+function callDenotativeFunction () {
+	return (isDenotativeState() ? motionUpDownDenotative : motionUpDown).apply(null, arguments);
+}
 function inputEscape () {
 	if (arguments.length) {
 		requestRegisterNotice(_('{0} canceled.', arguments[0]));
@@ -9260,6 +9277,43 @@ function motionLineStart (c, t, realTop) {
 }
 function motionLineEnd (c, t) {
 	t.selectionEnd = t.getLineTailOffset(t.selectionEnd);
+	prefixInput.motion = c;
+	idealWidthPixels = -1;
+	return true;
+}
+function motionLineStartDenotative (c, t, realTop) {
+	var n = t.selectionStart;
+	var curRect = t.charRectAt(n);
+	while (--n.col >= 0) {
+		var newRect = t.charRectAt(n);
+		if (newRect.top < curRect.top) {
+			n.col++;
+			break;
+		}
+	}
+	n.col = Math.max(n.col, 0);
+	if (!realTop) {
+		while (!t.isEndOfText(n) && !t.isNewline(n) && /\s/.test(t.charAt(n))) {
+			n.col++;
+		}
+	}
+	t.selectionStart = n;
+	prefixInput.motion = c;
+	idealWidthPixels = -1;
+	return true;
+}
+function motionLineEndDenotative (c, t) {
+	var n = t.selectionEnd;
+	var curRect = t.charRectAt(n);
+	while (!t.isEndOfText(n) && !t.isNewline(n)) {
+		n.col++;
+		var newRect = t.charRectAt(n);
+		if (newRect.top > curRect.top) {
+			n.col--;
+			break;
+		}
+	}
+	t.selectionEnd = n;
 	prefixInput.motion = c;
 	idealWidthPixels = -1;
 	return true;
@@ -9736,14 +9790,21 @@ function motionReplaceOne (c, t, count) {
 	idealWidthPixels = -1;
 	return true;
 }
-function motionUp (c, t, count) {
-	var textspan = $('wasavi_singleline_scaler');
-	var n = t.selectionStart;
-
+function motionUpDown (c, t, count, isDown) {
 	count || (count = 1);
 	refreshIdealWidthPixels(t);
-	n.row <= 0 && requestRegisterNotice(_('Top of text.'));
-	n.row = Math.max(n.row - count, 0);
+	var textspan = $('wasavi_singleline_scaler');
+	var n = isDown ? t.selectionEnd : t.selectionStart;
+	var goalWidth = idealWidthPixels;
+
+	if (isDown) {
+		n.row >= t.rowLength - 1 && requestRegisterNotice(_('Tail of text.'));
+		n.row = Math.min(n.row + count, t.rowLength - 1);
+	}
+	else {
+		n.row <= 0 && requestRegisterNotice(_('Top of text.'));
+		n.row = Math.max(n.row - count, 0);
+	}
 
 	var width = 0;
 	var widthp = 0;
@@ -9753,53 +9814,85 @@ function motionUp (c, t, count) {
 	textspan.textContent = '';
 
 	while (index < line.length && !t.isNewline(n.row, index)) {
+		// TODO: more optimization
 		textspan.textContent += line.substr(index++, 1);
 		width = textspan.offsetWidth;
-		if (width >= idealWidthPixels) {
-			if (Math.abs(widthp - idealWidthPixels) < Math.abs(width - idealWidthPixels)) {
-				index--;
-			}
+		if (width >= goalWidth) {
+			index -= Math.abs(widthp - goalWidth) < Math.abs(width - goalWidth) ? 1 : 0;
 			break;
 		}
 		widthp = width;
 	}
 	n.col = index;
-	t.selectionStart = n;
+	if (isDown) {
+		t.selectionEnd = n;
+	}
+	else {
+		t.selectionStart = n;
+	}
 	prefixInput.motion = c;
 	isVerticalMotion = true;
 	return true;
 }
+function motionUp (c, t, count) {
+	return motionUpDown(c, t, count, false);
+}
 function motionDown (c, t, count) {
-	var textspan = $('wasavi_singleline_scaler');
-	var n = t.selectionEnd;
-
+	return motionUpDown(c, t, count, true);
+}
+function motionUpDownDenotative (c, t, count, isDown) {
 	count || (count = 1);
 	refreshIdealWidthPixels(t);
-	n.row >= t.rowLength - 1 && requestRegisterNotice(_('Tail of text.'));
-	n.row = Math.min(n.row + count, t.rowLength - 1);
+	var n = isDown ? t.selectionEnd : t.selectionStart;
+	var goalWidth = idealDenotativeWidthPixels;
+	var overed = false;
+	var dir = isDown ? 1 : -1;
 
-	var width = 0;
-	var widthp = 0;
-	var line = t.rows(n);
-	var index = 0;
-
-	textspan.textContent = '';
-
-	while (index < line.length && !t.isNewline(n.row, index)) {
-		textspan.textContent += line.substr(index++, 1);
-		width = textspan.offsetWidth;
-		if (width >= idealWidthPixels) {
-			if (Math.abs(widthp - idealWidthPixels) < Math.abs(width - idealWidthPixels)) {
-				index--;
-			}
-			break;
+	for (var i = 0; i < count; i++) {
+		var curRect = t.charRectAt(n);
+		var startn = n.clone();
+		while (isDown && !t.isEndOfText(n) && !t.isNewline(n) && ++n.col >= 0
+		|| !isDown && --n.col >= 0) {
+			// TODO: more optimization
+			var newRect = t.charRectAt(n);
+			if (isDown && newRect.top > curRect.top
+			||  !isDown && newRect.top < curRect.top) break;
 		}
-		widthp = width;
+		if (isDown && t.isNewline(n) || !isDown && n.col < 0) {
+			if (isDown && n.row >= t.rowLength - 1 || !isDown && n.row <= 0) {
+				overed = i == 0;
+				n = startn;
+				break;
+			}
+			n.row += dir;
+			n.col = isDown ? 0 : Math.max(t.rows(n).length - 1, 0);
+		}
+
+		var widthp = 0;
+		while (isDown && !t.isEndOfText(n) && !t.isNewline(n)
+		|| !isDown && n.col >= 0) {
+			// TODO: more optimization
+			var newRect = t.charRectAt(n);
+			var width = newRect.left + parseInt((newRect.right - newRect.left) / 2);
+			if (isDown && width >= goalWidth || !isDown && width <= goalWidth) {
+				var closer = Math.abs(widthp - goalWidth) < Math.abs(width - goalWidth) ? 1 : 0;
+				n.col += closer * -dir;
+				break;
+			}
+			widthp = width;
+			n.col += dir
+		}
 	}
-	n.col = index;
-	t.selectionEnd = n;
+
+	n.col = Math.max(0, Math.min(n.col, t.rows(n).length));
+	if (isDown) {
+		t.selectionEnd = n;
+	}
+	else {
+		t.selectionStart = n;
+	}
 	prefixInput.motion = c;
-	isVerticalMotion = true;
+	overed && requestRegisterNotice(isDown ? _('Tail of text.') : _('Top of text.'));
 	return true;
 }
 function scrollView (c, t, count) {
@@ -10290,7 +10383,10 @@ var config = new Configurator(
 		new VariableItem('list', 'b', false),         // not used
 		new VariableItem('magic', 'b', true),         // O
 		new VariableItem('mesg', 'b', true),          // not used
-		new VariableItem('number', 'b', false),       // O
+		new VariableItem('number', 'b', false, function (v) {
+			idealWidthPixels = -1;
+			return v;
+		}),											  // O
 		new VariableItem('paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
 			searchUtils && searchUtils.setParagraphMacros(v);
 			return v;
@@ -10304,7 +10400,7 @@ var config = new Configurator(
 		new VariableItem('sections', 's', 'NHSHH HUnhsh', function (v) {
 			searchUtils && searchUtils.setSectionMacros(v);
 			return v;
-		}),                                           // O
+		}),											  // O
 		new VariableItem('shell', 's', '/bin/sh'),    // not used
 		new VariableItem('shiftwidth', 'i', 4),       // O
 		new VariableItem('showmatch', 'b', true),     // O
@@ -10349,6 +10445,7 @@ var config = new Configurator(
 			});
 			return v;
 		}),   // O
+		new VariableItem('jkdenotative', 'b', false),  // O
 
 		/* defined by vim */
 		new VariableItem('iskeyword', 'r', '^[a-zA-Z0-9_]\\+$'),// O
@@ -10430,7 +10527,7 @@ var config = new Configurator(
 		ul: 'undolevels',
 		qe: 'quoteescape',
 
-		fs: 'fullscreen'
+		fs: 'fullscreen',		jk: 'jkdenotative'
 	}
 );
 var isStandAlone = (function () {
@@ -10472,6 +10569,7 @@ var requestedState;
 var lineHeight;
 var charWidth;
 var idealWidthPixels;
+var idealDenotativeWidthPixels;
 var backlog;
 var pairBracketsIndicator;
 var exCommandExecutor;
@@ -10814,18 +10912,20 @@ var commandMap = {
 	},
 	// jump to fist non-blank position on current line
 	'^': function (c, t) {
-		return motionLineStart(c, t, false);
+		return (isDenotativeState() ? motionLineStartDenotative : motionLineStart)(c, t, false);
 	},
 	'<home>': function (c, t) {
 		return this['^'].apply(this, arguments);
 	},
 	// jump to end of line
 	'$': function (c, t) {
-		var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
-		if (count > 1) {
-			motionDown(c, t, count - 1);
+		if (isDenotativeState()) {
+			prefixInput.count > 1 && motionUpDownDenotative(c, t, prefixInput.count - 1, true);
+			return motionLineEndDenotative(c, t, false);
 		}
-		return motionLineEnd(c, t);
+		var count = Math.min(prefixInput.count, t.rowLength - t.selectionStartRow);
+		count > 1 && motionDown(c, t, count - 1);
+		return motionLineEnd(c, t, false);
 	},
 	'<end>': function (c, t) {
 		return this.$.apply(this, arguments);
@@ -11186,7 +11286,7 @@ var commandMap = {
 		}
 	},
 	j: function (c, t) {
-		return motionDown(c, t, prefixInput.count);
+		return callDenotativeFunction(c, t, prefixInput.count, true);
 	},
 	'\u000e'/*^N*/: function (c, t) {
 		return this.j.apply(this, arguments);
@@ -11195,7 +11295,7 @@ var commandMap = {
 		return this.j.apply(this, arguments);
 	},
 	k: function (c, t) {
-		return motionUp(c, t, prefixInput.count);
+		return callDenotativeFunction(c, t, prefixInput.count);
 	},
 	'\u0010'/*^P*/: function (c, t) {
 		return this.k.apply(this, arguments);
@@ -11291,6 +11391,14 @@ var commandMap = {
 				idealWidthPixels = -1;
 				prefixInput.trailer = c;
 				result = true;
+				break;
+			case 'j':
+				prefixInput.trailer = c;
+				result = this.j.apply(this, arguments);
+				break;
+			case 'k':
+				prefixInput.trailer = c;
+				result = this.k.apply(this, arguments);
 				break;
 			default:
 				requestRegisterNotice(_('Unknown g-prefixed command: {0}', c));
