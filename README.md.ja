@@ -176,15 +176,15 @@ tips
 * :abbreviate の文法は:
 	+ `:abbreviate` は、登録されている全ての略語を表示します
 	+ `:abbreviate [clear]` は、全ての略語を削除します
-	+ `:abbreviate <i>lhs</i>` は、lhs に対応する略語を表示します
-	+ `:abbreviate <i>lhs</i> <i>rhs</i>` は、lhs を rhs に展開する
+	+ `:abbreviate lhs` は、lhs に対応する略語を表示します
+	+ `:abbreviate lhs rhs` は、lhs を rhs に展開する
 	  略語を登録します
 * :map の文法は:
 	+ `:map` は、登録されている全てのマップを表示します
 	+ `:map [clear]` は、全てのマップを削除します
-	+ `:map <i>lhs</i> <i>rhs</i>` は、lhs を rhs に変換するマップを登録します。
+	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。
 	  この変換は再帰します
-	+ `:map [noremap] <i>lhs</i> <i>rhs</i>` も登録しますが、こちらは再帰しません
+	+ `:map [noremap] lhs rhs` も登録しますが、こちらは再帰しません
 	+ `:map` はノーマルモード用のマップを対象とします。一方、
 	  `:map!` は挿入モード用です
 
