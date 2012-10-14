@@ -18,15 +18,18 @@ public class EditingTest extends WasaviTest {
 
 		Wasavi.send(a);
 		assertEquals("#1", "fobar", Wasavi.getValue());
+		assertEquals("#1-1", "o", Wasavi.getRegister("\""));
 		assertPos("#2", 0, 2);
 
 		Wasavi.send("2", a);
 		assertEquals("#3", "for", Wasavi.getValue());
+		assertEquals("#3-1", "ba", Wasavi.getRegister("\""));
 		assertPos("#3", 0, 2);
 
 		Wasavi.send("d", a);
-		assertTrue(Wasavi.getLastMessage().length() > 0);
-		assertPos("#4", 0, 2);
+		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
+		assertPos("#4-1", 0, 2);
+		assertValue("#4-2", "for");
 	}
 
 	@Test
@@ -46,15 +49,18 @@ public class EditingTest extends WasaviTest {
 
 		Wasavi.send("X");
 		assertEquals("#1", "fooar", Wasavi.getValue());
+		assertEquals("#1-1", "b", Wasavi.getRegister("\""));
 		assertPos("#2", 0, 3);
 
 		Wasavi.send("2X");
 		assertEquals("#3", "far", Wasavi.getValue());
+		assertEquals("#1-1", "oo", Wasavi.getRegister("\""));
 		assertPos("#3", 0, 1);
 
 		Wasavi.send("dX");
-		assertTrue(Wasavi.getLastMessage().length() > 0);
-		assertPos("#4", 0, 1);
+		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
+		assertPos("#4-1", 0, 1);
+		assertValue("#4-2", "far");
 	}
 
 	@Test

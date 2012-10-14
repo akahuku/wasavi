@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 196 2012-10-13 07:30:22Z akahuku $
+ * @version $Id: wasavi.js 197 2012-10-14 02:23:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -107,8 +107,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 196 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 196 2012-10-13 07:30:22Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 197 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 197 2012-10-14 02:23:58Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -8633,7 +8633,7 @@ function processInput (code, e) {
 			if (!canTransit) continue;
 
 			editedStringCurrent = target + multiply('\u0008', i.length) + abbrevs[i] + last;
-			deleteChars(t, i.length + last.length);
+			deleteChars(t, i.length + last.length, false, true);
 			(inputMode == 'edit' ? insert : overwrite)(t, abbrevs[i] + last);
 			break;
 		}
@@ -9956,6 +9956,7 @@ function deleteSelection (t, isSubseq) {
 					position && (deleteMarksDest[name] = position.clone());
 				}
 				!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
+				!isSubseq && registers.set(prefixInput.register, content);
 				editLogger.write(
 					EditLogger.ITEM_TYPE.DELETE,
 					t.selectionStart, content,
@@ -10164,7 +10165,7 @@ function toggleCase (t, count) {
 		var replacedText = text.substr(n.col, count).replace(/[a-z]/ig, function (a) {
 			return a.charCodeAt(0) >= smalla ? a.toUpperCase() : a.toLowerCase();
 		});
-		deleteChars(t, count, true);
+		deleteChars(t, count, true, true);
 		insert(t, replacedText);
 	});
 	isEditCompleted = true;
@@ -12144,11 +12145,11 @@ var commandMap = {
 var editMap = {
 	'\u0008'/*backspace*/: function (c, t) {
 		logEditing(t, true);
-		deleteChars(t, 1, false);
+		deleteChars(t, 1, false, true);
 	},
 	'\u007f'/*delete*/: function (c, t) {
 		logEditing(t, true);
-		deleteChars(t, 1, true);
+		deleteChars(t, 1, true, true);
 	},
 	'\u0009'/*tab*/: function (c, t) {
 		insert(t, '\t');

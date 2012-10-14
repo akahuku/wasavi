@@ -81,6 +81,12 @@ into your vimperator plugin directory (~/.vimperator/plugin or %HOME%\vimperator
 this plugin controls the pass-through mode of vimperator according to the state
 of wasavi.
 
+And, on <http://wasavi.appsweets.net/>, enter
+`:ignorekeys add ^http://wasavi\\.appsweets\\.net/` to vimperator.
+then on the page, vimperator always becomes pass-through mode.
+
+settings of ignorekeys command are saved automatically, therefore it's enough to do once.
+
 ### use as a independent text editor
 
 Browse <http://wasavi.appsweets.net/>. wasavi will be executed automaticaly.
@@ -96,8 +102,6 @@ can save and load file on dropbox.
 Commands implemented
 --------------------
 
-### following vi commands:
-
 * [count] operation [count] motion
 * [count] operation [count] range-symbol
 * [count] operation-alias
@@ -106,38 +110,38 @@ Commands implemented
 * [count] edit-command
 * : ex-command
 
-#### operation:
+### operation:
 
 * c y d &gt; &lt;
 
-#### operation-alias:
+### operation-alias:
 
 * cc yy dd &gt;&gt; &lt;&lt; C Y D 
 
-#### motion:
+### motion:
 
 * &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
-  w W b B e E gg G H M L f F t T n N
+  w W b B e E gg gj gk g^ g$ G H M L f F t T n N
 
-#### range-symbol (also known as "text object" in vim):
+### range-symbol (also known as "text object" in vim):
 
 * a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
 * i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
 
-#### scroll-command:
+### scroll-command:
 
 * ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
   z&lt;enter&gt; z. zz z-
 
-#### edit-command:
+### edit-command:
 
 * x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
   a A i I o O & s S ZZ
 
-#### ex-command:
+### ex-command:
 
 * abbreviate copy delete edit file global join k map mark marks move
   options print put quit read redo s & ~ set registers to

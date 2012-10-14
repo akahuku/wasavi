@@ -80,6 +80,12 @@ Insert を押下してください。言うまでもありませんが、終了�
 %HOME%\vimperator\plugin）に置いてください。このプラグインは wasavi の状態に
 従って vimperator のパススルーモードを制御します。
 
+また、<http://wasavi.appsweets.net/> を利用する場合は、vimperator に対して
+`:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは
+常にパススルーモードになります。
+
+ignorekeys コマンドの設定は自動的に保存されるので、コマンドは 1 度実行すれば十分です。
+
 ### 単体のテキストエディタとしての利用
 
 <http://wasavi.appsweets.net/> へアクセスします。自動的に wasavi が起動します。
@@ -95,8 +101,6 @@ dropbox 上のファイルを読み書きすることができます。
 実装済みコマンド
 --------------------
 
-### 以下の形式の vi コマンド:
-
 * [count] operation [count] motion
 * [count] operation [count] range-symbol
 * [count] operation-alias
@@ -105,38 +109,38 @@ dropbox 上のファイルを読み書きすることができます。
 * [count] edit-command
 * : ex-command
 
-#### operation:
+### operation:
 
 * c y d &gt; &lt;
 
-#### operation-alias:
+### operation-alias:
 
 * cc yy dd &gt;&gt; &lt;&lt; C Y D 
 
-#### motion:
+### motion:
 
 * &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
-  w W b B e E gg G H M L f F t T n N
+  w W b B e E gg gj gk g^ g$ G H M L f F t T n N
 
-#### range-symbol（vim の "テキストオブジェクト"）:
+### range-symbol（vim の "テキストオブジェクト"）:
 
 * a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
 * i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
 
-#### scroll-command:
+### scroll-command:
 
 * ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
   z&lt;enter&gt; z. zz z-
 
-#### edit-command:
+### edit-command:
 
 * x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
   a A i I o O & s S ZZ
 
-#### ex-command:
+### ex-command:
 
 * abbreviate copy delete edit file global join k map mark marks move
   options print put quit read redo s & ~ set registers to
