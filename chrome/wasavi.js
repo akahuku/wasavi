@@ -35,8 +35,7 @@
  */
 
 /*const*/var IS_GECKO =
-	window.navigator.product == 'Gecko'
-	&& window.navigator.userAgent.indexOf('Gecko/') != -1;
+	window.navigator.product == 'Gecko' && window.navigator.userAgent.indexOf('Gecko/') != -1;
 
 var extensionChannel;
 var wasaviFrame;
@@ -48,8 +47,7 @@ if (global.WasaviExtensionWrapper
 	extensionChannel.setMessageListener(function (req) {
 		if (!req) return;
 		function run (callback) {
-			if (document.readyState == 'interactive'
-			||  document.readyState == 'complete') {
+			if (document.readyState == 'interactive' || document.readyState == 'complete') {
 				/*
 				 * an issue of security risk about innerHTML
 				 * =========================================
@@ -1367,9 +1365,11 @@ RegisterItem.prototype = {
 				comCursor.style.backgroundColor = theme.colors.invertBg;
 			}
 			editor.adjustBackgroundImage();
+			editor.adjustLineNumber(config.vars.relativenumber);
 			startBlink();
 		};
 		this.lostFocus = function () {
+			this.show();
 			stopBlink();
 			var span = getCursorSpan();
 			if (span) {
@@ -1377,8 +1377,6 @@ RegisterItem.prototype = {
 				span.style.backgroundColor = theme.colors.blurBg;
 			}
 			else {
-				comCursor.style.display = 'block';
-				comCursor.style.visibility = 'visible';
 				comCursor.style.color = theme.colors.blurFg;
 				comCursor.style.backgroundColor = theme.colors.blurBg;
 			}
@@ -1455,30 +1453,36 @@ RegisterItem.prototype = {
 			editCursor.value = leading = span.textContent;
 			editCursor.selectionStart = editCursor.value.length;
 			editCursor.selectionEnd = editCursor.value.length;
-
 			editCursor.focus();
+
+			editor.adjustBackgroundImage();
+			editor.adjustLineNumber(config.vars.relativenumber);
 		};
 		this.lostFocus = function () {};
 		this.dispose = function () {};
 	}
 	function getLineNumberWidth () {
-		return Math.min(6, (editor.rowLength + '').length);
+		if (config.vars.number) {
+			return Math.min(6, (editor.rowLength + '').length);
+		}
+		else if (config.vars.relativenumber) {
+			return 3;
+		}
+		return 0;
 	}
 	function getPaddingLeft (lineNumberWidth) {
 		lineNumberWidth || (lineNumberWidth = getLineNumberWidth());
-		if (!config.vars.number) return '0';
-		return (LINE_NUMBER_MAX_WIDTH + charWidth * (lineNumberWidth + 1)) + 'px';
+		if (config.vars.number || config.vars.relativenumber) {
+			return (LINE_NUMBER_MARGIN_LEFT + charWidth * (lineNumberWidth + 1)) + 'px';
+		}
+		return '0';
 	}
 	function syncPosition () {
 		fixPosition();
 
 		var caretdiv = $('wasavi_multiline_scaler');
 		var lineNumberWidth = getLineNumberWidth();
-		var newClass = config.vars.number ? ('n n' + lineNumberWidth) : '';
-
-		if (editor.elm.className != newClass) {
-			editor.elm.className = newClass;
-		}
+		editor.adjustLineNumberWidth(lineNumberWidth);
 
 		var n = editor.selectionStart;
 		caretdiv.textContent = editor.rows(n);
@@ -2322,6 +2326,18 @@ Editor.prototype = new function () {
 				this.elm.style.backgroundSize = desc;
 			}
 		},
+		adjustLineNumberWidth: function (width) {
+			var newClass = width != 0 ? ('n n' + width) : '';
+			if (this.elm.className != newClass) {
+				this.elm.className = newClass;
+			}
+		},
+		adjustLineNumber: function (isRelative) {
+			var desc = 'n ' + (isRelative ? -(this.selectionStartRow + 1) : 0);
+			if (this.elm.style.counterReset != desc) {
+				this.elm.style.counterReset = desc;
+			}
+		},
 		insertChars: function (arg, text) {
 			var iter = document.createNodeIterator(
 				this.elm.childNodes[arg.row],
@@ -2924,21 +2940,11 @@ whole:
 	this.dispose = function () {
 		editor = cursor = modeLine = null;
 	};
-	this.__defineGetter__('running', function () {
-		return running;
-	});
-	this.__defineGetter__('consumeMsecs', function () {
-		return consumeMsecs;
-	});
-	this.__defineGetter__('timerPrecision', function () {
-		return timerPrecision;
-	});
-	this.__defineSetter__('consumeMsecs', function (v) {
-		consumeMsecs = v;
-	});
-	this.__defineSetter__('timerPrecision', function (v) {
-		timerPrecision = v;
-	});
+	this.__defineGetter__('running', function () {return running;});
+	this.__defineGetter__('consumeMsecs', function () {return consumeMsecs;});
+	this.__defineGetter__('timerPrecision', function () {return timerPrecision;});
+	this.__defineSetter__('consumeMsecs', function (v) {consumeMsecs = v;});
+	this.__defineSetter__('timerPrecision', function (v) {timerPrecision = v;});
 }
 
 /*constructor*/function ExCommand (name, shortName, syntax, flags, handler) {
@@ -6211,7 +6217,7 @@ PairBracketsIndicator.getObject = function (c, t, n) {
 		var noSkip = false;
 
 		while (count--) {
-loop:			do {
+loop:		do {
 				if (editor.isNewline(pos)) {
 					do {
 						if (iter.call(editor, pos) == -1) break;
@@ -7353,7 +7359,9 @@ content:counter(n); \
 				result.push(
 					'#wasavi_editor.n' + i + ' > div:before {' +
 					'min-width:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * i) + 'px;' +
+					'max-width:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * i) + 'px;' +
 					'margin-left:-' + (LINE_NUMBER_MARGIN_LEFT + charWidth * (i + 1)) + 'px;' +
+					'overflow:hidden;' +
 					'}'
 				);
 				result.push(
@@ -10288,19 +10296,19 @@ function startEdit (c, t, opts, isAppend, isAlter) {
 
 		var n;
 		switch ((isAppend ? 2 : 0) + (isAlter ? 1 : 0)) {
-			case 0:// insert
-				n = t.selectionStart;
-				break;
-			case 1:// insert at top
-				n = t.getLineTopOffset2(t.selectionStart);
-				break;
-			case 2:// append
-				n = t.selectionEnd;
-				n.col = Math.min(n.col + 1, t.rows(n).length);
-				break;
-			case 3:// append at tail
-				n = t.getLineTailOffset(t.selectionEnd);
-				break;
+		case 0:// insert
+			n = t.selectionStart;
+			break;
+		case 1:// insert at top
+			n = t.getLineTopOffset2(t.selectionStart);
+			break;
+		case 2:// append
+			n = t.selectionEnd;
+			n.col = Math.min(n.col + 1, t.rows(n).length);
+			break;
+		case 3:// append at tail
+			n = t.getLineTailOffset(t.selectionEnd);
+			break;
 		}
 		t.setSelectionRange(n);
 		cursor.ensureVisible();
@@ -10386,6 +10394,7 @@ var config = new Configurator(
 		new VariableItem('mesg', 'b', true),          // not used
 		new VariableItem('number', 'b', false, function (v) {
 			idealWidthPixels = -1;
+			v && config.setData('norelativenumber');
 			return v;
 		}),											  // O
 		new VariableItem('paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
@@ -10459,6 +10468,11 @@ var config = new Configurator(
 			return v;
 		}),                                           // O
 		new VariableItem('quoteescape', 's', '\\'),   // O
+		new VariableItem('relativenumber', 'b', false, function (v) {
+			idealWidthPixels = -1;
+			v && config.setData('nonumber');
+			return v;
+		}),											  // O
 
 		/* defined by nvi */
 		//new VariableItem('altwerase', 'b', false),
@@ -10524,9 +10538,8 @@ var config = new Configurator(
 
 		isk: 'iskeyword',
 		incsearch: 'searchincr', is: 'searchincr',
-		scs: 'smartcase',
-		ul: 'undolevels',
-		qe: 'quoteescape',
+		scs: 'smartcase',		ul: 'undolevels',	qe: 'quoteescape',
+		rnu: 'relativenumber',
 
 		fs: 'fullscreen',		jk: 'jkdenotative'
 	}
