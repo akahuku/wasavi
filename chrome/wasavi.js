@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 197 2012-10-14 02:23:58Z akahuku $
+ * @version $Id: wasavi.js 199 2012-10-19 18:17:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -105,8 +105,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 197 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 197 2012-10-14 02:23:58Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 199 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 199 2012-10-19 18:17:02Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -159,6 +159,7 @@ if (global.WasaviExtensionWrapper
 /*const*/var COMPOSITION_CLASS = 'wasavi_composition';
 /*const*/var MARK_CLASS = 'wasavi_mark';
 /*const*/var EMPHASIS_CLASS = 'wasavi_em';
+/*const*/var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
 
 /*
  * classes {{{1
@@ -1283,7 +1284,6 @@ RegisterItem.prototype = {
 }
 
 /*constructor*/function CursorUI (editor, comCursor, editCursor) {
-	var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
 	var cursorType = 'command';
 	var locked = false;
 	var focused = false;
@@ -1342,10 +1342,7 @@ RegisterItem.prototype = {
 			var ch = editor.charAt(editor.selectionStart);
 			if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
 				comCursor.style.display = 'none';
-				var span = getCursorSpan();
-				if (!span) {
-					span = editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS)[0];
-				}
+				var span = getCursorSpan() || editor.emphasis(undefined, 1, CURSOR_SPAN_CLASS)[0];
 				span.style.color = theme.colors.invertFg;
 				span.style.backgroundColor = theme.colors.invertBg;
 				span.setAttribute('data-blink-active', '1');
@@ -1366,6 +1363,7 @@ RegisterItem.prototype = {
 			}
 			editor.adjustBackgroundImage();
 			editor.adjustLineNumber(config.vars.relativenumber);
+			editor.updateActiveRow();
 			startBlink();
 		};
 		this.lostFocus = function () {
@@ -1461,59 +1459,47 @@ RegisterItem.prototype = {
 		this.lostFocus = function () {};
 		this.dispose = function () {};
 	}
-	function getLineNumberWidth () {
+	function getCommandCursorCoord () {
+		var r = editor.charRectAt(editor.selectionStart);
+		var result3 = {
+			left:r.left + editor.scrollLeft,
+			top:r.top + editor.scrollTop,
+			right:(r.right == r.left ? r.left + charWidth : r.right) + editor.scrollLeft,
+			bottom:(r.bottom == r.top ? r.top + lineHeight : r.bottom) + editor.scrollTop
+		};
+		return result3;
+	}
+	function ensureVisible (smooth) {
+		if (!editor.selected) {
+			var needFix1 = !isEditing();
+			var needFix2 = !requestedState.inputMode || !isEditing(requestedState.inputMode.mode);
+			if (needFix1 && needFix2) {
+				var n = editor.selectionStart;
+				var fixed = false;
+				if (n.col > 0
+				&& n.row == editor.rowLength - 1
+				&& n.col >= editor.rows(n).length) {
+					n.col = Math.max(0, editor.rows(n).length - 1);
+					fixed = true;
+				}
+				if (n.col > 0 && editor.isNewline(n)) {
+					n.col--;
+					fixed = true;
+				}
+				if (fixed) {
+					editor.setSelectionRange(n);
+				}
+			}
+		}
+
+		var lineNumberWidth = 0;
 		if (config.vars.number) {
-			return Math.min(6, (editor.rowLength + '').length);
+			lineNumberWidth = Math.min(6, (editor.rowLength + '').length);
 		}
 		else if (config.vars.relativenumber) {
-			return 3;
+			lineNumberWidth = 2;
 		}
-		return 0;
-	}
-	function getPaddingLeft (lineNumberWidth) {
-		lineNumberWidth || (lineNumberWidth = getLineNumberWidth());
-		if (config.vars.number || config.vars.relativenumber) {
-			return (LINE_NUMBER_MARGIN_LEFT + charWidth * (lineNumberWidth + 1)) + 'px';
-		}
-		return '0';
-	}
-	function syncPosition () {
-		fixPosition();
-
-		var caretdiv = $('wasavi_multiline_scaler');
-		var lineNumberWidth = getLineNumberWidth();
-		editor.adjustLineNumberWidth(lineNumberWidth);
-
-		var n = editor.selectionStart;
-		caretdiv.textContent = editor.rows(n);
-		caretdiv.style.paddingLeft = getPaddingLeft(lineNumberWidth);
-
-		var eb = editor.rowNodes(0).getBoundingClientRect();
-		var rb = editor.rowNodes(n.row).getBoundingClientRect();
-		var span = document.createElement('span');
-		var r = document.createRange();
-
-		if (caretdiv.textContent.length) {
-			var col = Math.min(n.col, caretdiv.firstChild.length - 1);
-			r.setStart(caretdiv.firstChild, col);
-			r.setEnd(caretdiv.firstChild, col + 1);
-		}
-		else {
-			r.selectNodeContents(caretdiv);
-		}
-		r.surroundContents(span);
-		r.detach();
-
-		span.id = 'wasavi_caret';
-		span.style.color = theme.colors.highlightFg;
-		span.style.backgroundColor = theme.colors.highlightBg;
-		if (/^[\r\n\t]?$/.test(span.textContent)) {
-			span.textContent = ' ';
-		}
-	}
-
-	function ensureVisible (smooth) {
-		syncPosition();
+		editor.adjustLineNumberWidth(lineNumberWidth, config.vars.relativenumber);
 
 		var caret = getCommandCursorCoord();
 		var elm = editor.elm;
@@ -1537,43 +1523,6 @@ RegisterItem.prototype = {
 		}
 	}
 
-	function getCommandCursorCoord () {
-		var div = $('wasavi_multiline_scaler');
-		var caret = $('wasavi_caret');
-		var currentRow = editor.rowNodes(editor.selectionStartRow);
-		var s = document.defaultView.getComputedStyle(div, '');
-		var result2 = {
-			left:currentRow.offsetLeft + caret.offsetLeft - parseInt(s.paddingLeft, 10),
-			top:currentRow.offsetTop + caret.offsetTop - parseInt(s.paddingTop, 10)
-		};
-		result2.right = result2.left + caret.offsetWidth;
-		result2.bottom = result2.top + caret.offsetHeight;
-
-		return result2;
-	}
-	function fixPosition () {
-		if (editor.selected) return;
-
-		var needFix1 = !isEditing();
-		var needFix2 = !requestedState.inputMode || !isEditing(requestedState.inputMode.mode);
-		if (needFix1 && needFix2) {
-			var n = editor.selectionStart;
-			var fixed = false;
-			if (n.col > 0
-			&& n.row == editor.rowLength - 1
-			&& n.col >= editor.rows(n).length) {
-				n.col = Math.max(0, editor.rows(n).length - 1);
-				fixed = true;
-			}
-			if (n.col > 0 && editor.isNewline(n)) {
-				n.col--;
-				fixed = true;
-			}
-			if (fixed) {
-				editor.setSelectionRange(n);
-			}
-		}
-	}
 	function update (opts) {
 		if (locked) return;
 
@@ -2138,8 +2087,9 @@ Editor.prototype = new function () {
 		},
 		charRectAt: function () {
 			var a = arg2pos(arguments);
-			var result = this.emphasis(a, 1)[0].getBoundingClientRect();
-			this.unEmphasis();
+			var className = 'char-rect-at';
+			var result = this.emphasis(a, 1, className)[0].getBoundingClientRect();
+			this.unEmphasis(className);
 			return result;
 		},
 		getSelection: function () {
@@ -2226,7 +2176,7 @@ Editor.prototype = new function () {
 		},
 		getSpans: function (className) {
 			return document.querySelectorAll(
-				'#wasavi_editor>div>span' + (className ? ('.' + className) : ''));
+				'#wasavi_editor>div span' + (className ? ('.' + className) : ''));
 		},
 		// vim compatible cursor iterators
 		inc: function (pos) {
@@ -2326,17 +2276,24 @@ Editor.prototype = new function () {
 				this.elm.style.backgroundSize = desc;
 			}
 		},
-		adjustLineNumberWidth: function (width) {
-			var newClass = width != 0 ? ('n n' + width) : '';
+		adjustLineNumberWidth: function (width, isRelative) {
+			var newClass = width ? (('n n' + width) + ' ' + (isRelative ? 'r' : 'a')) : '';
 			if (this.elm.className != newClass) {
 				this.elm.className = newClass;
 			}
 		},
 		adjustLineNumber: function (isRelative) {
-			var desc = 'n ' + (isRelative ? -(this.selectionStartRow + 1) : 0);
+			var desc = 'n ' + (isRelative ? (this.selectionStartRow + 1) : 0);
 			if (this.elm.style.counterReset != desc) {
 				this.elm.style.counterReset = desc;
 			}
+		},
+		updateActiveRow: function () {
+			Array.prototype.forEach.call(
+				document.querySelectorAll('#wasavi_editor>div.current'),
+				function (node) {node.removeAttribute('class');}
+			);
+			this.elm.childNodes[this.selectionStartRow].className = 'current';
 		},
 		insertChars: function (arg, text) {
 			var iter = document.createNodeIterator(
@@ -7115,6 +7072,26 @@ function emptyNodeContents (node) {
 	r.deleteContents();
 	r.detach();
 }
+function addClass (elem) {
+	elem = $(elem);
+	if (!elem) return;
+	elem.className = (elem.className || '')
+		.replace(/^\s+|\s+$/g, '')
+		.split(/\s+/)
+		.concat(Array.prototype.slice.call(arguments, 1))
+		.reduce(function (r, v) {r.indexOf(v) < 0 && r.push(v); return r;}, [])
+		.join(' ');
+}
+function removeClass (elem) {
+	elem = $(elem);
+	if (!elem) return;
+	elem.className = (elem.className || '')
+		.replace(/^\s+|\s+$/g, '')
+		.split(/\s+/)
+		.filter(function (v) {return this.indexOf(v) < 0;},
+			Array.prototype.slice.call(arguments, 1))
+		.join(' ');
+}
 
 /*
  * low-level functions for application management {{{1
@@ -7223,8 +7200,6 @@ function installCore (x) {
 	 *   |   |
 	 *   |   + textarea#wasavi_console
 	 *   |
-	 *   + div#wasavi_multiline_scaler
-	 *   |
 	 *   + span#wasavi_singleline_scaler
 	 *   |
 	 *   + div#wasavi_console_scaler
@@ -7285,22 +7260,6 @@ overflow-x:hidden; \
 overflow-y:scroll; \
 counter-reset:n; \
 } \
-#wasavi_multiline_scaler { \
-position:fixed; \
-overflow:scroll; \
-' + paddingStyle + borderStyles + ' \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-' + fontStyle + ' \
-text-decoration:none; \
-text-shadow:none; \
-left:0px; \
-bottom:0px; \
-white-space:pre-wrap; \
-overflow-x:auto; \
-overflow-y:scroll; \
-visibility:hidden; \
-background-color:#fff; \
-} \
 #wasavi_singleline_scaler { \
 position:fixed; \
 margin:0; \
@@ -7338,6 +7297,8 @@ white-space:pre-wrap; \
 } \
 #wasavi_editor > div:nth-child(odd) { \
 } \
+#wasavi_editor > div.current { \
+} \
 #wasavi_editor > div > span.wasavi_em { \
 } \
 #wasavi_editor > div > span.wasavi_composition { \
@@ -7349,8 +7310,16 @@ margin:0; \
 padding:0 ' + charWidth + 'px 0 0; \
 text-align:right; \
 ' + fontStyle + ' \
-counter-increment:n; \
 content:counter(n); \
+} \
+#wasavi_editor.a > div:before { \
+counter-increment:n 1; \
+} \
+#wasavi_editor.r > div:before { \
+counter-increment:n -1; \
+} \
+#wasavi_editor.r > div.current ~ div:before { \
+counter-increment:n 1; \
 }',
 
 		(function () {
@@ -7523,9 +7492,6 @@ ime-mode:disabled; \
 
 	// editor
 	var editor = new Editor($(EDITOR_CORE_ID));
-
-	// caret position scaler
-	var caretdiv = $('wasavi_multiline_scaler');
 
 	// text length scaler
 	var textspan = $('wasavi_singleline_scaler');
@@ -7757,17 +7723,15 @@ function setGeometory (target) {
 	var conCon = $('wasavi_console_container');
 	var con = $('wasavi_console');
 	var conScaler = $('wasavi_console_scaler');
-	var mScaler = $('wasavi_multiline_scaler');
 	var fmodTable = $('wasavi_footer_modeline_table');
 	var faltTable = $('wasavi_footer_alter_table');
 
 	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !mScaler || !fmodTable || !faltTable) {
+	||  !fmodTable || !faltTable) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
-				container, editor, footer, con, conScaler,
-				mScaler, fmodTable, faltTable
+				container, editor, footer, con, conScaler, fmodTable, faltTable
 			].join(', ')
 		);
 	}
@@ -7807,11 +7771,6 @@ function setGeometory (target) {
 		width:(rect.width - 16) + 'px'
 	});
 
-	style(mScaler, {
-		width:rect.width + 'px',
-		height:rect.height + 'px'
-	});
-
 	style(fmodTable, {
 		width:(rect.width - 4) + 'px'
 	});
@@ -7832,7 +7791,7 @@ function setTabStop (ts) {
 	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
 		if (!(ts in editorStyle)) return;
 		editor.style[pn] = ts;
-		['wasavi_singleline_scaler', 'wasavi_multiline_scaler'].forEach(function (en) {
+		['wasavi_singleline_scaler'].forEach(function (en) {
 			en = $(en);
 			if (!en) return;
 			en.style[pn] = ts;
@@ -7864,7 +7823,7 @@ function setInputMode (newInputMode, newInputModeSub, initial) {
 		case 'line-input':
 			state = newState;
 			inputMode = newInputMode;
-			cursor.update({focused:false, visible:!backlog.visible});
+			cursor.update({focused:false, visible:false});
 			showLineInput(initial);
 			break;
 		case 'console-wait':
@@ -11060,10 +11019,9 @@ var commandMap = {
 				lastRegexFindCommand.setPattern(c, true);
 				var r = motionFindByRegexForward(lastRegexFindCommand.pattern, t, 1);
 				if (r) {
-					cursor.update({visible:false});
 					t.setSelectionRange(r.offset, r.offset + r.matchLength);
-					t.emphasis(r.offset, r.matchLength);
 					cursor.ensureVisible();
+					t.emphasis(undefined, r.matchLength);
 				}
 			}
 		},
@@ -11118,10 +11076,9 @@ var commandMap = {
 				lastRegexFindCommand.setPattern(c, true);
 				var r = motionFindByRegexBackward(lastRegexFindCommand.pattern, t, 1);
 				if (r) {
-					cursor.update({visible:false});
 					t.setSelectionRange(r.offset, r.offset + r.matchLength);
-					t.emphasis(r.offset, r.matchLength);
 					cursor.ensureVisible();
+					t.emphasis(undefined, r.matchLength);
 				}
 			}
 		},
@@ -11414,8 +11371,17 @@ var commandMap = {
 				prefixInput.trailer = c;
 				result = this.k.apply(this, arguments);
 				break;
+			case '^':
+				prefixInput.trailer = c;
+				result = this['^'].apply(this, arguments);
+				break;
+			case '$':
+				prefixInput.trailer = c;
+				result = this['$'].apply(this, arguments);
+				break;
 			default:
 				requestRegisterNotice(_('Unknown g-prefixed command: {0}', c));
+				result = true;
 				break;
 			}
 			return result;
@@ -12453,7 +12419,7 @@ function handleCoverClick (e) {
 		$('wasavi_focus_holder').focus();
 		break;
 	case 'line-input':
-		cursor.update({focused:false, visible:!backlog.visible});
+		cursor.update({focused:false, visible:false});
 		$(LINE_INPUT_ID).focus();
 		break;
 	}
