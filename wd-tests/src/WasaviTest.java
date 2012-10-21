@@ -508,6 +508,11 @@ public class WasaviTest {
 	public static void beforeClass () {
 		driver = createDriver(System.getProperty("wasavi.tests.browser"));
 		if (driver != null) {
+			try {
+				Thread.sleep(1000);
+			}
+			catch (Exception e) {
+			}
 			driver.navigate().to(System.getProperty("wasavi.tests.frame_url"));
 			Wasavi = new WasaviWrapper(driver);
 		}

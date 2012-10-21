@@ -21,7 +21,7 @@ public class ScrollersTest extends WasaviTest {
 		int rowTopBefore = Wasavi.getRow();
 		Wasavi.send(":set scroll=0\n\u0015H");
 		int rowTopAfter = Wasavi.getRow();
-		assertTrue("#1", Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2)) <= 1);
+		assertTrue("#1", Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2.0)) <= 1);
 
 		Wasavi.send("GH");
 		rowTopBefore = Wasavi.getRow();
@@ -44,7 +44,7 @@ public class ScrollersTest extends WasaviTest {
 		int rowTopBefore = Wasavi.getRow();
 		Wasavi.send(":set scroll=0\n\u0004");
 		int rowTopAfter = Wasavi.getRow();
-		assertTrue("#1", Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2)) <= 1);
+		assertTrue("#1", Math.abs(Math.abs(rowTopAfter - rowTopBefore) - (lines / 2.0)) <= 1);
 
 		Wasavi.send("gg");
 		rowTopBefore = Wasavi.getRow();

@@ -163,7 +163,7 @@ vim-compatible functionalities
 * range symbols (aka, text objects in vim)
 * register ", :, *, / (especially * is important since it accesses to system
   clipboard)
-* options: iskeyword, incsearch, smartcase, undolevels, quoteescape
+* options: iskeyword, incsearch, smartcase, undolevels, quoteescape, relativenumber
 
 
 

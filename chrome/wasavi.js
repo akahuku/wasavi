@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 199 2012-10-19 18:17:02Z akahuku $
+ * @version $Id: wasavi.js 200 2012-10-21 04:16:59Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -105,8 +105,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 199 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 199 2012-10-19 18:17:02Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 200 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 200 2012-10-21 04:16:59Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -8600,7 +8600,7 @@ function processInput (code, e) {
 			if (!canTransit) continue;
 
 			editedStringCurrent = target + multiply('\u0008', i.length) + abbrevs[i] + last;
-			deleteChars(t, i.length + last.length, false, true);
+			deleteCharsBackward(t, i.length + last.length);
 			(inputMode == 'edit' ? insert : overwrite)(t, abbrevs[i] + last);
 			break;
 		}
@@ -9923,7 +9923,6 @@ function deleteSelection (t, isSubseq) {
 					position && (deleteMarksDest[name] = position.clone());
 				}
 				!t.isLineOrientSelection && foldedMarkRegisterer(fragment);
-				!isSubseq && registers.set(prefixInput.register, content);
 				editLogger.write(
 					EditLogger.ITEM_TYPE.DELETE,
 					t.selectionStart, content,
@@ -9945,7 +9944,7 @@ function insert (t, s, opts) {
 	var isEditing_ = isEditing();
 
 	(isEditing_ ? $call : editLogger.open).call(editLogger, 'insert', function () {
-		deleteSelection(t, true);
+		deleteSelection(t);
 
 		var startn = t.selectionStart;
 		if (isLineOrientedLast
@@ -9961,10 +9960,10 @@ function insert (t, s, opts) {
 		for (var i = 0; i < re.length; i++) {
 			switch (re[i]) {
 			case '\u0008':
-				deleteChars(t, 1, false, true);
+				deleteCharsBackward(t, 1, {isSubseq:true});
 				break;
 			case '\u007f':
-				deleteChars(t, 1, true, true);
+				deleteCharsForward(t, 1, {isSubseq:true});
 				break;
 			case '\n':
 				!isEditing_ && editLogger.write(
@@ -10069,7 +10068,7 @@ function unshift (t, rowCount, shiftCount) {
 	});
 	isEditCompleted = true;
 }
-function deleteChars (t, count, isForward, isSubseq) {
+function deleteChars (t, count, isForward, isSubseq, withYank) {
 	if (t.selected) {
 		deleteSelection(t, isSubseq);
 	}
@@ -10081,17 +10080,29 @@ function deleteChars (t, count, isForward, isSubseq) {
 			var tail = t.getLineTailOffset(n);
 			n.col = Math.min(tail.col, n.col + count);
 			t.selectionEnd = n;
+			withYank && yank(t);
 			deleteSelection(t, isSubseq);
 		}
 		else {
 			var n = t.selectionStart;
-			n.col = Math.max(0, n.col - count);
-			t.selectionStart = n;
-			deleteSelection(t, isSubseq);
+			if (n.col > 0) {
+				n.col = Math.max(0, n.col - count);
+				t.selectionStart = n;
+				withYank && yank(t);
+				deleteSelection(t, isSubseq);
+			}
 		}
 	}
 	isEditCompleted = true;
 	return true;
+}
+function deleteCharsForward (t, count, opts) {
+	opts || (opts = {});
+	return deleteChars(t, count, true, !!opts.isSubseq, !!opts.yank);
+}
+function deleteCharsBackward (t, count, opts) {
+	opts || (opts = {});
+	return deleteChars(t, count, false, !!opts.isSubseq, !!opts.yank);
 }
 function joinLines (t, count, asis) {
 	count || (count = 1);
@@ -10132,7 +10143,7 @@ function toggleCase (t, count) {
 		var replacedText = text.substr(n.col, count).replace(/[a-z]/ig, function (a) {
 			return a.charCodeAt(0) >= smalla ? a.toUpperCase() : a.toLowerCase();
 		});
-		deleteChars(t, count, true, true);
+		deleteCharsForward(t, count);
 		insert(t, replacedText);
 	});
 	isEditCompleted = true;
@@ -11701,7 +11712,7 @@ var commandMap = {
 		if (prefixInput.isEmptyOperation) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
-			return deleteChars(t, prefixInput.count, true);
+			return deleteCharsForward(t, prefixInput.count, {yank:true});
 		}
 		else {
 			inputEscape(o.e.fullIdentifier);
@@ -11714,7 +11725,7 @@ var commandMap = {
 		if (prefixInput.isEmptyOperation) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
-			return deleteChars(t, prefixInput.count, false);
+			return deleteCharsBackward(t, prefixInput.count, {yank:true});
 		}
 		else {
 			inputEscape(o.e.fullIdentifier);
@@ -12035,7 +12046,7 @@ var commandMap = {
 	s: function (c, t, o) {
 		if (prefixInput.isEmptyOperation) {
 			editLogger.open('substitute');
-			deleteChars(t, prefixInput.count, true);
+			deleteCharsForward(t, prefixInput.count, {yank:true});
 			requestSimpleCommandUpdate();
 			return startEdit(c, t);
 		}
@@ -12124,11 +12135,11 @@ var commandMap = {
 var editMap = {
 	'\u0008'/*backspace*/: function (c, t) {
 		logEditing(t, true);
-		deleteChars(t, 1, false, true);
+		deleteCharsBackward(t, 1, {isSubseq:true});
 	},
 	'\u007f'/*delete*/: function (c, t) {
 		logEditing(t, true);
-		deleteChars(t, 1, true, true);
+		deleteCharsForward(t, 1, {isSubseq:true});
 	},
 	'\u0009'/*tab*/: function (c, t) {
 		insert(t, '\t');

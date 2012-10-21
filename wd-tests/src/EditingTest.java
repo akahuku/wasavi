@@ -61,6 +61,10 @@ public class EditingTest extends WasaviTest {
 		assertTrue("#4", Wasavi.getLastMessage().length() > 0);
 		assertPos("#4-1", 0, 1);
 		assertValue("#4-2", "far");
+
+		Wasavi.send("1|X");
+		assertPos("#5", 0, 0);
+		assertValue("#5-1", "far");
 	}
 
 	@Test
@@ -826,6 +830,21 @@ public class EditingTest extends WasaviTest {
 	//function testRepeatLastSubstitute () {
 		// this test is in excommands.html
 	//}
+
+	@Test
+	public void testSubstitute () {
+		Wasavi.send("ifirst\nsecond\nthird\u001b");
+
+		Wasavi.send("1G1|sXYZ\u001b");
+		assertPos("#1-1", 0, 2);
+		assertValue("#1-2", "XYZirst\nsecond\nthird");
+		assertEquals("#1-3", "f", Wasavi.getRegister("\""));
+
+		Wasavi.send("2G1|3sXYZ\u001b");
+		assertPos("#2-1", 1, 2);
+		assertValue("#2-2", "XYZirst\nXYZond\nthird");
+		assertEquals("#2-3", "sec", Wasavi.getRegister("\""));
+	}
 
 	@Test
 	public void testSubstituteWholeLines () {
