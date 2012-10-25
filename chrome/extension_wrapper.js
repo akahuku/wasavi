@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 182 2012-09-19 09:14:13Z akahuku $
+ * @version $Id: extension_wrapper.js 201 2012-10-23 05:42:03Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -159,6 +159,12 @@
 	function ChromeExtensionWrapper () {
 		var theObj = this;
 		var onMessageHandler;
+		function handleMessage (req, sender, res) {
+			if (req && req.type == 'init-response') {
+				theObj.tabId = req.tabId;
+			}
+			onMessageHandler && onMessageHandler(req);
+		}
 		this.constructor = ExtensionWrapper;
 		this.runType = 'chrome-extension';
 		this.sendRequest = function (data, callback) {
@@ -171,12 +177,11 @@
 		this.getMessage = function (messageId) {
 			return chrome.i18n.getMessage(messageId);
 		};
-		chrome.extension.onRequest.addListener(function (req, sender, res) {
-			if (req && req.type == 'init-response') {
-				theObj.tabId = req.tabId;
-			}
-			onMessageHandler && onMessageHandler(req);
-		});
+		this.disconnect = function () {
+			onMessageHandler = null;
+			chrome.extension.onRequest.removeListener(handleMessage);
+		};
+		chrome.extension.onRequest.addListener(handleMessage);
 	}
 	ChromeExtensionWrapper.prototype = ExtensionWrapper.prototype;
 
@@ -188,6 +193,12 @@
 	function OperaExtensionWrapper () {
 		var theObj = this;
 		var onMessageHandler;
+		function handleMessage (e) {
+			if (e.data && e.data.type == 'init-response') {
+				theObj.tabId = e.data.tabId;
+			}
+			onMessageHandler && onMessageHandler(e.data);
+		};
 		this.constructor = ExtensionWrapper;
 		this.runType = 'opera-extension';
 		this.sendRequest = function (data, callback) {
@@ -208,12 +219,11 @@
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
 		};
-		opera.extension.onmessage = function (e) {
-			if (e.data && e.data.type == 'init-response') {
-				theObj.tabId = e.data.tabId;
-			}
-			onMessageHandler && onMessageHandler(e.data);
+		this.disconnect = function () {
+			onMessageHandler = null;
+			opera.extension.onmessage = null;
 		};
+		opera.extension.onmessage = handleMessage;
 	}
 	OperaExtensionWrapper.prototype = ExtensionWrapper.prototype;
 
@@ -294,6 +304,10 @@
 		};
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
+		};
+		this.disconnect = function () {
+			onMessageHandler = null;
+			self.on('message', null);
 		};
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
