@@ -138,7 +138,7 @@ Commands implemented
 
 ### edit-command:
 
-* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ r R
+* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R
   a A i I o O & s S ZZ
 
 ### ex-command:

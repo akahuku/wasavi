@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 204 2012-10-27 01:36:27Z akahuku $
+ * @version $Id: wasavi.js 206 2012-10-27 08:12:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -105,8 +105,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 204 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 204 2012-10-27 01:36:27Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 206 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 206 2012-10-27 08:12:58Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -541,7 +541,8 @@ if (global.WasaviExtensionWrapper
 	}
 	function toInternalString (e) {
 		if (typeof e.code != 'number') return '';
-		return e.isSpecial ? '\ue000' + '<' + e.fullIdentifier + '>' : String.fromCharCode(e.code);
+		return e.isSpecial && e.code < 0 ?
+			'\ue000' + '<' + e.fullIdentifier + '>' : String.fromCharCode(e.code);
 	}
 	function getNopEvent () {
 		return {
@@ -1564,6 +1565,7 @@ RegisterItem.prototype = {
 
 			editor.adjustBackgroundImage();
 			editor.adjustLineNumber(config.vars.relativenumber);
+			editor.updateActiveRow();
 		};
 		this.lostFocus = function () {};
 		this.dispose = function () {};
@@ -11991,7 +11993,6 @@ var commandMap = {
 			}
 			if (recordedStrokes) {
 				var stroke = recordedStrokes.strokes.replace(/q$/, '');
-				console.log('stroke fixed: "' + toVisibleString(stroke) + '"');
 				registers.get('"').locked = recordedStrokes.register != '"';
 				registers.set(recordedStrokes.register, stroke);
 				registers.get('"').locked = false;

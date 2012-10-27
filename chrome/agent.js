@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 194 2012-10-11 04:16:48Z akahuku $
+ * @version $Id: agent.js 206 2012-10-27 08:12:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -192,14 +192,14 @@ function cleanup (value, isImplicit) {
 		targetElement.removeAttribute(EXTENSION_CURRENT);
 		targetElement = null;
 	}
+	if (mutationObserver) {
+		mutationObserver.disconnect();
+		mutationObserver = null;
+	}
 	if (wasaviFrame) {
 		wasaviFrame.removeEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
 		wasaviFrame.parentNode.removeChild(wasaviFrame);
 		wasaviFrame = null;
-	}
-	if (mutationObserver) {
-		mutationObserver.disconnect();
-		mutationObserver = null;
 	}
 	if (stateClearTimer) {
 		clearTimeout(stateClearTimer);
