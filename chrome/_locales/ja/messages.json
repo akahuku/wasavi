@@ -368,6 +368,10 @@
 		"message": "末尾",
 		"description": "Bot"
 	},
+	"recording": {
+		"message": "[記録中]",
+		"description": "[RECORDING]"
+	},
 	"@0_extra_range_specified": {
 		"message": "{0}: 余分な範囲が指定されました。",
 		"description": "{0}: extra range specified."
@@ -523,6 +527,10 @@
 	"register_@0_is_not_exist": {
 		"message": "レジスタ {0} は存在しません。",
 		"description": "Register {0} is not exist."
+	},
+	"@0_record_strokes": {
+		"message": "{0}: キー入力の記録",
+		"description": "{0}: record strokes"
 	},
 	"@0_replace_a_char": {
 		"message": "{0}: 1 文字置き換え",

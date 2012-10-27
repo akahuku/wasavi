@@ -368,6 +368,10 @@
 		"message": "Bot",
 		"description": "Bot"
 	},
+	"recording": {
+		"message": "[RECORDING]",
+		"description": "[RECORDING]"
+	},
 	"@0_extra_range_specified": {
 		"message": "{0}: extra range specified.",
 		"description": "{0}: extra range specified."
@@ -523,6 +527,10 @@
 	"register_@0_is_not_exist": {
 		"message": "Register {0} is not exist.",
 		"description": "Register {0} is not exist."
+	},
+	"@0_record_strokes": {
+		"message": "{0}: record strokes",
+		"description": "{0}: record strokes"
 	},
 	"@0_replace_a_char": {
 		"message": "{0}: replace a char",
