@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 203 2012-10-25 00:08:39Z akahuku $
+ * @version $Id: wasavi.js 204 2012-10-27 01:36:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -105,8 +105,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 203 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 203 2012-10-25 00:08:39Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 204 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 204 2012-10-27 01:36:27Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -530,10 +530,7 @@ if (global.WasaviExtensionWrapper
 			fullIdentifier:   c.join('-'),
 			shift:            e.shiftKey,
 			ctrl:             e.ctrlKey,
-			isSpecial:        isSpecial,
-			nativeKeyCode:    e.keyCode,
-			nativeCharCode:   e.charCode,
-			nativeIdentifier: e.keyIdentifier
+			isSpecial:        isSpecial
 		});
 	}
 	function code2letter (c, useSpecial) {
@@ -546,14 +543,109 @@ if (global.WasaviExtensionWrapper
 		if (typeof e.code != 'number') return '';
 		return e.isSpecial ? '\ue000' + '<' + e.fullIdentifier + '>' : String.fromCharCode(e.code);
 	}
-	function keyName2code (name) {
-		name = name.replace(/^<|>$/g, '').toLowerCase();
+	function getNopEvent () {
+		return {
+			code: 0,
+			identifier: '*nop*',
+			fullIdentifier: '*nop*',
+			shift: false,
+			ctrl: false,
+			isSpecial: false
+		};
+	}
+	function insertFnKeyHeader (s) {
+		return s.replace(/(\u0016)?(<[^>]+>|#\d{1,2})/g, function ($0, $1) {
+			return $1 == '\u0016' ? $0 : '\ue000' + $0;
+		});
+	}
+	function parseKeyDesc (desc, escaped) {
+		function doParse (desc) {
+			var parts = desc.toLowerCase().split('-');
+			var shift = false, ctrl = false, name = '';
 
-		for (var i in specialKeys) {
-			if (specialKeys[i] == name) {
-				return specialKeyCodes[i] || -i;
+			while (parts.length > 1 && (parts[0] == 's' || parts[0] == 'c')) {
+				shift = parts[0] == 's' || shift;
+				ctrl = parts[0] == 'c' || ctrl;
+				parts.shift();
+			}
+
+			name = parts[0];
+
+			for (var i in specialKeys) {
+				if (specialKeys[i] == name) {
+					return {
+						code:specialKeyCodes[i] || -i,
+						name:name,
+						shift:shift,
+						ctrl:ctrl
+					};
+				}
 			}
 		}
+		if (typeof desc == 'number') {
+			desc = String.fromCharCode(desc);
+		}
+		if (!escaped) {
+			var consumed = 0;
+			var re = /^\ue000<([^>]+)>/.exec(desc);
+			if (re) {
+				desc = re[1];
+				consumed = re[0].length;
+			}
+			else {
+				re = /^\ue000#(\d{1,2})/.exec(desc);
+				if (re) {
+					desc = 'f' + re[1];
+					consumed = re[0].length;
+				}
+			}
+			if (consumed) {
+				var obj = doParse(desc);
+				if (!obj) return {consumed:consumed};
+				var c = [];
+				obj.shift && c.push('s');
+				obj.ctrl  && c.push('c');
+				c.push(obj.name);
+				return {
+					consumed:consumed,
+					prop:{
+						code:obj.code,
+						identifier:obj.name,
+						fullIdentifier:c.join('-'),
+						shift:obj.shift,
+						ctrl:obj.ctrl,
+						isSpecial:true
+					}
+				};
+			}
+		}
+		return {
+			consumed:1,
+			prop:{
+				code:desc.charCodeAt(0),
+				identifier:desc.charAt(0),
+				fullIdentifier:desc.charAt(0),
+				shift:false,
+				ctrl:false,
+				isSpecial:false
+			}
+		};
+	}
+	function createSequences (s) {
+		var result = [];
+		for (var i = 0, goal = s.length; i < goal; i++) {
+			var parseResult;
+			if (s.charAt(i) == '\u0016') {
+				if (i >= s.length - 1) break;
+				parseResult = parseKeyDesc(s.substring(++i), true);
+			}
+			else {
+				parseResult = parseKeyDesc(s.substring(i));
+			}
+			parseResult.prop && result.push(parseResult.prop);
+			i += parseResult.consumed - 1;
+		}
+		return result;
 	}
 	function push (e) {
 		bufferedStrokes.push(e);
@@ -573,7 +665,10 @@ if (global.WasaviExtensionWrapper
 	this.uninstall = uninstall;
 	this.code2letter = code2letter;
 	this.toInternalString = toInternalString;
-	this.keyName2code = keyName2code;
+	this.getNopEvent = getNopEvent;
+	this.insertFnKeyHeader = insertFnKeyHeader;
+	this.parseKeyDesc = parseKeyDesc;
+	this.createSequences = createSequences;
 	this.push = push;
 	this.sweep = sweep;
 	this.dispose = dispose;
@@ -4019,6 +4114,8 @@ ExCommand.commands = [
 					if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
 						return _('Key {0} cannot be remapped.', toVisibleString(lhs));
 					}
+					lhs = keyManager.insertFnKeyHeader(lhs);
+					rhs = keyManager.insertFnKeyHeader(rhs);
 					map.register(lhs, rhs, remap);
 				}
 				break;
@@ -4474,48 +4571,9 @@ ExCommandExecutor.prototype = {
 	/*constructor*/function MapItem (name, rules, sequences, sequencesExpanded, options) {
 		this.register = function (lhs, rhs, remap) {
 			rules[lhs] = rhs;
-			sequences[lhs] = this.createSequences(lhs);
-			sequencesExpanded[lhs] = this.createSequences(rhs);
+			sequences[lhs] = keyManager.createSequences(lhs);
+			sequencesExpanded[lhs] = keyManager.createSequences(rhs);
 			options[lhs] = {remap:!!remap};
-		};
-		this.createSequences = function (s) {
-			var result = [];
-			for (var i = 0; i < s.length; i++) {
-				// ^V
-				if (s.charAt(i) == '\u0016') {
-					if (i < s.length - 1) {
-						result.push(s.charCodeAt(i + 1));
-						i++;
-						continue;
-					}
-				}
-				// key name
-				else if (s.charAt(i) == '<') {
-					var re = /<[^>]+>/.exec(s.substring(i));
-					if (re) {
-						var code = keyManager.keyName2code(re[0]);
-						if (code != undefined) {
-							result.push(code);
-							i += re[0].length - 1;
-							continue;
-						}
-					}
-				}
-				// function key name
-				else if (s.charAt(i) == '#') {
-					var re = /#(\d{1,2})/.exec(s.substring(i));
-					if (re) {
-						var code = keyManager.keyName2code('<f' + re[1] + '>');
-						if (code != undefined) {
-							result.push(code);
-							i += re[0].length - 1;
-							continue;
-						}
-					}
-				}
-				result.push(s.charCodeAt(i));
-			}
-			return result;
 		};
 		this.remove = function () {
 			for (var i = 0; i < arguments.length; i++) {
@@ -4643,7 +4701,7 @@ ExCommandExecutor.prototype = {
 				}
 				else {
 					for (var i = 0; i < rhs.length; i++) {
-						handler(rhs[i]);
+						handler(rhs[i].code, rhs[i]);
 					}
 				}
 			}
@@ -4667,17 +4725,24 @@ ExCommandExecutor.prototype = {
 	}
 	function process (keyCode, handler) {
 		var delayed = resetDelayed();
-		var mapIndex;
+		var mapIndex, obj;
 		if (inputMode in MAP_INDICES) {
 			mapIndex = MAP_INDICES[inputMode];
 		}
+		if (typeof keyCode == 'object') {
+			obj = keyCode;
+			keyCode = obj.code;
+		}
+		else {
+			obj = keyManager.getNopEvent();
+		}
 		if (mapIndex == undefined || keyCode == false) {
 			delayed && expandDelayed(delayed, 'delayed #1');
-			handler && handler(keyCode);
+			handler && handler(keyCode, obj);
 			return;
 		}
 		if (quickActivation && inputMode == 'command' && keyCode == 9) {
-			handler && handler(keyCode);
+			handler && handler(keyCode, obj);
 			return;
 		}
 		if (mapIndex != lastMapIndex) {
@@ -4693,7 +4758,7 @@ ExCommandExecutor.prototype = {
 
 		for (var i in srcmap) {
 			var seq = sequences[mapIndex][i];
-			if (seq[index] == keyCode) {
+			if (index < seq.length && seq[index].code == keyCode) {
 				dstmap[i] = srcmap[i];
 				found++;
 				if (index == seq.length - 1 && propCompleted == undefined) {
@@ -4722,7 +4787,7 @@ ExCommandExecutor.prototype = {
 		}
 		else {
 			delayed && expandDelayed(delayed, 'delayed #3');
-			handler && handler(keyCode);
+			handler && handler(keyCode, obj);
 			reset();
 		}
 	}
@@ -6983,7 +7048,7 @@ function toVisibleString (s) {
 		.replace(/[\u0000-\u001f\u007f]/g, function (a) {
 			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
 		})
-		.replace(/\ue000/g, '');
+		.replace(/\ue000/g, 'Fn:');
 }
 function toVisibleControl (code) {
 	// U+2400 - U+243F: Unicode Control Pictures
@@ -8422,7 +8487,6 @@ function executeExCommand (t, source, isRoot, parseOnly) {
 function executeViCommand (/*, keepRunLevel*/) {
 	var editor = getEditorCore();
 	var input = $(LINE_INPUT_ID);
-	var e = document.createEvent('UIEvent');
 	var args = Array.prototype.slice.call(arguments);
 	var keepRunLevel = false;
 
@@ -8441,22 +8505,11 @@ function executeViCommand (/*, keepRunLevel*/) {
 
 	try {
 		for (var j = 0; j < args.length; j++) {
-			switch (typeof args[j]) {
-			case 'number':
-				e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
-				mapManager.process(args[j], function (keyCode) {
+			var cmd = keyManager.createSequences(args[j]);
+			for (var i = 0, goal = cmd.length; i < goal; i++) {
+				mapManager.process(cmd[i], function (keyCode, e) {
 					processInput(keyCode, e);
 				});
-				break;
-			case 'string':
-				var cmd = args[j];
-				for (var i = 0, goal = cmd.length; i < goal; i++) {
-					e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
-					mapManager.process(cmd.charCodeAt(i), function (keyCode) {
-						processInput(keyCode, e);
-					});
-				}
-				break;
 			}
 		}
 		mapManager.process(false);
@@ -8811,17 +8864,13 @@ function processInput (code, e) {
 			setTimeout(function () {
 				var input = $(LINE_INPUT_ID);
 				if (input.value != dataset(input, 'current')) {
-					var e = document.createEvent('Event');
-					e.initEvent('input', false, false);
-					input.dispatchEvent(e);
+					var ev = document.createEvent('Event');
+					ev.initEvent('input', false, false);
+					input.dispatchEvent(ev);
 				}
 			}, 1);
 		}
 		else {
-			/*if (code >= 0 && code < 32) {
-				letter = toVisibleControl(code);
-				code = letter.charCodeAt(0);
-			}*/
 			if (code >= 32) {
 				lineInputHistories.isInitial = true;
 				input.value =
@@ -8830,7 +8879,7 @@ function processInput (code, e) {
 					input.value.substring(input.selectionEnd);
 				input.selectionStart += letter.length;
 				input.selectionEnd = input.selectionStart;
-				processInputSupplement(e);
+				processInputSupplement();
 			}
 		}
 		result = true;
@@ -8897,12 +8946,13 @@ function processInput (code, e) {
 	lastKeyCode = code;
 	return result;
 }
-function processInputSupplement (e) {
+function processInputSupplement () {
 	switch (inputMode) {
 	case 'line-input':
 		var editor = getEditorCore();
 		var input = $(LINE_INPUT_ID);
 		var key = prefixInput.motion || prefixInput.operation;
+		var e = keyManager.getNopEvent();
 		execMap(editor, e, commandMap, key, '@' + inputMode + '-reset', input.value);
 		execMap(editor, e, commandMap, key, '@' + inputMode + '-notify', input.value);
 		break;
@@ -12352,9 +12402,10 @@ var lineInputEditMap = {
 			if (code >= 0x00 && code <= 0x1f || code == 0x7f) {
 				c = toVisibleControl(code);
 			}
+			var ss = t.selectionStart;
 			t.value = t.value.substring(0, t.selectionStart) +
 				c + t.value.substring(t.selectionEnd);
-			t.selectionStart = t.selectionStart + 1;
+			t.selectionStart = ss + 1;
 			t.selectionEnd = t.selectionStart;
 			lineInputHistories.isInitial = true;
 		}
@@ -12453,7 +12504,7 @@ function handleKeydown2 (e) {
 			if (recordedStrokes) {
 				recordedStrokes.strokes += keyManager.toInternalString(e);
 			}
-			mapManager.process(e.code, function (code) {
+			mapManager.process(e, function (code, e) {
 				testMode && fireEvent('notify-keydown', {
 					keyCode:e.code,
 					key:e.fullIdentifier,
@@ -12463,8 +12514,8 @@ function handleKeydown2 (e) {
 			});
 		});
 }
-function handleInput (e) {
-	processInputSupplement(e);
+function handleInput () {
+	processInputSupplement();
 }
 function handleMousedown (e) {}
 function handleMouseup (e) {}

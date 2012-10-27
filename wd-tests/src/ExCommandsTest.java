@@ -801,6 +801,21 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void mapSpecialKey () {
+		Wasavi.send(":map [clear]\n");
+		Wasavi.send(":map Q <down><down>$\n");
+
+		Wasavi.send("i1\n2\n3 here!\n4\u001bgg");
+		assertPos("#1-1", 0, 0);
+		Wasavi.send("Q");
+		assertPos("#1-2", 2, 6);
+
+		Wasavi.send(":map <down> <up>\nG");
+		Wasavi.send(Keys.ARROW_DOWN);
+		assertPos("#2-1", 2, 0);
+	}
+
+	@Test
 	public void testMapUnique () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map Q G\ni1\n2\n3\u001bgg");
