@@ -53,6 +53,18 @@
 		"message": "利用するストレージ",
 		"description": "preferred storage"
 	},
+	"option_init_head": {
+		"message": "初期化",
+		"description": "Initialize"
+	},
+	"option_init_desc": {
+		"message": "全てのオプションを初期化する",
+		"description": "Initialize all options"
+	},
+	"option_init_confirm": {
+		"message": "本当にいいですか？",
+		"description": "Are you sure?"
+	},
 	"_plural_rule@function": {
 		"message": "isone(one)"
 	},

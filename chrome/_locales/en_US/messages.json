@@ -53,6 +53,18 @@
 		"message": "preferred storage",
 		"description": "preferred storage"
 	},
+	"option_init_head": {
+		"message": "Initialize",
+		"description": "Initialize"
+	},
+	"option_init_desc": {
+		"message": "Initialize all options",
+		"description": "Initialize all options"
+	},
+	"option_init_confirm": {
+		"message": "Are you sure?",
+		"description": "Are you sure?"
+	},
 	"_plural_rule@function": {
 		"message": "isone(one)"
 	},

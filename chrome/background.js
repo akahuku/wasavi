@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 191 2012-10-04 17:47:04Z akahuku $
+ * @version $Id: background.js 207 2012-10-29 08:00:33Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -99,6 +99,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	function StorageWrapper () {
 		this.getItem = function (key) {};
 		this.setItem = function (key, value) {};
+		this.clear = function () {};
 	}
 	StorageWrapper.create = function () {
 		if (window.localStorage) {
@@ -120,6 +121,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.setItem = function (key, value) {
 			localStorage.setItem(key, value);
 		};
+		this.clear = function () {
+			localStorage.clear();
+		};
 	}
 
 	function JetpackStorageWrapper () {
@@ -131,6 +135,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		};
 		this.setItem = function (key, value) {
 			ss.storage[key] = value;
+		};
+		this.clear = function () {
+			Object.keys(ss.storage).forEach(function (key) {
+				delete ss.storage[key];
+			});
 		};
 	}
 
@@ -1671,6 +1680,15 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			});
 			break;
 
+		case 'init-options':
+			extension.storage.clear();
+			initStorage();
+			initMessageCatalog();
+			initFileSystem();
+			broadcastStorageUpdate('targets exrc shortcut shortcutCode quickActivate'.split(' '));
+			res();
+			break;
+
 		case 'get-storage':
 			if ('key' in req) {
 				res({key:req.key, value:extension.storage.getItem(req.key)});
@@ -1797,11 +1815,13 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		resourceLoader = ResourceLoader.create();
 		extension = ExtensionWrapper.create();
 
+		initWasaviFrame();
+		initShortcutKeyTable();
+
 		initStorage();
 		initMessageCatalog();
-		initShortcutKeyTable();
 		initFileSystem();
-		initWasaviFrame();
+
 		extension.addRequestListener(handleRequest);
 
 		extension.isDev && console.info('wasavi background: running.');

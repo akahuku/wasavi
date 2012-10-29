@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 206 2012-10-27 08:12:58Z akahuku $
+ * @version $Id: agent.js 207 2012-10-29 08:00:33Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -354,24 +354,30 @@ function handleOptionsPageLoaded (req) {
 		}
 	}
 
-	var el = document.getElementById('exrc');
+	var el;
+	el = document.getElementById('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		el.value = exrc;
 	}
 
-	var el = document.getElementById('shortcut');
+	el = document.getElementById('shortcut');
 	if (el && el.nodeName == 'INPUT') {
 		el.value = shortcut;
 	}
 
-	var el = document.getElementById('font-family');
+	el = document.getElementById('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		el.value = fontFamily;
 	}
 
-	var el = document.getElementById('save');
+	el = document.getElementById('save');
 	if (el) {
 		el.addEventListener('click', handleOptionsSave, false);
+	}
+
+	el = document.getElementById('opt-init');
+	if (el) {
+		el.addEventListener('click', handleOptionsInit, false);
 	}
 
 	function replaceMessage (messageId, callback) {
@@ -415,6 +421,10 @@ function handleOptionsPageLoaded (req) {
 		});
 	});
 	replaceMessage('option_preferred_storage_head');
+	replaceMessage('option_init_head');
+	replaceMessage('option_init_desc');
+	replaceMessage('option_init_confirm');
+
 	replaceMessage('option_save');
 
 	document.evaluate(
@@ -474,6 +484,21 @@ function handleOptionsSave () {
 					saveResult.textContent = '';
 				}, 1000 * 2);
 			}
+		}
+	);
+}
+
+/**
+ * init button handler
+ * ----------------
+ */
+
+function handleOptionsInit () {
+	var message = document.getElementById('opt-init-confirm').textContent;
+	window.confirm(message) && extension.postMessage(
+		{type:'init-options'},
+		function () {
+			location.reload();
 		}
 	);
 }
