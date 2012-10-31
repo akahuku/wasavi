@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 206 2012-10-27 08:12:58Z akahuku $
+ * @version $Id: wasavi.js 208 2012-10-29 20:41:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -28,6 +28,7 @@
  */
 
 (function (global) {
+'use strict';
 
 /*
  * extension interface {{{1
@@ -58,17 +59,17 @@ if (global.WasaviExtensionWrapper
 				 * Thus we leave innerHTML.
 				 */
 				document.body.innerHTML = wasaviFrame;
-				delete wasaviFrame;
+				wasaviFrame = '';
 				callback();
 			}
 			else {
-				document.addEventListener('DOMContentLoaded', function (e) {
-					document.removeEventListener(e.type, arguments.callee, false);
+				document.addEventListener('DOMContentLoaded', function handleDCL (e) {
+					document.removeEventListener(e.type, handleDCL, false);
 					/*
 					 * an issue of innerHTML: see the comment above.
 					 */
 					document.body.innerHTML = wasaviFrame;
-					delete wasaviFrame;
+					wasaviFrame = '';
 					callback();
 				}, false);
 			}
@@ -105,8 +106,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 206 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 206 2012-10-27 08:12:58Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 208 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 208 2012-10-29 20:41:58Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -318,7 +319,7 @@ if (global.WasaviExtensionWrapper
 			if (colorSet == '' || !(colorSet in colorSets)) {
 				colorSet = 'blight';
 			}
-			return arguments.callee(colorSets[colorSet]);
+			return select(colorSets[colorSet]);
 		}
 	}
 	function update () {
@@ -2978,7 +2979,7 @@ whole:
 			distance = scrollTopDest - scrollTopStart;
 			running = true;
 			lastRan = +Date.now();
-			(function () {
+			(function doScroll () {
 				var now = +Date.now();
 				var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
@@ -3001,7 +3002,7 @@ whole:
 				}
 				else {
 					editor.scrollTop = parseInt(y);
-					setTimeout(arguments.callee, timerPrecision);
+					setTimeout(doScroll, timerPrecision);
 				}
 			})();
 		}
@@ -4935,8 +4936,8 @@ ExCommandExecutor.prototype = {
 		}
 	}
 
-	a.addEventListener('load', function () {
-		a.removeEventListener('load', arguments.callee, false);
+	a.addEventListener('load', function handleBellLoaded () {
+		a.removeEventListener('load', handleBellLoaded, false);
 		enabled = true;
 	}, false);
 
@@ -5988,7 +5989,7 @@ EditLogger.prototype = new function () {
 		else {
 			visible = !visible;
 			setColor();
-			timer = setTimeout(arguments.callee, 1000 * 0.1);
+			timer = setTimeout(handleTimeout, 1000 * 0.1);
 		}
 	}
 	function setColor () {
@@ -8021,7 +8022,7 @@ function requestRegisterNotice (message) {
 	if (!requestedState.notice) {
 		requestedState.notice = {play:true};
 		if (arguments.length) {
-			result = requestedState.notice.message = message;
+			requestedState.notice.message = message;
 		}
 	}
 	return message;
@@ -10568,9 +10569,8 @@ var config = new Configurator(
 		sm: 'showmatch',		smd: 'showmode',	sw: 'shiftwidth',
 		tag: 'tags',			tl: 'taglength',	to: 'timeout',
 		ts: 'tabstop',			tty: 'term',		ttytype: 'term',
-		ul: 'undolevels',		w: 'window',		wa: 'writeany',
-		wi: 'window',			wl: 'wraplen',		wm: 'wrapmargin',
-		ws: 'wrapscan',
+		w: 'window',			wa: 'writeany',		wi: 'window',
+		wl: 'wraplen',			wm: 'wrapmargin',	ws: 'wrapscan',
 
 		isk: 'iskeyword',
 		incsearch: 'searchincr', is: 'searchincr',

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 207 2012-10-29 08:00:33Z akahuku $
+ * @version $Id: background.js 208 2012-10-29 20:41:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -50,6 +50,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 }
 
 (function (global) {
+	'use strict';
+
 	/*
 	 * consts
 	 * ----------------
@@ -1098,7 +1100,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		}
 
 		function authorize (tabId) {
-			var thisFunc = arguments.callee;
+			var thisFunc = authorize;
 			switch (state) {
 			case 'error':
 				handleOAuthError(lastError);
@@ -1542,7 +1544,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		});
 
 		if (result.length == 0) {
-			result = arguments.callee('');
+			result = getShortcutCode('');
 		}
 
 		return result;
@@ -1811,7 +1813,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	 */
 
 	function handleLoad (e) {
-		window.removeEventListener && window.removeEventListener(e.type, arguments.callee, false);
+		window.removeEventListener && window.removeEventListener(e.type, handleLoad, false);
 		resourceLoader = ResourceLoader.create();
 		extension = ExtensionWrapper.create();
 

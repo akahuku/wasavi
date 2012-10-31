@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 201 2012-10-23 05:42:03Z akahuku $
+ * @version $Id: extension_wrapper.js 208 2012-10-29 20:41:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -28,6 +28,8 @@
  */
 
 (function (global) {
+	'use strict';
+
 	/*const*/var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;

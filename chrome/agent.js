@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 207 2012-10-29 08:00:33Z akahuku $
+ * @version $Id: agent.js 208 2012-10-29 20:41:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -32,6 +32,7 @@
 typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.framePageUrl.isExternal
 && (function (global) {
+'use strict';
 
 /*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 /*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
@@ -588,8 +589,8 @@ extension.setMessageListener(function (req) {
 			handleAgentInitialized(req);
 		}
 		else {
-			document.addEventListener('DOMContentLoaded', function (e) {
-				document.removeEventListener(e.type, arguments.callee, false);
+			document.addEventListener('DOMContentLoaded', function handleDCL (e) {
+				document.removeEventListener(e.type, handleDCL, false);
 				handleAgentInitialized(req)
 			}, false);
 		}
