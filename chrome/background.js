@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 208 2012-10-29 20:41:58Z akahuku $
+ * @version $Id: background.js 209 2012-11-01 07:25:11Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1765,13 +1765,18 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				extension.sendRequest(req.parentTabId, req.payload);
 			}
 			else {
+				// wasavi-read
 				// wasavi-saved
 				// wasavi-initialized
 				// wasavi-terminated
-				// wasavi-stroked
 				// wasavi-window-state
 				// wasavi-focus-me
 				switch (req.payload.type) {
+				case 'wasavi-read':
+					if ('tabId' in req && 'path' in req.payload && req.payload.path != '') {
+						getFileSystem(req.path).read(req.path, req.tabId);
+					}
+					break;
 				case 'wasavi-saved':
 					if ('tabId' in req && 'path' in req.payload && req.payload.path != '') {
 						getFileSystem(req.payload.path)
@@ -1797,13 +1802,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 		case 'get-clipboard':
 			res({data:extension.clipboard.get()});
-			break;
-
-		case 'read':
-			if ('tabId' in req) {
-				getFileSystem(req.path).read(req.path, req.tabId);
-			}
-			res();
 			break;
 		}
 	}

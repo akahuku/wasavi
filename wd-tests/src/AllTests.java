@@ -17,6 +17,7 @@ import org.junit.runners.Suite.SuiteClasses;
 	,OpYankTest.class
 	,OpShiftTest.class
 	,RangeSymbolsTest.class
+	,LerningTheViEditor6th.class
 })
 public class AllTests {
 	public static void main (String[] args) {

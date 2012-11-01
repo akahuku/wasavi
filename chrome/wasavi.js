@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 208 2012-10-29 20:41:58Z akahuku $
+ * @version $Id: wasavi.js 209 2012-11-01 07:25:11Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -106,8 +106,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 208 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 208 2012-10-29 20:41:58Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 209 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 209 2012-11-01 07:25:11Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -3768,17 +3768,11 @@ ExCommand.write = function (t, a, isCommand, isAppend, path) {
 	if (a.range[1] == t.rowLength - 1) {
 		content = trimTerm(content);
 	}
-	if (extensionChannel) {
-		extensionChannel.postMessage({
-			type:'notify-to-parent',
-			parentTabId:targetElement.parentTabId,
-			payload:{
-				type:'wasavi-saved',
-				path:path,
-				value:content.replace(/\n/g, preferredNewline)
-			}
-		});
-	}
+	fireEvent('saved', {
+		type:'wasavi-saved',
+		path:path,
+		value:content.replace(/\n/g, preferredNewline)
+	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == targetElement) {
 		isTextDirty = false;
 	}
@@ -3799,29 +3793,25 @@ ExCommand.read = function (t, a, content, meta) {
 	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
 };
 ExCommand.edit = function (t, a, content, meta) {
-	isTextDirty = false;
-	fileName = meta.path;
-	document.title = /[^\/]+$/.exec(fileName)[0] + ' - wasavi';
-	var empty = [];
 	var charCount = content.length;
-	preferredNewline = [
-		['\n',   (content.match(/(?:^|[^\r])\n/g) || empty).length],
-		['\r',   (content.match(/\r(?!\n)/g) || empty).length],
-		['\r\n', (content.match(/\r\n/g) || empty).length]
-	].sort(function (a, b) {return b[1] - a[1];})[0][0];
+	if (WasaviExtensionWrapper.isTopFrame) {
+		fileName = meta.path;
+		document.title = /[^\/]+$/.exec(fileName)[0] + ' - wasavi';
+		var empty = [];
+		preferredNewline = [
+			['\n',   (content.match(/(?:^|[^\r])\n/g) || empty).length],
+			['\r',   (content.match(/\r(?!\n)/g) || empty).length],
+			['\r\n', (content.match(/\r\n/g) || empty).length]
+		].sort(function (a, b) {return b[1] - a[1];})[0][0];
+	}
+	else {
+		fileName = '';
+		preferredNewline = '\n';
+	}
 	t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
+	isTextDirty = false;
 	editLogger.close().clear().open('excommand+edit');
 	marks.clear();
-
-	/*
-	// exrc
-	var exrcCommands = executeExCommand(t, exrc, false, true);
-	if (typeof exrcCommands == 'string') {
-		return exrcCommands;
-	}
-	exCommandExecutor.commands = Array.prototype.push.apply(
-		exrcCommands.commands, exCommandExecutor.commands);
-	 */
 
 	// +command
 	var initCommands = executeExCommand(t, a.initCommand, false, true);
@@ -3982,9 +3972,6 @@ ExCommand.commands = [
 		isEditCompleted = true;
 	}),
 	new ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (t, a) {
-		if (!extensionChannel || !WasaviExtensionWrapper.isTopFrame) {
-			return _('Only stand alone form can edit.');
-		}
 		if (!a.flags.force && isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
@@ -4000,13 +3987,19 @@ ExCommand.commands = [
 			a.initCommand = '';
 		}
 		path = path.replace(/\\(.)/g, '$1');
-		if (path == '' && fileName == '') {
-			return _('File name is empty.');
+
+		if (WasaviExtensionWrapper.isTopFrame) {
+			if (path == '' && fileName == '') {
+				return _('File name is empty.');
+			}
 		}
-		extensionChannel.postMessage({
-			type:'read',
-			path:path
-		});
+		else {
+			if (path != '') {
+				return _('Only stand alone form can edit.');
+			}
+		}
+
+		fireEvent('read', {path:path || fileName});
 	}),
 	new ExCommand('file', 'f', 'f', 0, function (t, a) {
 		if (!extensionChannel || !WasaviExtensionWrapper.isTopFrame) {
@@ -4204,10 +4197,7 @@ ExCommand.commands = [
 		if (!extensionChannel) {
 			return _('Extension system required.');
 		}
-		extensionChannel.postMessage({
-			type:'read',
-			path:a.argv[0]
-		});
+		fireEvent('read', {path:a.argv[0]});
 	}),
 	new ExCommand('redo', 're', '', 0, function (t, a) {
 		editLogger.close();
@@ -10479,16 +10469,10 @@ var config = new Configurator(
 		new VariableItem('fullscreen', 'b', false, function (v) {
 			!isStandAlone &&
 			targetElement &&
-			extensionChannel &&
-			extensionChannel.postMessage({
-				type:'notify-to-parent',
-				parentTabId:targetElement.parentTabId,
-				payload:{
-					type:'wasavi-window-state',
-					tabId:extensionChannel.tabId,
-					state:v ? 'maximized' : 'normal',
-					modelineHeight:$('wasavi_footer').offsetHeight
-				}
+			fireEvent('window-state', {
+				tabId:extensionChannel.tabId,
+				state:v ? 'maximized' : 'normal',
+				modelineHeight:$('wasavi_footer').offsetHeight
 			});
 			return v;
 		}),   // O
@@ -12539,13 +12523,7 @@ function handleCoverClick (e) {
 		$(LINE_INPUT_ID).focus();
 		break;
 	}
-	if (extensionChannel) {
-		extensionChannel.postMessage({
-			type:'notify-to-parent',
-			parentTabId:targetElement.parentTabId,
-			payload:{type:'wasavi-focus-me'}
-		});
-	}
+	fireEvent('focus-me');
 }
 function handleCoverMousewheel (e) {
 	e.preventDefault();

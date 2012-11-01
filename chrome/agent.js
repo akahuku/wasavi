@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 208 2012-10-29 20:41:58Z akahuku $
+ * @version $Id: agent.js 209 2012-11-01 07:25:11Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -703,6 +703,25 @@ extension.setMessageListener(function (req) {
 		var ev = document.createEvent('CustomEvent');
 		ev.initCustomEvent('WasaviTerminated', false, false, 0);
 		document.dispatchEvent(ev);
+		break;
+
+	case 'wasavi-read':
+		if (!wasaviFrame) break;
+		try {
+			extension.postMessage({
+				type:'notify-to-child',
+				childTabId:req.childTabId,
+				payload:{
+					type:'fileio-read-response',
+					state:'complete',
+					meta:{
+						path:'',
+						charLength:targetElement.value.length
+					},
+					content:targetElement.value
+				}
+			});
+		} catch (e) {;}
 		break;
 
 	case 'wasavi-saved':
