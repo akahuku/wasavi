@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 209 2012-11-01 07:25:11Z akahuku $
+ * @version $Id: agent.js 210 2012-11-02 08:53:23Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -687,6 +687,15 @@ extension.setMessageListener(function (req) {
 		catch (e) {
 			;
 		}
+		break;
+
+	case 'wasavi-blink-me':
+		if (!wasaviFrame) break;
+		wasaviFrame.style.visibility = 'hidden';
+		wasaviFrame && setTimeout(function () {
+			if (!wasaviFrame) return;
+			wasaviFrame.style.visibility = '';
+		}, 500);
 		break;
 
 	case 'wasavi-terminated':

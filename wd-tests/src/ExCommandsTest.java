@@ -558,6 +558,22 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testEditReload () {
+		Wasavi.send("ifoo\u001b");
+
+		Wasavi.send(":edit\n");
+		assertEquals("#1-1",
+				"edit: File is modified; write or use \"!\" to override.",
+				Wasavi.getLastMessage());
+		assertValue("#1-2", "foo");
+
+		Wasavi.send(":e!\n");
+		assertEquals("#1-3",
+				driver.findElement(By.id("t2")).getAttribute("value"),
+				Wasavi.getValue());
+	}
+
+	@Test
 	public void testGlobal () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 209 2012-11-01 07:25:11Z akahuku $
+ * @version $Id: wasavi.js 210 2012-11-02 08:53:23Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -106,8 +106,8 @@ if (global.WasaviExtensionWrapper
  * ---------------------
  */
 
-/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 209 $') || [1])[0];
-/*const*/var VERSION_DESC = '$Id: wasavi.js 209 2012-11-01 07:25:11Z akahuku $';
+/*const*/var VERSION = '0.4.' + (/\d+/.exec('$Revision: 210 $') || [1])[0];
+/*const*/var VERSION_DESC = '$Id: wasavi.js 210 2012-11-02 08:53:23Z akahuku $';
 /*const*/var CONTAINER_ID = 'wasavi_container';
 /*const*/var EDITOR_CORE_ID = 'wasavi_editor';
 /*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
@@ -11889,8 +11889,7 @@ var commandMap = {
 	// clear screen
 	'\u000c'/*^L*/: function (c, t, o) {
 		if (prefixInput.isEmptyOperation) {
-			$(CONTAINER_ID).style.display = 'none';
-			setTimeout(function () {$(CONTAINER_ID).style.display = '';}, 100);
+			fireEvent('blink-me');
 		}
 		else {
 			inputEscape(o.e.fullIdentifier);
