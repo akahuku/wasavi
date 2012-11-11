@@ -94,6 +94,61 @@ public class LearningTheViEditor6th extends WasaviTest {
 			assertPos(String.format("B: col %d", i), 0, i);
 		}
 	}
+
+	@Test
+	public void test2_3 () {
+/*
+With a editor you can scrooll the page,
+move the cursor, delete lines, nisret
+characters, and more while results of
+your edits as you make tham.
+Since they allow you to make changes
+as you read through a file, much as
+you would edit a printed copy,
+screen editors are very popular.
+ */
+
+/*
+With a screen editor you can scroll the page,
+move the cursor, delete lines, insert
+characters, and more while seeing the results of
+your edits as you make them.
+Screen editors are very popular
+since they allow you to make changes
+as you read through a file, much as
+you would edit a printed copy.
+ */
+		Wasavi.send(
+				"iWith a editor you can scrooll the page,\n" +
+				 "move the cursor, delete lines, nisret\n" +
+				 "characters, and more while results of\n" +
+				 "your edits as you make tham.\n" +
+				 "Since they allow you to make changes\n" +
+				 "as you read through a file, much as\n" +
+				 "you would edit a printed copy,\n" +
+				 "screen editors are very popular.\u001b");
+
+		Wasavi.send("1G8|iscreen \u001b");
+		Wasavi.send("/oo\nx");
+		Wasavi.send("2G$bcwinsert\u001b");
+		Wasavi.send("3G4Wiseeing the \u001b");
+		Wasavi.send("4G$Fare");
+		Wasavi.send("5Grs");
+		Wasavi.send("7G$r.");
+		Wasavi.send("8G$x");
+		Wasavi.send("^rS");
+		Wasavi.send("dd2kP");
+
+		assertValue("#1",
+				"With a screen editor you can scroll the page,\n" +
+				"move the cursor, delete lines, insert\n" +
+				"characters, and more while seeing the results of\n" +
+				"your edits as you make them.\n" +
+				"Screen editors are very popular\n" +
+				"since they allow you to make changes\n" +
+				"as you read through a file, much as\n" +
+				"you would edit a printed copy.");
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

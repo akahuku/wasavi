@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 210 2012-11-02 08:53:23Z akahuku $
+ * @version $Id: agent.js 212 2012-11-11 14:40:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -111,26 +111,52 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 	return rect;
 }
 
-function getHighestZindex (element) {
-	var result = 0;
-	var view = document.defaultView;
-	for (; element; element = element.parentNode) {
-		if (element.nodeType != 1) continue;
-		var z = (element.style.zIndex || view.getComputedStyle(element, '').zIndex) - 0;
-		if (z > result) result = z;
-	}
-	return result;
-}
-
 function run (element) {
+	/*
+	 * boot sequence:
+	 *
+	 * background		agent		wasavi
+	 *     |              |           |
+	 *     |              |..........>|
+	 *     |              |(create iframe)
+	 *     |              |           |
+	 *     |<.........................|
+	 *     |(background recoginizes the iframe)
+	 *     |              |           |
+	 *     |<-------------|           |
+	 *     |"request-wasavi"          |
+	 *     |              |           |
+	 *     |<-------------------------|
+	 *     |           "init"         |
+	 *     |              |           |
+	 *     |------------------------->|
+	 *     |       "init-response"    |
+	 *     |              |           |
+	 *     |              |<----------|
+	 *     |              |"wasavi-initialized"
+	 *     |              |           |
+	 *
+	 */
+
+	function getHighestZindex (element) {
+		var result = 0;
+		var view = document.defaultView;
+		for (; element; element = element.parentNode) {
+			if (element.nodeType != 1) continue;
+			var z = (element.style.zIndex || view.getComputedStyle(element, '').zIndex) - 0;
+			if (z > result) result = z;
+		}
+		return result;
+	}
+
 	function getFontStyle (s, fontFamilyOverride) {
 		return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
 			'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
 	}
 
+	//
 	targetElement = element;
 	wasaviFrame = document.createElement('iframe');
-	var rect = locate(wasaviFrame, element);
 	wasaviFrame.style.border = 'none';
 	wasaviFrame.style.overflow = 'hidden';
 	wasaviFrame.style.visibility = 'hidden';
@@ -146,30 +172,29 @@ function run (element) {
 		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.external;
 	}
 
-	wasaviFrame.onload = function (e) {
-		var s = document.defaultView.getComputedStyle(element, '');
-		var payload = {
-			type:'run',
-			parentTabId:extension.tabId,
-			url:window.location.href,
-			testMode:isTestFrame,
-			id:element.id,
-			nodeName:element.nodeName,
-			elementType:element.type,
-			selectionStart:element.selectionStart,
-			selectionEnd:element.selectionEnd,
-			scrollTop:element.scrollTop,
-			scrollLeft:element.scrollLeft,
-			readOnly:element.readOnly,
-			value:element.value,
-			rect:{width:rect.width, height:rect.height},
-			fontStyle:getFontStyle(s, fontFamily)
-		};
-		extension.postMessage({type:'notify-to-child', payload:payload});
-	};
-
 	document.body.appendChild(wasaviFrame);
 
+	//
+	var rect = locate(wasaviFrame, element);
+	extension.postMessage({
+		type:'push-payload',
+		parentTabId:extension.tabId,
+		url:window.location.href,
+		testMode:isTestFrame,
+		id:element.id,
+		nodeName:element.nodeName,
+		elementType:element.type,
+		selectionStart:element.selectionStart,
+		selectionEnd:element.selectionEnd,
+		scrollTop:element.scrollTop,
+		scrollLeft:element.scrollLeft,
+		readOnly:element.readOnly,
+		value:element.value,
+		rect:{width:rect.width, height:rect.height},
+		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily)
+	});
+
+	//
 	var mo = window.MutationObserver
 	|| window.WebKitMutationObserver
 	|| window.OMutationObserver
@@ -820,7 +845,7 @@ extension.setMessageListener(function (req) {
 		break;
 	}
 });
-extension.sendRequest({type:'init-agent'});
+extension.connect('init-agent');
 
 })(this);
 

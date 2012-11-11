@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 208 2012-10-29 20:41:58Z akahuku $
+ * @version $Id: extension_wrapper.js 212 2012-11-11 14:40:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -80,8 +80,8 @@
 				this.sendRequest(data, callback);
 			}
 		},
-		connect: function () {
-			this.sendRequest({type:'init'});
+		connect: function (type) {
+			this.sendRequest({type:type || 'init', url:window.location.href});
 		},
 		getMessage: function (messageId) {},
 		setClipboard: function (data) {

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi_frame.js 190 2012-10-04 06:55:45Z akahuku $
+ * @version $Id: wasavi_frame.js 212 2012-11-11 14:40:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,7 +38,18 @@
 		});
 	}
 	if (window.location.protocol == 'chrome-extension:' && window.chrome) {
-		load('extension_wrapper.js', 'wasavi.js');
+		load(
+			'extension_wrapper.js',
+			'wasavi/init.js',
+			'wasavi/utils.js',
+			'wasavi/classes.js',
+			'wasavi/classes_ex.js',
+			'wasavi/classes_undo.js',
+			'wasavi/classes_subst.js',
+			'wasavi/classes_search.js',
+			'wasavi/classes_ui.js',
+			'wasavi.js'
+		);
 	}
 	else if (window.location.protocol == 'widget:' && window.opera) {
 		load('includes/001_extension_wrapper.js', 'includes/wasavi.js');

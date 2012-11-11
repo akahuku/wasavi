@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 209 2012-11-01 07:25:11Z akahuku $
+ * @version $Id: background.js 212 2012-11-11 14:40:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -88,6 +88,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	var messageCatalog;
 	var wasaviFrame;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
+	var payload;
 
 	/*
 	 * classes
@@ -460,6 +461,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.extensionId = '';
 		this.lastRegisteredTab = '';
 		this.messageCatalogPath = '';
+		this.version = '';
 		this.isDev = false;
 	}
 	ExtensionWrapper.create = function () {
@@ -563,7 +565,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		});
 		(function (self) {
 			resourceLoader.get('manifest.json', function (data) {
-				self.isDev = JSON.parse(data).version == '0.0.1';
+				self.version = JSON.parse(data).version;
+				self.isDev = self.version == '0.0.1';
 			}, {noCache:true});
 		})(this);
 	}
@@ -711,6 +714,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return result;
 		});
 		this.messageCatalogPath = 'messages.json';
+		this.version = widget.version;
 		this.isDev = widget.version == '0.0.1';
 	}
 
@@ -919,7 +923,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 			return 'xlocale/' + result + '/messages.json';
 		})();
-		this.isDev = require('self').version == '0.0.1';
+		this.version = require('self').version;
+		this.isDev = this.version == '0.0.1';
 	}
 
 	/**
@@ -1678,7 +1683,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
 				testMode:req.url == TEST_MODE_URL,
 				devMode:extension.isDev,
-				fstab:getFileSystemInfo()
+				fstab:getFileSystemInfo(),
+				version:extension.version,
+				payload:payload || null
 			});
 			break;
 
@@ -1802,6 +1809,11 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 		case 'get-clipboard':
 			res({data:extension.clipboard.get()});
+			break;
+
+		case 'push-payload':
+			payload = req;
+			res();
 			break;
 		}
 	}

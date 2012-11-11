@@ -35,7 +35,18 @@
         "http://wasavi.appsweets.net/",
         "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
-      "js": ["extension_wrapper.js", "wasavi.js"],
+      "js": [
+        "extension_wrapper.js",
+        "wasavi/init.js",
+        "wasavi/utils.js",
+        "wasavi/classes.js",
+        "wasavi/classes_ex.js",
+        "wasavi/classes_undo.js",
+        "wasavi/classes_subst.js",
+        "wasavi/classes_search.js",
+        "wasavi/classes_ui.js",
+        "wasavi.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
     }
