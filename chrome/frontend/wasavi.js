@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 212 2012-11-11 14:40:24Z akahuku $
+ * @version $Id: wasavi.js 214 2012-11-12 07:51:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -93,7 +93,6 @@
 		get devMode () {return devMode},
 		get fstab () {return fstab},
 		get abbrevs () {return abbrevs},
-		set abbrevs (v) {abbrevs = v},
 		get keyManager () {return keyManager},
 		get mapManager () {return mapManager},
 		get theme () {return theme},
@@ -141,7 +140,6 @@
 		get lastSimpleCommand () {return lastSimpleCommand},
 		get lastRegexFindCommand () {return lastRegexFindCommand},
 		get lastSubstituteInfo () {return lastSubstituteInfo},
-		set lastSubstituteInfo (v) {lastSubstituteInfo = v},
 		get lastMessage () {return lastMessage},
 		set lastMessage (v) {lastMessage = v},
 
@@ -171,7 +169,24 @@
 	};
 }
 
-function ExCommandExecutor (isRoot, onFinish) {
+/*constructor*/function Collection () {
+}
+Collection.prototype = Object.create({}, {
+	clear: {
+		value: function () {
+			Object.keys(this).forEach(function (key) {
+				delete this[key];
+			}, this);
+		}
+	},
+	size: {
+		value: function () {
+			return Object.keys(this).length;
+		}
+	}
+});
+
+/*constructor*/function ExCommandExecutor (isRoot, onFinish) {
 	this.commands = [];
 	this.editLogLevel = 0;
 	this.isRoot = !!isRoot;
@@ -801,7 +816,7 @@ ime-mode:disabled; \
 	lastSimpleCommand = '';
 	lastHorzFindCommand = {direction:0, letter:'', stopBefore:false};
 	lastRegexFindCommand = new Wasavi.RegexFinderInfo;
-	lastSubstituteInfo = {};
+	lastSubstituteInfo = new Collection;
 	lastMessage = '';
 	requestedState = {};
 
@@ -3734,7 +3749,7 @@ var devMode;
 var fstab;
 var substituteWorker;
 var resizeHandlerInvokeTimer;
-var abbrevs = {};
+var abbrevs = new Collection;
 var keyManager = new Wasavi.KeyManager;
 var regexConverter = new Wasavi.RegexConverter(appProxy);
 var mapManager = new Wasavi.MapManager(appProxy);

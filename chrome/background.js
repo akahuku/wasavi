@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 212 2012-11-11 14:40:24Z akahuku $
+ * @version $Id: background.js 214 2012-11-12 07:51:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -790,7 +790,10 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				}
 			},
 			contentScriptWhen:'start',
-			contentScriptFile:[self.data.url('extension_wrapper.js'), self.data.url('agent.js')],
+			contentScriptFile:[
+				self.data.url('frontend/extension_wrapper.js'),
+				self.data.url('frontend/agent.js')
+			],
 			onAttach:function (worker) {
 				var tabId = getNewTabId();
 				tabIds[tabId] = worker;
@@ -806,7 +809,18 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				'https://ss1.xrea.com/wasavi.appsweets.net/'
 			],
 			contentScriptWhen:'start',
-			contentScriptFile:[self.data.url('extension_wrapper.js'), self.data.url('wasavi.js')],
+			contentScriptFile:[
+				self.data.url('frontend/extension_wrapper.js'),
+				self.data.url('frontend/init.js'),
+				self.data.url('frontend/utils.js'),
+				self.data.url('frontend/classes.js'),
+				self.data.url('frontend/classes_ex.js'),
+				self.data.url('frontend/classes_undo.js'),
+				self.data.url('frontend/classes_subst.js'),
+				self.data.url('frontend/classes_search.js'),
+				self.data.url('frontend/classes_ui.js'),
+				self.data.url('frontend/wasavi.js')
+			],
 			onAttach:function (worker) {
 				var tabId = getNewTabId();
 				tabIds[tabId] = worker;

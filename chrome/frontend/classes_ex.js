@@ -926,7 +926,7 @@ Wasavi.ExCommand.commands = [
 		case 1:
 			var lhs = a.argv[0];
 			if (lhs == '[clear]') {
-				app.abbrevs = {};
+				app.abbrevs.clear();
 			}
 			else {
 				var tmp = {};
@@ -1287,7 +1287,7 @@ Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {
 		app.lastRegexFindCommand.push({});
 		app.lastRegexFindCommand.setPattern('');
-		app.lastSubstituteInfo = {};
+		app.lastSubstituteInfo.clear();
 		app.low.requestShowMessage('Whassup?');
 	}),
 	new Wasavi.ExCommand('storage', 'st', '', 0, function (app, t, a) {
@@ -1312,7 +1312,7 @@ Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('unabbreviate', 'una', 'w1r', 0, function (app, t, a) {
 		var lhs = a.argv[0];
 		if (lhs == '[all]') {
-			app.abbrevs = {};
+			app.abbrevs.clear();
 		}
 		else if (!(lhs in app.abbrevs)) {
 			return _('{0} is not an abbreviation.', lhs);

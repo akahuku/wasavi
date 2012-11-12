@@ -26,7 +26,10 @@
         "http://wasavi.appsweets.net/",
         "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
-      "js": ["extension_wrapper.js", "agent.js"],
+      "js": [
+        "frontend/extension_wrapper.js", 
+        "frontend/agent.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
     },
@@ -36,24 +39,23 @@
         "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
       "js": [
-        "extension_wrapper.js",
-        "wasavi/init.js",
-        "wasavi/utils.js",
-        "wasavi/classes.js",
-        "wasavi/classes_ex.js",
-        "wasavi/classes_undo.js",
-        "wasavi/classes_subst.js",
-        "wasavi/classes_search.js",
-        "wasavi/classes_ui.js",
-        "wasavi.js"
+        "frontend/extension_wrapper.js",
+        "frontend/init.js",
+        "frontend/utils.js",
+        "frontend/classes.js",
+        "frontend/classes_ex.js",
+        "frontend/classes_undo.js",
+        "frontend/classes_subst.js",
+        "frontend/classes_search.js",
+        "frontend/classes_ui.js",
+        "frontend/wasavi.js"
       ],
       "run_at": "document_start",
       "all_frames": true
     }
   ],
   "web_accessible_resources": [
-    "wasavi_frame.html",
-    "wasavi_frame.js"
+    "wasavi_frame.html"
   ],
   "options_page": "options.html",
   "homepage_url": "http://appsweets.net/",
