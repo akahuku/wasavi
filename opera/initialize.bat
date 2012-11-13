@@ -12,15 +12,22 @@ mklink icon128.png ..\chrome\icon128.png
 
 mkdir includes
 pushd includes
-mklink extension_wrapper.js ..\..\chrome\extension_wrapper.js
-mklink agent.js  ..\..\chrome\agent.js
-mklink wasavi.js ..\..\chrome\wasavi.js
+mklink 001_extension_wrapper.js ..\..\chrome\frontend\extension_wrapper.js
+mklink 010_init.js              ..\..\chrome\frontend\init.js
+mklink 020_utils.js             ..\..\chrome\frontend\utils.js
+mklink 030_classes.js           ..\..\chrome\frontend\classes.js
+mklink 040_classes_ex.js        ..\..\chrome\frontend\classes_ex.js
+mklink 050_classes_undo.js      ..\..\chrome\frontend\classes_undo.js
+mklink 060_classes_subst.js     ..\..\chrome\frontend\classes_subst.js
+mklink 070_classes_search.js    ..\..\chrome\frontend\classes_search.js
+mklink 080_classes_ui.js        ..\..\chrome\frontend\classes_ui.js
+mklink agent.js                 ..\..\chrome\frontend\agent.js
+mklink wasavi.js                ..\..\chrome\frontend\wasavi.js
 popd
 
 mklink options.html ..\chrome\options.html
 mklink options.js ..\chrome\options.js
 mklink wasavi_frame.html ..\chrome\wasavi_frame.html
-mklink wasavi_frame.js ..\chrome\wasavi_frame.js
 mklink LICENSE ..\LICENSE
 mklink NOTICE ..\NOTICE
 mklink README.md.en ..\README.md.en

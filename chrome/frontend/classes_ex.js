@@ -517,14 +517,14 @@ Wasavi.ExCommand.global = function (app, t, a) {
 	var command = a.argv[1];
 
 	if (pattern == '') {
-		if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
+		if (!app.registers.exists('/') || (pattern = app.registers.get('/').data) == '') {
 			return _('No previous search pattern.');
 		}
 	}
 	else {
 		app.lastRegexFindCommand.push({direction:1});
 		app.lastRegexFindCommand.setPattern(pattern);
-		registers.set('/', app.lastRegexFindCommand.pattern);
+		app.registers.set('/', app.lastRegexFindCommand.pattern);
 	}
 	var patternString = pattern;
 	pattern = app.low.getFindRegex(pattern);
@@ -672,7 +672,7 @@ Wasavi.ExCommand.copy = function (app, t, a) {
 	var content = rg.toString();
 	rg.detach();
 	t.setSelectionRange(new Wasavi.Position(a.lineNumber, 0));
-	app.edit.paste(t, 1, {
+	app.edit.paste(1, {
 		isForward:true,
 		isForceLineOrient:true,
 		content:content
@@ -777,7 +777,7 @@ Wasavi.ExCommand.read = function (app, t, a, content, meta) {
 	content = content.replace(/\r\n|\r/g, '\n');
 	var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
 	t.setSelectionRange(new Wasavi.Position(startLine, 0));
-	app.edit.paste(t, 1, {
+	app.edit.paste(1, {
 		isForward:true,
 		isForceLineOrient:true,
 		content:content
@@ -833,13 +833,13 @@ Wasavi.ExCommand.executeRegister = function (app, t, a) {
 	if (a.flags.register) {
 		register = a.register;
 	}
-	else if (!registers.exists('@') || (register = registers.get('@').data) == '') {
+	else if (!app.registers.exists('@') || (register = app.registers.get('@').data) == '') {
 		return _('No previous execution.');
 	}
-	if (register == '@' || !registers.isReadable(register)) {
+	if (register == '@' || !app.registers.isReadable(register)) {
 		return _('Invalid register name: {0}', register);
 	}
-	if (!registers.exists(register) || (command = registers.get(register).data) == '') {
+	if (!app.registers.exists(register) || (command = app.registers.get(register).data) == '') {
 		return _('Register {0} is empty.', register);
 	}
 	t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
@@ -847,7 +847,7 @@ Wasavi.ExCommand.executeRegister = function (app, t, a) {
 	if (typeof result == 'string') {
 		return result;
 	}
-	registers.set('@', command, true);
+	app.registers.set('@', command, true);
 };
 Wasavi.ExCommand.printRow = function (app, t, from, to, flags) {
 	function getLineNumber (i) {
@@ -954,8 +954,8 @@ Wasavi.ExCommand.commands = [
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
 		t.isLineOrientSelection = true;
 		var deleted = a.range[1] - a.range[0] + 1;
-		app.edit.yank(t, deleted, true, a.flags.register ? a.register : '');
-		app.edit.deleteSelection(t);
+		app.edit.yank(deleted, true, a.flags.register ? a.register : '');
+		app.edit.deleteSelection();
 		if (deleted >= app.config.vars.report) {
 			app.low.requestShowMessage(_('Deleted {0} {line:0}.', deleted));
 		}
@@ -1041,7 +1041,7 @@ Wasavi.ExCommand.commands = [
 		var head = a.range[0];
 		var tail = Math.min(t.rowLength - 1, a.range[1] + (a.flags.count ? a.count - 1 : 0));
 		t.setSelectionRange(new Wasavi.Position(head, 0));
-		app.edit.joinLines(t, tail - head, a.flags.force);
+		app.edit.joinLines(tail - head, a.flags.force);
 		t.setSelectionRange(t.getLineTopOffset2(head, 0));
 		app.isEditCompleted = true;
 	}),
@@ -1134,7 +1134,7 @@ Wasavi.ExCommand.commands = [
 				t.setSelectionRange(new Wasavi.Position(r[0], 0));
 				t.selectRows(rows);
 				var content = t.getSelectionRows();
-				app.edit.deleteSelection(t);
+				app.edit.deleteSelection();
 				t.isLineOrientSelection = false;
 
 				// fix destination position
@@ -1142,7 +1142,7 @@ Wasavi.ExCommand.commands = [
 
 				// paste
 				t.setSelectionRange(new Wasavi.Position(dest, 0));
-				app.edit.paste(t, 1, {
+				app.edit.paste(1, {
 					isForward:true,
 					isForceLineOrient:true,
 					content:content
@@ -1171,11 +1171,11 @@ Wasavi.ExCommand.commands = [
 	}),
 	new Wasavi.ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
 		var register = a.flags.register ? a.register : '"';
-		if (!registers.exists(register)) {
+		if (!app.registers.exists(register)) {
 			return _('Register {0} is empty.', register);
 		}
 		t.setSelectionRange(new Wasavi.Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
-		app.edit.paste(t, 1, {
+		app.edit.paste(1, {
 			isForward:true,
 			isForceLineOrient:true,
 			register:register
@@ -1205,17 +1205,17 @@ Wasavi.ExCommand.commands = [
 		}
 	}),
 	new Wasavi.ExCommand('s', 's', 's', 2, function (app, t, a) {
-		return (new SubstituteWorker(app)).run(a.range, a.argv[0], a.argv[1], a.argv[2]);
+		return (new Wasavi.SubstituteWorker(app)).run(a.range, a.argv[0], a.argv[1], a.argv[2]);
 	}),
 	new Wasavi.ExCommand('&', '&', 's', 2, function (app, t, a) {
-		return (new SubstituteWorker(app)).run(a.range, '', '%', a.argv[0]);
+		return (new Wasavi.SubstituteWorker(app)).run(a.range, '', '%', a.argv[0]);
 	}),
 	new Wasavi.ExCommand('~', '~', 's', 2, function (app, t, a) {
 		var pattern;
-		if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
+		if (!app.registers.exists('/') || (pattern = app.registers.get('/').data) == '') {
 			return _('No previous search pattern.');
 		}
-		return (new SubstituteWorker(app)).run(a.range, pattern, '~', a.argv[0]);
+		return (new Wasavi.SubstituteWorker(app)).run(a.range, pattern, '~', a.argv[0]);
 	}),
 	new Wasavi.ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
 		var messages;
@@ -1304,7 +1304,7 @@ Wasavi.ExCommand.commands = [
 		app.backlog.push(list);
 	}),
 	new Wasavi.ExCommand('registers', 'reg', '', 0, function (app, t, a) {
-		app.backlog.push(registers.dump());
+		app.backlog.push(app.registers.dump());
 	}),
 	new Wasavi.ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		return Wasavi.ExCommand.copy(app, t, a);
@@ -1376,17 +1376,17 @@ Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('yank', 'ya', 'bca', 2, function (app, t, a) {
 		var p = t.selectionStart;
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-		app.edit.yank(t, a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
+		app.edit.yank(a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
 		t.setSelectionRange(p);
 	}),
 	new Wasavi.ExCommand('>', '>', 'mca1', 2, function (app, t, a) {
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-		app.edit.shift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
+		app.edit.shift(a.range[1] - a.range[0] + 1, a.argv[0]);
 		t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 	}),
 	new Wasavi.ExCommand('<', '<', 'mca1', 2, function (app, t, a) {
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-		app.edit.unshift(t, a.range[1] - a.range[0] + 1, a.argv[0]);
+		app.edit.unshift(a.range[1] - a.range[0] + 1, a.argv[0]);
 		t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 	}),
 	new Wasavi.ExCommand('@', '@', 'b', 1, function (app, t, a) {

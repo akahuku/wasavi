@@ -2,19 +2,16 @@
 
 mkdir -p data
 pushd data
-ln -s ../../chrome/agent.js
 ln -s ../../chrome/appsweets.png
 ln -s ../../chrome/beep.ogg.txt
 ln -s ../../chrome/consumer_keys.json
-ln -s ../../chrome/extension_wrapper.js
 ln -s ../../chrome/icon016.png
 ln -s ../../chrome/icon048.png
 ln -s ../../chrome/icon128.png
 ln -s ../../chrome/options.html
 ln -s ../../chrome/options.js
-ln -s ../../chrome/wasavi.js
 ln -s ../../chrome/wasavi_frame.html
-ln -s ../../chrome/wasavi_frame.js
+ln -s ../../chrome/frontend
 
 mkdir -p xlocale
 pushd xlocale

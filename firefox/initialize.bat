@@ -2,19 +2,16 @@
 
 mkdir data
 pushd data
-mklink agent.js ..\..\chrome\agent.js
 mklink appsweets.png ..\..\chrome\appsweets.png
 mklink beep.ogg.txt ..\..\chrome\beep.ogg.txt
 mklink consumer_keys.json ..\..\chrome\consumer_keys.json
-mklink extension_wrapper.js ..\..\chrome\extension_wrapper.js
 mklink icon016.png ..\..\chrome\icon016.png
 mklink icon048.png ..\..\chrome\icon048.png
 mklink icon128.png ..\..\chrome\icon128.png
 mklink options.html ..\..\chrome\options.html
 mklink options.js ..\..\chrome\options.js
-mklink wasavi.js ..\..\chrome\wasavi.js
 mklink wasavi_frame.html ..\..\chrome\wasavi_frame.html
-mklink wasavi_frame.js ..\..\chrome\wasavi_frame.js
+mklink /d frontend ..\..\chrome\frontend
 
 mkdir xlocale
 pushd xlocale

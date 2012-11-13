@@ -25,6 +25,7 @@ Wasavi.SubstituteWorker = function (app) {
 };
 Wasavi.SubstituteWorker.prototype = {
 	run: function (range, pattern, repl, options) {
+		var app = this.app;
 		var t = this.app.buffer;
 		pattern || (pattern = '');
 		repl || (repl = '');
@@ -33,34 +34,34 @@ Wasavi.SubstituteWorker.prototype = {
 
 		// pattern and replacemnt
 		if (pattern == '' && repl == '') {
-			if ((pattern = lastSubstituteInfo.pattern || '') == '') {
+			if ((pattern = app.lastSubstituteInfo.pattern || '') == '') {
 				return _('No previous substitution.');
 			}
-			repl = this.app.config.vars.magic ? '~' : '\\~';
+			repl = app.config.vars.magic ? '~' : '\\~';
 		}
 		else if (pattern == '' && repl != '') {
-			if ((pattern = lastRegexFindCommand.pattern || '') == '') {
+			if ((pattern = app.lastRegexFindCommand.pattern || '') == '') {
 				return _('No previous search pattern.');
 			}
 		}
 		if (repl == '%') {
-			if (lastSubstituteInfo.replacement == undefined) {
+			if (app.lastSubstituteInfo.replacement == undefined) {
 				return _('No previous substitution.');
 			}
-			repl = lastSubstituteInfo.replacement;
+			repl = app.lastSubstituteInfo.replacement;
 		}
 		repl.replace(/\\.|./g, function (a) {
-			if (a == '\\~' && !this.app.config.vars.magic
-			||  a == '~' && this.app.config.vars.magic) {
+			if (a == '\\~' && !app.config.vars.magic
+			||  a == '~' && app.config.vars.magic) {
 				tildeUsed = true;
 			}
 		});
 		if (tildeUsed) {
-			if (lastSubstituteInfo.replacement == undefined) {
+			if (app.lastSubstituteInfo.replacement == undefined) {
 				return _('No previous substitution.');
 			}
-			var tildeRegex = this.app.config.vars.magic ? /(?!\\)~/g : /\\~/g;
-			repl = repl.replace(tildeRegex, lastSubstituteInfo.replacement);
+			var tildeRegex = app.config.vars.magic ? /(?!\\)~/g : /\\~/g;
+			repl = repl.replace(tildeRegex, app.lastSubstituteInfo.replacement);
 		}
 
 		// options
@@ -84,14 +85,14 @@ Wasavi.SubstituteWorker.prototype = {
 			options = options.substring(re[0].length);
 		}
 
-		lastRegexFindCommand.push({direction:1});
-		lastRegexFindCommand.setPattern(pattern);
-		lastSubstituteInfo.pattern = pattern;
-		lastSubstituteInfo.replacement = repl;
+		app.lastRegexFindCommand.push({direction:1});
+		app.lastRegexFindCommand.setPattern(pattern);
+		app.lastSubstituteInfo.pattern = pattern;
+		app.lastSubstituteInfo.replacement = repl;
 		this.patternString = pattern;
-		this.pattern = this.app.low.getFindRegex(pattern);
+		this.pattern = app.low.getFindRegex(pattern);
 		this.pattern.lastIndex = 0;
-		registers.set('/', lastRegexFindCommand.pattern);
+		app.registers.set('/', app.lastRegexFindCommand.pattern);
 		this.replOpcodes = this.compileReplacer(repl);
 		if (!this.replOpcodes) {
 			return _('Internal Error: invalid replace function');
@@ -111,7 +112,7 @@ Wasavi.SubstituteWorker.prototype = {
 		this.substCount = 0;
 		this.foundCount = 0;
 		if (this.isConfirm) {
-			substituteWorker = this;
+			app.low.setSubstituteWorker(this);
 			this.kontinue();
 		}
 		else {
@@ -128,7 +129,7 @@ Wasavi.SubstituteWorker.prototype = {
 			var pos = t.linearPositionToBinaryPosition(re.index + this.textPreLength);
 			row = pos.row;
 			col = pos.col;
-			this.doSubstitute(t, re, row, col);
+			this.doSubstitute(re, row, col);
 			prevOffset = re.index;
 			prevRow = row;
 			this.foundCount++;
@@ -138,7 +139,7 @@ Wasavi.SubstituteWorker.prototype = {
 				row = prevRow + delta;
 				if (this.isGlobal || row != prevRow) {
 					col = re.index - (Math.max(-1, this.text.lastIndexOf('\n', re.index - 1)) + 1);
-					this.doSubstitute(t, re, row, col);
+					this.doSubstitute(re, row, col);
 				}
 				prevOffset = re.index;
 				prevRow = row;
@@ -181,7 +182,7 @@ Wasavi.SubstituteWorker.prototype = {
 				switch (action.toLowerCase()) {
 				case 'y':
 					if (this.isGlobal || this.currentPos.row != this.prevPos.row) {
-						this.doSubstitute(t, this.re, this.currentPos.row, this.currentPos.col);
+						this.doSubstitute(this.re, this.currentPos.row, this.currentPos.col);
 					}
 					/*FALLTHRU*/
 				case 'n':
@@ -222,11 +223,12 @@ Wasavi.SubstituteWorker.prototype = {
 			}
 		}
 	},
-	doSubstitute: function (t, re, row, col) {
+	doSubstitute: function (re, row, col) {
+		var t = this.app.buffer;
 		var replaced = this.executeReplacer(re);
 		t.selectionStart = new Wasavi.Position(row, col);
 		t.selectionEnd = t.offsetBy(t.selectionStart, re[0].length);
-		this.app.edit.insert(t, replaced);
+		this.app.edit.insert(replaced);
 		this.text =
 			this.text.substring(0, re.index) +
 			replaced +
@@ -311,7 +313,7 @@ Wasavi.SubstituteWorker.prototype = {
 		var result, stack = [];
 		var specialEscapes = {'\\':'\\', 'n':'\n', 't':'\t'};
 		var specialLetters = {'\r':'\n'};
-		var magic = this.app.config.magic;
+		var magic = this.app.config.vars.magic;
 		function loop (callDepth, interruptMode, start) {
 			/*
 			 * opcodes:

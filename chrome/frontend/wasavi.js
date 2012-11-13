@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 214 2012-11-12 07:51:17Z akahuku $
+ * @version $Id: wasavi.js 216 2012-11-13 19:17:30Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -55,7 +55,8 @@
 		get getFileIoResultInfo () {return getFileIoResultInfo},
 		get getFileInfo () {return getFileInfo},
 		get fireEvent () {return fireEvent},
-		get fireCommandCompleteEvent () {return fireCommandCompleteEvent}
+		get fireCommandCompleteEvent () {return fireCommandCompleteEvent},
+		get setSubstituteWorker () {return setSubstituteWorker}
 	};
 	var motion = {
 		get left () {return motionLeft},
@@ -290,8 +291,8 @@ ExCommandExecutor.prototype = {
 			this.onFinish && this.onFinish(this);
 			var e = document.createEvent('UIEvent');
 			e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
-			app.low.processInput(0, e);
-			app.keyManager.sweep();
+			processInput(0, e);
+			keyManager.sweep();
 		}
 	},
 	run: function () {
@@ -829,7 +830,7 @@ ime-mode:disabled; \
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
 	exCommandExecutor = new ExCommandExecutor(true);
-	backlog = new Wasavi.Backlog(conwincnt, conwin, conscaler);
+	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
 	searchUtils = new Wasavi.SearchUtils(appProxy);
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
@@ -2252,7 +2253,6 @@ function fireCommandCompleteEvent (eventName) {
 	if (testMode) {
 		eventName || (eventName = 'command-completed');
 		var pt = new Position(getCurrentViewPositionIndices().top, 0);
-		console.log(pt.toString());
 		fireEvent(eventName, {
 			state:{
 				running:    !!targetElement,
@@ -2271,6 +2271,12 @@ function fireCommandCompleteEvent (eventName) {
 			}
 		});
 	}
+}
+function setSubstituteWorker (obj) {
+	if (!(obj instanceof Wasavi.SubstituteWorker)) {
+		throw new Error('invalid object assigning as SubstituteWorker');
+	}
+	substituteWorker = obj;
 }
 
 /*
