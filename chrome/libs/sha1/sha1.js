@@ -1,13 +1,14 @@
 /*
-	SHA-1
-	Copyright (C) 2007 MITSUNARI Shigeo at Cybozu Labs, Inc.
-	license:new BSD license
-	how to use
-	CybozuLabs.SHA1.calc(<ascii string>);
-	CybozuLabs.SHA1.calc(<unicode(UTF16) string>, CybozuLabs.SHA1.BY_UTF16);
+ *	SHA-1
+ *	Copyright (C) 2007 MITSUNARI Shigeo at Cybozu Labs, Inc.
+ *	license:new BSD license
+ *	how to use
+ *	CybozuLabs.SHA1.calc(<ascii string>);
+ *	CybozuLabs.SHA1.calc(<unicode(UTF16) string>, CybozuLabs.SHA1.BY_UTF16);
+ *
+ *	ex. CybozuLabs.SHA1.calc("abc") == "a9993e364706816aba3e25717850c26c9cd0d89d";
+ */
 
-	ex. CybozuLabs.SHA1.calc("abc") == "a9993e364706816aba3e25717850c26c9cd0d89d";
-*/
 var CybozuLabs = {
 	SHA1 : {
 		int16toBE : function(i16) {
