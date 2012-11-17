@@ -13,7 +13,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 public class ExCommandsTest extends WasaviTest {
-	@Test
+	//@Test
 	public void testAddressAll () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send(":%p\n");
@@ -23,7 +23,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertFalse("#2-1", "".equals(Wasavi.getLastMessage()));
 	}
 
-	@Test
+	//@Test
 	public void testNull () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -35,7 +35,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#2-1", "2\n2", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAddressCurrent () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send("2G", ":.p\n");
@@ -62,14 +62,14 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#3-6", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testAddressLast () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send(":$p\n");
 		assertEquals("#1-1", "3", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAddressInteger () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -101,7 +101,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#6-1", "print: Out of range.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAddressMark () {
 		Wasavi.send("i1\n2\n3\n4\u001b");
 
@@ -110,7 +110,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 3, 0);
 	}
 
-	@Test
+	//@Test
 	public void testAddressOffsetInteger () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -127,7 +127,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#4-1", "1", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAddressSearchForward () {
 		Wasavi.send(":set nowrapscan\n");
 		Wasavi.send("i1 foo\n2 foo\n3 foo\u001b");
@@ -164,7 +164,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#5-2", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testAddressSearchBackward () {
 		Wasavi.send(":set nowrapscan\n");
 		Wasavi.send("i1 foo\n2 foo\n3 foo\u001b");
@@ -201,7 +201,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#5-2", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testRangeStatic () {
 		Wasavi.send(":set nowrapscan\n");
 		Wasavi.send("i1 foo\n2 bar\n3 foo\n4 bar\n5 foo\u001b");
@@ -220,7 +220,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#2-1", "2 bar\n3 foo", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testRangeDynamic () {
 		Wasavi.send(":set nowrapscan\n");
 		Wasavi.send("i1 foo\n2 bar\n3 foo\n4 bar\n5 foo\u001b");
@@ -240,21 +240,21 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#2-1", "Out of range.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testRangeTooManyAddress () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send(":1,2,3p\n");
 		assertEquals("#1-1", "2\n3", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testImplicitAddress () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send("2G", ":||\n");
 		assertEquals("#1-1", "2\n2", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testNumericAddress () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -273,7 +273,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#4-2", "", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAbbreviate () {
 		Wasavi.send(":abbreviate [clear]\n");
 		Wasavi.send(":abbreviate\n");
@@ -313,7 +313,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#6-1", "No abbreviations are defined.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testAbbreviateAction () {
 		Wasavi.send(":ab foo FOO\n");
 		Wasavi.send("ifoo bar foo\u001b");
@@ -322,7 +322,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":unab foo\n");
 	}
 
-	@Test
+	//@Test
 	public void testCopyBadDest () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -333,7 +333,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "copy: Invalid argument.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testCopyZeroSource () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -341,7 +341,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-1", "1\n2\n1\n3");
 	}
 
-	@Test
+	//@Test
 	public void testCopyToLower () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 		/*
@@ -368,7 +368,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-4", "1\n2\n3\n2\n3\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testCopyToLowerSpecial () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 		/*
@@ -392,7 +392,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-4", "2\n3\n1\n2\n3\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testCopyToInsideRange () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 		/*
@@ -416,7 +416,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-4", "1\n2\n2\n3\n3\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testCopyToUpper () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 		/*
@@ -440,7 +440,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-4", "1\n2\n3\n4\n2\n3\n5");
 	}
 
-	@Test
+	//@Test
 	public void testCopyToUpperSpecial () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 		/*
@@ -464,7 +464,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-4", "1\n2\n3\n4\n5\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testDelete () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -480,7 +480,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testDeleteZeroSource () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -496,7 +496,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "3\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testDeleteTail () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -512,7 +512,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testDeleteByCount () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -528,7 +528,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n5");
 	}
 
-	@Test
+	//@Test
 	public void testDeleteByCountWithRange () {
 		/*
 		 * if both range and count are specified, first range should be discarded:
@@ -557,7 +557,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n2\n3\n6\n7");
 	}
 
-	@Test
+	//@Test
 	public void testEditReload () {
 		Wasavi.send("ifoo\u001b");
 
@@ -573,7 +573,7 @@ public class ExCommandsTest extends WasaviTest {
 				Wasavi.getValue());
 	}
 
-	@Test
+	//@Test
 	public void testGlobal () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -583,7 +583,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 5, 0);
 	}
 
-	@Test
+	//@Test
 	public void testGlobalRanged () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -593,7 +593,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 3, 0);
 	}
 
-	@Test
+	//@Test
 	public void testGlobalZeroMatch () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -603,7 +603,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 5, 0);
 	}
 
-	@Test
+	//@Test
 	public void testGlobalWithEmptyCommand () {
 		Wasavi.send("i1\n2\n3\u001b");
 		Wasavi.send(":g/./\n");
@@ -612,7 +612,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-3", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testGlobalDelete () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -637,7 +637,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "2 y\n3 z\n5 y\n6 z");
 	}
 
-	@Test
+	//@Test
 	public void testGlobalDeleteSpecial () {
 		Wasavi.send("i1\n2\n3\n4\n5\n6\u001b");
 
@@ -665,7 +665,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n3\n5");
 	}
 
-	@Test
+	//@Test
 	public void testGlobalWithNestDeniedCommand () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -674,7 +674,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-2", "1\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testJoinWithCount () {
 		Wasavi.send("ifirst\nsecond\nthird\nfourth\u001b");
 
@@ -728,7 +728,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-3", "first\nsecond\nthird\nfourth");
 	}
 
-	@Test
+	//@Test
 	public void testJoinWithNoCount () {
 		Wasavi.send("ifirst\nsecond\nthird\nfourth\u001b");
 
@@ -775,7 +775,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-3", "first\nsecond\nthird\nfourth");
 	}
 
-	@Test
+	//@Test
 	public void testMark () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -787,7 +787,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#2-1", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testMap () {
 		Wasavi.send(":map\n");
 		assertEquals("#1-1", join("\n",
@@ -816,7 +816,7 @@ public class ExCommandsTest extends WasaviTest {
 		), Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void mapSpecialKey () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map Q <down><down>$\n");
@@ -831,7 +831,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#2-1", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testMapUnique () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map Q G\ni1\n2\n3\u001bgg");
@@ -844,7 +844,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#3-1", "1\n2\nf1 key pressed3");
 	}
 
-	@Test
+	//@Test
 	public void testMapAmbiguous () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map Q 1G\n");
@@ -868,7 +868,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#4-1", 3, 0);
 	}
 
-	@Test
+	//@Test
 	public void testNestedMap () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map Q G\n");
@@ -883,7 +883,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#2-1", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testEditMapUnique () {
 		Wasavi.send(":map! [clear]\n");
 		Wasavi.send(":map! Q quick\u0016\u0016 brown\u0016\u0016 fox\n");
@@ -892,7 +892,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-1", "quick brown fox!");
 	}
 
-	@Test
+	//@Test
 	public void testMark2 () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -904,7 +904,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#2-1", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testMarks () {
 		Wasavi.send("i1 first\n2 second\n3 third\u001b");
 
@@ -937,7 +937,7 @@ public class ExCommandsTest extends WasaviTest {
 		), Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testMove () {
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
@@ -1043,7 +1043,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#5-5", "1\n2\n3\n4\n5");
 	}
 
-	@Test
+	//@Test
 	public void testPrint () {
 		Wasavi.send("i1\t$\u0016\u0010\\\n2\n3\n4\n5\u001b");
 
@@ -1092,7 +1092,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#7-2", "     1  1\t\\$\\020\\\\$", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testPut () {
 		Wasavi.send("ifoo\nbar\u001b");
 
@@ -1122,7 +1122,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#5-2", 0, 0);
 	}
 
-	@Test
+	//@Test
 	public void testQuit () {
 		Wasavi.sendNoWait(":quit\n");
 
@@ -1130,7 +1130,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertTrue("wasaviFrame must not be exist.", vanished);
 	}
 
-	@Test
+	//@Test
 	public void testQuitForce () {
 		Wasavi.send("ifoo\u001b");
 
@@ -1144,7 +1144,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertTrue("wasaviFrame must not be exist.", vanished);
 	}
 
-	@Test
+	//@Test
 	public void testUndoAndRedo () {
 		Wasavi.send(":undo\n");
 		assertEquals("#1-1", "undo: No undo item.", Wasavi.getLastMessage());
@@ -1434,6 +1434,18 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testSubstMatchedEmpty () {
+		Wasavi.send(":sushi\n");
+		Wasavi.send("i1*\n012\n3*\u001b");
+
+		Wasavi.send("1G", ":s/\\*\\?$/<\\/li>/g\n");
+		assertValue("#1-1", "1</li>\n012\n3*");
+
+		Wasavi.send("2G", ":s/a\\?/!/g\n");
+		assertValue("#1-2", "1</li>\n!0!1!2\n3*");
+	}
+
+	//@Test
 	public void testSet () {
 		Wasavi.send(":set\n");
 		System.out.println(Wasavi.getLastMessage());
@@ -1473,7 +1485,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#7-5", "  report=6", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testRegisters () {
 		Wasavi.send(":registers\n");
 		assertEquals("#1-1", join("\n",
@@ -1492,7 +1504,7 @@ public class ExCommandsTest extends WasaviTest {
 		), Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testUnabbreviate () {
 		Wasavi.send(":ab foo bar\n:ab\n");
 		assertEquals("#1-1", join("\n",
@@ -1513,7 +1525,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#5-1", "No abbreviations are defined.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testUnmap () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":unmap\n");
@@ -1534,13 +1546,13 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#3-1", "No mappings for command mode are defined.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testVersion () {
 		Wasavi.send(":version\n");
 		assertTrue("#1-1", Pattern.matches("^wasavi/\\d+\\.\\d+\\.\\d+.*", Wasavi.getLastMessage()));
 	}
 
-	@Test
+	//@Test
 	public void testInvertedGlobal () {
 		Wasavi.send("i1 x\n2\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -1550,7 +1562,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 5, 0);
 	}
 
-	@Test
+	//@Test
 	public void testInvertedGlobalRanged () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4 x\n5 y\n6 z\u001b");
 
@@ -1560,7 +1572,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 4, 0);
 	}
 
-	@Test
+	//@Test
 	public void testInvertedGlobalZeroMatch () {
 		Wasavi.send("i1 x\n2 y\n3 z\n4\n5\u001b");
 
@@ -1577,7 +1589,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-2", 4, 0);
 	}
 
-	@Test
+	//@Test
 	public void testInvertedGlobalWithEmptyCommand () {
 		Wasavi.send("ia\nb\nc\u001b");
 		Wasavi.send(":v/b/\n");
@@ -1586,7 +1598,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#1-3", 2, 0);
 	}
 
-	@Test
+	//@Test
 	public void testInvertGlobalWithNestDeniedCommand () {
 		Wasavi.send("i1\n2\n3\u001b");
 
@@ -1595,7 +1607,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-2", "1\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testWrite () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send(":write\n");
@@ -1604,35 +1616,35 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "foobar", text);
 	}
 
-	@Test
+	//@Test
 	public void testWriteToFile () {
 		Wasavi.send(":writ foobar\n");
 		// tests for web-based storage is in another file...
 		assertEquals("#1-1", "write: Only stand alone form can write.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testWriteToFileAppend () {
 		Wasavi.send(":wri >>\n");
 		// not implemented, for now
 		assertEquals("#1-1", "write: Appending is not implemented.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testWriteRedirect () {
 		Wasavi.send(":wri !foobar\n");
 		// not implemented, for now
 		assertEquals("#1-1", "write: Command redirection is not implemented.", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testWriteReadonlyWarning () {
 		Wasavi.send(":set readonly\n");
 		Wasavi.send(":w\n");
 		assertEquals("#1-1", "write: Readonly option is set (use \"!\" to override).", Wasavi.getLastMessage());
 	}
 
-	@Test
+	//@Test
 	public void testWriteAndQuit () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.sendNoWait(":wq\n");
@@ -1644,7 +1656,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "foobar", text);
 	}
 
-	@Test
+	//@Test
 	public void testExitModified () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.sendNoWait(":xit\n");
@@ -1656,7 +1668,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "foobar", text);
 	}
 
-	@Test
+	//@Test
 	public void testExitNotModified () {
 		Wasavi.sendNoWait(":xit\n");
 
@@ -1667,7 +1679,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "", text);
 	}
 
-	@Test
+	//@Test
 	public void testYank () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\t1.\n2.\n3.\u001b");
@@ -1692,7 +1704,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#5-2", 0, 2);
 	}
 
-	@Test
+	//@Test
 	public void testShift () {
 		Wasavi.send(":set sw=8 noai\n");
 		Wasavi.send("i\t1\n2\n3\u001b");
@@ -1710,7 +1722,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#4-1", "\t\t1\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testShiftMulti () {
 		Wasavi.send(":set sw=8 noai\n");
 		Wasavi.send("i\t1\n2\n3\u001b");
@@ -1728,7 +1740,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#4-1", "\t\t\t1\n\t\t2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testUnshift () {
 		Wasavi.send(":set sw=8 noai\n");
 		Wasavi.send("i\t\t1\n\t2\n3\u001b");
@@ -1746,7 +1758,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#4-1", "\t1\n\t2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testUnshiftMulti () {
 		Wasavi.send(":set sw=8 noai\n");
 		Wasavi.send("i\t\t\t1\n\t2\n3\u001b");
@@ -1764,7 +1776,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#4-1", "\t1\n2\n3");
 	}
 
-	@Test
+	//@Test
 	public void testExecuteRegister () {
 		Wasavi.send("is/\\d/\tfoo\u0016\u001b\\n\u0016\u0009\u001b");
 		assertValue("#1-1", "s/\\d/\tfoo\u001b\\n\t");

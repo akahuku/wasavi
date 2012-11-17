@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 216 2012-11-13 19:17:30Z akahuku $
+ * @version $Id: wasavi.js 220 2012-11-17 12:04:50Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -186,6 +186,40 @@ Collection.prototype = Object.create({}, {
 		}
 	}
 });
+
+/*constructor*/function LiteralInput () {
+	this.radix = 10;
+	this.value = '';
+	this.maxLength = 0;
+}
+LiteralInput.prototype = {
+	process: function (c) {
+	},
+	toUTF16: function (cp) {
+		/*
+		 * U+10FFFF (1 0000 1111 1111 1111 1111)
+		 *           * **** HHHH HHLL LLLL LLLL
+		 *
+		 * high surrogate: 1101 10_11 1111 1111
+		 *                         ** **HH HHHH
+		 *  low surrogate: 1101 11_11 1111 1111
+		 *                         LL LLLL LLLL
+		 */
+		if (cp > 0x10ffff) throw new Error('Invalid code point');
+
+		var plane = (cp & 0x1f0000) >> 16;
+		var offset = cp & 0xffff;
+		if (plane) {
+			return [
+				0xd800 | ((plane - 1) << 6) | ((offset & 0xfc00) >> 10),
+				0xdc00 | (offset & 0x03ff)
+			];
+		}
+		else {
+			return [offset];
+		}
+	}
+};
 
 /*constructor*/function ExCommandExecutor (isRoot, onFinish) {
 	this.commands = [];
@@ -2029,11 +2063,12 @@ function processInput (code, e) {
 		else {
 			if (code >= 32) {
 				lineInputHistories.isInitial = true;
+				var ss = input.selectionStart;
 				input.value =
-					input.value.substring(0, input.selectionStart) +
+					input.value.substring(0, ss) +
 					letter +
 					input.value.substring(input.selectionEnd);
-				input.selectionStart += letter.length;
+				input.selectionStart = ss + letter.length;
 				input.selectionEnd = input.selectionStart;
 				processInputSupplement();
 			}
@@ -3983,7 +4018,7 @@ var lastSubstituteInfo;
 var lastMessage;
 
 /*
- * editor functions mapping {{{1
+ * command mode mapping {{{1
  * ----------------
  */
 
@@ -5566,6 +5601,11 @@ var commandMap = {
 	/*'!': null,*/ /* not implemented */
 };
 
+/*
+ * insert mode mapping {{{1
+ * ----------------
+ */
+
 var editMap = {
 	'\u0008'/*backspace*/: function (c) {
 		logEditing(true);
@@ -5590,8 +5630,7 @@ var editMap = {
 			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 		},
 		'edit-overwrite': function (c, o) {
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
+			this['\u0016'].edit.apply(this, arguments);
 		},
 		'wait-a-letter': function (c) {
 			var code = c.charCodeAt(0);
@@ -5647,6 +5686,11 @@ var editMap = {
 		});
 	}
 };
+
+/*
+ * line input mode mapping {{{1
+ * ----------------
+ */
 
 var lineInputEditMap = {
 	'\u0001'/*^A*/: function (c, o) {

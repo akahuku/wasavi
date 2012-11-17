@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 217 2012-11-15 19:01:25Z akahuku $
+ * @version $Id: classes_subst.js 220 2012-11-17 12:04:50Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -45,6 +45,7 @@ Wasavi.SubstituteWorker = function (app) {
 	this.currentPos;
 	this.prevPos;
 	this.prevOffset;
+	this.prevMatchLength;
 };
 Wasavi.SubstituteWorker.prototype = {
 	run: function (range, pattern, repl, options) {
@@ -129,11 +130,13 @@ Wasavi.SubstituteWorker.prototype = {
 
 		rg.setStartBefore(t.rowNodes(range[0]));
 		rg.setEndAfter(t.rowNodes(range[1]));
-		this.text = range[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
+		//this.text = range[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
+		this.text = trimTerm(rg.toString());
 		rg.detach();
 
 		this.substCount = 0;
 		this.foundCount = 0;
+		this.prevMatchLength = -1;
 		if (this.isConfirm) {
 			app.low.setSubstituteWorker(this);
 			this.kontinue();
@@ -256,7 +259,11 @@ Wasavi.SubstituteWorker.prototype = {
 			this.text.substring(0, re.index) +
 			replaced +
 			this.text.substring(re.index + re[0].length);
-		this.pattern.lastIndex += replaced.length - re[0].length;
+		this.pattern.lastIndex +=
+			replaced.length - (re[0].length ? re[0].length : -1);
+		this.pattern.lastIndex +=
+			this.pattern.lastIndex >= this.text.length || this.text.charAt(this.pattern.lastIndex) == '\n' ?
+			1 : 0;
 		this.substCount++;
 	},
 	showResult: function (immediate) {
