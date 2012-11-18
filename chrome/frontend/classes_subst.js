@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 220 2012-11-17 12:04:50Z akahuku $
+ * @version $Id: classes_subst.js 221 2012-11-18 15:52:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -45,7 +45,6 @@ Wasavi.SubstituteWorker = function (app) {
 	this.currentPos;
 	this.prevPos;
 	this.prevOffset;
-	this.prevMatchLength;
 };
 Wasavi.SubstituteWorker.prototype = {
 	run: function (range, pattern, repl, options) {
@@ -130,13 +129,11 @@ Wasavi.SubstituteWorker.prototype = {
 
 		rg.setStartBefore(t.rowNodes(range[0]));
 		rg.setEndAfter(t.rowNodes(range[1]));
-		//this.text = range[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
 		this.text = trimTerm(rg.toString());
 		rg.detach();
 
 		this.substCount = 0;
 		this.foundCount = 0;
-		this.prevMatchLength = -1;
 		if (this.isConfirm) {
 			app.low.setSubstituteWorker(this);
 			this.kontinue();

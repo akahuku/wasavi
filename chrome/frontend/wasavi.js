@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 220 2012-11-17 12:04:50Z akahuku $
+ * @version $Id: wasavi.js 221 2012-11-18 15:52:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -186,40 +186,6 @@ Collection.prototype = Object.create({}, {
 		}
 	}
 });
-
-/*constructor*/function LiteralInput () {
-	this.radix = 10;
-	this.value = '';
-	this.maxLength = 0;
-}
-LiteralInput.prototype = {
-	process: function (c) {
-	},
-	toUTF16: function (cp) {
-		/*
-		 * U+10FFFF (1 0000 1111 1111 1111 1111)
-		 *           * **** HHHH HHLL LLLL LLLL
-		 *
-		 * high surrogate: 1101 10_11 1111 1111
-		 *                         ** **HH HHHH
-		 *  low surrogate: 1101 11_11 1111 1111
-		 *                         LL LLLL LLLL
-		 */
-		if (cp > 0x10ffff) throw new Error('Invalid code point');
-
-		var plane = (cp & 0x1f0000) >> 16;
-		var offset = cp & 0xffff;
-		if (plane) {
-			return [
-				0xd800 | ((plane - 1) << 6) | ((offset & 0xfc00) >> 10),
-				0xdc00 | (offset & 0x03ff)
-			];
-		}
-		else {
-			return [offset];
-		}
-	}
-};
 
 /*constructor*/function ExCommandExecutor (isRoot, onFinish) {
 	this.commands = [];
@@ -1131,6 +1097,13 @@ function getCursorPositionString () {
 	}
 	return ('  ' + Math.floor(buffer.elm.scrollTop / viewHeight * 100.)).substr(-3) + '%';
 }
+function getDefaultPrefixInputString () {
+	// 000000,0000xxx000%
+	return ((recordedStrokes ? _('[RECORDING]') + ' ' : '') +
+		 ('     ' + (buffer.selectionStartRow + 1)).substr(-6) +
+		 ',' + ((getLogicalColumn() + 1) + '   ').substr(0, 4) +
+		 '   ' + getCursorPositionString());
+}
 function showPrefixInput (message) {
 	if (state != 'normal') return;
 	var line = $('wasavi_footer_modeline');
@@ -1139,13 +1112,19 @@ function showPrefixInput (message) {
 	var indp = $('wasavi_footer_prefix_indicator');
 	line.style.display = indf.style.display = indp.style.display = '';
 	alter.style.display = 'none';
-	indf.textContent = getFileNameString();
-	indp.textContent = message || prefixInput.toString() ||
-		// 000000,0000xxx000%
-		((recordedStrokes ? _('[RECORDING]') + ' ' : '') +
-		 ('     ' + (buffer.selectionStartRow + 1)).substr(-6) +
-		 ',' + ((getLogicalColumn() + 1) + '   ').substr(0, 4) +
-		 '   ' + getCursorPositionString());
+	switch (inputMode) {
+	case 'edit':
+		indf.textContent = config.vars.showmode ? _('--INSERT--') : getFileNameString();
+		break;
+	case 'overwrite':
+		indf.textContent = config.vars.showmode ? _('--OVERWRITE--') : getFileNameString();
+		break;
+	case 'command':
+	default:
+		indf.textContent = getFileNameString();
+		break;
+	}
+	indp.textContent = message || prefixInput.toString() || getDefaultPrefixInputString();
 }
 function showMessage (message, emphasis, pseudoCursor, volatile_) {
 	if (state != 'normal' && state != 'console-wait') return;
@@ -1719,7 +1698,7 @@ function executeViCommand (/*, keepRunLevel*/) {
 		}
 	}
 }
-function processInput (code, e) {
+function processInput (code, e, ignoreAbbreviation) {
 	function completeSelectionRange (ss, se) {
 		if (buffer.selectionStart.gt(ss) && buffer.selectionStart.gt(se)) {
 			buffer.setSelectionRange(buffer.selectionStart);
@@ -1810,6 +1789,8 @@ function processInput (code, e) {
 		return false;
 	}
 	function processAbbrevs (force) {
+		if (ignoreAbbreviation) return;
+
 		var regex = config.vars.iskeyword;
 		var target, last;
 
@@ -2011,6 +1992,7 @@ function processInput (code, e) {
 				if (runLevel == 0) {
 					cursor.ensureVisible();
 					cursor.update({visible:true});
+					requestShowPrefixInput(getDefaultPrefixInputString());
 				}
 			}
 			if (config.vars.showmatch) {
@@ -2063,13 +2045,7 @@ function processInput (code, e) {
 		else {
 			if (code >= 32) {
 				lineInputHistories.isInitial = true;
-				var ss = input.selectionStart;
-				input.value =
-					input.value.substring(0, ss) +
-					letter +
-					input.value.substring(input.selectionEnd);
-				input.selectionStart = ss + letter.length;
-				input.selectionEnd = input.selectionStart;
+				insertToLineInput(input, letter);
 				processInputSupplement();
 			}
 		}
@@ -2133,8 +2109,9 @@ function processInput (code, e) {
 			}
 		}
 	}
-
-	lastKeyCode = code;
+	if (!isLastKeyCodeLocked) {
+		lastKeyCode = code;
+	}
 	return result;
 }
 function processInputSupplement () {
@@ -3544,7 +3521,7 @@ function startEdit (c, opts, isAppend, isAlter) {
 		buffer.setSelectionRange(n);
 		cursor.ensureVisible();
 		cursor.update({type:'edit'});
-		config.vars.showmode && requestShowMessage(_('--INSERT--'), false, false, true);
+		requestShowPrefixInput(getDefaultPrefixInputString());
 		prefixInput.operation = c;
 		prefixInput.isLocked = true;
 		editedString = editedStringCurrent = '';
@@ -4000,6 +3977,7 @@ var pairBracketsIndicator;
 var exCommandExecutor;
 var searchUtils;
 var recordedStrokes;
+var literalInput;
 
 var isTextDirty;
 var isEditCompleted;
@@ -4009,6 +3987,7 @@ var isInteractive;
 var isSmoothScrollRequested;
 var isSimpleCommandUpdateRequested;
 var isJumpBaseUpdateRequested;
+var isLastKeyCodeLocked;
 
 var lastKeyCode;
 var lastSimpleCommand;
@@ -5471,7 +5450,6 @@ var commandMap = {
 		if (prefixInput.isEmptyOperation && !buffer.selected) {
 			requestInputMode('edit-overwrite');
 			cursor.update({type:'edit-overwrite'});
-			config.vars.showmode && requestShowMessage(_('--OVERWRITE--'), false, false, true);
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
 			editedString = editedStringCurrent = editedStringSuffix = '';
@@ -5563,11 +5541,11 @@ var commandMap = {
 		},
 		'line-input': function (c) {
 			prefixInput.trailer = c;
+			registers.set(':', c);
+			lineInputHistories.push(c);
 			if (!exCommandExecutor.onFinish) {
 				exCommandExecutor.onFinish = function (executor) {
 					executor.lastError && requestShowMessage(executor.lastError, true);
-					registers.set(':', executor.source);
-					lineInputHistories.push(executor.source);
 				};
 			}
 			var result = executeExCommand(c, true);
@@ -5628,27 +5606,51 @@ var editMap = {
 		'edit': function (c, o) {
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
+			literalInput = new Wasavi.LiteralInput;
 		},
 		'edit-overwrite': function (c, o) {
 			this['\u0016'].edit.apply(this, arguments);
 		},
 		'wait-a-letter': function (c) {
-			var code = c.charCodeAt(0);
-			if (code == 0x0a) {
-				this['\u000d'].apply(this, arguments);
+			var result = literalInput.process(c);
+			if (result) {
+				if (result.error) {
+					requestShowMessage(result.error, true);
+				}
+				else {
+					if (result.sequence) {
+						for (var i = 0, goal = result.sequence.length; i < goal; i++) {
+							var ch = result.sequence[i];
+							var code = ch.charCodeAt(0);
+
+							if (code == 10 || code == 13) {
+								insert('\n');
+							}
+							else {
+								if (code >= 0 && code != 9 && code <= 31 || code == 0x7f) {
+									ch = toVisibleControl(code);
+								}
+								(inputMode == 'edit' ? insert : overwrite)(ch);
+							}
+						}
+						cursor.ensureVisible();
+						cursor.update();
+					}
+					if (result.trail) {
+						var e = keyManager.parseKeyDesc(result.trail).prop;
+						processInput(e.code, e);
+					}
+				}
+				literalInput = null;
+				isLastKeyCodeLocked = false;
 			}
 			else {
-				if (code >= 0x00 && code != 0x09 && code <= 0x1f || code == 0x7f) {
-					c = toVisibleControl(code);
-				}
-				(inputMode == 'edit' ? insert : overwrite)(c);
-				cursor.ensureVisible();
-				cursor.update();
+				inputModeSub = 'wait-a-letter';
+				requestShowPrefixInput(literalInput.message);
+				isLastKeyCodeLocked = true;
 			}
-			requestShowPrefixInput('');
 		}
 	},
-
 	'<left>': function (c) {
 		logEditing();
 		motionLeft(c, 1);
@@ -5779,18 +5781,37 @@ var lineInputEditMap = {
 	'\u0016'/*^V*/: {
 		'line-input': function (c, o) {
 			inputModeSub = 'wait-a-letter';
+			literalInput = new Wasavi.LiteralInput;
 		},
 		'wait-a-letter': function (c, o) {
-			var code = c.charCodeAt(0);
-			if (code >= 0x00 && code <= 0x1f || code == 0x7f) {
-				c = toVisibleControl(code);
+			var result = literalInput.process(c);
+			if (result) {
+				if (result.error) {
+					requestRegisterNotice();
+				}
+				else {
+					if (result.sequence) {
+						for (var i = 0, goal = result.sequence.length; i < goal; i++) {
+							var ch = result.sequence[i];
+							var code = ch.charCodeAt(0);
+							if (code >= 0 && code <= 31 || code == 0x7f) {
+								ch = toVisibleControl(code);
+							}
+							insertToLineInput(o.target, ch);
+						}
+					}
+					if (result.trail) {
+						insertToLineInput(o.target, result.trail);
+					}
+				}
+				literalInput = null;
+				isLastKeyCodeLocked = false;
+				lineInputHistories.isInitial = true;
 			}
-			var ss = o.target.selectionStart;
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				c + o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionStart = ss + 1;
-			o.target.selectionEnd = o.target.selectionStart;
-			lineInputHistories.isInitial = true;
+			else {
+				inputModeSub = 'wait-a-letter';
+				isLastKeyCodeLocked = true;
+			}
 		}
 	},
 	'\u0017'/*^W*/: function (c, o) {

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 217 2012-11-15 19:01:25Z akahuku $
+ * @version $Id: classes.js 221 2012-11-18 15:52:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2713,6 +2713,113 @@ whole:
 			this.elm.scrollLeft = v;
 		}
 	};
+};
+
+Wasavi.LiteralInput = function () {
+	this.value = '';
+	this.radix = 10;
+	this.pattern;
+	this.processor = '0';
+	this.maxLength = 0;
+	this.message = '';
+};
+Wasavi.LiteralInput.prototype = {
+	process: function (c) {
+		return this['process_' + this.processor].call(this, c, c.charCodeAt(0));
+	},
+	process_0: function (c, code) {
+		if (code >= 48 && code <= 57) {
+			this.radix = 10;
+			this.pattern = /^[0-9]$/;
+			this.processor = 'codepoint';
+			this.maxLength = 3;
+			this.message = 'dec:';
+			return this.process.call(this, c);
+		}
+		else if (c == 'o' || c == 'O') {
+			this.radix = 8;
+			this.pattern = /^[0-7]$/;
+			this.processor = 'codepoint';
+			this.message = 'oct:';
+			this.maxLength = 3;
+		}
+		else if (c == 'x' || c == 'X') {
+			this.radix = 16;
+			this.pattern = /^[0-9a-f]$/i;
+			this.processor = 'codepoint';
+			this.message = 'hex:';
+			this.maxLength = 2;
+		}
+		else if (c == 'u' || c == 'U') {
+			this.radix = 16;
+			this.pattern = /^[0-9a-f]$/i;
+			this.processor = 'codepoint';
+			this.message = 'hex:';
+			this.maxLength = c == 'u' ? 4 : 6;
+		}
+		else {
+			this.processor = 'literal';
+			return this.process.call(this, c);
+		}
+	},
+	process_codepoint: function (c, code) {
+		if (code == 27) {
+			this.value = '';
+			return this.getResult();
+		}
+		if (code == 10 || code == 13) {
+			return this.getResult();
+		}
+		if (this.pattern.test(c)) {
+			this.value += c;
+			this.message += c;
+			if (this.value.length >= this.maxLength) {
+				return this.getResult();
+			}
+		}
+		else {
+			return this.getResult(c);
+		}
+	},
+	process_literal: function (c, code) {
+		return {sequence:[c]};
+	},
+	getResult: function (c) {
+		var result = {};
+		if (this.value != '') {
+			var value = parseInt(this.value, this.radix);
+			if (value < 0 || value > 0x10ffff) {
+				result.error = _('Invalid codepoint.');
+				return result;
+			}
+			result.sequence = this.toUTF16(value);
+		}
+		if (c != undefined) {
+			result.trail = c;
+		}
+		return result;
+	},
+	toUTF16: function (cp) {
+		/*
+		 * U+10FFFF (1 0000 1111 1111 1111 1111)
+		 *           * **** HHHH HHLL LLLL LLLL
+		 *
+		 * high surrogate: 1101 10_11 1111 1111
+		 *                         ** **HH HHHH
+		 *  low surrogate: 1101 11_11 1111 1111
+		 *                         LL LLLL LLLL
+		 */
+		var p = (cp & 0x1f0000) >> 16;
+		var o = cp & 0xffff;
+		return p ?
+			[
+				String.fromCharCode(0xd800 | ((p - 1) << 6) | ((o & 0xfc00) >> 10)),
+				String.fromCharCode(0xdc00 | (o & 0x03ff))
+			] :
+			[
+				String.fromCharCode(o)
+			];
+	}
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

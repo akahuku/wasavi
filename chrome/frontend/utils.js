@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 217 2012-11-15 19:01:25Z akahuku $
+ * @version $Id: utils.js 221 2012-11-18 15:52:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -436,6 +436,12 @@ function removeClass (elem) {
 		.filter(function (v) {return this.indexOf(v) < 0;},
 			Array.prototype.slice.call(arguments, 1))
 		.join(' ');
+}
+function insertToLineInput (t, ch) {
+	var ss = t.selectionStart;
+	t.value = t.value.substring(0, t.selectionStart) + ch + t.value.substring(t.selectionEnd);
+	t.selectionStart = ss + 1;
+	t.selectionEnd = t.selectionStart;
 }
 function _ () {
 	var args = Array.prototype.slice.call(arguments);
