@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 221 2012-11-18 15:52:02Z akahuku $
+ * @version $Id: classes.js 223 2012-11-18 17:47:06Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2733,14 +2733,14 @@ Wasavi.LiteralInput.prototype = {
 			this.pattern = /^[0-9]$/;
 			this.processor = 'codepoint';
 			this.maxLength = 3;
-			this.message = 'dec:';
+			this.message = _('dec:');
 			return this.process.call(this, c);
 		}
 		else if (c == 'o' || c == 'O') {
 			this.radix = 8;
 			this.pattern = /^[0-7]$/;
 			this.processor = 'codepoint';
-			this.message = 'oct:';
+			this.message = _('oct:');
 			this.maxLength = 3;
 		}
 		else if (c == 'x' || c == 'X') {
@@ -2754,7 +2754,7 @@ Wasavi.LiteralInput.prototype = {
 			this.radix = 16;
 			this.pattern = /^[0-9a-f]$/i;
 			this.processor = 'codepoint';
-			this.message = 'hex:';
+			this.message = _('hex:');
 			this.maxLength = c == 'u' ? 4 : 6;
 		}
 		else {

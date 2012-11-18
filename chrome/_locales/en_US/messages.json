@@ -124,6 +124,10 @@
 		"message": "*** options ***",
 		"description": "*** options ***"
 	},
+	"map_expansion_reached_maximum_recursion_limit": {
+		"message": "Map expansion reached maximum recursion limit.",
+		"description": "Map expansion reached maximum recursion limit."
+	},
 	"_@0_@1": {
 		"message": "  {0}  {1}",
 		"description": "  {0}  {1}"
@@ -135,6 +139,22 @@
 	"_marks_": {
 		"message": "*** marks ***",
 		"description": "*** marks ***"
+	},
+	"dec": {
+		"message": "dec:",
+		"description": "dec:"
+	},
+	"oct": {
+		"message": "oct:",
+		"description": "oct:"
+	},
+	"hex": {
+		"message": "hex:",
+		"description": "hex:"
+	},
+	"invalid_codepoint": {
+		"message": "Invalid codepoint.",
+		"description": "Invalid codepoint."
 	},
 	"bad_address": {
 		"message": "Bad address.",
@@ -260,10 +280,6 @@
 		"message": "Deleted {0} {line:0}.",
 		"description": "Deleted {0} {line:0}."
 	},
-	"only_stand_alone_form_can_edit": {
-		"message": "Only stand alone form can edit.",
-		"description": "Only stand alone form can edit."
-	},
 	"file_is_modified_write_or_use_to_override": {
 		"message": "File is modified; write or use \"!\" to override.",
 		"description": "File is modified; write or use \"!\" to override."
@@ -275,6 +291,10 @@
 	"file_name_is_empty": {
 		"message": "File name is empty.",
 		"description": "File name is empty."
+	},
+	"only_stand_alone_form_can_edit": {
+		"message": "Only stand alone form can edit.",
+		"description": "Only stand alone form can edit."
 	},
 	"no_mappings_for_@0_mode_are_defined": {
 		"message": "No mappings for {0} mode are defined.",
@@ -324,25 +344,13 @@
 		"message": "{0} is not mapped.",
 		"description": "{0} is not mapped."
 	},
-	"@0_unknown_error": {
-		"message": "{0}: unknown error.",
-		"description": "{0}: unknown error."
+	"invalid_paragraph_format_@0": {
+		"message": "Invalid paragraph format: {0}",
+		"description": "Invalid paragraph format: {0}"
 	},
-	"@0_executed_in_synchronous_context": {
-		"message": "{0}: Executed in synchronous context.",
-		"description": "{0}: Executed in synchronous context."
-	},
-	"map_expansion_reached_maximum_recursion_limit": {
-		"message": "Map expansion reached maximum recursion limit.",
-		"description": "Map expansion reached maximum recursion limit."
-	},
-	"more": {
-		"message": "More...",
-		"description": "More..."
-	},
-	"press_any_key_to_continue_or_enter_more_ex_command": {
-		"message": "Press any key to continue, or enter more ex command:",
-		"description": "Press any key to continue, or enter more ex command:"
+	"invalid_section_format_@0": {
+		"message": "Invalid section format: {0}",
+		"description": "Invalid section format: {0}"
 	},
 	"no_previous_substitution": {
 		"message": "No previous substitution.",
@@ -360,13 +368,21 @@
 		"message": "{0} {substitution:0} on {1} {line:1}.",
 		"description": "{0} {substitution:0} on {1} {line:1}."
 	},
-	"invalid_paragraph_format_@0": {
-		"message": "Invalid paragraph format: {0}",
-		"description": "Invalid paragraph format: {0}"
+	"more": {
+		"message": "More...",
+		"description": "More..."
 	},
-	"invalid_section_format_@0": {
-		"message": "Invalid section format: {0}",
-		"description": "Invalid section format: {0}"
+	"press_any_key_to_continue_or_enter_more_ex_command": {
+		"message": "Press any key to continue, or enter more ex command:",
+		"description": "Press any key to continue, or enter more ex command:"
+	},
+	"@0_unknown_error": {
+		"message": "{0}: unknown error.",
+		"description": "{0}: unknown error."
+	},
+	"@0_executed_in_synchronous_context": {
+		"message": "{0}: Executed in synchronous context.",
+		"description": "{0}: Executed in synchronous context."
 	},
 	"all": {
 		"message": "All",
@@ -383,6 +399,14 @@
 	"recording": {
 		"message": "[RECORDING]",
 		"description": "[RECORDING]"
+	},
+	"insert": {
+		"message": "--INSERT--",
+		"description": "--INSERT--"
+	},
+	"overwrite": {
+		"message": "--OVERWRITE--",
+		"description": "--OVERWRITE--"
 	},
 	"@0_extra_range_specified": {
 		"message": "{0}: extra range specified.",
@@ -492,9 +516,29 @@
 		"message": "Putting data is empty.",
 		"description": "Putting data is empty."
 	},
-	"insert": {
-		"message": "--INSERT--",
-		"description": "--INSERT--"
+	"obtaining_access_rights_@0": {
+		"message": "Obtaining access rights ({0})...",
+		"description": "Obtaining access rights ({0})..."
+	},
+	"buffered_@0": {
+		"message": "Buffered: {0}",
+		"description": "Buffered: {0}"
+	},
+	"writing_@0": {
+		"message": "Writing ({0}%)",
+		"description": "Writing ({0}%)"
+	},
+	"written_@0": {
+		"message": "Written: {0}",
+		"description": "Written: {0}"
+	},
+	"reading_@0": {
+		"message": "Reading ({0}%)",
+		"description": "Reading ({0}%)"
+	},
+	"invalid_read_handler": {
+		"message": "Invalid read handler.",
+		"description": "Invalid read handler."
 	},
 	"@0_register_azaz19": {
 		"message": "{0}: register (a-z,A-Z,1-9)",
@@ -552,10 +596,6 @@
 		"message": "{0}: range symbol",
 		"description": "{0}: range symbol"
 	},
-	"overwrite": {
-		"message": "--OVERWRITE--",
-		"description": "--OVERWRITE--"
-	},
 	"@0_literal_input": {
 		"message": "{0}: literal input",
 		"description": "{0}: literal input"
@@ -571,29 +611,5 @@
 	"top_of_history": {
 		"message": "Top of history.",
 		"description": "Top of history."
-	},
-	"obtaining_access_rights_@0": {
-		"message": "Obtaining access rights ({0})...",
-		"description": "Obtaining access rights ({0})..."
-	},
-	"buffered_@0": {
-		"message": "Buffered: {0}",
-		"description": "Buffered: {0}"
-	},
-	"writing_@0": {
-		"message": "Writing ({0}%)",
-		"description": "Writing ({0}%)"
-	},
-	"written_@0": {
-		"message": "Written: {0}",
-		"description": "Written: {0}"
-	},
-	"reading_@0": {
-		"message": "Reading ({0}%)",
-		"description": "Reading ({0}%)"
-	},
-	"invalid_read_handler": {
-		"message": "Invalid read handler.",
-		"description": "Invalid read handler."
 	}
 }

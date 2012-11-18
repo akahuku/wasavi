@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 214 2012-11-12 07:51:17Z akahuku $
+ * @version $Id: background.js 223 2012-11-18 17:47:06Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1608,7 +1608,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				);
 			}
 			else {
-				resourceLoader.get('wasavi.js', function (data) {
+				resourceLoader.get('background.js', function (data) {
 					initFileSystemCore(
 						(new Blowfish(SHA1.calc(data))).decrypt64(binkeys)
 					);
