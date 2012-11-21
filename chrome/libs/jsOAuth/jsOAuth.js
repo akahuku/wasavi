@@ -434,7 +434,7 @@ oauth.onModifyTransport = null;
                     }
                 }
 
-                urlString = url.scheme + '://' + url.host + url.path;
+                var urlString = url.scheme + '://' + url.host + url.path;
                 signatureString = toSignatureBaseString(method, urlString, headerParams, signatureData);
 
                 signature = OAuth.signatureMethod[signatureMethod](oauth.consumerSecret, oauth.accessTokenSecret, signatureString);

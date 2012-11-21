@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: init.js 217 2012-11-15 19:01:25Z akahuku $
+ * @version $Id: init.js 224 2012-11-19 08:32:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

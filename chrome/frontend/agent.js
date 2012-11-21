@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 214 2012-11-12 07:51:17Z akahuku $
+ * @version $Id: agent.js 226 2012-11-21 08:30:03Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -29,10 +29,11 @@
  * limitations under the License.
  */
 
+'use strict';
+
 typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.framePageUrl.isExternal
 && (function (global) {
-'use strict';
 
 /*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 /*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
@@ -641,7 +642,7 @@ extension.setMessageListener(function (req) {
 				break;
 
 			case 'quickActivate':
-				quickActivate = item.value;
+				quickActivation = item.value;
 				break;
 			}
 		});

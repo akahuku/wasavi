@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 218 2012-11-16 07:40:31Z akahuku $
+ * @version $Id: extension_wrapper.js 224 2012-11-19 08:32:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

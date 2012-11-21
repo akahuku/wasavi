@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 221 2012-11-18 15:52:02Z akahuku $
+ * @version $Id: classes_subst.js 224 2012-11-19 08:32:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
