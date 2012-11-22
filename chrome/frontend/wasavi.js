@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 221 2012-11-18 15:52:02Z akahuku $
+ * @version $Id: wasavi.js 228 2012-11-22 18:33:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1742,10 +1742,6 @@ function processInput (code, e, ignoreAbbreviation) {
 				isEditCompleted && doEditComplete();
 				completeSelectionRange(ss, se);
 
-				cursor.ensureVisible(isSmoothScrollRequested);
-				cursor.update(scroller.running || state != 'normal' ?
-					{visible:false} : {focused:true, visible:true});
-
 				buffer.isLineOrientSelection =
 				isEditCompleted =
 				isVerticalMotion =
@@ -1767,6 +1763,9 @@ function processInput (code, e, ignoreAbbreviation) {
 		else {
 			needEmitEvent = true;
 		}
+		cursor.ensureVisible(isSmoothScrollRequested);
+		cursor.update(scroller.running || state != 'normal' ?
+			{visible:false} : {focused:true, visible:true});
 	}
 	function execEditMap (t, key, subkey, code) {
 		if (editMap[key]) {
@@ -4550,8 +4549,8 @@ var commandMap = {
 				return true;
 			}
 			else {
-				inputEscape(o.e.fullIdentifier);
 				requestShowMessage(_('Mark {0} is not set.', c), true);
+				return inputEscape(o.e.fullIdentifier);
 			}
 		}
 	},
@@ -4574,8 +4573,8 @@ var commandMap = {
 				return true;
 			}
 			else {
-				inputEscape(o.e.fullIdentifier);
 				requestShowMessage(_('Mark {0} is not set.', c), true);
+				return inputEscape(o.e.fullIdentifier);
 			}
 		}
 	},
@@ -5794,6 +5793,10 @@ var lineInputEditMap = {
 						for (var i = 0, goal = result.sequence.length; i < goal; i++) {
 							var ch = result.sequence[i];
 							var code = ch.charCodeAt(0);
+							if (code == 10) {
+								requestRegisterNotice();
+								break;
+							}
 							if (code >= 0 && code <= 31 || code == 0x7f) {
 								ch = toVisibleControl(code);
 							}

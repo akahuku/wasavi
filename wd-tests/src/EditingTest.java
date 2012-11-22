@@ -800,26 +800,20 @@ public class EditingTest extends WasaviTest {
 		assertValue("#4-1", "\nbaz");
 		assertEquals("#4-2", "\u0016\nbaz", Wasavi.getRegister("."));
 	}
-	
+
 	@Test
 	public void testInsertLiteral_LineInput () {
-		// general control code: form-feed (shoude be converted to Unicode
-		// Control Pictures)
 		Wasavi.send(":\"\u0016\u000bfoo\n");
 		assertEquals("#1-1", "\"\u000bfoo", Wasavi.getRegister(":"));
 
-		// special control code: tab
 		Wasavi.send(":\"\u0016\u0009foo\n");
 		assertEquals("#2-1", "\"\u0009foo", Wasavi.getRegister(":"));
 
-		// special control code: escape
 		Wasavi.send(":\"\u0016\u001bbar\n");
 		assertEquals("#3-1", "\"\u001bbar", Wasavi.getRegister(":"));
 
-		// special control code: newline
-		// in line input mode, newline should be ignored.
-		Wasavi.send(":\"\u0016\nbaz\n");
-		assertEquals("#4-1", "\"baz", Wasavi.getRegister(":"));
+		Wasavi.send(":\"\u0016" + Keys.ENTER + "baz\n");
+		assertEquals("#4-1", "\"\rbaz", Wasavi.getRegister(":"));
 	}
 
 	@Test
