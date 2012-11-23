@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 228 2012-11-22 18:33:02Z akahuku $
+ * @version $Id: wasavi.js 230 2012-11-23 14:55:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2254,11 +2254,11 @@ function fireEvent (eventName, payload) {
 	if (!extensionChannel) return;
 	payload || (payload = {});
 	payload.type = 'wasavi-' + eventName;
-	extensionChannel.postMessage({
-		type:'notify-to-parent',
-		parentTabId:targetElement.parentTabId,
-		payload:payload
-	});
+	var message = {type:'notify-to-parent', payload:payload};
+	if ('parentTabId' in targetElement) {
+		message.parentTabId = targetElement.parentTabId;
+	}
+	extensionChannel.postMessage(message);
 }
 function fireCommandCompleteEvent (eventName) {
 	if (testMode) {
@@ -3739,6 +3739,7 @@ function handleExtensionChannelMessage (req) {
 				}
 				return _('Invalid read handler.');
 			};
+			cursor.update({visible:false});
 			exCommandExecutor.runAsyncNext(read, exCommandExecutor.lastCommandArg);
 			break;
 		}

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 223 2012-11-18 17:47:06Z akahuku $
+ * @version $Id: background.js 229 2012-11-23 14:53:30Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1781,35 +1781,41 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			break;
 
 		case 'notify-to-parent':
-			if ('parentTabId' in req && req.parentTabId != undefined) {
+			if (!('payload' in req)) {
+				res();
+				break;
+			}
+
+			var needForward = true;
+			switch (req.payload.type) {
+			case 'wasavi-read':
+				if ('tabId' in req &&
+					'path' in req.payload && req.payload.path != '') {
+					needForward = false;
+					getFileSystem(req.payload.path)
+						.read(req.payload.path, req.tabId);
+				}
+				break;
+			case 'wasavi-saved':
+				if ('tabId' in req &&
+					'path' in req.payload && req.payload.path != '') {
+					needForward = false;
+					getFileSystem(req.payload.path)
+						.write(req.payload.path, req.payload.value, req.tabId);
+				}
+				break;
+			case 'wasavi-terminated':
+				if (!('parentTabId' in req) &&
+					'tabId' in req &&
+					'isTopFrame' in req.payload && req.payload.isTopFrame) {
+					needForward = false;
+					extension.closeTabByWasaviId(req.tabId);
+				}
+				break;
+			}
+			if (needForward && 'parentTabId' in req && req.parentTabId != undefined) {
 				'tabId' in req && (req.payload.childTabId = req.tabId);
 				extension.sendRequest(req.parentTabId, req.payload);
-			}
-			else {
-				// wasavi-read
-				// wasavi-saved
-				// wasavi-initialized
-				// wasavi-terminated
-				// wasavi-window-state
-				// wasavi-focus-me
-				switch (req.payload.type) {
-				case 'wasavi-read':
-					if ('tabId' in req && 'path' in req.payload && req.payload.path != '') {
-						getFileSystem(req.path).read(req.path, req.tabId);
-					}
-					break;
-				case 'wasavi-saved':
-					if ('tabId' in req && 'path' in req.payload && req.payload.path != '') {
-						getFileSystem(req.payload.path)
-							.write(req.payload.path, req.payload.value, req.tabId);
-					}
-					break;
-				case 'wasavi-terminated':
-					if ('tabId' in req && req.payload && req.payload.isTopFrame) {
-						extension.closeTabByWasaviId(req.tabId);
-					}
-					break;
-				}
 			}
 			res();
 			break;
