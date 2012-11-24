@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: agent.js 232 2012-11-24 11:40:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -318,7 +318,7 @@ function handleWasaviFrameRemoved (e) {
  */
 
 function handleKeydown (e) {
-	if (targetElement || !e || !e.target) return;
+	if (targetElement || !e || !e.target || !enableList) return;
 	if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
 	if (!(e.target.type in ACCEPTABLE_TYPES) 
 	||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
@@ -576,9 +576,7 @@ function handleAgentInitialized (req) {
 
 	if (quickActivation) {
 		window.addEventListener('focus', handleTargetFocus, true);
-	}
-	else {
-		window.addEventListener('keydown', handleKeydown, true);
+		window.removeEventListener('keydown', handleKeydown, true);
 	}
 
 	devMode
@@ -593,6 +591,7 @@ function handleAgentInitialized (req) {
  * ----------------
  */
 
+window.addEventListener('keydown', handleKeydown, true);
 extension = WasaviExtensionWrapper.create();
 extension.setMessageListener(function (req) {
 	if (!req || !req.type) return;
