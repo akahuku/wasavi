@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 229 2012-11-23 14:53:30Z akahuku $
+ * @version $Id: background.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -27,17 +27,17 @@
  */
 
 if (typeof window == 'undefined') {
-	window = this;
+	this.window = this;
 	window.jetpack = {};
 }
 if (typeof window.OAuth == 'undefined' && typeof require == 'function') {
-	OAuth = require("./jsOAuth").OAuth;
+	this.OAuth = require("./jsOAuth").OAuth;
 }
 if (typeof window.SHA1 == 'undefined' && typeof require == 'function') {
-	SHA1 = require("./sha1").SHA1;
+	this.SHA1 = require("./sha1").SHA1;
 }
 if (typeof window.Blowfish == 'undefined' && typeof require == 'function') {
-	Blowfish = require("./blowfish").Blowfish;
+	this.Blowfish = require("./blowfish").Blowfish;
 }
 if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	(function (global) {
@@ -387,6 +387,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					startTimer();
 					return true;
 				}
+				return false;
 			});
 		};
 	}
@@ -594,6 +595,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					return i;
 				}
 			}
+			return undefined;
 		}
 
 		opera.extension.onconnect = function (e) {
@@ -687,6 +689,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					tab.close();
 					return true;
 				}
+				return false;
 			});
 		};
 		this.closeTabByWasaviId = function (id) {
@@ -699,6 +702,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					tab.focus();
 					return true;
 				}
+				return false;
 			});
 		};
 		this.createTransport = function () {
@@ -748,6 +752,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 					return i;
 				}
 			}
+			return undefined;
 		}
 
 		function handleWorkerDetach () {

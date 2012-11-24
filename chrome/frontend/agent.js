@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 226 2012-11-21 08:30:03Z akahuku $
+ * @version $Id: agent.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -570,7 +570,7 @@ function handleAgentInitialized (req) {
 	isTestFrame = window.location.href == 'http://wasavi.appsweets.net/test_frame.html';
 
 	if (window.location.href == WasaviExtensionWrapper.optionsPageUrl) {
-		WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
+		//WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
 		handleOptionsPageLoaded(req);
 	}
 

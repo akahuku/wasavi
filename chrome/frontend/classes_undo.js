@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: classes_undo.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -429,6 +429,7 @@ Wasavi.EditLogger.prototype = new function () {
 			else if (this.items.length == 1) {
 				return this.items[0];
 			}
+			return null;
 		}
 	};
 

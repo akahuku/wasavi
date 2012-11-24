@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: classes_ui.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -169,20 +169,18 @@ Wasavi.Theme = function (app) {
 		if (typeof colorSet == 'object') {
 			var newColors = {};
 			for (var i in colors) {
-				if (!(i in colorSet)) return;
+				if (!(i in colorSet)) return false;
 				newColors[i] = colors[i] instanceof Array ?
 					[colors[i][0], colorSet[i]] : colorSet[i];
 			}
 			colors = newColors;
 			return true;
 		}
-		else {
-			colorSet || (colorSet = '');
-			if (colorSet == '' || !(colorSet in colorSets)) {
-				colorSet = 'blight';
-			}
-			return select(colorSets[colorSet]);
+		colorSet || (colorSet = '');
+		if (colorSet == '' || !(colorSet in colorSets)) {
+			colorSet = 'blight';
 		}
+		return select(colorSets[colorSet]);
 	}
 	function update () {
 		if (!container || !colors || colors.background == '') return;

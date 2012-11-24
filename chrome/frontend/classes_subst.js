@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: classes_subst.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -141,6 +141,7 @@ Wasavi.SubstituteWorker.prototype = {
 		else {
 			this.burst();
 		}
+		return undefined;
 	},
 	burst: function () {
 		var t = this.app.buffer;
@@ -245,6 +246,7 @@ Wasavi.SubstituteWorker.prototype = {
 				return false;
 			}
 		}
+		return false;
 	},
 	doSubstitute: function (re, row, col) {
 		var t = this.app.buffer;

@@ -773,7 +773,7 @@ return btoa(signature);
             str_len = string.length, i, string_arr = string.split(''), c;
 
         for (i = 0; i < str_len; i++) {
-            if (c = string_arr[i].match(reserved_chars)) {
+            if ((c = string_arr[i].match(reserved_chars))) {
                 c = c[0].charCodeAt(0);
 
                 if (c < 128) {

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_search.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: classes_search.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -344,6 +344,7 @@ loop:		do {
 				prevn = n;
 				n = buffer.rightPos(n);
 			}
+			return null;
 		}
 		function findMatchBackward (current, match) {
 			var depth = 0;
@@ -362,20 +363,21 @@ loop:		do {
 				prevn = n;
 				n = buffer.leftPos(n);
 			}
+			return null;
 		}
 
 		var n = initialPos || buffer.selectionStart;
 		var currentIndex = bracketSpecified ?
 			BRACKETS.indexOf(bracketSpecified) :
 			findBracket();
-		if (currentIndex <= -1) return;
+		if (currentIndex <= -1) return null;
 
 		var baseChar = BRACKETS.charAt(currentIndex);
 		var matchChar = BRACKETS.charAt(BRACKETS.length - 1 - currentIndex);
 		count || (count = 1);
 		if (baseChar == matchChar) {
 			var range = findQuoteRange(buffer.rows(n), n.col, baseChar);
-			if (!range) return;
+			if (!range) return null;
 			n.col = n.col == range.start ? range.end : range.start;
 			return n;
 		}
@@ -386,6 +388,7 @@ loop:		do {
 			case  1: return findMatchForward(baseChar, matchChar);
 			}
 		}
+		return null;
 	}
 	function quote (count, quoteChar, includeAnchor) {
 		var line = buffer.rows(buffer.selectionStartRow);
@@ -393,7 +396,7 @@ loop:		do {
 		var colEnd;
 		if (line.charAt(colStart) == quoteChar) {
 			var range = findQuoteRange(line, colStart, quoteChar);
-			if (!range) return;
+			if (!range) return false;
 			colStart = range.start;
 			colEnd = range.end;
 		}
@@ -635,8 +638,9 @@ loop:		do {
 		case 's':
 			return sentence(count, includeAnchor);
 		case 't':
-			return false; // not implemented
+			break // not implemented
 		}
+		return false;
 	}
 	function setParagraphMacros (m) {
 		if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {

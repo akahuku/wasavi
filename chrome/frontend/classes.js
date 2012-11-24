@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: classes.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -247,6 +247,9 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			return a[0].localeCompare(b[0]);
 		})
 		.map(function (value, i) {
+			for (var j = value.length; j < 4; j++) {
+				value.push(undefined);
+			}
 			var v = new VariableItem(value[0], value[1], value[2], value[3]);
 			names[v.name] = i;
 			if (v.isLateBind) {
@@ -267,21 +270,15 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		if (name in abbrevs) {
 			name = abbrevs[name];
 		}
-		if (name in names) {
-			return internals[names[name]];
-		}
+		return name in names ? internals[names[name]] : null;
 	}
 	this.getInfo = function (name) {
 		var item = getItem(name);
-		if (item) {
-			return {name:item.name, type:item.type};
-		}
+		return item ? {name:item.name, type:item.type} : null;
 	};
 	this.getData = function (name, reformat) {
 		var item = getItem(name);
-		if (item) {
-			return reformat ? item.visibleString : item.value;
-		}
+		return item ? (reformat ? item.visibleString : item.value) : null;
 	};
 	this.setData = function (name, value) {
 		var off = false;
@@ -311,6 +308,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			}
 		}
 		vars[item.name] = item.value;
+		return null;
 	};
 	this.dump = function (cols, all) {
 		var result = [_('*** options ***')];
@@ -334,12 +332,12 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				}
 			}
 			if (i == 0) {
-				var cols = Math.max(1, Math.floor((cols + gap - 3) / (maxLength + gap)));
-				var rows = Math.floor((tmp.length + cols - 1) / cols);
-				for (var j = 0; j < rows; j++) {
+				var c = Math.max(1, Math.floor((cols + gap - 3) / (maxLength + gap)));
+				var r = Math.floor((tmp.length + c - 1) / c);
+				for (var j = 0; j < r; j++) {
 					var tmpline = '';
-					for (var k = 0; k < cols; k++) {
-						var index = k * rows + j;
+					for (var k = 0; k < c; k++) {
+						var index = k * r + j;
 						if (index < tmp.length) {
 							tmpline += tmp[index] +
 								multiply(' ', maxLength + gap - tmp[index].length);
@@ -786,6 +784,7 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 		if (s[name].current > 0) {
 			return s[name].lines[--s[name].current];
 		}
+		return null;
 	}
 	function next () {
 		if (s[name].current < s[name].lines.length) {
@@ -794,6 +793,7 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 				return s[name].lines[s[name].current];
 			}
 		}
+		return null;
 	}
 
 	this.__defineGetter__('isInitial', function () {
@@ -1046,6 +1046,7 @@ Wasavi.KeyManager = function () {
 					};
 				}
 			}
+			return null;
 		}
 		if (typeof desc == 'number') {
 			desc = String.fromCharCode(desc);
@@ -1210,6 +1211,7 @@ Wasavi.MapManager = function (app) {
 		else if (arg === 'edit') {
 			return maps[1];
 		}
+		return null;
 	}
 	function resetDelayed () {
 		var result;
@@ -1295,6 +1297,7 @@ Wasavi.MapManager = function (app) {
 				return i;
 			}
 		}
+		return null;
 	}
 	function process (keyCode, handler) {
 		var delayed = resetDelayed();
@@ -1795,6 +1798,7 @@ Wasavi.Editor.prototype = new function () {
 			args.pop();
 			return func;
 		}
+		return null;
 	}
 	function setRange (r, pos, isEnd) {
 		var iter = document.createNodeIterator(
@@ -2241,8 +2245,8 @@ Wasavi.Editor.prototype = new function () {
 			return arg;
 		},
 		shift: function (row, rowCount, shiftCount, shiftWidth, tabWidth, indents) {
-			if (rowCount < 1) return;
-			if (shiftCount == 0) return;
+			if (rowCount < 1) return null;
+			if (shiftCount == 0) return null;
 			if (shiftWidth < 1) shiftWidth = 1;
 			if (tabWidth < 1) tabWidth = 8;
 
@@ -2761,6 +2765,7 @@ Wasavi.LiteralInput.prototype = {
 			this.processor = 'literal';
 			return this.process.call(this, c);
 		}
+		return null;
 	},
 	process_codepoint: function (c, code) {
 		if (code == 27) {
@@ -2780,6 +2785,7 @@ Wasavi.LiteralInput.prototype = {
 		else {
 			return this.getResult(c);
 		}
+		return null;
 	},
 	process_literal: function (c, code) {
 		return {sequence:[c]};

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 221 2012-11-18 15:52:02Z akahuku $
+ * @version $Id: utils.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -375,12 +375,11 @@ var dataset = (function () {
 		if (s in datasetNameCache) {
 			return datasetNameCache[s];
 		}
-		else {
-			s = toHyphen(s);
-			s = 'data-' + s;
-			s = s.toLowerCase();
-			return datasetNameCache[s] = s;;
-		}
+		s = toHyphen(s);
+		s = 'data-' + s;
+		s = s.toLowerCase();
+		datasetNameCache[s] = s;
+		return s;
 	}
 
 	return function (elm, name) {

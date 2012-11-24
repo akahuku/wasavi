@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 230 2012-11-23 14:55:18Z akahuku $
+ * @version $Id: wasavi.js 231 2012-11-24 04:21:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -307,6 +307,7 @@ ExCommandExecutor.prototype = {
 				this.editLogLevel++;
 			}
 			this.runAsyncNext();
+			return false;
 		}
 		else {
 			this.running = true;
@@ -1024,7 +1025,7 @@ function setTabStop (ts) {
 	ts || (ts = 8);
 	var editorStyle = document.defaultView.getComputedStyle(editor, '');
 	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
-		if (!(ts in editorStyle)) return;
+		if (!(ts in editorStyle)) return false;
 		editor.style[pn] = ts;
 		['wasavi_singleline_scaler'].forEach(function (en) {
 			en = $(en);
@@ -2427,10 +2428,12 @@ function inputEscape () {
 
 	prefixInput.reset();
 	requestShowPrefixInput();
+	return false;
 }
 function inputDigit (c) {
 	prefixInput.appendCount(c);
 	requestShowPrefixInput();
+	return false;
 }
 function operationDefault (c, o) {
 	if (prefixInput.isEmptyOperation) {
@@ -2443,6 +2446,7 @@ function operationDefault (c, o) {
 	else {
 		inputEscape(o.e.fullIdentifier);
 	}
+	return false;
 }
 
 /*
@@ -2801,7 +2805,7 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 		result = motionFindByRegexForward(pattern, count);
 		break;
 	default:
-		return;
+		return false;
 	}
 
 	if (result) {
@@ -2866,7 +2870,7 @@ function motionFindByRegexForward (c, count, opts) {
 						loop = true;
 					}
 					else {
-						return;
+						return null;
 					}
 				}
 			} while (loop);
@@ -2947,7 +2951,7 @@ function motionFindByRegexBackward (c, count, opts) {
 						loop = true;
 					}
 					else {
-						return;
+						return null;
 					}
 				}
 			} while (loop);
@@ -3492,7 +3496,7 @@ function paste (count, opts) {
 	isEditCompleted = true;
 	return true;
 }
-function startEdit (c, opts, isAppend, isAlter) {
+function startEdit (c, opts) {
 	if (!buffer.selected) {
 		requestInputMode('edit', '', '', true);
 
@@ -3530,9 +3534,7 @@ function startEdit (c, opts, isAppend, isAlter) {
 		editRepeatCount = opts.repeatCount || 1;
 		return false;
 	}
-	else {
-		inputEscape(opts.e.fullIdentifier);
-	}
+	return inputEscape(opts.e.fullIdentifier);
 }
 function openLine (c, after) {
 	var n, isTopOfText = false;
@@ -3935,7 +3937,9 @@ var config = new Wasavi.Configurator(appProxy,
 var isStandAlone = (function () {
 	try {
 		return window.chrome ? window.parent == window : !!!window.frameElement;
-	} catch (e) {}
+	} catch (e) {
+		return false;
+	}
 })();
 
 // extension depend objects
@@ -4025,6 +4029,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-register': function (c) {
 			prefixInput.appendRegister(c);
@@ -4043,7 +4048,7 @@ var commandMap = {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
-				return;
+				return false;
 			}
 
 			buffer.regalizeSelectionRelation();
@@ -4113,7 +4118,7 @@ var commandMap = {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
-				return;
+				return false;
 			}
 
 			buffer.regalizeSelectionRelation();
@@ -4170,7 +4175,7 @@ var commandMap = {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
-				return;
+				return false;
 			}
 
 			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
@@ -4198,7 +4203,7 @@ var commandMap = {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
-				return;
+				return false;
 			}
 
 			buffer.regalizeSelectionRelation();
@@ -4226,7 +4231,7 @@ var commandMap = {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
-				return;
+				return false;
 			}
 
 			buffer.regalizeSelectionRelation();
@@ -4260,9 +4265,7 @@ var commandMap = {
 			prefixInput.operation = c;
 			return this.c['@op'].call(this, '', buffer);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// D: delete the characters to the end of the line (equivalents to d$)
 	D: function (c, o) {
@@ -4272,9 +4275,7 @@ var commandMap = {
 			prefixInput.operation = c;
 			return this.d['@op'].call(this, '', buffer);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// Y: yank the lines (equivalents to yy)
 	Y: function (c, o) {
@@ -4283,9 +4284,7 @@ var commandMap = {
 			isVerticalMotion = true;
 			return this.y['@op'].call(this, c, buffer);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 
 	/*
@@ -4346,9 +4345,7 @@ var commandMap = {
 			isSmoothScrollRequested = true;
 			return true;
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// direct jump to specified column
 	'|': function (c) {
@@ -4364,7 +4361,7 @@ var commandMap = {
 	// invert of last find
 	',': function (c) {
 		prefixInput.motion = c;
-		var result;
+		var result = false;
 		switch (lastHorzFindCommand.direction) {
 		case -1:
 			result = motionFindForward(
@@ -4388,7 +4385,7 @@ var commandMap = {
 	// repeat last find
 	';': function (c) {
 		prefixInput.motion = c;
-		var result;
+		var result = false;
 		switch (lastHorzFindCommand.direction) {
 		case -1:
 			result = motionFindBackward(
@@ -4428,6 +4425,7 @@ var commandMap = {
 				scrollTop: buffer.scrollTop,
 				scrollLeft: buffer.scrollLeft
 			});
+			return false;
 		},
 		'line-input': function (c) {
 			var pattern;
@@ -4485,6 +4483,7 @@ var commandMap = {
 				scrollTop: buffer.scrollTop,
 				scrollLeft: buffer.scrollLeft
 			});
+			return false;
 		},
 		'line-input': function (c) {
 			var pattern;
@@ -4535,6 +4534,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: return to mark', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c, o) {
 			prefixInput.appendMotion(c);
@@ -4561,6 +4561,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: return to mark', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c, o) {
 			prefixInput.appendMotion(c);
@@ -4588,9 +4589,7 @@ var commandMap = {
 			buffer.selectionStart = pos;
 			return true;
 		}
-		else {
-			inputEscape(prefixInput.motion);
-		}
+		return inputEscape(prefixInput.motion);
 	},
 	// forward an sentence
 	')': function (c) {
@@ -4601,9 +4600,7 @@ var commandMap = {
 			buffer.selectionEnd = pos;
 			return true;
 		}
-		else {
-			inputEscape(prefixInput.motion);
-		}
+		return inputEscape(prefixInput.motion);
 	},
 	// back a paragraph
 	'{': function (c) {
@@ -4615,9 +4612,7 @@ var commandMap = {
 			isVerticalMotion = prefixInput.isEmptyOperation;
 			return true;
 		}
-		else {
-			inputEscape(prefixInput.motion);
-		}
+		return inputEscape(prefixInput.motion);
 	},
 	// forward a paragraph
 	'}': function (c) {
@@ -4629,9 +4624,7 @@ var commandMap = {
 			isVerticalMotion = prefixInput.isEmptyOperation;
 			return true;
 		}
-		else {
-			inputEscape(prefixInput.motion);
-		}
+		return inputEscape(prefixInput.motion);
 	},
 	// move to previous section
 	'[': {
@@ -4639,6 +4632,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput();
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			if (c == prefixInput.motion) {
@@ -4652,7 +4646,7 @@ var commandMap = {
 					return true;
 				}
 			}
-			inputEscape(prefixInput.motion);
+			return inputEscape(prefixInput.motion);
 		}
 	},
 	// move to next section
@@ -4661,6 +4655,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput();
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			if (c == prefixInput.motion) {
@@ -4674,7 +4669,7 @@ var commandMap = {
 					return true;
 				}
 			}
-			inputEscape(prefixInput.motion);
+			return inputEscape(prefixInput.motion);
 		}
 	},
 	'\u000d'/*enter*/: function (c) {
@@ -4773,6 +4768,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(o.e.fullIdentifier);
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			var result = false;
@@ -4874,6 +4870,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.trailer = c;
@@ -4885,6 +4882,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.trailer = c;
@@ -4896,6 +4894,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.trailer = c;
@@ -4907,6 +4906,7 @@ var commandMap = {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.trailer = c;
@@ -4923,9 +4923,8 @@ var commandMap = {
 				lastRegexFindCommand.direction,
 				lastRegexFindCommand.verticalOffset);
 		}
-		else {
-			requestShowMessage(_('No previous search pattern.'), true);
-		}
+		requestShowMessage(_('No previous search pattern.'), true);
+		return false;
 	},
 	// search previous match for current pattern
 	N: function (c) {
@@ -4937,9 +4936,8 @@ var commandMap = {
 				-lastRegexFindCommand.direction,
 				lastRegexFindCommand.verticalOffset);
 		}
-		else {
-			requestShowMessage(_('No previous search pattern.'), true);
-		}
+		requestShowMessage(_('No previous search pattern.'), true);
+		return false;
 	},
 
 	/*
@@ -4958,9 +4956,7 @@ var commandMap = {
 				}
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll down half (height of screen) lines
 	'\u0004'/*^D*/: function (c, o) {
@@ -4974,9 +4970,7 @@ var commandMap = {
 				}
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll up 1 line
 	'\u0019'/*^Y*/: function (c, o) {
@@ -4990,9 +4984,7 @@ var commandMap = {
 				config.vars.smooth = ss;
 			}
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll down 1 line
 	'\u0005'/*^E*/: function (c, o) {
@@ -5006,9 +4998,7 @@ var commandMap = {
 				config.vars.smooth = ss;
 			}
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll up (height of screen - 2) lines
 	'\u0002'/*^B*/: function (c, o) {
@@ -5017,9 +5007,7 @@ var commandMap = {
 				return -Math.max(v.lines - 2, 1) * prefixInput.count;
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	'<pageup>': function (c) {
 		return this['\u0002'].apply(this, arguments);
@@ -5031,9 +5019,7 @@ var commandMap = {
 				return Math.max(parseInt(v.lines - 2), 1) * prefixInput.count;
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	'<pagedown>': function (c) {
 		return this['\u0006'].apply(this, arguments);
@@ -5053,6 +5039,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.motion = c;
@@ -5117,6 +5104,7 @@ var commandMap = {
 
 	'\u0009'/*tab*/: function (c, opts) {
 		quickActivation && fireEvent('focus-changed', {direction:opts.e.shift ? -1 : 1});
+		return false;
 	},
 
 	/*
@@ -5129,9 +5117,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return deleteCharsForward(prefixInput.count, {yank:true});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	'\u007f'/*delete*/: function (c) {
 		return this.x.apply(this, arguments);
@@ -5142,9 +5128,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return deleteCharsBackward(prefixInput.count, {yank:true});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	p: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
@@ -5155,9 +5139,7 @@ var commandMap = {
 				register:prefixInput.register
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	P: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
@@ -5167,9 +5149,7 @@ var commandMap = {
 				register:prefixInput.register
 			});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	J: function (c, o) {
 		if (prefixInput.isEmptyOperation && buffer.selectionStartRow + prefixInput.count <= buffer.rowLength - 1) {
@@ -5177,9 +5157,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return joinLines(prefixInput.count);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	'.': function (c, o) {
 		// . command repeats the last
@@ -5203,9 +5181,7 @@ var commandMap = {
 			}
 			return true;
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	u: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
@@ -5214,14 +5190,14 @@ var commandMap = {
 				requestShowMessage(requestRegisterNotice(_('No undo item.')));
 			}
 			else {
-				requestShowMessage(
-					_('{0} {operation:0} have reverted.', result));
+				requestShowMessage(_('{0} {operation:0} have reverted.', result));
 				return true;
 			}
 		}
 		else {
 			inputEscape(o.e.fullIdentifier);
 		}
+		return false;
 	},
 	'\u0012'/*^R*/: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
@@ -5230,14 +5206,14 @@ var commandMap = {
 				requestShowMessage(requestRegisterNotice(_('No redo item.')));
 			}
 			else {
-				requestShowMessage(
-					_('{0} {operation:0} have executed again.', result));
+				requestShowMessage(_('{0} {operation:0} have executed again.', result));
 				return true;
 			}
 		}
 		else {
 			inputEscape(o.e.fullIdentifier);
 		}
+		return false;
 	},
 	U: null,
 	'~': function (c, o) {
@@ -5246,9 +5222,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return toggleCase(prefixInput.count);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// clear screen
 	'\u000c'/*^L*/: function (c, o) {
@@ -5258,6 +5232,7 @@ var commandMap = {
 		else {
 			inputEscape(o.e.fullIdentifier);
 		}
+		return false;
 	},
 	// display file information
 	'\u0007'/*^G*/: function (c, o) {
@@ -5267,6 +5242,7 @@ var commandMap = {
 		else {
 			inputEscape(o.e.fullIdentifier);
 		}
+		return false;
 	},
 	// marks
 	m: {
@@ -5279,6 +5255,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			prefixInput.trailer = c;
@@ -5300,6 +5277,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			if (!registers.isReadable(c)) {
@@ -5336,7 +5314,7 @@ var commandMap = {
 		'command': function (c, o) {
 			if (!prefixInput.isEmptyOperation) {
 				inputEscape(o.e.fullIdentifier);
-				return;
+				return false;
 			}
 			if (recordedStrokes) {
 				var stroke = recordedStrokes.strokes.replace(/q$/, '');
@@ -5346,10 +5324,9 @@ var commandMap = {
 				recordedStrokes = null;
 				return true;
 			}
-			else {
-				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: record strokes', o.e.fullIdentifier));
-			}
+			inputModeSub = 'wait-a-letter';
+			requestShowPrefixInput(_('{0}: record strokes', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c, o) {
 			if (/^(?:[A-Z])$/.test(c) && !registers.exists(c)) {
@@ -5374,6 +5351,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			if (c != '\u001b') {
@@ -5392,11 +5370,10 @@ var commandMap = {
 					isAppend:c == 'a',
 					repeatCount:prefixInput.count});
 			}
-			else {
-				prefixInput.motion = c;
-				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: range symbol', o.e.fullIdentifier));
-			}
+			prefixInput.motion = c;
+			inputModeSub = 'wait-a-letter';
+			requestShowPrefixInput(_('{0}: range symbol', o.e.fullIdentifier));
+			return false;
 		},
 		'wait-a-letter': function (c, o) {
 			var result = searchUtils.dispatchRangeSymbol(
@@ -5419,9 +5396,7 @@ var commandMap = {
 				isAlter:true,
 				repeatCount:prefixInput.count});
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	i: {
 		'command': function (c, o) {
@@ -5439,9 +5414,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return openLine(c, c == 'o');
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	O: function (c, o) {
 		return this.o.apply(this, arguments);
@@ -5462,6 +5435,7 @@ var commandMap = {
 		else {
 			inputEscape(o.e.fullIdentifier);
 		}
+		return false;
 	},
 	// equivalents to :& (repeat last executed :s)
 	'&': function (c, o) {
@@ -5473,9 +5447,7 @@ var commandMap = {
 			typeof result == 'string' && requestShowMessage(result, true);
 			return true;
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// S: substitute text for whole lines (equivalents to cc)
 	S: function (c, o) {
@@ -5484,9 +5456,7 @@ var commandMap = {
 			isVerticalMotion = true;
 			return this.c['@op'].call(this, c, buffer);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// s: substitute characters
 	s: function (c, o) {
@@ -5496,9 +5466,7 @@ var commandMap = {
 			requestSimpleCommandUpdate();
 			return startEdit(c);
 		}
-		else {
-			inputEscape(o.e.fullIdentifier);
-		}
+		return inputEscape(o.e.fullIdentifier);
 	},
 	// equivalents to :x
 	//   ZZ
@@ -5512,6 +5480,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'wait-a-letter': function (c) {
 			if (c == prefixInput.operation) {
@@ -5519,9 +5488,7 @@ var commandMap = {
 				typeof result == 'string' && requestShowMessage(result, true);
 				return true;
 			}
-			else {
-				return inputEscape(prefixInput.operation);
-			}
+			return inputEscape(prefixInput.operation);
 		},
 		'@op': function (c) {
 			prefixInput.appendOperation(c);
@@ -5538,6 +5505,7 @@ var commandMap = {
 			else {
 				inputEscape(o.e.fullIdentifier);
 			}
+			return false;
 		},
 		'line-input': function (c) {
 			prefixInput.trailer = c;
@@ -5683,7 +5651,7 @@ var editMap = {
 	},
 	'<pagedown>': function (c) {
 		logEditing();
-		return scrollView(c, function (v) {
+		scrollView(c, function (v) {
 			return Math.max(parseInt(v.lines - 2), 1);
 		});
 	}
@@ -5859,7 +5827,6 @@ var lineInputEditMap = {
  * startup {{{1
  * ----------------
  */
-
 if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  WasaviExtensionWrapper.framePageUrl.isAny) {
