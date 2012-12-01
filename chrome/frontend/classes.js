@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: classes.js 234 2012-12-01 15:22:41Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -831,6 +831,14 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 Wasavi.KeyManager = function () {
 	// consts
 	var specialKeys = {
+		/*
+		 * TODO:
+		 * internal code of special keys shoud be the following form:
+		 * 0x800000 + index (no modifier keys)
+		 * 0x810000 + index (with shift key)
+		 * 0x820000 + index (with ctrl key)
+		 * 0x830000 + index (with shift,ctrl key)
+		 */
 		8: 'bs',
 		9: 'tab',
 		13: 'enter',
@@ -941,6 +949,11 @@ Wasavi.KeyManager = function () {
 			specialKeyName = e.keyCode == e.which && specialKeys[e.keyCode] ?
 				specialKeys[e.keyCode] : false;
 			specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
+
+			// workaround for Opera 12.10/12.11
+			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
+				handleKeypress(e);
+			}
 		}
 	}
 	function handleKeypress (e) {
@@ -1008,7 +1021,19 @@ Wasavi.KeyManager = function () {
 		return e.isSpecial && e.code < 0 ?
 			'\ue000' + '<' + e.fullIdentifier + '>' : String.fromCharCode(e.code);
 	}
-	function getNopEvent () {
+	function objectFromCode (c) {
+		if (typeof c != 'number') return null;
+		var identifier = c >= 0 ? String.fromCharCode(c) : specialKeys[-c] ? specialKeys[-c] : '';
+		return {
+			code: c,
+			identifier: identifier,
+			fullIdentifier: identifier,
+			shift: false,
+			ctrl: false,
+			isSpecial: c < 0 && specialKeys[-c]
+		};
+	}
+	function nopObjectFromCode () {
 		return {
 			code: 0,
 			identifier: '*nop*',
@@ -1131,7 +1156,8 @@ Wasavi.KeyManager = function () {
 	this.uninstall = uninstall;
 	this.code2letter = code2letter;
 	this.toInternalString = toInternalString;
-	this.getNopEvent = getNopEvent;
+	this.objectFromCode = objectFromCode;
+	this.nopObjectFromCode = nopObjectFromCode;
 	this.insertFnKeyHeader = insertFnKeyHeader;
 	this.parseKeyDesc = parseKeyDesc;
 	this.createSequences = createSequences;
@@ -1310,7 +1336,7 @@ Wasavi.MapManager = function (app) {
 			keyCode = obj.code;
 		}
 		else {
-			obj = app.keyManager.getNopEvent();
+			obj = app.keyManager.nopObjectFromCode();
 		}
 		if (mapIndex == undefined || keyCode == false) {
 			delayed && expandDelayed(delayed, 'delayed #1');
@@ -2728,6 +2754,9 @@ Wasavi.LiteralInput = function () {
 	this.message = '';
 };
 Wasavi.LiteralInput.prototype = {
+	PROCESSOR_LITERAL: 'literal',
+	PROCESSOR_CODEPOINT: 'codepoint',
+
 	process: function (c) {
 		return this['process_' + this.processor].call(this, c, c.charCodeAt(0));
 	},
@@ -2735,7 +2764,7 @@ Wasavi.LiteralInput.prototype = {
 		if (code >= 48 && code <= 57) {
 			this.radix = 10;
 			this.pattern = /^[0-9]$/;
-			this.processor = 'codepoint';
+			this.processor = this.PROCESSOR_CODEPOINT;
 			this.maxLength = 3;
 			this.message = _('dec:');
 			return this.process.call(this, c);
@@ -2743,26 +2772,26 @@ Wasavi.LiteralInput.prototype = {
 		else if (c == 'o' || c == 'O') {
 			this.radix = 8;
 			this.pattern = /^[0-7]$/;
-			this.processor = 'codepoint';
+			this.processor = this.PROCESSOR_CODEPOINT;
 			this.message = _('oct:');
 			this.maxLength = 3;
 		}
 		else if (c == 'x' || c == 'X') {
 			this.radix = 16;
 			this.pattern = /^[0-9a-f]$/i;
-			this.processor = 'codepoint';
+			this.processor = this.PROCESSOR_CODEPOINT;
 			this.message = 'hex:';
 			this.maxLength = 2;
 		}
 		else if (c == 'u' || c == 'U') {
 			this.radix = 16;
 			this.pattern = /^[0-9a-f]$/i;
-			this.processor = 'codepoint';
+			this.processor = this.PROCESSOR_CODEPOINT;
 			this.message = _('hex:');
 			this.maxLength = c == 'u' ? 4 : 6;
 		}
 		else {
-			this.processor = 'literal';
+			this.processor = this.PROCESSOR_LITERAL;
 			return this.process.call(this, c);
 		}
 		return null;
@@ -2788,10 +2817,10 @@ Wasavi.LiteralInput.prototype = {
 		return null;
 	},
 	process_literal: function (c, code) {
-		return {sequence:[c]};
+		return {processor:this.processor, sequence:[c]};
 	},
 	getResult: function (c) {
-		var result = {};
+		var result = {processor:this.processor};
 		if (this.value != '') {
 			var value = parseInt(this.value, this.radix);
 			if (value < 0 || value > 0x10ffff) {
@@ -2825,6 +2854,136 @@ Wasavi.LiteralInput.prototype = {
 			[
 				String.fromCharCode(o)
 			];
+	}
+};
+
+Wasavi.InputHandler = function (appProxy) {
+	this.app = appProxy;
+	this.startPosition = null;
+	this.count = 1
+	this.suffix = '';
+	this.text = this.textFragment = this.stroke = '';
+	this.overwritten = null;
+	this.prevLengthText = [];
+	this.prevLengthStroke = false;
+	this.stackText = [];
+	this.stackStroke = [];
+};
+Wasavi.InputHandler.prototype = {
+	dispose: function () {
+		this.app = this.startPosition = null;
+	},
+	reset: function (count, suffix, position) {
+		this.startPosition = position || null;
+		this.count = count || 1;
+		this.suffix = suffix || '';
+		this.text = this.textFragment = this.stroke = '';
+		this.overwritten = null;
+	},
+	close: function () {
+		this.flush();
+		this.reset();
+	},
+	newState: function (position) {
+		this.flush();
+		this.startPosition = position || null;
+		this.text = this.textFragment = this.stroke = '';
+		this.overwritten = null;
+		this.app.editLogger.close();
+		this.app.editLogger.open('log-editing');
+	},
+	pushText: function () {
+		this.stackText.push([
+			this.text.length, this.textFragment.length,
+			this.prevLengthText[0], this.prevLengthText[1]
+		]);
+	},
+	popText: function () {
+		if (this.stackText.length == 0) {
+			throw new Error('popText: stackText is empty.');
+		}
+		var o = this.stackText.pop();
+		this.text = this.text.substring(0, o[0]);
+		this.textFragment = this.textFragment.substring(0, o[1]);
+		this.prevLengthText[0] = o[2];
+		this.prevLengthText[1] = o[3];
+	},
+	updateText: function (e) {
+		var result = e.code == 0x000d ? '\u000a' : this.app.keyManager.code2letter(e.code);
+		this.prevLengthText[0] = this.text.length;
+		this.prevLengthText[1] = this.textFragment.length;
+		this.text += result;
+		this.textFragment += result;
+		return result;
+	},
+	ungetText: function () {
+		if (this.prevLengthText[0] !== undefined) {
+			this.text = this.text.substring(0, this.prevLengthText[0]);
+		}
+		if (this.prevLengthText[1] !== undefined) {
+			this.textFragment = this.textFragment.substring(0, this.prevLengthText[1]);
+		}
+	},
+	pushStroke: function () {
+		this.stackStroke.push([
+			this.stroke.length, this.prevLengthStroke
+		]);
+	},
+	popStroke: function () {
+		if (this.stackStroke.length == 0) {
+			throw new Error('popStroke: stackStroke is empty.');
+		}
+		var o = this.stackStroke.pop();
+		this.stroke = this.stroke.substring(0, o[0]);
+		this.prevLengthStroke = o[1];
+	},
+	updateStroke: function (e) {
+		this.prevLengthStroke = this.stroke.length;
+		this.stroke += e.code == 0x000d ? '\u000a' : this.app.keyManager.toInternalString(e);
+	},
+	ungetStroke: function () {
+		if (this.prevLengthStroke !== undefined) {
+			this.stroke = this.stroke.substring(0, this.prevLengthStroke);
+		}
+	},
+	updateStartPosition: function () {
+		if (this.startPosition === null) {
+			this.startPosition = this.app.buffer.selectionStart;
+		}
+		return this.startPosition;
+	},
+	updateOverwritten: function () {
+		if (this.overwritten === null) {
+			this.overwritten = this.app.buffer.rows(this.app.buffer.selectionStartRow);
+		}
+		return this.overwritten;
+	},
+	flush: function () {
+		function resolveEscape (s) {
+			var result = s;
+			result = result.replace(/\u0016[\s\S]|[\s\S]/g, function (a) {
+				return a.charAt(a.length == 2 ? 1 : 0);
+			});
+			result = result.replace(/[\u0008\u007f]/g, '');
+			return result;
+		}
+		var s;
+		if (this.textFragment.length && (s = resolveEscape(this.textFragment)).length) {
+			if (this.app.inputMode == 'edit') {
+				this.app.editLogger.write(
+					Wasavi.EditLogger.ITEM_TYPE.INSERT,
+					this.startPosition, s
+				);
+			}
+			else {
+				this.overwritten !== null && this.app.editLogger.write(
+					Wasavi.EditLogger.ITEM_TYPE.OVERWRITE,
+					this.startPosition, s, this.overwritten
+				);
+				this.overwritten = null;
+			}
+			this.textFragment = '';
+		}
 	}
 };
 

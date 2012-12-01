@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: background.js 233 2012-12-01 10:47:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -462,6 +462,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.extensionId = '';
 		this.lastRegisteredTab = '';
 		this.messageCatalogPath = '';
+		this.cryptKeyPath = '';
 		this.version = '';
 		this.isDev = false;
 	}
@@ -564,6 +565,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			lastRegisteredTab = undefined;
 			return result;
 		});
+		this.cryptKeyPath = 'frontend/wasavi.js';
 		(function (self) {
 			resourceLoader.get('manifest.json', function (data) {
 				self.version = JSON.parse(data).version;
@@ -718,6 +720,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return result;
 		});
 		this.messageCatalogPath = 'messages.json';
+		this.cryptKeyPath = 'includes/wasavi.js';
 		this.version = widget.version;
 		this.isDev = widget.version == '0.0.1';
 	}
@@ -942,6 +945,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 			return 'xlocale/' + result + '/messages.json';
 		})();
+		this.cryptKeyPath = 'frontend/wasavi.js';
 		this.version = require('self').version;
 		this.isDev = this.version == '0.0.1';
 	}
@@ -1613,7 +1617,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				);
 			}
 			else {
-				resourceLoader.get('background.js', function (data) {
+				resourceLoader.get(extension.cryptKeyPath, function (data) {
 					initFileSystemCore(
 						(new Blowfish(SHA1.calc(data))).decrypt64(binkeys)
 					);

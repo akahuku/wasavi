@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: wasavi.js 234 2012-12-01 15:22:41Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -826,6 +826,7 @@ ime-mode:disabled; \
 	buffer.selectionStart = x.selectionStart || 0;
 	buffer.selectionEnd = x.selectionEnd || 0;
 
+	inputHandler = new Wasavi.InputHandler(appProxy);
 	marks = new Wasavi.Marks(appProxy, testMode);
 	cursor = new Wasavi.CursorUI(appProxy, cc, ec);
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
@@ -891,6 +892,7 @@ function uninstall (save, implicit) {
 	lastRegexFindCommand = undefined;
 	lastSubstituteInfo = undefined;
 	requestedState = undefined;
+	inputHandler = inputHandler.dispose();
 	marks.save();
 	marks = marks.dispose();
 	cursor = cursor.dispose();
@@ -1204,41 +1206,6 @@ function requestInputMode (mode, modeSub, initial, updateCursor) {
 			initial:initial || '',
 			updateCursor:updateCursor
 		};
-	}
-}
-function logEditing (connect) {
-	function resolveEscape (s) {
-		var result = '';
-		s.replace(/\u0016[\s\S]|[\s\S]/g, function (a) {
-			result += a.charAt(a.length == 2 ? 1 : 0);
-			return '';
-		});
-		result = result.replace(/[\u0008\u007f]/g, '');
-		return result;
-	}
-	var s;
-	if (editedStringCurrent != '' && (s = resolveEscape(editedStringCurrent)) != '') {
-		editLogger.open('editing', function () {
-			if (inputMode == 'edit') {
-				editLogger.write(
-					Wasavi.EditLogger.ITEM_TYPE.INSERT,
-					editStartPosition, s
-				);
-			}
-			else {
-				editLogger.write(
-					Wasavi.EditLogger.ITEM_TYPE.OVERWRITE,
-					editStartPosition, s, overwroteString
-				);
-			}
-		});
-		editedStringCurrent = '';
-		overwroteString = false;
-		editStartPosition = null;
-	}
-	if (!connect && editLogger.clusterNestLevel >= 0) {
-		editLogger.close();
-		editLogger.open('log-editing');
 	}
 }
 function requestSimpleCommandUpdate () {
@@ -1795,14 +1762,14 @@ function processInput (code, e, ignoreAbbreviation) {
 		var target, last;
 
 		if (force) {
-			if (editedStringCurrent.length < 1) return;
-			target = editedStringCurrent;
+			if (inputHandler.text.length < 1) return;
+			target = inputHandler.text;
 			last = '';
 		}
 		else {
-			if (editedStringCurrent.length < 2) return;
-			target = editedStringCurrent.substring(0, editedStringCurrent.length - 1);
-			last = editedStringCurrent.substr(-1);
+			if (inputHandler.text.length < 2) return;
+			target = inputHandler.text.substring(0, inputHandler.text.length - 1);
+			last = inputHandler.text.substr(-1);
 			if (!(regex.test(target.substr(-1)) && !regex.test(last))) return;
 		}
 
@@ -1836,7 +1803,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			if (!canTransit) continue;
 
-			editedStringCurrent = target + multiply('\u0008', i.length) + abbrevs[i] + last;
+			inputHandler.text = target + multiply('\u0008', i.length) + abbrevs[i] + last;
 			deleteCharsBackward(i.length + last.length);
 			(inputMode == 'edit' ? insert : overwrite)(abbrevs[i] + last);
 			break;
@@ -1931,16 +1898,16 @@ function processInput (code, e, ignoreAbbreviation) {
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
 			processAbbrevs(true);
 
-			var editedStringSaved = editedString;
+			var finalStroke = inputHandler.stroke;
+			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
 
-			if (editRepeatCount > 1) {
-				var editedStringFollowed = editedStringSuffix + editedStringSaved;
-				for (var i = 1; i < editRepeatCount; i++) {
-					executeViCommand(editedStringFollowed);
+			if (inputHandler.count > 1) {
+				for (var i = 1; i < inputHandler.count; i++) {
+					executeViCommand(finalStrokeFollowed);
 				}
 			}
 
-			logEditing(true);
+			inputHandler.close();
 
 			var n = buffer.selectionStart;
 			n.col = Math.max(n.col - 1, 0);
@@ -1948,8 +1915,8 @@ function processInput (code, e, ignoreAbbreviation) {
 
 			popInputMode();
 			prefixInput.isLocked = false;
-			prefixInput.trailer = editedStringSaved;
-			registers.set('.', editedStringSaved);
+			prefixInput.trailer = finalStroke;
+			registers.set('.', finalStroke);
 
 			cursor.ensureVisible();
 			cursor.update({type:inputMode, visible:true});
@@ -1959,9 +1926,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				isSimpleCommandUpdateRequested = false;
 			}
 
-			(isEditCompleted || editedStringSaved != '') && doEditComplete();
-			editedString = editedStringCurrent = '';
-			overwroteString = false;
+			(isEditCompleted || finalStroke != '') && doEditComplete();
 			prefixInput.reset();
 			isEditCompleted = isVerticalMotion = false;
 			isSmoothScrollRequested = false;
@@ -1972,23 +1937,18 @@ function processInput (code, e, ignoreAbbreviation) {
 			idealWidthPixels = -1;
 		}
 		else {
-			var letterActual = code == 0x0d ? '\n' : letter;
+			var letterActual = inputHandler.updateText(e);
 			var prevPos = buffer.selectionStart;
-			editedString += letterActual;
-			editedStringCurrent += letterActual;
+			inputHandler.updateStroke(e);
+			inputHandler.updateStartPosition();
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
 
 			if (execEditMap(buffer, mapkey, subkey, code)) {
 				//
 			}
 			else if (isEditing() && (code == 0x08 || code == 0x0a || code >= 32)) {
-				if (!editStartPosition) {
-					editStartPosition = buffer.selectionStart;
-				}
-
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAbbrevs();
-
 				if (runLevel == 0) {
 					cursor.ensureVisible();
 					cursor.update({visible:true});
@@ -2119,7 +2079,7 @@ function processInputSupplement () {
 	case 'line-input':
 		var input = $(LINE_INPUT_ID);
 		var key = prefixInput.motion || prefixInput.operation;
-		var e = keyManager.getNopEvent();
+		var e = keyManager.nopObjectFromCode();
 		execMap(buffer, e, commandMap, key, '@' + inputMode + '-reset', input.value);
 		execMap(buffer, e, commandMap, key, '@' + inputMode + '-notify', input.value);
 		break;
@@ -2271,6 +2231,7 @@ function fireCommandCompleteEvent (eventName) {
 				state:      state,
 				inputMode:  inputMode,
 				lastMessage:lastMessage,
+				lastSimpleCommand: lastSimpleCommand,
 				value:      buffer.value,
 				row:        buffer.selectionStartRow,
 				col:        buffer.selectionStartCol,
@@ -3236,9 +3197,7 @@ function overwrite (s, opts) {
 	var keepPosition = !!opts.keepPosition;
 	var isLineOrientedLast = !!opts.isLineOrientedLast;
 
-	if (overwroteString === false) {
-		overwroteString = buffer.rows(buffer.selectionStartRow);
-	}
+	inputHandler.updateOverwritten();
 
 	(isEditing() ? $call : editLogger.open).call(editLogger, 'overwrite', function () {
 		deleteSelection();
@@ -3309,7 +3268,7 @@ function unshift (rowCount, shiftCount) {
 	});
 	isEditCompleted = true;
 }
-function deleteChars (count, isForward, isSubseq, withYank) {
+function deleteChars (count, isForward, isSubseq, withYank, canJoin) {
 	if (buffer.selected) {
 		deleteSelection(isSubseq);
 	}
@@ -3319,10 +3278,18 @@ function deleteChars (count, isForward, isSubseq, withYank) {
 		if (isForward) {
 			var n = buffer.selectionEnd;
 			var tail = buffer.getLineTailOffset(n);
-			n.col = Math.min(tail.col, n.col + count);
-			buffer.selectionEnd = n;
-			withYank && yank();
-			deleteSelection(isSubseq);
+			if (n.col < tail.col) {
+				n.col = Math.min(tail.col, n.col + count);
+				buffer.selectionEnd = n;
+				withYank && yank();
+				deleteSelection(isSubseq);
+			}
+			else if (canJoin && n.col >= tail.col && n.row < buffer.rowLength - 1) {
+				n.row++;
+				n.col = 0;
+				buffer.selectionEnd = n;
+				deleteSelection(isSubseq);
+			}
 		}
 		else {
 			var n = buffer.selectionStart;
@@ -3332,6 +3299,12 @@ function deleteChars (count, isForward, isSubseq, withYank) {
 				withYank && yank();
 				deleteSelection(isSubseq);
 			}
+			else if (canJoin && n.col == 0 && n.row > 0) {
+				n.row--;
+				n.col = buffer.rows(n).length;
+				buffer.selectionStart = n;
+				deleteSelection(isSubseq);
+			}
 		}
 	}
 	isEditCompleted = true;
@@ -3339,11 +3312,11 @@ function deleteChars (count, isForward, isSubseq, withYank) {
 }
 function deleteCharsForward (count, opts) {
 	opts || (opts = {});
-	return deleteChars(count, true, !!opts.isSubseq, !!opts.yank);
+	return deleteChars(count, true, !!opts.isSubseq, !!opts.yank, !!opts.canJoin);
 }
 function deleteCharsBackward (count, opts) {
 	opts || (opts = {});
-	return deleteChars(count, false, !!opts.isSubseq, !!opts.yank);
+	return deleteChars(count, false, !!opts.isSubseq, !!opts.yank, !!opts.canJoin);
 }
 function joinLines (count, asis) {
 	count || (count = 1);
@@ -3527,11 +3500,7 @@ function startEdit (c, opts) {
 		requestShowPrefixInput(getDefaultPrefixInputString());
 		prefixInput.operation = c;
 		prefixInput.isLocked = true;
-		editedString = editedStringCurrent = '';
-		overwroteString = false;
-		editedStringSuffix = opened ? '\n' : '';
-		editStartPosition = buffer.selectionStart;
-		editRepeatCount = opts.repeatCount || 1;
+		inputHandler.reset(opts.repeatCount, opened ? '\n' : '', buffer.selectionStart);
 		return false;
 	}
 	return inputEscape(opts.e.fullIdentifier);
@@ -3962,15 +3931,10 @@ var cursor;
 var scroller;
 var editLogger;
 var prefixInput;
+var inputHandler;
 var inputModeStack;
 var inputMode;
 var inputModeSub;
-var editStartPosition;
-var editedString;
-var editedStringCurrent;
-var overwroteString;
-var editedStringSuffix;
-var editRepeatCount;
 var requestedState;
 var lineHeight;
 var charWidth;
@@ -5425,10 +5389,7 @@ var commandMap = {
 			cursor.update({type:'edit-overwrite'});
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
-			editedString = editedStringCurrent = editedStringSuffix = '';
-			overwroteString = false;
-			editStartPosition = buffer.selectionStart;
-			editRepeatCount = prefixInput.count;
+			inputHandler.reset(prefixInput.count, '', buffer.selectionStart);
 			editLogger.open('edit-wrapper');
 			requestSimpleCommandUpdate();
 		}
@@ -5554,15 +5515,40 @@ var commandMap = {
 
 var editMap = {
 	'\u0008'/*backspace*/: function (c) {
-		logEditing(true);
-		deleteCharsBackward(1, {isSubseq:true});
+		if (buffer.selectionStartRow == 0 && buffer.selectionStartCol == 0) {
+			requestShowMessage(_('Top of text.'), true);
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+			return;
+		}
+		if (inputMode == 'edit-overwrite' &&
+		buffer.selectionStart.le(inputHandler.startPosition)) {
+			inputHandler.flush();
+			motionLeft(c, 1);
+			inputHandler.startPosition = null;
+			return;
+		}
+		inputHandler.flush();
+		deleteCharsBackward(1, {canJoin:true});
+		inputHandler.startPosition = null;
 	},
 	'\u007f'/*delete*/: function (c) {
-		logEditing(true);
-		deleteCharsForward(1, {isSubseq:true});
+		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
+		buffer.selectionStartCol >= buffer.getLineTailOffset(buffer.selectionStartRow).col) {
+			requestShowMessage(_('Tail of text.'), true);
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+			return;
+		}
+		inputHandler.flush();
+		deleteCharsForward(1, {canJoin:true});
+		inputHandler.startPosition = null;
 	},
 	'\u0009'/*tab*/: function (c) {
 		insert('\t');
+	},
+	'\u000a'/*^J*/: function (c) {
+		this['\u000d'].apply(this, arguments);
 	},
 	'\u000d'/*enter*/: function (c) {
 		var indent = config.vars.autoindent ? buffer.getIndent(buffer.selectionStart) : '';
@@ -5575,82 +5561,97 @@ var editMap = {
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 			literalInput = new Wasavi.LiteralInput;
+			inputHandler.ungetText();
+			inputHandler.pushText();
+			inputHandler.pushStroke();
 		},
 		'edit-overwrite': function (c, o) {
 			this['\u0016'].edit.apply(this, arguments);
 		},
 		'wait-a-letter': function (c) {
 			var result = literalInput.process(c);
-			if (result) {
-				if (result.error) {
-					requestShowMessage(result.error, true);
-				}
-				else {
-					if (result.sequence) {
-						for (var i = 0, goal = result.sequence.length; i < goal; i++) {
-							var ch = result.sequence[i];
-							var code = ch.charCodeAt(0);
-
-							if (code == 10 || code == 13) {
-								insert('\n');
-							}
-							else {
-								if (code >= 0 && code != 9 && code <= 31 || code == 0x7f) {
-									ch = toVisibleControl(code);
-								}
-								(inputMode == 'edit' ? insert : overwrite)(ch);
-							}
-						}
-						cursor.ensureVisible();
-						cursor.update();
-					}
-					if (result.trail) {
-						var e = keyManager.parseKeyDesc(result.trail).prop;
-						processInput(e.code, e);
-					}
-				}
-				literalInput = null;
-				isLastKeyCodeLocked = false;
+			if (!result) {
+				requestShowPrefixInput(literalInput.message);
+				inputModeSub = 'wait-a-letter';
+				isLastKeyCodeLocked = true;
+				return;
+			}
+			if (result.error) {
+				requestShowMessage(result.error, true);
+				inputHandler.popStroke();
+				inputHandler.ungetStroke();
+				inputHandler.popText();
 			}
 			else {
-				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(literalInput.message);
-				isLastKeyCodeLocked = true;
+				inputHandler.popText();
+
+				if (result.sequence) {
+					for (var i = 0, goal = result.sequence.length; i < goal; i++) {
+						var ch = result.sequence[i];
+						var code = ch.charCodeAt(0);
+						var e = keyManager.objectFromCode(code);
+
+						inputHandler.updateText(e);
+						if (code == 10 || code == 13) {
+							insert('\n');
+						}
+						else {
+							if (code >= 0 && code != 9 && code <= 31 || code == 0x7f) {
+								ch = toVisibleControl(code);
+							}
+							(inputMode == 'edit' ? insert : overwrite)(ch);
+						}
+					}
+					cursor.ensureVisible();
+					cursor.update();
+					requestShowPrefixInput(getDefaultPrefixInputString());
+				}
+				else {
+					inputHandler.popStroke();
+					inputHandler.ungetStroke();
+				}
+				if (result.trail) { 
+					inputHandler.ungetStroke();
+					var e = keyManager.objectFromCode(result.trail.charCodeAt(0));
+					processInput(e.code, e);
+				}
 			}
+			literalInput = null;
+			isLastKeyCodeLocked = false;
 		}
 	},
 	'<left>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionLeft(c, 1);
 	},
 	'<up>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionUp(c, 1);
 	},
 	'<right>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionRight(c, 1);
 	},
 	'<down>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionDown(c, 1);
 	},
 	'<home>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionLineStart(c, false);
 	},
 	'<end>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		motionLineEnd(c);
 	},
 	'<pageup>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		scrollView(c, function (v) {
 			return -(Math.max(parseInt(v.lines - 2), 1));
 		});
 	},
 	'<pagedown>': function (c) {
-		logEditing();
+		inputHandler.newState();
 		scrollView(c, function (v) {
 			return Math.max(parseInt(v.lines - 2), 1);
 		});
@@ -5750,40 +5751,55 @@ var lineInputEditMap = {
 		'line-input': function (c, o) {
 			inputModeSub = 'wait-a-letter';
 			literalInput = new Wasavi.LiteralInput;
+			inputHandler.ungetText();
+			inputHandler.pushText();
+			inputHandler.pushStroke();
 		},
 		'wait-a-letter': function (c, o) {
 			var result = literalInput.process(c);
-			if (result) {
-				if (result.error) {
-					requestRegisterNotice();
-				}
-				else {
-					if (result.sequence) {
-						for (var i = 0, goal = result.sequence.length; i < goal; i++) {
-							var ch = result.sequence[i];
-							var code = ch.charCodeAt(0);
-							if (code == 10) {
-								requestRegisterNotice();
-								break;
-							}
-							if (code >= 0 && code <= 31 || code == 0x7f) {
-								ch = toVisibleControl(code);
-							}
-							insertToLineInput(o.target, ch);
-						}
-					}
-					if (result.trail) {
-						insertToLineInput(o.target, result.trail);
-					}
-				}
-				literalInput = null;
-				isLastKeyCodeLocked = false;
-				lineInputHistories.isInitial = true;
-			}
-			else {
+			if (!result) {
 				inputModeSub = 'wait-a-letter';
 				isLastKeyCodeLocked = true;
+				return;
 			}
+			if (result.error) {
+				requestRegisterNotice();
+				inputHandler.popStroke();
+				inputHandler.ungetStroke();
+				inputHandler.popText();
+			}
+			else {
+				inputHandler.popText();
+
+				if (result.sequence) {
+					for (var i = 0, goal = result.sequence.length; i < goal; i++) {
+						var ch = result.sequence[i];
+						var code = ch.charCodeAt(0);
+						var e = keyManager.objectFromCode(code);
+
+						inputHandler.updateText(e);
+						if (code == 10) {
+							requestRegisterNotice();
+							break;
+						}
+						if (code >= 0 && code <= 31 || code == 0x7f) {
+							ch = toVisibleControl(code);
+						}
+						insertToLineInput(o.target, ch);
+					}
+				}
+				else {
+					inputHandler.popStroke();
+					inputHandler.ungetStroke();
+				}
+				if (result.trail) {
+					inputHandler.ungetStroke();
+					insertToLineInput(o.target, result.trail);
+				}
+			}
+			literalInput = null;
+			isLastKeyCodeLocked = false;
+			lineInputHistories.isInitial = true;
 		}
 	},
 	'\u0017'/*^W*/: function (c, o) {

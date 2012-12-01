@@ -225,6 +225,10 @@ class WasaviWrapper {
 		return getString("lastMessage", "***Exception in getLastMessage***");
 	}
 
+	public String getLastSimpleCommand () {
+		return getString("lastSimpleCommand", "***Exception in getLastSimpleCommand***");
+	}
+
 	public String getInputMode () {
 		return getString("inputMode", "***Exception in getInputMode***");
 	}
@@ -342,13 +346,25 @@ class WasaviAsserts {
 		wasaviState = ws;
 	}
 
+	public static String fromCharCode (int... codePoints) {
+		return new String(codePoints, 0, codePoints.length);
+	}
+
+	public static String toVisibleString (String s) {
+		for (int i = 0; i < 32; i++) {
+			s = s.replaceAll(fromCharCode(i), "^" + fromCharCode(64 + i));
+		}
+		s = s.replaceAll(fromCharCode(127), "^_");
+		return s;
+	}
+
 	public static void assertEquals (String message, String expected, String actual) {
 		if (!expected.equals(actual)) {
 			org.junit.Assert.fail(
-					message +
 					String.format(
-						" expected:\n<<%s>>\n\nbut was:\n<<%s>>",
-						expected, actual));
+						"%s: expected:\n<<%s>>\n\nbut was:\n<<%s>>",
+						message,
+						toVisibleString(expected), toVisibleString(actual)));
 		}
 	}
 
@@ -362,9 +378,9 @@ class WasaviAsserts {
 			int actualCol = wasaviState.getInt("col");
 			if (row != actualRow || col != actualCol) {
 				org.junit.Assert.fail(
-						message +
 						String.format(
-							" expected:[%d, %d] but was:[%d, %d]\n%s",
+							"%s: position unmatch.\nexpected:[%d, %d] but was:[%d, %d]\n%s",
+							message,
 							row, col, actualRow, actualCol,
 							wasaviState.getString("value")));
 			}
@@ -383,10 +399,11 @@ class WasaviAsserts {
 			String value = wasaviState.getString("value");
 			if (!value.equals(expected)) {
 				org.junit.Assert.fail(
-						message +
 						String.format(
-							"%s: value unmatch.\nexpected:\n%s\n\nactual:\n%s\n\nstate:%s",
-							message, expected, value, wasaviState.toString(2)));
+							"%s: value unmatch.\nexpected:\n<<%s>>\n\nbut was:\n<<%s>>\n\nstate:%s",
+							message,
+							toVisibleString(expected), toVisibleString(value),
+							wasaviState.toString(2)));
 			}
 		}
 		catch (JSONException e) {
