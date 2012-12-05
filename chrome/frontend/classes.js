@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 234 2012-12-01 15:22:41Z akahuku $
+ * @version $Id: classes.js 235 2012-12-05 11:56:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1496,7 +1496,7 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 		return /^[1-9a-zA-Z@]$/.test(name);
 	}
 	function isReadable (name) {
-		return /^["1-9a-z@.:*\/]$/.test(name);
+		return /^["1-9a-z@.:*\/\^]$/.test(name);
 	}
 	function exists (name) {
 		if (!isReadable(name)) {
@@ -1549,7 +1549,7 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 				unnamed.set(data, isLineOrient);
 				name == '*' && app.extensionChannel && app.extensionChannel.setClipboard(item.data);
 			}
-			else if (/^[@.:\/]$/.test(name) && !isInteractive) {
+			else if (/^[@.:\/\^]$/.test(name) && !isInteractive) {
 				var item = findItem(name);
 				item.set(data, isLineOrient);
 			}
@@ -1647,7 +1647,7 @@ Wasavi.Marks = function (app, ignoreStorage) {
 		app.dataset('wasaviMarks', serialize());
 	}
 	function isValidName (name) {
-		return /^[a-z']$/.test(name);
+		return /^[a-z'\^]$/.test(name);
 	}
 	function regalizeName (name) {
 		if (name == '`') {
@@ -1665,6 +1665,18 @@ Wasavi.Marks = function (app, ignoreStorage) {
 	function get (name) {
 		name = regalizeName(name);
 		return isValidName(name) && name in marks ? marks[name] : undefined;
+	}
+	function setJumpBaseMark (pos) {
+		set("'", pos || app.buffer.selectionStart);
+	}
+	function setInputOriginMark (pos) {
+		set('^', pos || app.buffer.selectionStart);
+	}
+	function getJumpBaseMark () {
+		return get("'");
+	}
+	function getInputOriginMark () {
+		return get('^');
 	}
 	function update (pos, func) {
 		function setMarks () {
@@ -1790,6 +1802,10 @@ Wasavi.Marks = function (app, ignoreStorage) {
 	}
 	this.set = set;
 	this.get = get;
+	this.setJumpBaseMark = setJumpBaseMark;
+	this.setInputOriginMark = setInputOriginMark;
+	this.getJumpBaseMark = getJumpBaseMark;
+	this.getInputOriginMark = getInputOriginMark;
 	this.update = update;
 	this.dump = dump;
 	this.dumpData = dumpData;
@@ -2859,7 +2875,7 @@ Wasavi.LiteralInput.prototype = {
 
 Wasavi.InputHandler = function (appProxy) {
 	this.app = appProxy;
-	this.startPosition = null;
+	this.inputHeadPosition = null;
 	this.count = 1
 	this.suffix = '';
 	this.text = this.textFragment = this.stroke = '';
@@ -2871,14 +2887,15 @@ Wasavi.InputHandler = function (appProxy) {
 };
 Wasavi.InputHandler.prototype = {
 	dispose: function () {
-		this.app = this.startPosition = null;
+		this.app = this.inputHeadPosition = null;
 	},
-	reset: function (count, suffix, position) {
-		this.startPosition = position || null;
+	reset: function (count, suffix, position, initStartPosition) {
+		this.inputHeadPosition = position || null;
 		this.count = count || 1;
 		this.suffix = suffix || '';
 		this.text = this.textFragment = this.stroke = '';
 		this.overwritten = null;
+		initStartPosition && this.setStartPosition(this.inputHeadPosition);
 	},
 	close: function () {
 		this.flush();
@@ -2886,11 +2903,27 @@ Wasavi.InputHandler.prototype = {
 	},
 	newState: function (position) {
 		this.flush();
-		this.startPosition = position || null;
+		this.inputHeadPosition = position || null;
 		this.text = this.textFragment = this.stroke = '';
 		this.overwritten = null;
 		this.app.editLogger.close();
 		this.app.editLogger.open('log-editing');
+	},
+	setStartPosition: function (pos) {
+		var p = pos.clone();
+		p.col--;
+		this.app.marks.setInputOriginMark(p);
+	},
+	getStartPosition: function () {
+		var p = this.app.marks.getInputOriginMark();
+		if (p) {
+			p = p.clone();
+			p.col++;
+		}
+		return p;
+	},
+	invalidateHeadPosition: function () {
+		this.inputHeadPosition = null;
 	},
 	pushText: function () {
 		this.stackText.push([
@@ -2946,11 +2979,11 @@ Wasavi.InputHandler.prototype = {
 			this.stroke = this.stroke.substring(0, this.prevLengthStroke);
 		}
 	},
-	updateStartPosition: function () {
-		if (this.startPosition === null) {
-			this.startPosition = this.app.buffer.selectionStart;
+	updateHeadPosition: function () {
+		if (this.inputHeadPosition === null) {
+			this.inputHeadPosition = this.app.buffer.selectionStart;
 		}
-		return this.startPosition;
+		return this.inputHeadPosition;
 	},
 	updateOverwritten: function () {
 		if (this.overwritten === null) {
@@ -2972,13 +3005,13 @@ Wasavi.InputHandler.prototype = {
 			if (this.app.inputMode == 'edit') {
 				this.app.editLogger.write(
 					Wasavi.EditLogger.ITEM_TYPE.INSERT,
-					this.startPosition, s
+					this.inputHeadPosition, s
 				);
 			}
 			else {
 				this.overwritten !== null && this.app.editLogger.write(
 					Wasavi.EditLogger.ITEM_TYPE.OVERWRITE,
-					this.startPosition, s, this.overwritten
+					this.inputHeadPosition, s, this.overwritten
 				);
 				this.overwritten = null;
 			}

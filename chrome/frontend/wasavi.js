@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 234 2012-12-01 15:22:41Z akahuku $
+ * @version $Id: wasavi.js 235 2012-12-05 11:56:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -216,9 +216,13 @@ ExCommandExecutor.prototype = {
 		}
 		if ((isJumpBaseUpdateRequested || command.flags.updateJump)
 		&& buffer.selectionStart.ne(ss)) {
-			marks.set('\'', ss);
+			marks.setJumpBaseMark(ss);
 			isJumpBaseUpdateRequested = false;
 		}
+
+
+
+
 		if (result.flags.hash || result.flags.list || result.flags.print) {
 			var n = Math.max(0, Math.min(
 				buffer.selectionStartRow + result.flagoff, t.rowLength - 1));
@@ -1119,7 +1123,7 @@ function showPrefixInput (message) {
 	case 'edit':
 		indf.textContent = config.vars.showmode ? _('--INSERT--') : getFileNameString();
 		break;
-	case 'overwrite':
+	case 'edit-overwrite':
 		indf.textContent = config.vars.showmode ? _('--OVERWRITE--') : getFileNameString();
 		break;
 	case 'command':
@@ -1910,6 +1914,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			inputHandler.close();
 
 			var n = buffer.selectionStart;
+			inputHandler.setStartPosition(n);
 			n.col = Math.max(n.col - 1, 0);
 			buffer.setSelectionRange(n);
 
@@ -1928,9 +1933,7 @@ function processInput (code, e, ignoreAbbreviation) {
 
 			(isEditCompleted || finalStroke != '') && doEditComplete();
 			prefixInput.reset();
-			isEditCompleted = isVerticalMotion = false;
-			isSmoothScrollRequested = false;
-			showMessage('');
+			isEditCompleted = isVerticalMotion = isSmoothScrollRequested = false;
 			requestShowPrefixInput();
 			editLogger.close();// edit-wrapper
 			needEmitEvent = true;
@@ -1940,18 +1943,18 @@ function processInput (code, e, ignoreAbbreviation) {
 			var letterActual = inputHandler.updateText(e);
 			var prevPos = buffer.selectionStart;
 			inputHandler.updateStroke(e);
-			inputHandler.updateStartPosition();
+			inputHandler.updateHeadPosition();
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
 
 			if (execEditMap(buffer, mapkey, subkey, code)) {
-				//
+				// do nothing
 			}
-			else if (isEditing() && (code == 0x08 || code == 0x0a || code >= 32)) {
+			else if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAbbrevs();
 				if (runLevel == 0) {
 					cursor.ensureVisible();
-					cursor.update({visible:true});
+					cursor.update();
 					requestShowPrefixInput(getDefaultPrefixInputString());
 				}
 			}
@@ -2619,11 +2622,16 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 	idealWidthPixels = -1;
 	return true;
 }
-function motionPrevWord (c, count, bigWord) {
+function motionPrevWord (c, count, bigWord, specialStops) {
 	var n = buffer.selectionStart;
 	count || (count = 1);
 	n.col <= 0 && n.row <= 0 && requestRegisterNotice(_('Top of text.'));
 
+	function isStopPosition (stop) {return stop.eq(n);}
+
+	if (specialStops && !(specialStops instanceof Array)) {
+		specialStops = [specialStops];
+	}
 	if (bigWord) {
 		for (var i = 0; i < count; i++) {
 			n = buffer.leftPos(n);
@@ -2632,6 +2640,7 @@ function motionPrevWord (c, count, bigWord) {
 
 			while (n.row > 0 || n.col > 0) {
 				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
+				if (specialStops && specialStops.some(isStopPosition)) {break;}
 
 				var prevn = n;
 				n = buffer.leftPos(n);
@@ -2657,6 +2666,7 @@ function motionPrevWord (c, count, bigWord) {
 
 			while (n.row > 0 || n.col > 0) {
 				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
+				if (specialStops && specialStops.some(isStopPosition)) {break;}
 
 				var prevn = n;
 				n = buffer.leftPos(n);
@@ -3104,6 +3114,19 @@ function extendRightIfInclusiveMotion () {
 		}
 	}
 }
+function clipOverrun () {
+	if (inputMode != 'edit-overwrite') {
+		return false;
+	}
+	var p = inputHandler.getStartPosition();
+	var n = buffer.selectionStart;
+	if (n.lt(p)) {
+		buffer.setSelectionRange(p);
+		requestShowMessage(_('You are in the restricted region.'), true);
+		return true;
+	}
+	return false;
+}
 
 /*
  * low-level functions for text modification {{{1
@@ -3500,7 +3523,7 @@ function startEdit (c, opts) {
 		requestShowPrefixInput(getDefaultPrefixInputString());
 		prefixInput.operation = c;
 		prefixInput.isLocked = true;
-		inputHandler.reset(opts.repeatCount, opened ? '\n' : '', buffer.selectionStart);
+		inputHandler.reset(opts.repeatCount, opened ? '\n' : '', buffer.selectionStart, true);
 		return false;
 	}
 	return inputEscape(opts.e.fullIdentifier);
@@ -4303,7 +4326,7 @@ var commandMap = {
 		prefixInput.motion = c;
 		var result = searchUtils.findMatchedBracket(prefixInput.count);
 		if (result) {
-			marks.set('\'', buffer.selectionStart);
+			marks.setJumpBaseMark();
 			buffer.extendSelectionTo(result);
 			idealWidthPixels = -1;
 			isSmoothScrollRequested = true;
@@ -4505,7 +4528,7 @@ var commandMap = {
 			var offset = marks.get(c);
 			if (offset != undefined) {
 				if ('\'`[]'.indexOf(c) >= 0) {
-					marks.set('\'', buffer.selectionStart);
+					marks.setJumpBaseMark();
 				}
 				buffer.extendSelectionTo(buffer.getLineTopOffset2(offset));
 				isVerticalMotion = true;
@@ -4532,7 +4555,7 @@ var commandMap = {
 			var offset = marks.get(c);
 			if (offset != undefined) {
 				if ('\'`[]'.indexOf(c) >= 0) {
-					marks.set('\'', buffer.selectionStart);
+					marks.setJumpBaseMark();
 				}
 				buffer.extendSelectionTo(offset);
 				isSmoothScrollRequested = true;
@@ -4549,7 +4572,7 @@ var commandMap = {
 		prefixInput.motion = c;
 		var pos = searchUtils.findSentenceBoundary(prefixInput.count, false, true);
 		if (pos) {
-			marks.set('\'', buffer.selectionStart);
+			marks.setJumpBaseMark();
 			buffer.selectionStart = pos;
 			return true;
 		}
@@ -4560,7 +4583,7 @@ var commandMap = {
 		prefixInput.motion = c;
 		var pos = searchUtils.findSentenceBoundary(prefixInput.count, true, true);
 		if (pos) {
-			marks.set('\'', buffer.selectionStart);
+			marks.setJumpBaseMark();
 			buffer.selectionEnd = pos;
 			return true;
 		}
@@ -4571,7 +4594,7 @@ var commandMap = {
 		prefixInput.motion = c;
 		var pos = searchUtils.findParagraphBoundary(prefixInput.count, false, true);
 		if (pos) {
-			marks.set('\'', buffer.selectionStart);
+			marks.setJumpBaseMark();
 			buffer.selectionStart = pos;
 			isVerticalMotion = prefixInput.isEmptyOperation;
 			return true;
@@ -4583,7 +4606,7 @@ var commandMap = {
 		prefixInput.motion = c;
 		var pos = searchUtils.findParagraphBoundary(prefixInput.count, true, true);
 		if (pos) {
-			marks.set('\'', buffer.selectionStart);
+			marks.setJumpBaseMark();
 			buffer.selectionEnd = pos;
 			isVerticalMotion = prefixInput.isEmptyOperation;
 			return true;
@@ -4604,7 +4627,7 @@ var commandMap = {
 				var pos = searchUtils.findParagraphBoundary(
 					prefixInput.count, false, true, '{', false);
 				if (pos) {
-					marks.set('\'', buffer.selectionStart);
+					marks.setJumpBaseMark();
 					buffer.selectionStart = buffer.getLineTopOffset2(pos);
 					isVerticalMotion = prefixInput.isEmptyOperation;
 					return true;
@@ -4627,7 +4650,7 @@ var commandMap = {
 				var pos = searchUtils.findParagraphBoundary(
 					prefixInput.count, true, true, '{', !prefixInput.isEmptyOperation);
 				if (pos) {
-					marks.set('\'', buffer.selectionStart);
+					marks.setJumpBaseMark();
 					buffer.selectionEnd = buffer.getLineTopOffset2(pos);
 					isVerticalMotion = prefixInput.isEmptyOperation;
 					return true;
@@ -4740,7 +4763,7 @@ var commandMap = {
 			case 'g':
 				var index = prefixInput.count;
 				var n = new Position(index - 1, 0);
-				marks.set('\'', buffer.selectionStart);
+				marks.setJumpBaseMark();
 				if (prefixInput.isEmptyOperation) {
 					buffer.setSelectionRange(buffer.getLineTopOffset2(n));
 					var node = buffer.rowNodes(n);
@@ -4754,6 +4777,18 @@ var commandMap = {
 				idealWidthPixels = -1;
 				prefixInput.trailer = c;
 				result = true;
+				break;
+			case 'i':
+				var m = inputHandler.getStartPosition();
+				if (m) {
+					buffer.setSelectionRange(m);
+					editLogger.open('edit-wrapper');
+					result = startEdit(c);
+				}
+				else {
+					requestRegisterNotice(_('Last inputted position is undefined.'));
+					result = true;
+				}
 				break;
 			case 'j':
 				prefixInput.trailer = c;
@@ -4782,7 +4817,7 @@ var commandMap = {
 	H: function (c) {
 		var v = getCurrentViewPositionIndices();
 		var index = Math.min(v.top + prefixInput.count - 1, v.bottom, buffer.rowLength - 1);
-		marks.set('\'', buffer.selectionStart);
+		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
 		idealWidthPixels = -1;
@@ -4792,7 +4827,7 @@ var commandMap = {
 	M: function (c) {
 		var v = getCurrentViewPositionIndices();
 		var index = v.top + parseInt(v.lines / 2);
-		marks.set('\'', buffer.selectionStart);
+		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
 		idealWidthPixels = -1;
@@ -4802,7 +4837,7 @@ var commandMap = {
 	L: function (c) {
 		var v = getCurrentViewPositionIndices();
 		var index = Math.max(v.bottom - prefixInput.count + 1, v.top, 0);
-		marks.set('\'', buffer.selectionStart);
+		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
 		idealWidthPixels = -1;
@@ -4813,7 +4848,7 @@ var commandMap = {
 		var index = prefixInput.isCountSpecified ?
 			Math.max(Math.min(prefixInput.count, buffer.rowLength), 1) : buffer.rowLength;
 		var n = new Position(index - 1, 0);
-		marks.set('\'', buffer.selectionStart);
+		marks.setJumpBaseMark();
 		if (prefixInput.isEmptyOperation) {
 			buffer.setSelectionRange(buffer.getLineTopOffset2(n));
 			var node = buffer.rowNodes(n);
@@ -5018,7 +5053,7 @@ var commandMap = {
 			var n = new Position(line, 0);
 
 			if (prefixInput.isCountSpecified) {
-				marks.set('\'', buffer.selectionStart);
+				marks.setJumpBaseMark();
 			}
 			if (motion == prefixInput.operation) {
 				motion = '.';
@@ -5387,9 +5422,10 @@ var commandMap = {
 		if (prefixInput.isEmptyOperation && !buffer.selected) {
 			requestInputMode('edit-overwrite');
 			cursor.update({type:'edit-overwrite'});
+			requestShowPrefixInput(getDefaultPrefixInputString());
 			prefixInput.operation = c;
 			prefixInput.isLocked = true;
-			inputHandler.reset(prefixInput.count, '', buffer.selectionStart);
+			inputHandler.reset(prefixInput.count, '', buffer.selectionStart, true);
 			editLogger.open('edit-wrapper');
 			requestSimpleCommandUpdate();
 		}
@@ -5515,49 +5551,116 @@ var commandMap = {
 
 var editMap = {
 	'\u0008'/*backspace*/: function (c) {
+		inputHandler.ungetText();
+
 		if (buffer.selectionStartRow == 0 && buffer.selectionStartCol == 0) {
 			requestShowMessage(_('Top of text.'), true);
-			inputHandler.ungetText();
 			inputHandler.ungetStroke();
 			return;
 		}
-		if (inputMode == 'edit-overwrite' &&
-		buffer.selectionStart.le(inputHandler.startPosition)) {
-			inputHandler.flush();
-			motionLeft(c, 1);
-			inputHandler.startPosition = null;
-			return;
+
+		function selectNewline () {
+			if (buffer.selectionStartCol == 0) {
+				var p = buffer.selectionStart;
+				p.row--;
+				p = buffer.getLineTailOffset(p);
+				buffer.selectionStart = p;
+				return true;
+			}
+			return false;
 		}
+		
+		function backToPrevWord () {
+			if (selectNewline()) return;
+			motionPrevWord(c, 1, false, [
+				inputHandler.getStartPosition(),
+				new Position(buffer.selectionStartRow, 0)
+			]);
+		}
+
+		function backToStartPosition () {
+			if (selectNewline()) return;
+
+			var start = inputHandler.getStartPosition();
+			var n = new Position(buffer.selectionStartRow, 0);
+			var n2 = buffer.getLineTopOffset2(buffer.selectionStart);
+
+			if (config.vars.autoindent && buffer.selectionStartCol > n2.col) {
+				n = n2;
+			}
+			if (start.lt(buffer.selectionStart) && start.gt(n)) {
+				n = start;
+			}
+			else {
+				inputHandler.setStartPosition(n);
+			}
+
+			buffer.selectionStart = n;
+		}
+
 		inputHandler.flush();
-		deleteCharsBackward(1, {canJoin:true});
-		inputHandler.startPosition = null;
+		if (inputMode == 'edit-overwrite' &&
+		buffer.selectionStart.le(inputHandler.getStartPosition())) {
+			switch (c) {
+			case '\u0008':
+				motionLeft(c, 1);
+				break;
+			case '\u0015':
+				backToStartPosition();
+				break;
+			case '\u0017':
+				backToPrevWord();
+				break;
+			}
+		}
+		else {
+			switch (c) {
+			case '\u0008':
+				deleteCharsBackward(1, {canJoin:true});
+				break;
+			case '\u0015':
+				backToStartPosition();
+				deleteSelection();
+				break;
+			case '\u0017':
+				backToPrevWord();
+				deleteSelection();
+				break;
+			}
+			inputHandler.invalidateHeadPosition();
+		}
 	},
 	'\u007f'/*delete*/: function (c) {
+		if (clipOverrun()) return;
+		inputHandler.ungetText();
 		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
 		buffer.selectionStartCol >= buffer.getLineTailOffset(buffer.selectionStartRow).col) {
 			requestShowMessage(_('Tail of text.'), true);
-			inputHandler.ungetText();
 			inputHandler.ungetStroke();
 			return;
 		}
 		inputHandler.flush();
 		deleteCharsForward(1, {canJoin:true});
-		inputHandler.startPosition = null;
+		inputHandler.invalidateHeadPosition();
+	},
+	'\u0015'/*^U*/: function (c) {
+		this['\u0008'].apply(this, arguments);
 	},
 	'\u0009'/*tab*/: function (c) {
+		if (clipOverrun()) return;
 		insert('\t');
 	},
 	'\u000a'/*^J*/: function (c) {
 		this['\u000d'].apply(this, arguments);
 	},
 	'\u000d'/*enter*/: function (c) {
+		if (clipOverrun()) return;
 		var indent = config.vars.autoindent ? buffer.getIndent(buffer.selectionStart) : '';
 		insert('\n' + indent);
-		cursor.ensureVisible();
-		cursor.update();
 	},
 	'\u0016'/*^V*/: {
 		'edit': function (c, o) {
+			if (clipOverrun()) return;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 			literalInput = new Wasavi.LiteralInput;
@@ -5619,6 +5722,9 @@ var editMap = {
 			literalInput = null;
 			isLastKeyCodeLocked = false;
 		}
+	},
+	'\u0017'/*^W*/: function (c) {
+		this['\u0008'].apply(this, arguments);
 	},
 	'<left>': function (c) {
 		inputHandler.newState();

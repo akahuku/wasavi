@@ -586,6 +586,24 @@ public class InsertionTest extends WasaviTest {
 	}
 
 	@Test
+	public void testBackspaceOverwriteOverrun () {
+		Wasavi.send("afooo\u001bRbar" +
+				Keys.BACK_SPACE +
+				Keys.BACK_SPACE +
+				Keys.BACK_SPACE +
+				Keys.BACK_SPACE +
+				Keys.BACK_SPACE +
+				Keys.ESCAPE);
+		assertValue("#1-1", "foo");
+		assertEquals("#1-2", "bar\u0008\u0008\u0008\u0008\u0008", Wasavi.getRegister("."));
+		assertEquals("#1-3", "Rbar\u0008\u0008\u0008\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "fooo");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo");
+	}
+
+	@Test
 	public void testBackspaceTopOfLine () {
 		Wasavi.send("ifoo\n\u001b");
 		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
@@ -748,6 +766,228 @@ public class InsertionTest extends WasaviTest {
 	}
 
 	@Test
+	public void testDeleteWord () {
+		Wasavi.send("ifoo bar\u0017o\u001b");
+		assertValue("#1-1", "foo o");
+		assertEquals("#1-2", "foo bar\u0017o", Wasavi.getRegister("."));
+		assertEquals("#1-3", "ifoo bar\u0017o\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo o");
+	}
+
+	@Test
+	public void testDeleteWordOverwrite () {
+		Wasavi.send("Rfoo bar\u0017o\u001b");
+		assertValue("#1-1", "foo o");
+		assertEquals("#1-2", "foo bar\u0017o", Wasavi.getRegister("."));
+		assertEquals("#1-3", "Rfoo bar\u0017o\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo o");
+	}
+
+	@Test
+	public void testDeleteWordBoundary () {
+		Wasavi.send("afoo\u001b");
+		Wasavi.send("abar\u0017\u001b");
+		assertValue("#1-1", "foo");
+		Wasavi.send("u");
+		assertValue("#1-2", "foo");
+		Wasavi.send("u");
+		assertValue("#1-3", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo");
+	}
+
+	@Test
+	public void testDeleteWordTopOfLine () {
+		Wasavi.send("ifoo bar\n\u001b");
+		Wasavi.send("a\tbaz\u0017\u0017\u0017\u001b");
+		assertValue("#1-1", "foo bar");
+		assertEquals("#1-2", "\tbaz\u0017\u0017\u0017", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\tbaz\u0017\u0017\u0017\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "foo bar\n");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo bar");
+	}
+
+	@Test
+	public void testDeleteWordTopOfLineOverwrite () {
+		Wasavi.send("ifoo\n\u001b");
+		Wasavi.send("R\u0017\u0017\u001b");
+		assertValue("#1-1", "foo\n");
+		assertEquals("#1-2", "\u0017\u0017", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\u0017\u0017\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo\n");
+	}
+
+	@Test
+	public void testDeleteWordTopOfBuffer () {
+		Wasavi.send("a\u0017\u0017\u001b");
+		assertValue("#1-1", "");
+		assertEquals("#1-2", "", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertTrue("#1-4", Wasavi.getLastMessage().length() > 0);
+		Wasavi.send("\u0012");
+		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
+	}
+
+	@Test
+	public void testDeleteWordTopOfBufferOverwrite () {
+		Wasavi.send("R\u0017\u0017\u001b");
+		assertValue("#1-1", "");
+		assertEquals("#1-2", "", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertTrue("#1-4", Wasavi.getLastMessage().length() > 0);
+		Wasavi.send("\u0012");
+		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
+	}
+
+	@Test
+	public void testDeleteWordMiddleOfLine () {
+		Wasavi.send("ifoo bar baz\u001b");
+		Wasavi.send("a\u0017\u0017\u001b");
+		assertValue("#1-1", "foo ");
+		assertEquals("#1-2", "\u0017\u0017", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\u0017\u0017\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "foo bar baz");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo ");
+	}
+
+	@Test
+	public void testDeleteWordMiddleOfLineOverwrite () {
+		Wasavi.send("ifoo bar baz\u001b");
+		Wasavi.send("R\u0017\u0017\u001b");
+		assertValue("#1-1", "foo bar baz");
+		assertEquals("#1-2", "\u0017\u0017", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\u0017\u0017\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo bar baz");
+	}
+
+	@Test
+	public void testDeleteLine () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("ifoo\u001babar\u0015baz\u001b");
+		assertValue("#1-1", "foobaz");
+		assertEquals("#1-2", "bar\u0015baz", Wasavi.getRegister("."));
+		assertEquals("#1-3", "abar\u0015baz\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foobaz");
+	}
+
+	@Test
+	public void testDeleteLineNoAI () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\t\tfoobar\u0015baz\u001b");
+		assertValue("#1-1", "baz");
+		assertEquals("#1-2", "\t\tfoobar\u0015baz", Wasavi.getRegister("."));
+		assertEquals("#1-3", "i\t\tfoobar\u0015baz\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "baz");
+	}
+
+	@Test
+	public void testDeleteLineAI () {
+		Wasavi.send(":set ai\n");
+		Wasavi.send("i\t\tfoobar\u0015baz\u001b");
+		assertValue("#1-1", "\t\tbaz");
+		assertEquals("#1-2", "\t\tfoobar\u0015baz", Wasavi.getRegister("."));
+		assertEquals("#1-3", "i\t\tfoobar\u0015baz\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "\t\tbaz");
+	}
+
+	@Test
+	public void testDeleteSecondLineNoAI () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("ifoo\n\tbar\u0015\u001b");
+		assertValue("#1-1", "foo\n");
+		assertEquals("#1-2", "foo\n\tbar\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "ifoo\n\tbar\u0015\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo\n");
+	}
+
+	@Test
+	public void testDeleteSecondLineAI () {
+		Wasavi.send(":set ai\n");
+		Wasavi.send("ifoo\n\tbar\u0015\u001b");
+		assertValue("#1-1", "foo\n\t");
+		assertEquals("#1-2", "foo\n\tbar\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "ifoo\n\tbar\u0015\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "foo\n\t");
+	}
+
+	@Test
+	public void testDeleteLineOverrunNoAI () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
+		Wasavi.send("a\u0017\u0017\u0017\u0015\u001b");
+		assertValue("#1-1", "\tfirst\n");
+		assertEquals("#1-2", "\u0017\u0017\u0017\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\u0017\u0017\u0017\u0015\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "\tfirst\n\tsecond\n\tthird");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "\tfirst\n");
+	}
+
+	@Test
+	public void testDeleteLineOverrunAI () {
+		Wasavi.send(":set ai\n");
+		Wasavi.send("i\tfirst\nsecond\nthird\u001b");
+		Wasavi.send("a\u0017\u0017\u0017\u0015\u001b");
+		assertValue("#1-1", "\tfirst\n\t");
+		assertEquals("#1-2", "\u0017\u0017\u0017\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\u0017\u0017\u0017\u0015\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "\tfirst\n\tsecond\n\tthird");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "\tfirst\n\t");
+	}
+
+	@Test
+	public void testDeleteLineOverrunOverwrite () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
+		Wasavi.send("R\u0017\u0017\u0017\u0015\u001b");
+		assertValue("#1-1", "\tfirst\n\tsecond\n\tthird");
+		assertEquals("#1-2", "\u0017\u0017\u0017\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\u0017\u0017\u0017\u0015\u001b", Wasavi.getLastSimpleCommand());
+		Wasavi.send("u");
+		assertValue("#1-4", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-5", "\tfirst\n\tsecond\n\tthird");
+	}
+
+	@Test
 	public void testNewSession () {
 		Wasavi.send("ifoo" + Keys.ARROW_LEFT + "bar\u001b");
 		assertValue("#1-1", "fobaro");
@@ -761,5 +1001,11 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-6", "foo");
 		Wasavi.send("\u0012");
 		assertValue("#1-7", "fobaro");
+	}
+
+	@Test
+	public void lastInputPoint () {
+		Wasavi.send("ifoo\u001b1|gibar\u001b");
+		assertValue("#1-1", "foobar");
 	}
 }

@@ -912,7 +912,8 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", join("\n",
 			"*** marks ***",
 			"mark  line   col   text",
-			"====  =====  ====  ===="
+			"====  =====  ====  ====",
+			" ^        3     6  3 third"
 		), Wasavi.getLastMessage());
 
 		Wasavi.send("1G", "1|:mark a\n");
@@ -921,6 +922,7 @@ public class ExCommandsTest extends WasaviTest {
 			"*** marks ***",
 			"mark  line   col   text",
 			"====  =====  ====  ====",
+			" ^        3     6  3 third",
 			" '        3     6  3 third",
 			" a        1     0  1 first"
 		), Wasavi.getLastMessage());
@@ -931,6 +933,7 @@ public class ExCommandsTest extends WasaviTest {
 			"*** marks ***",
 			"mark  line   col   text",
 			"====  =====  ====  ====",
+			" ^        3     6  3 third",
 			" '        1     0  1 first",
 			" a        1     0  1 first",
 			" b        2     0  2 second"
