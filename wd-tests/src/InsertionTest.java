@@ -12,7 +12,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 public class InsertionTest extends WasaviTest {
-	//@Test
+	@Test
 	public void testInsert () {
 		Wasavi.setInputModeOfWatchTarget("edit");
 		Wasavi.send("ifoobar");
@@ -34,7 +34,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-3", "BAR", Wasavi.getRegister("."));
 	}
 
-	//@Test
+	@Test
 	public void testInsertToTop () {
 		Wasavi.setInputModeOfWatchTarget("edit");
 		Wasavi.send("Ifoobar");
@@ -56,7 +56,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-3", "BAR", Wasavi.getRegister("."));
 	}
 
-	//@Test
+	@Test
 	public void testInsertToTail () {
 		Wasavi.setInputModeOfWatchTarget("edit");
 		Wasavi.send("Afoobar");
@@ -78,7 +78,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-3", "BAR", Wasavi.getRegister("."));
 	}
 
-	//@Test
+	@Test
 	public void testInsertLiteral () {
 		Wasavi.send(":set noai\n");
 
@@ -120,7 +120,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#4-4", "\nbaz");
 	}
 
-	//@Test
+	@Test
 	public void testInsertLiteral_LineInput () {
 		Wasavi.send(":\"\u0016\u000bfoo\n");
 		assertEquals("#1-1", "\"\u000bfoo", Wasavi.getRegister(":"));
@@ -135,7 +135,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-1", "\"\rbaz", Wasavi.getRegister(":"));
 	}
 
-	//@Test
+	@Test
 	public void testInsertByDecimalCodePoint () {
 		Wasavi.send(":set noai\n");
 
@@ -176,7 +176,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#4-4", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testInsertByDecimalCodePoint_LineInput () {
 		// 3 chars
 		Wasavi.send(":\"\u0016009foo\n");
@@ -195,7 +195,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-1", "\"foo", Wasavi.getRegister(":"));
 	}
 
-	//@Test
+	@Test
 	public void testInsertByOctalCodePoint () {
 		Wasavi.send(":set noai\n");
 
@@ -268,7 +268,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#4-8", "bar");
 	}
 
-	//@Test
+	@Test
 	public void testInsertByOctalCodePoint_LineInput () {
 		// 3 chars
 		Wasavi.send(":\"\u0016o011foo\n");
@@ -299,7 +299,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-1", "\"bar", Wasavi.getRegister(":"));
 	}
 
-	//@Test
+	@Test
 	public void testInsertByHexaCodePoint () {
 		Wasavi.send(":set noai\n");
 
@@ -372,7 +372,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#4-8", "bar");
 	}
 
-	//@Test
+	@Test
 	public void testInsertByHexaCodePoint_LineInput () {
 		// 2 chars
 		Wasavi.send(":\"\u0016x09Zoo\n");
@@ -403,7 +403,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-1", "\"bar", Wasavi.getRegister(":"));
 	}
 
-	//@Test
+	@Test
 	public void testInsertByBMPCodePoint () {
 		Wasavi.send(":set noai\n");
 
@@ -444,7 +444,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#4-4", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testInsertByBMPCodePoint_LineInput () {
 		// 4 chars
 		Wasavi.send(":\"\u0016u0009Zoo\n");
@@ -463,7 +463,7 @@ public class InsertionTest extends WasaviTest {
 		assertEquals("#4-1", "\"foo", Wasavi.getRegister(":"));
 	}
 
-	//@Test
+	@Test
 	public void testInsertByUnicodeCodePoint () {
 		Wasavi.send(":set noai\n");
 
@@ -524,7 +524,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#6-5", "Zoo");
 	}
 
-	//@Test
+	@Test
 	public void testInsertByUnicodeCodePoint_LineInput () {
 		// 6 chars
 		Wasavi.send(":\"\u0016U000009Zoo\n");
@@ -553,7 +553,7 @@ public class InsertionTest extends WasaviTest {
 		//assertTrue("#6-2", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testBackspace () {
 		Wasavi.send(
 				"ifoa" +
@@ -569,7 +569,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceOverwrite () {
 		Wasavi.send(
 				"Rfoa" +
@@ -585,7 +585,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceOverwriteOverrun () {
 		Wasavi.send("afooo\u001bRbar" +
 				Keys.BACK_SPACE +
@@ -603,7 +603,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceTopOfLine () {
 		Wasavi.send("ifoo\n\u001b");
 		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
@@ -616,7 +616,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "fo");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceTopOfLineOverwrite () {
 		Wasavi.send("ifoo\n\u001b");
 		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
@@ -629,7 +629,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo\n");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceTopOfBuffer () {
 		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
 		assertValue("#1-1", "");
@@ -641,7 +641,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceTopOfBufferOverwrite () {
 		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
 		assertValue("#1-1", "");
@@ -653,7 +653,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceMiddleOfLine () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
@@ -666,7 +666,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foob");
 	}
 
-	//@Test
+	@Test
 	public void testBackspaceMiddleOfLineOverwrite () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
@@ -679,7 +679,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foobar");
 	}
 
-	//@Test
+	@Test
 	public void testDelete () {
 		Wasavi.send("idar\u001b1|");
 		Wasavi.send("ifoo" + Keys.DELETE + "b" + Keys.ESCAPE);
@@ -692,7 +692,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foobar");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteOverwrite () {
 		Wasavi.send("idar\u001b1|");
 		Wasavi.send("Rf" + Keys.DELETE + "e" + Keys.ESCAPE);
@@ -705,7 +705,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "fe");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteTailOfLine () {
 		Wasavi.send("ifoo\nbar\u001b1G$");
 		Wasavi.send("a" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
@@ -718,7 +718,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "fooar");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteTailOfLineOverwrite () {
 		Wasavi.send("ifoo\nbar\u001b1G$");
 		Wasavi.send("R" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
@@ -731,7 +731,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "fobar");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteTailOfBuffer () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("$a" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
@@ -748,7 +748,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testDeleteTailOfBufferOverwrite () {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send("$R" + Keys.ARROW_RIGHT + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
@@ -765,7 +765,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWord () {
 		Wasavi.send("ifoo bar\u0017o\u001b");
 		assertValue("#1-1", "foo o");
@@ -777,7 +777,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo o");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordOverwrite () {
 		Wasavi.send("Rfoo bar\u0017o\u001b");
 		assertValue("#1-1", "foo o");
@@ -789,7 +789,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo o");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordBoundary () {
 		Wasavi.send("afoo\u001b");
 		Wasavi.send("abar\u0017\u001b");
@@ -804,7 +804,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordTopOfLine () {
 		Wasavi.send("ifoo bar\n\u001b");
 		Wasavi.send("a\tbaz\u0017\u0017\u0017\u001b");
@@ -817,7 +817,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo bar");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordTopOfLineOverwrite () {
 		Wasavi.send("ifoo\n\u001b");
 		Wasavi.send("R\u0017\u0017\u001b");
@@ -830,7 +830,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo\n");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordTopOfBuffer () {
 		Wasavi.send("a\u0017\u0017\u001b");
 		assertValue("#1-1", "");
@@ -842,7 +842,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordTopOfBufferOverwrite () {
 		Wasavi.send("R\u0017\u0017\u001b");
 		assertValue("#1-1", "");
@@ -854,7 +854,7 @@ public class InsertionTest extends WasaviTest {
 		assertTrue("#1-5", Wasavi.getLastMessage().length() > 0);
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordMiddleOfLine () {
 		Wasavi.send("ifoo bar baz\u001b");
 		Wasavi.send("a\u0017\u0017\u001b");
@@ -867,7 +867,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo ");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteWordMiddleOfLineOverwrite () {
 		Wasavi.send("ifoo bar baz\u001b");
 		Wasavi.send("R\u0017\u0017\u001b");
@@ -880,7 +880,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo bar baz");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLine () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifoo\u001babar\u0015baz\u001b");
@@ -893,7 +893,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foobaz");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineNoAI () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\t\tfoobar\u0015baz\u001b");
@@ -906,7 +906,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "baz");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineAI () {
 		Wasavi.send(":set ai\n");
 		Wasavi.send("i\t\tfoobar\u0015baz\u001b");
@@ -919,7 +919,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "\t\tbaz");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteSecondLineNoAI () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifoo\n\tbar\u0015\u001b");
@@ -932,7 +932,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo\n");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteSecondLineAI () {
 		Wasavi.send(":set ai\n");
 		Wasavi.send("ifoo\n\tbar\u0015\u001b");
@@ -945,7 +945,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "foo\n\t");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineOverrunNoAI () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
@@ -959,7 +959,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "\tfirst\n");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineOverrunAI () {
 		Wasavi.send(":set ai\n");
 		Wasavi.send("i\tfirst\nsecond\nthird\u001b");
@@ -973,7 +973,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "\tfirst\n\t");
 	}
 
-	//@Test
+	@Test
 	public void testDeleteLineOverrunOverwrite () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
@@ -987,7 +987,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-5", "\tfirst\n\tsecond\n\tthird");
 	}
 
-	//@Test
+	@Test
 	public void testNewSession () {
 		Wasavi.send("ifoo" + Keys.ARROW_LEFT + "bar\u001b");
 		assertValue("#1-1", "fobaro");
@@ -1003,7 +1003,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#1-7", "fobaro");
 	}
 
-	//@Test
+	@Test
 	public void lastInputPoint () {
 		Wasavi.send("ifoo\u001b1|gibar\u001b");
 		assertValue("#1-1", "foobar");

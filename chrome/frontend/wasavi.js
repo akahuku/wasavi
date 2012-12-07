@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 236 2012-12-07 08:16:25Z akahuku $
+ * @version $Id: wasavi.js 237 2012-12-07 13:45:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1623,15 +1623,8 @@ function executeExCommand (source, isRoot, parseOnly) {
 
 	return parseOnly ? executor : executor.run();
 }
-function executeViCommand (/*, keepRunLevel*/) {
+function executeViCommand (arg, keepRunLevel) {
 	var input = $(LINE_INPUT_ID);
-	var args = Array.prototype.slice.call(arguments);
-	var keepRunLevel = false;
-
-	if (args.length && typeof args[args.length - 1] == 'boolean') {
-		keepRunLevel = args.pop();
-	}
-
 	var cursorState = {visible:cursor.visible};
 	cursor.update({visible:false});
 	cursor.locked = true;
@@ -1642,13 +1635,11 @@ function executeViCommand (/*, keepRunLevel*/) {
 	!keepRunLevel && runLevel++;
 
 	try {
-		for (var j = 0; j < args.length; j++) {
-			var cmd = keyManager.createSequences(args[j]);
-			for (var i = 0, goal = cmd.length; i < goal; i++) {
-				mapManager.process(cmd[i], function (keyCode, e) {
-					processInput(keyCode, e);
-				});
-			}
+		var cmd = keyManager.createSequences(arg);
+		for (var i = 0, goal = cmd.length; i < goal; i++) {
+			mapManager.process(cmd[i], function (keyCode, e) {
+				processInput(keyCode, e);
+			});
 		}
 		mapManager.process(false);
 	}
@@ -1902,8 +1893,11 @@ function processInput (code, e, ignoreAbbreviation) {
 			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
 
 			if (inputHandler.count > 1) {
+				var cmd = keyManager.createSequences(finalStrokeFollowed);
 				for (var i = 1; i < inputHandler.count; i++) {
-					executeViCommand(finalStrokeFollowed);
+					for (var j = 0, goal = cmd.length; j < goal; j++) {
+						processInput(cmd[j].code, cmd[j]);
+					}
 				}
 			}
 
@@ -1940,8 +1934,11 @@ function processInput (code, e, ignoreAbbreviation) {
 			var prevPos = buffer.selectionStart;
 			inputHandler.updateStroke(e);
 			inputHandler.updateHeadPosition();
-			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
 
+			if (config.vars.showmatch && pairBracketsIndicator) {
+				pairBracketsIndicator.clear();
+				pairBracketsIndicator = null;
+			}
 			if (execEditMap(buffer, mapkey, subkey, code)) {
 				// do nothing
 			}
@@ -1954,7 +1951,7 @@ function processInput (code, e, ignoreAbbreviation) {
 					requestShowPrefixInput(getDefaultPrefixInputString());
 				}
 			}
-			if (config.vars.showmatch) {
+			if (config.vars.showmatch && !pairBracketsIndicator) {
 				pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
 					letterActual, buffer, prevPos);
 			}
@@ -5547,10 +5544,20 @@ var commandMap = {
 
 var editMap = {
 	'\u0000'/*^@*/: function (c) {
+		inputHandler.ungetText();
+		if (clipOverrun()) return;
+		if (!registers.exists('.')) {
+			requestShowMessage(_('Last inputted text is undefined.'), true);
+			return;
+		}
+		var cmd = keyManager.createSequences(registers.get('.').data + '\u001b');
+		for (var i = 0, goal = cmd.length; i < goal; i++) {
+			processInput(cmd[i].code, cmd[i], true);
+		}
 	},
 	'\u0004'/*^D*/: function (c) {
-		if (clipOverrun()) return;
 		inputHandler.ungetText();
+		if (clipOverrun()) return;
 		var needShift = c == '\u0014';
 		var n = buffer.selectionStart;
 		var re = /^([ \t]*).*?([0^]?)$/.exec(buffer.rows(n).substring(0, n.col));
@@ -5661,8 +5668,8 @@ var editMap = {
 		}
 	},
 	'\u007f'/*delete*/: function (c) {
-		if (clipOverrun()) return;
 		inputHandler.ungetText();
+		if (clipOverrun()) return;
 		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
 		buffer.selectionStartCol >= buffer.getLineTailOffset(buffer.selectionStartRow).col) {
 			requestShowMessage(_('Tail of text.'), true);
@@ -5697,11 +5704,11 @@ var editMap = {
 	},
 	'\u0016'/*^V*/: {
 		'edit': function (c, o) {
+			inputHandler.ungetText();
 			if (clipOverrun()) return;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(_('{0}: literal input', o.e.fullIdentifier));
 			literalInput = new Wasavi.LiteralInput;
-			inputHandler.ungetText();
 			inputHandler.pushText();
 			inputHandler.pushStroke();
 		},
