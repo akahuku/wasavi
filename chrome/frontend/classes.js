@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 235 2012-12-05 11:56:34Z akahuku $
+ * @version $Id: classes.js 236 2012-12-07 08:16:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -976,10 +976,15 @@ Wasavi.KeyManager = function () {
 			var keyCode = e.keyCode || e.charCode;
 
 			// ctrl code shortcuts: ctrl + *
-			if (e.ctrlKey && keyCode >= 64 && keyCode <= 127) {
+			if (e.ctrlKey && keyCode >= 64 && keyCode <= 95) {
 				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
 				c.push(baseKeyName);
 				logicalCharCode = keyCode & 0x1f;
+			}
+			else if (e.ctrlKey && keyCode == 32) {
+				baseKeyName = '^@';
+				c.push(baseKeyName);
+				logicalCharCode = 0;
 			}
 			// printable chars
 			else if (keyCode >= 32 && keyCode <= 127) {
@@ -1647,7 +1652,7 @@ Wasavi.Marks = function (app, ignoreStorage) {
 		app.dataset('wasaviMarks', serialize());
 	}
 	function isValidName (name) {
-		return /^[a-z'\^]$/.test(name);
+		return /^[a-z'\^]/.test(name);
 	}
 	function regalizeName (name) {
 		if (name == '`') {
@@ -1662,9 +1667,22 @@ Wasavi.Marks = function (app, ignoreStorage) {
 			save();
 		}
 	}
+	function setPrivate (name, pos) {
+		name = '$' + name;
+		if (pos) {
+			marks[name] = pos;
+		}
+		else {
+			delete marks[name];
+		}
+	}
 	function get (name) {
 		name = regalizeName(name);
 		return isValidName(name) && name in marks ? marks[name] : undefined;
+	}
+	function getPrivate (name) {
+		name = '$' + name;
+		return name in marks ? marks[name] : undefined;
 	}
 	function setJumpBaseMark (pos) {
 		set("'", pos || app.buffer.selectionStart);
@@ -1685,7 +1703,7 @@ Wasavi.Marks = function (app, ignoreStorage) {
 			for (var i in marks) {
 				var m = marks[i];
 				if (m.row >= buffer.rowLength
-				||  m.row == buffer.rowLength - 1 && m.col > buffer.rows(m.row)) {
+				||  m.row == buffer.rowLength - 1 && m.col > buffer.rows(m.row).length) {
 					m.row = m.col = 0;
 				}
 				if (m.row > pos.row || m.row == pos.row && m.col >= pos.col) {
@@ -1778,6 +1796,7 @@ Wasavi.Marks = function (app, ignoreStorage) {
 			  'mark  line   col   text',
 			  '====  =====  ====  ===='];
 		for (var i in marks) {
+			if (i.charAt(0) == '$') continue;
 			a.push(
 				' ' + i + '  ' +
 				'  ' + ('    ' + (marks[i].row + 1)).substr(-5) +
@@ -1802,6 +1821,8 @@ Wasavi.Marks = function (app, ignoreStorage) {
 	}
 	this.set = set;
 	this.get = get;
+	this.setPrivate = setPrivate;
+	this.getPrivate = getPrivate;
 	this.setJumpBaseMark = setJumpBaseMark;
 	this.setInputOriginMark = setInputOriginMark;
 	this.getJumpBaseMark = getJumpBaseMark;
@@ -2074,27 +2095,32 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getLineTopOffset2: function () {
 			var a = arg2pos(arguments);
-			var re = /^(\s*).*\n$/.exec(this.elm.childNodes[a.row].textContent);
+			var re = /^([\t ]*).*\n$/.exec(this.elm.childNodes[a.row].textContent);
 			a.col = re ? re[1].length : 0;
 			return a;
 		},
 		getIndent: function () {
 			var a = arg2pos(arguments);
-			var re = /^\s*/.exec(this.rows(a));
-			return re[0];
+			var line = '';
+			while (a.row >= 0 &&
+				(
+					this.rowNodes(a).getAttribute('data-indent-ignore') == '1' ||
+					this.rows(a) == ''
+				)
+			) {
+				a.row--;
+			}
+			return a.row >= 0 ? /^[\t ]*/.exec(this.rows(a))[0] : '';
 		},
 		getBackIndent: function () {
 			var a = arg2pos(arguments);
-			var result = '';
-			while (--a.row > 0) {
-				var line = this.rows(a);
-				if (line != '') {
-					var re = /^\s*/.exec(line);
-					result = re[0];
-					break;
-				}
-			}
-			return result;
+			while (--a.row >= 0 &&
+				(
+					this.rowNodes(a).getAttribute('data-indent-ignore') == '1' ||
+					this.rows(a) == ''
+				)
+			) {}
+			return a.row >= 0 ? /^[\t ]*/.exec(this.rows(a))[0] : '';
 		},
 		getSpans: function (className) {
 			return document.querySelectorAll(

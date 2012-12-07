@@ -124,7 +124,7 @@ Commands implemented
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
-  w W b B e E gg gj gk g^ g$ G H M L f F t T n N
+  w W b B e E gg gj gk g^ g$ gi G H M L f F t T n N
 
 ### range-symbol (also known as "text object" in vim):
 
@@ -150,6 +150,31 @@ Commands implemented
 
 Specifying addresses in ex command is full supported: absolute line number,
 relative line number, regal expression. also, wasavi accepts offset.
+
+
+
+Commands in input mode
+--------------------
+
+* ^D ^H ^T ^U ^V ^W
+
+^D accepts the last ^ and 0.
+
+
+
+Commands in line input mode
+--------------------
+
+* ^A: move cursor to top of line
+* ^B: back
+* ^E: move cursor to end of line
+* ^F: forward
+* ^H: delete a character
+* ^N: next history
+* ^P: previous history
+* ^U: delete whole line
+* ^V: literal input
+* ^W: delete a word
 
 
 

@@ -496,6 +496,10 @@
 		"message": "置き換える文字数が多すぎます。",
 		"description": "Replace count too large."
 	},
+	"you_are_in_the_restricted_region": {
+		"message": "保護された領域内です。",
+		"description": "You are in the restricted region."
+	},
 	"shifted_@0_line": {
 		"message": "{0} 行が右シフトされました。",
 		"description": "Shifted {0} {line:0}."
@@ -555,6 +559,10 @@
 	"mark_@0_is_not_set": {
 		"message": "マーク {0} はセットされていません。",
 		"description": "Mark {0} is not set."
+	},
+	"last_inputted_position_is_undefined": {
+		"message": "最後の編集位置は未定義です。",
+		"description": "Last inputted position is undefined."
 	},
 	"unknown_gprefixed_command_@0": {
 		"message": "未知の g 始まりのコマンド: {0}",

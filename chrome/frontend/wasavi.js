@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 235 2012-12-05 11:56:34Z akahuku $
+ * @version $Id: wasavi.js 236 2012-12-07 08:16:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -219,10 +219,6 @@ ExCommandExecutor.prototype = {
 			marks.setJumpBaseMark(ss);
 			isJumpBaseUpdateRequested = false;
 		}
-
-
-
-
 		if (result.flags.hash || result.flags.list || result.flags.print) {
 			var n = Math.max(0, Math.min(
 				buffer.selectionStartRow + result.flagoff, t.rowLength - 1));
@@ -1954,7 +1950,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				processAbbrevs();
 				if (runLevel == 0) {
 					cursor.ensureVisible();
-					cursor.update();
+					cursor.update({visible:true, focused:true});
 					requestShowPrefixInput(getDefaultPrefixInputString());
 				}
 			}
@@ -5550,6 +5546,40 @@ var commandMap = {
  */
 
 var editMap = {
+	'\u0000'/*^@*/: function (c) {
+	},
+	'\u0004'/*^D*/: function (c) {
+		if (clipOverrun()) return;
+		inputHandler.ungetText();
+		var needShift = c == '\u0014';
+		var n = buffer.selectionStart;
+		var re = /^([ \t]*).*?([0^]?)$/.exec(buffer.rows(n).substring(0, n.col));
+		var tmpMark = 'edit-shifter';
+		if (needShift || re) {
+			inputHandler.flush();
+			if (!needShift && re[2]) {
+				n.col--;
+				buffer.selectionStart = n;
+				deleteSelection();
+				marks.setPrivate(tmpMark, buffer.selectionStart);
+				n.col = 0;
+				buffer.selectionStart = n;
+				n.col = re[1].length;
+				buffer.selectionEnd = n;
+				deleteSelection();
+				buffer.setSelectionRange(marks.getPrivate(tmpMark));
+				marks.setPrivate(tmpMark);
+				re[2] == '^' && buffer.rowNodes(n).setAttribute('data-indent-ignore', '1');
+			}
+			else {
+				marks.setPrivate(tmpMark, buffer.selectionStart);
+				(needShift ? shift : unshift)();
+				buffer.setSelectionRange(marks.getPrivate(tmpMark));
+				marks.setPrivate(tmpMark);
+			}
+			inputHandler.invalidateHeadPosition();
+		}
+	},
 	'\u0008'/*backspace*/: function (c) {
 		inputHandler.ungetText();
 
@@ -5643,6 +5673,9 @@ var editMap = {
 		deleteCharsForward(1, {canJoin:true});
 		inputHandler.invalidateHeadPosition();
 	},
+	'\u0014'/*^T*/: function (c) {
+		this['\u0004'].apply(this, arguments);
+	},
 	'\u0015'/*^U*/: function (c) {
 		this['\u0008'].apply(this, arguments);
 	},
@@ -5656,6 +5689,10 @@ var editMap = {
 	'\u000d'/*enter*/: function (c) {
 		if (clipOverrun()) return;
 		var indent = config.vars.autoindent ? buffer.getIndent(buffer.selectionStart) : '';
+		if (indent != '') {
+			inputHandler.text += indent;
+			inputHandler.textFragment += indent;
+		}
 		insert('\n' + indent);
 	},
 	'\u0016'/*^V*/: {
