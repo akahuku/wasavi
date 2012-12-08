@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: utils.js 238 2012-12-08 03:22:42Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -460,6 +460,22 @@ function _ () {
 			return $1.substr(0, $1.length - 1) + 'ies';
 		}
 		return $1 + 's';
+	});
+}
+function setTabStop (ts) {
+	var editor = $(EDITOR_CORE_ID);
+	if (!editor) return;
+
+	ts || (ts = 8);
+	var editorStyle = document.defaultView.getComputedStyle(editor, '');
+	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
+		if (!(pn in editorStyle)) return false;
+		editor.style[pn] = ts;
+		['wasavi_singleline_scaler'].forEach(function (en) {
+			en = $(en);
+			if (en) en.style[pn] = ts;
+		});
+		return true;
 	});
 }
 

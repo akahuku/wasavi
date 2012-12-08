@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 237 2012-12-07 13:45:19Z akahuku $
+ * @version $Id: wasavi.js 238 2012-12-08 03:22:42Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1019,23 +1019,6 @@ function setGeometory (target) {
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight));
 	config.setData('columns', parseInt(editor.clientWidth / charWidth));
-}
-function setTabStop (ts) {
-	var editor = $(EDITOR_CORE_ID);
-	if (!editor) return;
-
-	ts || (ts = 8);
-	var editorStyle = document.defaultView.getComputedStyle(editor, '');
-	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
-		if (!(ts in editorStyle)) return false;
-		editor.style[pn] = ts;
-		['wasavi_singleline_scaler'].forEach(function (en) {
-			en = $(en);
-			if (!en) return;
-			en.style[pn] = ts;
-		});
-		return true;
-	});
 }
 function setInputMode (newInputMode, newInputModeSub, initial) {
 	var newState;
@@ -2259,6 +2242,8 @@ function execMap (target, e, map, key, subkey, code, pos) {
 		var opts = {
 			target:target,
 			e:e,
+			key:key,
+			subkey:subkey,
 			selectionStart:pos && pos.s || buffer.selectionStart,
 			selectionEnd:pos && pos.e || buffer.selectionEnd
 		};
@@ -3987,7 +3972,7 @@ var lastMessage;
 
 var commandMap = {
 	// internal special
-	'\u0000': function (c) {
+	'\u0000': function () {
 		return true;
 	},
 
@@ -4178,7 +4163,7 @@ var commandMap = {
 	},
 	'<': {
 		'command': operationDefault,
-		'@op': function (c) {
+		'@op': function (c, o) {
 			if (c == prefixInput.operation) {
 				this._.apply(this, arguments);
 			}
@@ -4187,7 +4172,7 @@ var commandMap = {
 			}
 
 			buffer.regalizeSelectionRelation();
-			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+			var isLineOrient = o.key == prefixInput.operation || isVerticalMotion;
 			var actualCount = buffer.selectionEndRow - buffer.selectionStartRow + 1;
 
 			// special shift behavior followed vim.
@@ -4196,7 +4181,7 @@ var commandMap = {
 				buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
 			}
 
-			unshift(actualCount);
+			(o.key == '<' ? unshift : shift)(actualCount);
 			buffer.setSelectionRange(buffer.getLineTopOffset2(buffer.selectionStart));
 			isVerticalMotion = true;
 			prefixInput.motion = c;
@@ -4206,30 +4191,8 @@ var commandMap = {
 	},
 	'>': {
 		'command': operationDefault,
-		'@op': function (c, opts) {
-			if (c == prefixInput.operation) {
-				this._.apply(this, arguments);
-			}
-			if (requestedState.notice) {
-				return false;
-			}
-
-			buffer.regalizeSelectionRelation();
-			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
-			var actualCount = buffer.selectionEndRow - buffer.selectionStartRow + 1;
-
-			// special shift behavior followed vim.
-			if (!isLineOrient && buffer.selectionEndCol == 0 && actualCount > 1) {
-				actualCount--;
-				buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
-			}
-
-			shift(actualCount);
-			buffer.setSelectionRange(buffer.getLineTopOffset2(buffer.selectionStart));
-			isVerticalMotion = true;
-			prefixInput.motion = c;
-			requestSimpleCommandUpdate();
-			return true;
+		'@op': function () {
+			return this['<']['@op'].apply(this, arguments);
 		}
 	},
 
@@ -4251,8 +4214,8 @@ var commandMap = {
 	D: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
 			this.$('', buffer);
-			isVerticalMotion = false;
 			prefixInput.operation = c;
+			isVerticalMotion = false;
 			return this.d['@op'].call(this, '', buffer);
 		}
 		return inputEscape(o.e.fullIdentifier);
@@ -4298,7 +4261,7 @@ var commandMap = {
 	'^': function (c) {
 		return (isDenotativeState() ? motionLineStartDenotative : motionLineStart)(c, false);
 	},
-	'<home>': function (c) {
+	'<home>': function () {
 		return this['^'].apply(this, arguments);
 	},
 	// jump to end of line
@@ -4311,7 +4274,7 @@ var commandMap = {
 		count > 1 && motionDown(c, count - 1);
 		return motionLineEnd(c, false);
 	},
-	'<end>': function (c) {
+	'<end>': function () {
 		return this.$.apply(this, arguments);
 	},
 	// jump to matching <, (, {, or [
@@ -4330,7 +4293,7 @@ var commandMap = {
 	// direct jump to specified column
 	'|': function (c) {
 		// TODO: need to treat specified column index as logical number
-		//       which in consideration of a proportinal font width.
+		//       which in consideration of a proportional font width.
 		var n = buffer.selectionStart;
 		n.col = Math.min(prefixInput.count - 1, buffer.rows(n).length);
 		buffer.extendSelectionTo(n);
@@ -4400,14 +4363,14 @@ var commandMap = {
 			requestInputMode('line-input', '', c);
 			lastRegexFindCommand.push({
 				head: c,
-				direction: 1,
+				direction: c == '/' ? 1 : -1,
 				offset: buffer.selectionStart,
 				scrollTop: buffer.scrollTop,
 				scrollLeft: buffer.scrollLeft
 			});
 			return false;
 		},
-		'line-input': function (c) {
+		'line-input': function (c, o) {
 			var pattern;
 			if (c != '') {
 				lastRegexFindCommand.setPattern(c, true);
@@ -4422,12 +4385,16 @@ var commandMap = {
 			}
 			lineInputHistories.push(pattern);
 			return motionFindByRegexFacade(
-				pattern, prefixInput.count, 1, lastRegexFindCommand.verticalOffset);
+				pattern,
+				prefixInput.count,
+				o.key == '/' ? 1 : -1,
+				lastRegexFindCommand.verticalOffset);
 		},
-		'@line-input-notify': function (c) {
+		'@line-input-notify': function (c, o) {
 			if (config.vars.searchincr) {
 				lastRegexFindCommand.setPattern(c, true);
-				var r = motionFindByRegexForward(lastRegexFindCommand.pattern, 1);
+				var r = (o.key == '/' ? motionFindByRegexForward : motionFindByRegexBackward)
+					(lastRegexFindCommand.pattern, 1);
 				if (r) {
 					buffer.setSelectionRange(r.offset, r.offset + r.matchLength);
 					cursor.ensureVisible();
@@ -4452,60 +4419,20 @@ var commandMap = {
 	},
 	// search backward
 	'?': {
-		'command': function (c) {
-			prefixInput.motion = c;
-			lineInputHistories.defaultName = '/';
-			requestInputMode('line-input', '', c);
-			lastRegexFindCommand.push({
-				head: c,
-				direction: -1,
-				offset: buffer.selectionStart,
-				scrollTop: buffer.scrollTop,
-				scrollLeft: buffer.scrollLeft
-			});
-			return false;
+		'command': function (c, o) {
+			return this['/'][o.subkey].apply(this, arguments);
 		},
-		'line-input': function (c) {
-			var pattern;
-			if (c != '') {
-				lastRegexFindCommand.setPattern(c, true);
-				registers.set('/', lastRegexFindCommand.pattern, false);
-				pattern = lastRegexFindCommand.pattern;
-			}
-			else {
-				if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
-					requestShowMessage(_('No previous search pattern.'), true);
-					return true;
-				}
-			}
-			lineInputHistories.push(pattern);
-			return motionFindByRegexFacade(
-				pattern, prefixInput.count, -1, lastRegexFindCommand.verticalOffset);
+		'line-input': function (c, o) {
+			return this['/'][o.subkey].apply(this, arguments);
 		},
-		'@line-input-notify': function (c) {
-			if (config.vars.searchincr) {
-				lastRegexFindCommand.setPattern(c, true);
-				var r = motionFindByRegexBackward(lastRegexFindCommand.pattern, 1);
-				if (r) {
-					buffer.setSelectionRange(r.offset, r.offset + r.matchLength);
-					cursor.ensureVisible();
-					buffer.emphasis(undefined, r.matchLength);
-				}
-			}
+		'@line-input-notify': function (c, o) {
+			return this['/'][o.subkey].apply(this, arguments);
 		},
-		'@line-input-reset': function (c) {
-			buffer.unEmphasis();
-			buffer.setSelectionRange(lastRegexFindCommand.offset);
-			buffer.scrollTop = lastRegexFindCommand.scrollTop;
-			buffer.scrollLeft = lastRegexFindCommand.scrollLeft;
+		'@line-input-reset': function (c, o) {
+			return this['/'][o.subkey].apply(this, arguments);
 		},
-		'@line-input-escape': function (c) {
-			buffer.unEmphasis();
-			buffer.setSelectionRange(lastRegexFindCommand.offset);
-			buffer.scrollTop = lastRegexFindCommand.scrollTop;
-			buffer.scrollLeft = lastRegexFindCommand.scrollLeft;
-			cursor.update({visible:true});
-			cursor.ensureVisible();
+		'@line-input-escape': function (c, o) {
+			return this['/'][o.subkey].apply(this, arguments);
 		}
 	},
 	// return to line specified by following mark, first white position on line, line orient motion
@@ -4523,10 +4450,15 @@ var commandMap = {
 				if ('\'`[]'.indexOf(c) >= 0) {
 					marks.setJumpBaseMark();
 				}
-				buffer.extendSelectionTo(buffer.getLineTopOffset2(offset));
-				isVerticalMotion = true;
+				if (o.key == "'") {
+					buffer.extendSelectionTo(buffer.getLineTopOffset2(offset));
+					isVerticalMotion = true;
+					idealWidthPixels = -1;
+				}
+				else {
+					buffer.extendSelectionTo(offset);
+				}
 				isSmoothScrollRequested = true;
-				idealWidthPixels = -1;
 				return true;
 			}
 			else {
@@ -4538,73 +4470,54 @@ var commandMap = {
 	// return to marked line at remembered column, character orient motion
 	'`': {
 		'command': function (c, o) {
-			prefixInput.motion = c;
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: return to mark', o.e.fullIdentifier));
-			return false;
+			return this["'"][o.subkey].apply(this, arguments);
 		},
 		'wait-a-letter': function (c, o) {
-			prefixInput.appendMotion(c);
-			var offset = marks.get(c);
-			if (offset != undefined) {
-				if ('\'`[]'.indexOf(c) >= 0) {
-					marks.setJumpBaseMark();
-				}
-				buffer.extendSelectionTo(offset);
-				isSmoothScrollRequested = true;
-				return true;
-			}
-			else {
-				requestShowMessage(_('Mark {0} is not set.', c), true);
-				return inputEscape(o.e.fullIdentifier);
-			}
+			return this["'"][o.subkey].apply(this, arguments);
 		}
 	},
 	// back an sentence
-	'(': function (c) {
+	'(': function (c, o) {
 		prefixInput.motion = c;
-		var pos = searchUtils.findSentenceBoundary(prefixInput.count, false, true);
+		var pos = searchUtils.findSentenceBoundary(
+			prefixInput.count, o.key == ')', true);
 		if (pos) {
 			marks.setJumpBaseMark();
-			buffer.selectionStart = pos;
+			if (o.key == '(') {
+				buffer.selectionStart = pos;
+			}
+			else {
+				buffer.selectionEnd = pos;
+			}
 			return true;
 		}
 		return inputEscape(prefixInput.motion);
 	},
 	// forward an sentence
-	')': function (c) {
-		prefixInput.motion = c;
-		var pos = searchUtils.findSentenceBoundary(prefixInput.count, true, true);
-		if (pos) {
-			marks.setJumpBaseMark();
-			buffer.selectionEnd = pos;
-			return true;
-		}
-		return inputEscape(prefixInput.motion);
+	')': function () {
+		return this['('].apply(this, arguments);
 	},
 	// back a paragraph
-	'{': function (c) {
+	'{': function (c, o) {
 		prefixInput.motion = c;
-		var pos = searchUtils.findParagraphBoundary(prefixInput.count, false, true);
+		var pos = searchUtils.findParagraphBoundary(
+			prefixInput.count, o.key == '}', true);
 		if (pos) {
 			marks.setJumpBaseMark();
-			buffer.selectionStart = pos;
+			if (o.key == '{') {
+				buffer.selectionStart = pos;
+			}
+			else {
+				buffer.selectionEnd = pos;
+			}
 			isVerticalMotion = prefixInput.isEmptyOperation;
 			return true;
 		}
 		return inputEscape(prefixInput.motion);
 	},
 	// forward a paragraph
-	'}': function (c) {
-		prefixInput.motion = c;
-		var pos = searchUtils.findParagraphBoundary(prefixInput.count, true, true);
-		if (pos) {
-			marks.setJumpBaseMark();
-			buffer.selectionEnd = pos;
-			isVerticalMotion = prefixInput.isEmptyOperation;
-			return true;
-		}
-		return inputEscape(prefixInput.motion);
+	'}': function () {
+		return this['{'].apply(this, arguments);
 	},
 	// move to previous section
 	'[': {
@@ -4631,11 +4544,8 @@ var commandMap = {
 	},
 	// move to next section
 	']': {
-		'command': function (c) {
-			prefixInput.motion = c;
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput();
-			return false;
+		'command': function (c, o) {
+			return this['['][o.subkey].apply(this, arguments);
 		},
 		'wait-a-letter': function (c) {
 			if (c == prefixInput.motion) {
@@ -4652,7 +4562,7 @@ var commandMap = {
 			return inputEscape(prefixInput.motion);
 		}
 	},
-	'\u000d'/*enter*/: function (c) {
+	'\u000d'/*enter*/: function () {
 		return this['+'].apply(this, arguments);
 	},
 	'0': function (c) {
@@ -4666,82 +4576,69 @@ var commandMap = {
 	j: function (c) {
 		return callDenotativeFunction(c, prefixInput.count, true);
 	},
-	'\u000e'/*^N*/: function (c) {
+	'\u000e'/*^N*/: function () {
 		return this.j.apply(this, arguments);
 	},
-	'<down>': function (c) {
+	'<down>': function () {
 		return this.j.apply(this, arguments);
 	},
 	k: function (c) {
 		return callDenotativeFunction(c, prefixInput.count);
 	},
-	'\u0010'/*^P*/: function (c) {
+	'\u0010'/*^P*/: function () {
 		return this.k.apply(this, arguments);
 	},
-	'<up>': function (c) {
+	'<up>': function () {
 		return this.k.apply(this, arguments);
 	},
 	h: function (c) {
 		return motionLeft(c, prefixInput.count);
 	},
-	'<left>': function (c) {
+	'<left>': function () {
 		return this.h.apply(this, arguments);
 	},
-	'\u0008'/*^H*/: function (c) {
+	'\u0008'/*^H*/: function () {
 		return this.h.apply(this, arguments);
 	},
 	l: function (c) {
 		return motionRight(c, prefixInput.count);
 	},
-	' ': function (c, opts) {
-		return this[opts.e.shift ? 'h' : 'l'].apply(this, arguments);
+	' ': function (c, o) {
+		return this[o.e.shift ? 'h' : 'l'].apply(this, arguments);
 	},
-	'<right>': function (c) {
+	'<right>': function () {
 		return this.l.apply(this, arguments);
 	},
-	w: function (c) {
+	w: function (c, o) {
 		if (prefixInput.operation == 'c') {
-			motionNextWord(c, prefixInput.count, false, true);
+			motionNextWord(c, prefixInput.count, o.key == 'W', true);
 			if (!buffer.isNewline(buffer.selectionEnd)) {
 				buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
 			}
 			return true;
 		}
 		else {
-			return motionNextWord(c, prefixInput.count, false);
+			return motionNextWord(c, prefixInput.count, o.key == 'W');
 		}
 	},
-	W: function (c) {
-		if (prefixInput.operation == 'c') {
-			motionNextWord(c, prefixInput.count, true, true);
-			if (!buffer.isNewline(buffer.selectionEnd)) {
-				buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
-			}
-			return true;
-		}
-		else {
-			return motionNextWord(c, prefixInput.count, true);
-		}
+	W: function () {
+		return this.w.apply(this, arguments);
 	},
-	b: function (c) {
-		motionPrevWord(c, prefixInput.count, false);
+	b: function (c, o) {
+		motionPrevWord(c, prefixInput.count, o.key == 'B');
 		if (prefixInput.operation == 'c' && buffer.selectionEndCol == 0) {
 			buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
 		}
 		return true;
 	},
-	B: function (c) {
-		motionPrevWord(c, prefixInput.count, true);
-		if (prefixInput.operation == 'c' && buffer.selectionEndCol == 0) {
-			buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
-		}
-		return true;
+	B: function () {
+		return this.b.apply(this, arguments);
 	},
-	e: function (c) {
-		return motionNextWord(c, prefixInput.count, false, true);
+	e: function (c, o) {
+		return motionNextWord(c, prefixInput.count, o.key == 'E', true);
 	},
-	E: function (c) {
-		return motionNextWord(c, prefixInput.count, true, true);
+	E: function () {
+		return this.e.apply(this, arguments);
 	},
 	g: {
 		'command': function (c, o) {
@@ -4861,75 +4758,66 @@ var commandMap = {
 		'command': function (c, o) {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
+			requestShowPrefixInput(
+				o.key == 'f' ?
+					_('{0}: find forward', o.e.fullIdentifier) :
+					_('{0}: find backward', o.e.fullIdentifier)
+			);
 			return false;
 		},
-		'wait-a-letter': function (c) {
+		'wait-a-letter': function (c, o) {
 			prefixInput.trailer = c;
-			return motionFindForward(c, prefixInput.count);
+			return (o.key == 'f' ? motionFindForward : motionFindBackward)(c, prefixInput.count);
 		}
 	},
 	F: {
 		'command': function (c, o) {
-			prefixInput.motion = c;
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
-			return false;
+			return this.f[o.subkey].apply(this, arguments);
 		},
-		'wait-a-letter': function (c) {
-			prefixInput.trailer = c;
-			return motionFindBackward(c, prefixInput.count);
+		'wait-a-letter': function (c, o) {
+			return this.f[o.subkey].apply(this, arguments);
 		}
 	},
 	t: {
 		'command': function (c, o) {
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: find forward', o.e.fullIdentifier));
+			requestShowPrefixInput(
+				o.key == 'f' ?
+					_('{0}: find forward', o.e.fullIdentifier) :
+					_('{0}: find backward', o.e.fullIdentifier)
+			);
 			return false;
 		},
-		'wait-a-letter': function (c) {
+		'wait-a-letter': function (c, o) {
 			prefixInput.trailer = c;
-			return motionFindForward(c, prefixInput.count, true);
+			return (o.key == 't' ? motionFindForward : motionFindBackward)(c, prefixInput.count, true);
 		}
 	},
 	T: {
 		'command': function (c, o) {
-			prefixInput.motion = c;
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(_('{0}: find backward', o.e.fullIdentifier));
-			return false;
+			return this.t[o.subkey].apply(this, arguments);
 		},
-		'wait-a-letter': function (c) {
-			prefixInput.trailer = c;
-			return motionFindBackward(c, prefixInput.count, true);
+		'wait-a-letter': function (c, o) {
+			return this.t[o.subkey].apply(this, arguments);
 		}
 	},
 	// search next match for current pattern
-	n: function (c) {
+	n: function (c, o) {
 		if (registers.exists('/')) {
 			prefixInput.motion = c;
 			isSmoothScrollRequested = true;
 			return motionFindByRegexFacade(
 				registers.get('/').data, prefixInput.count,
-				lastRegexFindCommand.direction,
+				lastRegexFindCommand.direction * (o.key == 'n' ? 1 : -1),
 				lastRegexFindCommand.verticalOffset);
 		}
 		requestShowMessage(_('No previous search pattern.'), true);
 		return false;
 	},
 	// search previous match for current pattern
-	N: function (c) {
-		if (registers.exists('/')) {
-			prefixInput.motion = c;
-			isSmoothScrollRequested = true;
-			return motionFindByRegexFacade(
-				registers.get('/').data, prefixInput.count,
-				-lastRegexFindCommand.direction,
-				lastRegexFindCommand.verticalOffset);
-		}
-		requestShowMessage(_('No previous search pattern.'), true);
-		return false;
+	N: function () {
+		return this.n.apply(this, arguments);
 	},
 
 	/*
@@ -4939,38 +4827,30 @@ var commandMap = {
 	// scroll up half (height of screen) lines
 	'\u0015'/*^U*/: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
+			var dir = o.key == '\u0015' ? -1 : 1;
 			return scrollView(c, function (v) {
 				if (config.vars.scroll > 0) {
-					return -config.vars.scroll * prefixInput.count;
+					return dir * config.vars.scroll * prefixInput.count;
 				}
 				else {
-					return -parseInt(v.lines / 2) * prefixInput.count;
+					return dir * parseInt(v.lines / 2) * prefixInput.count;
 				}
 			});
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll down half (height of screen) lines
-	'\u0004'/*^D*/: function (c, o) {
-		if (prefixInput.isEmptyOperation) {
-			return scrollView(c, function (v) {
-				if (config.vars.scroll > 0) {
-					return config.vars.scroll * prefixInput.count;
-				}
-				else {
-					return parseInt(v.lines / 2) * prefixInput.count;
-				}
-			});
-		}
-		return inputEscape(o.e.fullIdentifier);
+	'\u0004'/*^D*/: function () {
+		return this['\u0015'].apply(this, arguments);
 	},
 	// scroll up 1 line
 	'\u0019'/*^Y*/: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
 			var ss = config.vars.smooth;
+			var dir = o.key == '\u0019' ? -1 : 1;
 			config.vars.smooth = false;
 			try {
-				return scrollView(c, -prefixInput.count);
+				return scrollView(c, dir * prefixInput.count);
 			}
 			finally {
 				config.vars.smooth = ss;
@@ -4979,42 +4859,28 @@ var commandMap = {
 		return inputEscape(o.e.fullIdentifier);
 	},
 	// scroll down 1 line
-	'\u0005'/*^E*/: function (c, o) {
-		if (prefixInput.isEmptyOperation) {
-			var ss = config.vars.smooth;
-			config.vars.smooth = false;
-			try {
-				return scrollView(c, prefixInput.count);
-			}
-			finally {
-				config.vars.smooth = ss;
-			}
-		}
-		return inputEscape(o.e.fullIdentifier);
+	'\u0005'/*^E*/: function () {
+		return this['\u0019'].apply(this, arguments);
 	},
 	// scroll up (height of screen - 2) lines
 	'\u0002'/*^B*/: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
+			var dir = (o.key == '\u0002' || o.key == '<pageup>') ? -1 : 1;
 			return scrollView(c, function (v) {
-				return -Math.max(v.lines - 2, 1) * prefixInput.count;
+				return dir * Math.max(v.lines - 2, 1) * prefixInput.count;
 			});
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
-	'<pageup>': function (c) {
+	'<pageup>': function () {
 		return this['\u0002'].apply(this, arguments);
 	},
 	// scroll down (height of screen - 2) lines
-	'\u0006'/*^F*/: function (c, o) {
-		if (prefixInput.isEmptyOperation) {
-			return scrollView(c, function (v) {
-				return Math.max(parseInt(v.lines - 2), 1) * prefixInput.count;
-			});
-		}
-		return inputEscape(o.e.fullIdentifier);
+	'\u0006'/*^F*/: function () {
+		return this['\u0002'].apply(this, arguments);
 	},
-	'<pagedown>': function (c) {
-		return this['\u0006'].apply(this, arguments);
+	'<pagedown>': function () {
+		return this['\u0002'].apply(this, arguments);
 	},
 	// z: screen adjustment
 	//   z<CR> (top of the screen)
@@ -5094,8 +4960,8 @@ var commandMap = {
 	 * special key
 	 */
 
-	'\u0009'/*tab*/: function (c, opts) {
-		quickActivation && fireEvent('focus-changed', {direction:opts.e.shift ? -1 : 1});
+	'\u0009'/*tab*/: function (c, o) {
+		quickActivation && fireEvent('focus-changed', {direction:o.e.shift ? -1 : 1});
 		return false;
 	},
 
@@ -5107,44 +4973,34 @@ var commandMap = {
 		if (prefixInput.isEmptyOperation) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
-			return deleteCharsForward(prefixInput.count, {yank:true});
+			return (o.key == 'x' || o.key == '\u007f' ?
+				deleteCharsForward : deleteCharsBackward)(prefixInput.count, {yank:true});
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
-	'\u007f'/*delete*/: function (c) {
+	'\u007f'/*delete*/: function () {
 		return this.x.apply(this, arguments);
 	},
-	X: function (c, o) {
-		if (prefixInput.isEmptyOperation) {
-			prefixInput.operation = c;
-			requestSimpleCommandUpdate();
-			return deleteCharsBackward(prefixInput.count, {yank:true});
-		}
-		return inputEscape(o.e.fullIdentifier);
+	X: function () {
+		return this.x.apply(this, arguments);
 	},
 	p: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
 			return paste(prefixInput.count, {
-				isForward:true,
+				isForward:o.key == 'p',
 				register:prefixInput.register
 			});
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
-	P: function (c, o) {
-		if (prefixInput.isEmptyOperation) {
-			prefixInput.operation = c;
-			requestSimpleCommandUpdate();
-			return paste(prefixInput.count, {
-				register:prefixInput.register
-			});
-		}
-		return inputEscape(o.e.fullIdentifier);
+	P: function () {
+		return this.p.apply(this, arguments);
 	},
 	J: function (c, o) {
-		if (prefixInput.isEmptyOperation && buffer.selectionStartRow + prefixInput.count <= buffer.rowLength - 1) {
+		if (prefixInput.isEmptyOperation
+		&& buffer.selectionStartRow + prefixInput.count <= buffer.rowLength - 1) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
 			return joinLines(prefixInput.count);
@@ -5320,7 +5176,7 @@ var commandMap = {
 			requestShowPrefixInput(_('{0}: record strokes', o.e.fullIdentifier));
 			return false;
 		},
-		'wait-a-letter': function (c, o) {
+		'wait-a-letter': function (c) {
 			if (/^(?:[A-Z])$/.test(c) && !registers.exists(c)) {
 				requestShowMessage(_('Register {0} is not exist.', c), true);
 				return inputEscape();
@@ -5392,13 +5248,13 @@ var commandMap = {
 	},
 	i: {
 		'command': function (c, o) {
-			return this.a.command.apply(this, arguments);
+			return this.a[o.subkey].apply(this, arguments);
 		},
-		'wait-a-letter': function () {
-			return this.a['wait-a-letter'].apply(this, arguments);
+		'wait-a-letter': function (c, o) {
+			return this.a[o.subkey].apply(this, arguments);
 		}
 	},
-	I: function (c, o) {
+	I: function () {
 		return this.A.apply(this, arguments);
 	},
 	o: function (c, o) {
@@ -5408,7 +5264,7 @@ var commandMap = {
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
-	O: function (c, o) {
+	O: function () {
 		return this.o.apply(this, arguments);
 	},
 	R: function (c, o) {
@@ -5546,6 +5402,7 @@ var editMap = {
 	'\u0000'/*^@*/: function (c) {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
+		if (inputHandler.stroke.length) return;
 		if (!registers.exists('.')) {
 			requestShowMessage(_('Last inputted text is undefined.'), true);
 			return;
