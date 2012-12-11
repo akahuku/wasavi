@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 238 2012-12-08 03:22:42Z akahuku $
+ * @version $Id: wasavi.js 239 2012-12-11 07:28:48Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2672,11 +2672,25 @@ function motionFindForward (c, count, stopBefore, continuous) {
 	var n = buffer.selectionEnd;
 	count || (count = 1);
 
+	function indexOfEx (line, target, start) {
+		if (!ffttDictionary) return line.indexOf(target, start);
+		var index = start || 0;
+		var goal = line.length;
+		while (index < goal) {
+			var c = line.charAt(index);
+			if (c == target || ffttDictionary[c] && target in ffttDictionary[c]) {
+				return index;
+			}
+			index++;
+		}
+		return -1;
+	}
+
 	var startn = n.clone();
 	var found = true;
 	var line = buffer.rows(n);
 	for (var i = 0; i < count; i++) {
-		var index = line.indexOf(c, n.col + 1);
+		var index = indexOfEx(line, c, n.col + 1);
 		if (index >= 0) {
 			n.col = index;
 			if (stopBefore
@@ -2704,17 +2718,31 @@ function motionFindForward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
 	idealWidthPixels = -1;
+	ffttDictionary = null;
 	return true;
 }
 function motionFindBackward (c, count, stopBefore, continuous) {
 	var n = buffer.selectionStart;
 	count || (count = 1);
 
+	function lastIndexOfEx (line, target, start) {
+		if (!ffttDictionary) return line.lastIndexOf(target, start);
+		var index = start || 0;
+		while (index >= 0) {
+			var c = line.charAt(index);
+			if (c == target || ffttDictionary[c] && target in ffttDictionary[c]) {
+				return index;
+			}
+			index--;
+		}
+		return -1;
+	}
+
 	var startn = n.clone();
 	var found = true;
 	var line = buffer.rows(n);
 	for (var i = 0; i < count; i++) {
-		var index = line.lastIndexOf(c, n.col - 1);
+		var index = lastIndexOfEx(line, c, n.col - 1);
 		if (index >= 0) {
 			n.col = index;
 			if (stopBefore
@@ -2742,6 +2770,7 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
 	idealWidthPixels = -1;
+	ffttDictionary = null;
 	return true;
 }
 function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
@@ -3947,6 +3976,7 @@ var exCommandExecutor;
 var searchUtils;
 var recordedStrokes;
 var literalInput;
+var ffttDictionary;
 
 var isTextDirty;
 var isEditCompleted;
@@ -4756,10 +4786,23 @@ var commandMap = {
 	},
 	f: {
 		'command': function (c, o) {
+			extensionChannel && extensionChannel.postMessage(
+				{
+					type:'get-fftt',
+					data:o.key == 'f' || o.key == 't' ?
+						buffer.rows(buffer.selectionStartRow).substr(
+							buffer.selectionStartCol, 256) :
+						buffer.rows(buffer.selectionStartRow).substr(
+							0, buffer.selectionStartCol).substr(-256)
+				},
+				function (res) {
+					ffttDictionary = res.data;
+				}
+			);
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(
-				o.key == 'f' ?
+				o.key == 'f' || o.key == 't' ?
 					_('{0}: find forward', o.e.fullIdentifier) :
 					_('{0}: find backward', o.e.fullIdentifier)
 			);
@@ -4767,7 +4810,8 @@ var commandMap = {
 		},
 		'wait-a-letter': function (c, o) {
 			prefixInput.trailer = c;
-			return (o.key == 'f' ? motionFindForward : motionFindBackward)(c, prefixInput.count);
+			return (o.key == 'f' || o.key == 't' ? motionFindForward : motionFindBackward)
+				(c, prefixInput.count, o.key == 't' || o.key == 'T');
 		}
 	},
 	F: {
@@ -4780,26 +4824,18 @@ var commandMap = {
 	},
 	t: {
 		'command': function (c, o) {
-			prefixInput.motion = c;
-			inputModeSub = 'wait-a-letter';
-			requestShowPrefixInput(
-				o.key == 'f' ?
-					_('{0}: find forward', o.e.fullIdentifier) :
-					_('{0}: find backward', o.e.fullIdentifier)
-			);
-			return false;
+			return this.f[o.subkey].apply(this, arguments);
 		},
 		'wait-a-letter': function (c, o) {
-			prefixInput.trailer = c;
-			return (o.key == 't' ? motionFindForward : motionFindBackward)(c, prefixInput.count, true);
+			return this.f[o.subkey].apply(this, arguments);
 		}
 	},
 	T: {
 		'command': function (c, o) {
-			return this.t[o.subkey].apply(this, arguments);
+			return this.f[o.subkey].apply(this, arguments);
 		},
 		'wait-a-letter': function (c, o) {
-			return this.t[o.subkey].apply(this, arguments);
+			return this.f[o.subkey].apply(this, arguments);
 		}
 	},
 	// search next match for current pattern
@@ -5850,6 +5886,7 @@ var lineInputEditMap = {
  * startup {{{1
  * ----------------
  */
+
 if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  WasaviExtensionWrapper.framePageUrl.isAny) {

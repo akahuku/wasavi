@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 233 2012-12-01 10:47:24Z akahuku $
+ * @version $Id: background.js 239 2012-12-11 07:28:48Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,6 +38,9 @@ if (typeof window.SHA1 == 'undefined' && typeof require == 'function') {
 }
 if (typeof window.Blowfish == 'undefined' && typeof require == 'function') {
 	this.Blowfish = require("./blowfish").Blowfish;
+}
+if (typeof window.FfttDictionary == 'undefined' && typeof require == 'function') {
+	this.FfttDictionary = require("./fftt").FfttDictionary;
 }
 if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	(function (global) {
@@ -86,6 +89,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	var fstab;
 	var resourceLoader;
 	var messageCatalog;
+	var ffttDictionary;
 	var wasaviFrame;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
@@ -177,12 +181,18 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			else {
 				var xhr = new XMLHttpRequest;
 				xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, true);
-				xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
+				if (opts.responseType && opts.responseType != 'text') {
+					xhr.responseType = opts.responseType;
+				}
+				else {
+					xhr.responseType = 'text';
+					xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
+				}
 				xhr.onload = function () {
 					if (!opts.noCache) {
-						data[resourcePath] = xhr.responseText;
+						data[resourcePath] = xhr.response;
 					}
-					emit(callback, xhr.responseText);
+					emit(callback, xhr.response);
 					xhr = xhr.onload = xhr.onerror = null;
 				};
 				xhr.onerror = function () {
@@ -682,7 +692,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			var tab = opera.extension.tabs.create({
 				url:location.href.replace(/\/[^\/]*$/, '/') + file, focused:true
 			});
-			emit(callback, tab.id, url);
+			emit(callback, tab.id, tab.url);
 		};
 		this.closeTab = function (id) {
 			opera.extension.tabs.getAll().some(function (tab) {
@@ -886,7 +896,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			tabs.open({
 				url:self.data.url(file),
 				onReady:function (tab) {
-					callback && emit(callback, tab, url);
+					callback && emit(callback, tab, tab.url);
 					callback = null;
 				}
 			});
@@ -1666,6 +1676,22 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	}
 
 	/**
+	 * f/F/t/T dictionary
+	 */
+
+	function initFfttDictionary () {
+		ffttDictionary = new FfttDictionary();
+
+		resourceLoader.get('fftt/general.dat', function (data) {
+			ffttDictionary.addGeneralData(data);
+		}, {noCache:true, responseType:'arraybuffer'});
+
+		resourceLoader.get('fftt/han_ja.dat', function (data) {
+			ffttDictionary.addHanJaData(data);
+		}, {noCache:true, responseType:'arraybuffer'});
+	}
+
+	/**
 	 * broadcasts to all content scripts that storage updated
 	 */
 
@@ -1844,6 +1870,15 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			payload = req;
 			res();
 			break;
+
+		case 'get-fftt':
+			if ('data' in req) {
+				res({data:ffttDictionary.get(req.data)});
+			}
+			else {
+				res({data:{}});
+			}
+			break;
 		}
 	}
 
@@ -1862,6 +1897,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		initStorage();
 		initMessageCatalog();
 		initFileSystem();
+		initFfttDictionary();
 
 		extension.addRequestListener(handleRequest);
 

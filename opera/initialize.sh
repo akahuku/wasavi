@@ -6,6 +6,7 @@ ln -s ../chrome/beep.ogg
 ln -s ../chrome/beep.ogg.txt
 ln -s ../chrome/consumer_keys.json
 ln -s ../chrome/exports_init.js
+ln -s ../chrome/fftt
 ln -s ../chrome/icon016.png
 ln -s ../chrome/icon048.png
 ln -s ../chrome/icon128.png

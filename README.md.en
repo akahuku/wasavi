@@ -221,6 +221,9 @@ tips
 * j k ^ $ moves cursor by physical row, on the other hand,
   gj gk g^ g$ moves by wrapped row.
   to swap each behavior: `:set jkdenotative`
+* f/F/t/T extension for Japanese: these commands recognizes reading (ro-ma ji
+  expression) of hiragana, katakana, and kanji. for example, `fk` will place
+  a cursor on '漢'.
 
 
 
