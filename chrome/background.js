@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 239 2012-12-11 07:28:48Z akahuku $
+ * @version $Id: background.js 242 2012-12-12 18:50:42Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,9 +38,6 @@ if (typeof window.SHA1 == 'undefined' && typeof require == 'function') {
 }
 if (typeof window.Blowfish == 'undefined' && typeof require == 'function') {
 	this.Blowfish = require("./blowfish").Blowfish;
-}
-if (typeof window.FfttDictionary == 'undefined' && typeof require == 'function') {
-	this.FfttDictionary = require("./fftt").FfttDictionary;
 }
 if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	(function (global) {
@@ -89,7 +86,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	var fstab;
 	var resourceLoader;
 	var messageCatalog;
-	var ffttDictionary;
+	var ffttDictData;
 	var wasaviFrame;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
@@ -109,6 +106,36 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.clear = function () {};
 	}
 	StorageWrapper.create = function () {
+		function WebStorageWrapper () {
+			this.constructor = StorageWrapper;
+			this.getItem = function (key) {
+				return localStorage.getItem(key)
+			};
+			this.setItem = function (key, value) {
+				localStorage.setItem(key, value);
+			};
+			this.clear = function () {
+				localStorage.clear();
+			};
+		}
+
+		function JetpackStorageWrapper () {
+			var ss = require('simple-storage');
+			this.constructor = StorageWrapper;
+			this.getItem = function (key) {
+				var result = ss.storage[key];
+				return result === undefined ? null : result;
+			};
+			this.setItem = function (key, value) {
+				ss.storage[key] = value;
+			};
+			this.clear = function () {
+				Object.keys(ss.storage).forEach(function (key) {
+					delete ss.storage[key];
+				});
+			};
+		}
+
 		if (window.localStorage) {
 			return new WebStorageWrapper;
 		}
@@ -120,115 +147,100 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		}
 	};
 
-	function WebStorageWrapper () {
-		this.constructor = StorageWrapper;
-		this.getItem = function (key) {
-			return localStorage.getItem(key)
-		};
-		this.setItem = function (key, value) {
-			localStorage.setItem(key, value);
-		};
-		this.clear = function () {
-			localStorage.clear();
-		};
-	}
-
-	function JetpackStorageWrapper () {
-		var ss = require('simple-storage');
-		this.constructor = StorageWrapper;
-		this.getItem = function (key) {
-			var result = ss.storage[key];
-			return result === undefined ? null : result;
-		};
-		this.setItem = function (key, value) {
-			ss.storage[key] = value;
-		};
-		this.clear = function () {
-			Object.keys(ss.storage).forEach(function (key) {
-				delete ss.storage[key];
-			});
-		};
-	}
-
 	/**
 	 * resource loader class
 	 */
 
-	function ResourceLoader () {
-		this.get = function (resourcePath, callback) {
-			emit(callback, '');
+	function ResourceLoader (transportGetter, locationGetter) {
+		var data = {};
+		this.get = function (resourcePath, callback, opts) {
+			opts || (opts = {});
+
+			if (!transportGetter || !locationGetter) {
+				emit(callback, '');
+				return;
+			}
+			if (resourcePath in data) {
+				emit(callback, data[resourcePath]);
+				return;
+			}
+
+			var xhr = transportGetter();
+			var isText;
+			xhr.open('GET', locationGetter(resourcePath), true);
+			if (opts.responseType && opts.responseType != 'text') {
+				xhr.responseType = opts.responseType;
+				isText = false;
+			}
+			else {
+				xhr.responseType = 'text';
+				xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
+				isText = true;
+			}
+
+			function handleLoad () {
+				var res = isText ? xhr.responseText : xhr.response;
+				if (!opts.noCache) {
+					data[resourcePath] = res;
+				}
+				emit(callback, res);
+				xhr.removeEventListener('load', handleLoad, false);
+				xhr.removeEventListener('error', handleError, false);
+				xhr = null;
+			}
+			xhr.addEventListener('load', handleLoad, false);
+
+			function handleError () {
+				var res = data[resourcePath] = false;
+				emit(callback, res);
+				xhr.removeEventListener('load', handleLoad, false);
+				xhr.removeEventListener('error', handleError, false);
+				xhr = null;
+			}
+			xhr.addEventListener('error', handleError, false);
+
+			try {
+				xhr.send(null);
+			}
+			catch (e) {
+			}
 		};
 	}
 	ResourceLoader.create = function () {
 		if (window.XMLHttpRequest) {
-			return new XhrResourceLoader;
+			return new ResourceLoader(
+				function () {
+					return new XMLHttpRequest;
+				},
+				function (resourcePath) {
+					return location.href.replace(/\/[^\/]*$/, '/') + resourcePath;
+				}
+			);
 		}
 		else if (window.jetpack) {
-			return new JetpackResourceLoader;
+			/*
+			 * XMLHttpRequest which SDK provides is very very limited.
+			 * There is no responseType/response properties. So we use native xhr.
+			 */
+			var chrome = require('chrome');
+			var Cc = chrome.Cc, Ci = chrome.Ci;
+			var self = require('self');
+			return new ResourceLoader(
+				function () {
+					var xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1']
+						.createInstance(Ci.nsIXMLHttpRequest);
+					xhr.mozBackgroundRequest = true;
+					return xhr;
+				},
+				function (resourcePath) {
+					return self.data.url(resourcePath);
+				}
+			);
 		}
 		else {
 			return new ResourceLoader;
 		}
 	};
-
-	function XhrResourceLoader () {
-		var data = {};
-		this.get = function (resourcePath, callback, opts) {
-			opts || (opts = {});
-			if (resourcePath in data) {
-				emit(callback, data[resourcePath]);
-			}
-			else {
-				var xhr = new XMLHttpRequest;
-				xhr.open('GET', location.href.replace(/\/[^\/]*$/, '/') + resourcePath, true);
-				if (opts.responseType && opts.responseType != 'text') {
-					xhr.responseType = opts.responseType;
-				}
-				else {
-					xhr.responseType = 'text';
-					xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
-				}
-				xhr.onload = function () {
-					if (!opts.noCache) {
-						data[resourcePath] = xhr.response;
-					}
-					emit(callback, xhr.response);
-					xhr = xhr.onload = xhr.onerror = null;
-				};
-				xhr.onerror = function () {
-					data[resourcePath] = false;
-					emit(callback, data[resourcePath]);
-					xhr = xhr.onload = xhr.onerror = null;
-				};
-				try {
-					xhr.send(null);
-				}
-				catch (e) {
-				}
-			}
-		};
-	}
-
-	function JetpackResourceLoader () {
-		var data = {};
-		var self = require('self');
-		this.get = function (resourcePath, callback) {
-			if (resourcePath in data) {
-				emit(callback, data[resourcePath]);
-			}
-			else {
-				var content;
-				try {
-					content = self.data.load(resourcePath);
-				}
-				catch (e) {
-					content = false;
-				}
-				data[resourcePath] = content;
-				emit(callback, content);
-			}
-		};
-	}
 
 	/**
 	 * clipboard manager class
@@ -239,6 +251,42 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.get = function () {return '';}
 	}
 	ClipboardManager.create = function () {
+		function ExecCommandClipboardManager () {
+			this.constructor = ClipboardManager;
+			this.set = function (data) {
+				var buffer = document.getElementById('clipboard-buffer');
+				data || (data = '');
+				if (buffer && data != '') {
+					buffer.value = data;
+					buffer.focus();
+					buffer.select();
+					document.execCommand('cut');
+				}
+			};
+			this.get = function () {
+				var buffer = document.getElementById('clipboard-buffer');
+				var data = '';
+				if (buffer) {
+					buffer.value = '';
+					buffer.focus();
+					document.execCommand('paste');
+					data = buffer.value;
+				}
+				return data;
+			};
+		}
+
+		function JetpackClipboardManager () {
+			var cb = require('clipboard');
+			this.constructor = ClipboardManager;
+			this.set = function (data) {
+				cb.set(data, 'text');
+			};
+			this.get = function () {
+				return cb.get('text');
+			};
+		}
+
 		if (window.chrome) {
 			return new ExecCommandClipboardManager;
 		}
@@ -252,40 +300,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return new ClipboardManager;
 		}
 	};
-
-	function ExecCommandClipboardManager () {
-		this.set = function (data) {
-			var buffer = document.getElementById('clipboard-buffer');
-			data || (data = '');
-			if (buffer && data != '') {
-				buffer.value = data;
-				buffer.focus();
-				buffer.select();
-				document.execCommand('cut');
-			}
-		};
-		this.get = function () {
-			var buffer = document.getElementById('clipboard-buffer');
-			var data = '';
-			if (buffer) {
-				buffer.value = '';
-				buffer.focus();
-				document.execCommand('paste');
-				data = buffer.value;
-			}
-			return data;
-		};
-	}
-
-	function JetpackClipboardManager () {
-		var cb = require('clipboard');
-		this.set = function (data) {
-			cb.set(data, 'text');
-		};
-		this.get = function () {
-			return cb.get('text');
-		};
-	}
 
 	/**
 	 * tab watcher class for opera
@@ -743,8 +757,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		var self = require('self');
 		var pagemod = require('page-mod');
 		var tabs = require('tabs');
-		var l10n = require('api-utils/l10n/locale');
-		var XMLHttpRequest = require('api-utils/xhr').XMLHttpRequest;
+		var l10n = require('l10n/locale');
+		var XMLHttpRequest = require('sdk/net/xhr').XMLHttpRequest;
 
 		var tabIds = {};
 		var lastRegisteredTab;
@@ -1679,16 +1693,28 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	 * f/F/t/T dictionary
 	 */
 
-	function initFfttDictionary () {
-		ffttDictionary = new FfttDictionary();
+	function initFfttDictData () {
+		ffttDictData = {};
 
-		resourceLoader.get('fftt/general.dat', function (data) {
-			ffttDictionary.addGeneralData(data);
-		}, {noCache:true, responseType:'arraybuffer'});
+		function handler (name) {
+			return function (data) {
+				var buffer = [];
+				for (var i = 0, goal = data.length; i < goal; i++) {
+					buffer[i] = data.charCodeAt(i) & 0xff;
+				}
+				ffttDictData[name] = String.fromCharCode.apply(null, buffer);
+			};
+		}
 
-		resourceLoader.get('fftt/han_ja.dat', function (data) {
-			ffttDictionary.addHanJaData(data);
-		}, {noCache:true, responseType:'arraybuffer'});
+		resourceLoader.get(
+			'fftt/general.dat',
+			handler('General'),
+			{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
+
+		resourceLoader.get(
+			'fftt/han_ja.dat',
+			handler('HanJa'),
+			{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
 	}
 
 	/**
@@ -1717,7 +1743,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		switch (req.type) {
 		case 'init':
 		case 'init-agent':
-			req.type == 'init' && extension.registerTabId(tabId);
+			var init = req.type == 'init';
+			init && extension.registerTabId(tabId);
 			res({
 				type:'init-response',
 				extensionId:extension.extensionId,
@@ -1727,12 +1754,13 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				shortcut:extension.storage.getItem('shortcut'),
 				shortcutCode:JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut'))),
 				fontFamily:extension.storage.getItem('fontFamily'),
-				messageCatalog:messageCatalog,
-				wasaviFrame:wasaviFrame,
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
+				messageCatalog:messageCatalog,
 				testMode:req.url == TEST_MODE_URL,
 				devMode:extension.isDev,
-				fstab:getFileSystemInfo(),
+				wasaviFrame:init ? wasaviFrame : null,
+				fstab:init ? getFileSystemInfo() : null,
+				ffttDictData:init ? ffttDictData : null,
 				version:extension.version,
 				payload:payload || null
 			});
@@ -1870,15 +1898,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			payload = req;
 			res();
 			break;
-
-		case 'get-fftt':
-			if ('data' in req) {
-				res({data:ffttDictionary.get(req.data)});
-			}
-			else {
-				res({data:{}});
-			}
-			break;
 		}
 	}
 
@@ -1897,7 +1916,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		initStorage();
 		initMessageCatalog();
 		initFileSystem();
-		initFfttDictionary();
+		initFfttDictData();
 
 		extension.addRequestListener(handleRequest);
 

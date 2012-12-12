@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 239 2012-12-11 07:28:48Z akahuku $
+ * @version $Id: wasavi.js 242 2012-12-12 18:50:42Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2673,12 +2673,11 @@ function motionFindForward (c, count, stopBefore, continuous) {
 	count || (count = 1);
 
 	function indexOfEx (line, target, start) {
-		if (!ffttDictionary) return line.indexOf(target, start);
 		var index = start || 0;
 		var goal = line.length;
 		while (index < goal) {
 			var c = line.charAt(index);
-			if (c == target || ffttDictionary[c] && target in ffttDictionary[c]) {
+			if (c == target || ffttDictionary.match(c, target)) {
 				return index;
 			}
 			index++;
@@ -2718,7 +2717,6 @@ function motionFindForward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
 	idealWidthPixels = -1;
-	ffttDictionary = null;
 	return true;
 }
 function motionFindBackward (c, count, stopBefore, continuous) {
@@ -2726,11 +2724,10 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 	count || (count = 1);
 
 	function lastIndexOfEx (line, target, start) {
-		if (!ffttDictionary) return line.lastIndexOf(target, start);
 		var index = start || 0;
 		while (index >= 0) {
 			var c = line.charAt(index);
-			if (c == target || ffttDictionary[c] && target in ffttDictionary[c]) {
+			if (c == target || ffttDictionary.match(c, target)) {
 				return index;
 			}
 			index--;
@@ -2770,7 +2767,6 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
 	idealWidthPixels = -1;
-	ffttDictionary = null;
 	return true;
 }
 function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
@@ -3946,6 +3942,7 @@ var registers;
 var lineInputHistories;
 var bell;
 var l10n;
+var ffttDictionary;
 
 // instance variables
 var targetElement;
@@ -3976,7 +3973,6 @@ var exCommandExecutor;
 var searchUtils;
 var recordedStrokes;
 var literalInput;
-var ffttDictionary;
 
 var isTextDirty;
 var isEditCompleted;
@@ -4786,19 +4782,6 @@ var commandMap = {
 	},
 	f: {
 		'command': function (c, o) {
-			extensionChannel && extensionChannel.postMessage(
-				{
-					type:'get-fftt',
-					data:o.key == 'f' || o.key == 't' ?
-						buffer.rows(buffer.selectionStartRow).substr(
-							buffer.selectionStartCol, 256) :
-						buffer.rows(buffer.selectionStartRow).substr(
-							0, buffer.selectionStartCol).substr(-256)
-				},
-				function (res) {
-					ffttDictionary = res.data;
-				}
-			);
 			prefixInput.motion = c;
 			inputModeSub = 'wait-a-letter';
 			requestShowPrefixInput(
@@ -5923,12 +5906,13 @@ if (global.WasaviExtensionWrapper
 			exrc = req.exrc;
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
-			fstab = req.fstab;
 			l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
 			global._ = l10n.getTranslator();
-			wasaviFrame = req.wasaviFrame;
 			testMode = req.testMode;
 			devMode = req.devMode;
+			wasaviFrame = req.wasaviFrame;
+			ffttDictionary = new Wasavi.FfttDictionary(req.ffttDictData);
+			fstab = req.fstab;
 			version = req.version;
 			document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));
 			if (WasaviExtensionWrapper.isTopFrame) {
