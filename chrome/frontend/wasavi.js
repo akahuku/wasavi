@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 242 2012-12-12 18:50:42Z akahuku $
+ * @version $Id: wasavi.js 243 2012-12-12 23:10:00Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4198,7 +4198,7 @@ var commandMap = {
 			}
 
 			buffer.regalizeSelectionRelation();
-			var isLineOrient = o.key == prefixInput.operation || isVerticalMotion;
+			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
 			var actualCount = buffer.selectionEndRow - buffer.selectionStartRow + 1;
 
 			// special shift behavior followed vim.

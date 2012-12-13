@@ -66,6 +66,7 @@ var isTestFrame;
 var isFullscreen;
 var stateClearTimer;
 var targetElementResizedTimer;
+var wasaviFrameTimeoutTimer;
 var keyStrokeLog = [];
 var mutationObserver;
 
@@ -208,6 +209,12 @@ function run (element) {
 		mutationObserver = null;
 		wasaviFrame.addEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
 	}
+
+	//
+	wasaviFrameTimeoutTimer = setTimeout(function () {
+		wasaviFrame.parentNode.removeChild(wasaviFrame);
+		wasaviFrameTimeoutTimer = null;
+	}, 1000 * 5);
 }
 
 function cleanup (value, isImplicit) {
@@ -668,6 +675,9 @@ extension.setMessageListener(function (req) {
 		var ev = document.createEvent('CustomEvent');
 		ev.initCustomEvent('WasaviStarted', false, false, 0);
 		document.dispatchEvent(ev);
+
+		clearTimeout(wasaviFrameTimeoutTimer);
+		wasaviFrameTimeoutTimer = null;
 		break;
 
 	case 'wasavi-window-state':

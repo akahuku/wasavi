@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 242 2012-12-12 18:50:42Z akahuku $
+ * @version $Id: classes.js 244 2012-12-13 03:20:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3050,8 +3050,9 @@ Wasavi.FfttDictionary = function (dictData) {
 	var data = {}, cache = {};
 	var handlers = {
 		general: function (cp, data) {
-			var result = {}, index = find(cp, data, 3);
+			var index = find(cp, data, 3);
 			if (index === false) return false;
+			var result = {};
 			result[data.charAt(index + 2)] = true;
 			return result;
 		},
@@ -3085,9 +3086,9 @@ Wasavi.FfttDictionary = function (dictData) {
 				,0x200000: 'z'
 			};
 			return function (cp, data) {
-				var result = {}, index = find(cp, data, 5);
+				var index = find(cp, data, 5);
 				if (index === false) return false;
-				var bits = pick3(data, index + 2);
+				var result = {}, bits = pick3(data, index + 2);
 				for (var i in packmap) {
 					if (bits & (i - 0)) {
 						result[packmap[i]] = true;

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 242 2012-12-12 18:50:42Z akahuku $
+ * @version $Id: background.js 244 2012-12-13 03:20:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1656,6 +1656,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		var nullFs;
 		for (var i in fstab) {
 			var fs = fstab[i];
+			if (!fs.instance) {
+				continue;
+			}
 			if (fs.instance.match(path)) {
 				preferred = fs.instance;
 			}
