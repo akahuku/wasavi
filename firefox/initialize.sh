@@ -5,7 +5,7 @@ pushd data
 ln -s ../../chrome/appsweets.png
 ln -s ../../chrome/beep.ogg.txt
 ln -s ../../chrome/consumer_keys.json
-ln -s ../../chrome/fftt
+ln -s ../../chrome/unicode
 ln -s ../../chrome/frontend
 ln -s ../../chrome/icon016.png
 ln -s ../../chrome/icon048.png

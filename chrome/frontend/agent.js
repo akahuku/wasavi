@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 232 2012-11-24 11:40:15Z akahuku $
+ * @version $Id: agent.js 245 2012-12-16 01:59:49Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

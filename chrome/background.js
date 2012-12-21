@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 244 2012-12-13 03:20:12Z akahuku $
+ * @version $Id: background.js 260 2012-12-21 07:13:33Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -86,7 +86,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	var fstab;
 	var resourceLoader;
 	var messageCatalog;
-	var ffttDictData;
+	var unicodeDictData;
 	var wasaviFrame;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
@@ -845,6 +845,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				self.data.url('frontend/extension_wrapper.js'),
 				self.data.url('frontend/init.js'),
 				self.data.url('frontend/utils.js'),
+				self.data.url('frontend/unicode_utils.js'),
 				self.data.url('frontend/classes.js'),
 				self.data.url('frontend/classes_ex.js'),
 				self.data.url('frontend/classes_undo.js'),
@@ -1696,28 +1697,38 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	 * f/F/t/T dictionary
 	 */
 
-	function initFfttDictData () {
-		ffttDictData = {};
+	function initUnicodeDictData () {
+		unicodeDictData = {fftt:{}};
 
-		function handler (name) {
+		function ensureBinaryString (data) {
+			var buffer = [];
+			for (var i = 0, goal = data.length; i < goal; i++) {
+				buffer[i] = data.charCodeAt(i) & 0xff;
+			}
+			return String.fromCharCode.apply(null, buffer);
+		}
+		function handler (name1, name2) {
 			return function (data) {
-				var buffer = [];
-				for (var i = 0, goal = data.length; i < goal; i++) {
-					buffer[i] = data.charCodeAt(i) & 0xff;
+				if (name1 && name2) {
+					unicodeDictData[name1][name2] = ensureBinaryString(data);
 				}
-				ffttDictData[name] = String.fromCharCode.apply(null, buffer);
+				else if (name1) {
+					unicodeDictData[name1] = ensureBinaryString(data);
+				}
 			};
 		}
 
-		resourceLoader.get(
-			'fftt/general.dat',
-			handler('General'),
-			{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
-
-		resourceLoader.get(
-			'fftt/han_ja.dat',
-			handler('HanJa'),
-			{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
+		[
+			['fftt_general.dat', 'fftt', 'General'],
+			['fftt_han_ja.dat', 'fftt', 'HanJa'],
+			['linebreak.dat', 'LineBreak']
+		].forEach(function (arg) {
+			var file = arg.shift();
+			resourceLoader.get(
+				'unicode/' + file,
+				handler.apply(null, arg),
+				{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
+		});
 	}
 
 	/**
@@ -1763,7 +1774,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				devMode:extension.isDev,
 				wasaviFrame:init ? wasaviFrame : null,
 				fstab:init ? getFileSystemInfo() : null,
-				ffttDictData:init ? ffttDictData : null,
+				unicodeDictData:init ? unicodeDictData : null,
 				version:extension.version,
 				payload:payload || null
 			});
@@ -1919,7 +1930,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		initStorage();
 		initMessageCatalog();
 		initFileSystem();
-		initFfttDictData();
+		initUnicodeDictData();
 
 		extension.addRequestListener(handleRequest);
 

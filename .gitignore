@@ -4,8 +4,10 @@ Thumbs.db
 desktop.ini
 .svnignore
 .svn/
+.stop-server-result
 consumer_keys.json
 consumer_keys.bin
+Session.vim
 build.xml
 test.xml
 wasavi.pem
@@ -17,6 +19,9 @@ opera/
 chrome/libs/jsOAuth/original/
 chrome/libs/blowfish/original/
 chrome/libs/sha1/original/
+chrome/frontend/linebreak.js
 wd-tests/dst/
 wd-tests/libs/
 wd-tests/result.txt
+unicode-tools/ucd/
+unicode-tools/unihan/

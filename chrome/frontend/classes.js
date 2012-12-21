@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 244 2012-12-13 03:20:12Z akahuku $
+ * @version $Id: classes.js 251 2012-12-16 04:37:29Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2026,7 +2026,9 @@ Wasavi.Editor.prototype = new function () {
 				return 'Z';
 			}
 
-			return cp <= 0x7f ? getLatin1Prop(cp).charAt(0) : getUnicodeBlock(cp);
+			return cp <= 0x7f ?
+				unicodeUtils.getLatin1Prop(cp).charAt(0) :
+				unicodeUtils.getUnicodeBlock(cp);
 		},
 		charRectAt: function () {
 			var a = arg2pos(arguments);
@@ -3044,146 +3046,6 @@ Wasavi.InputHandler.prototype = {
 			this.textFragment = '';
 		}
 	}
-};
-
-Wasavi.FfttDictionary = function (dictData) {
-	var data = {}, cache = {};
-	var handlers = {
-		general: function (cp, data) {
-			var index = find(cp, data, 3);
-			if (index === false) return false;
-			var result = {};
-			result[data.charAt(index + 2)] = true;
-			return result;
-		},
-		han_ja: (function () {
-			var packmap = {
-				 0x000001: 'a'
-				,0x000002: 'b'
-				,0x000004: 'c'
-				,0x000008: 'd'
-				,0x000010: 'e'
-				,0x000020: 'f'
-				,0x000040: 'g'
-				,0x000080: 'h'
-				,0x000100: 'i'
-				,0x000200: 'j'
-				,0x000400: 'k'
-				// omitted: l
-				,0x000800: 'm'
-				,0x001000: 'n'
-				,0x002000: 'o'
-				,0x004000: 'p'
-				// omitted: q
-				,0x008000: 'r'
-				,0x010000: 's'
-				,0x020000: 't'
-				,0x040000: 'u'
-				// omitted: v
-				,0x080000: 'w'
-				// omitted: x
-				,0x100000: 'y'
-				,0x200000: 'z'
-			};
-			return function (cp, data) {
-				var index = find(cp, data, 5);
-				if (index === false) return false;
-				var result = {}, bits = pick3(data, index + 2);
-				for (var i in packmap) {
-					if (bits & (i - 0)) {
-						result[packmap[i]] = true;
-					}
-				}
-				return result;
-			};
-		})()
-	};
-
-	function nop () {}
-
-	function pick2 (data, index) {
-		return data.charCodeAt(index)
-			|  data.charCodeAt(index + 1) << 8;
-	}
-
-	function pick3 (data, index) {
-		return data.charCodeAt(index)
-			|  data.charCodeAt(index + 1) << 8
-			|  data.charCodeAt(index + 2) << 16;
-	}
-
-	function find (cp, data, units) {
-		var left = 0, right = ((data.length / units) >> 0) - 1;
-		var middle, index, target;
-		while (left <= right) {
-			middle = ((left + right) / 2) >> 0;
-			index = middle * units;
-			target = pick2(data, index);
-
-			if (target < cp) {
-				left = middle + 1;
-			}
-			else if (target > cp) {
-				right = middle - 1;
-			}
-			else {
-				return index;
-			}
-		}
-		return false;
-	}
-
-	function init () {
-		if (!dictData) return; 
-		for (var i in dictData) {
-			var m = 'add' + i + 'Data';
-			m in this && this[m](dictData[i]);
-		}
-	}
-
-	this.addGeneralData = function (/*binary string*/d) {
-		if (typeof d == 'string') {
-			data.general = d;
-		}
-	};
-	this.addHanJaData = function (/*binary string*/d) {
-		if (typeof d == 'string') {
-			data.han_ja = d;
-		}
-	};
-	this.addData = function (/*string*/name, /*any*/d, /*function*/handler) {
-		name = '' + name;
-		data[name] = d;
-		handlers[name] = typeof handler == 'function' ? handler : nop;
-	};
-	this.get = function (/*string*/ch) {
-		var result = false;
-		if (ch.charCodeAt(0) <= 0x7f) {
-			return result;
-		}
-		if (ch in cache) {
-			return cache[ch];
-		}
-		for (var j in data) {
-			var o = handlers[j](ch.charCodeAt(0), data[j]);
-			if (!o) continue;
-			if (result) {
-				for (var k in o) {
-					result[k] = o[k];
-				}
-			}
-			else {
-				result = o;
-			}
-		}
-		return cache[ch] = result;
-	};
-	this.match = function (/*string*/ch, /*string*/target) {
-		var o = this.get(ch);
-		return o && target in o;
-	};
-
-	init.call(this);
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

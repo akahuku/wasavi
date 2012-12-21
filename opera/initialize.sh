@@ -6,7 +6,7 @@ ln -s ../chrome/beep.ogg
 ln -s ../chrome/beep.ogg.txt
 ln -s ../chrome/consumer_keys.json
 ln -s ../chrome/exports_init.js
-ln -s ../chrome/fftt
+ln -s ../chrome/unicode
 ln -s ../chrome/icon016.png
 ln -s ../chrome/icon048.png
 ln -s ../chrome/icon128.png
@@ -16,6 +16,7 @@ pushd includes
 ln -s ../../chrome/frontend/extension_wrapper.js 001_extension_wrapper.js
 ln -s ../../chrome/frontend/init.js              010_init.js
 ln -s ../../chrome/frontend/utils.js             020_utils.js
+ln -s ../../chrome/frontend/unicode_utils.js     021_unicode_utils.js
 ln -s ../../chrome/frontend/classes.js           030_classes.js
 ln -s ../../chrome/frontend/classes_ex.js        040_classes_ex.js
 ln -s ../../chrome/frontend/classes_undo.js      050_classes_undo.js

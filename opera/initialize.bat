@@ -6,7 +6,7 @@ mklink beep.ogg ..\chrome\beep.ogg
 mklink beep.ogg.txt ..\chrome\beep.ogg.txt
 mklink consumer_keys.json ..\chrome\consumer_keys.json
 mklink exports_init.js ..\chrome\exports_init.js
-mklink /d fftt ..\chrome\fftt
+mklink /d unicode ..\chrome\unicode
 mklink icon016.png ..\chrome\icon016.png
 mklink icon048.png ..\chrome\icon048.png
 mklink icon128.png ..\chrome\icon128.png
@@ -16,6 +16,7 @@ pushd includes
 mklink 001_extension_wrapper.js ..\..\chrome\frontend\extension_wrapper.js
 mklink 010_init.js              ..\..\chrome\frontend\init.js
 mklink 020_utils.js             ..\..\chrome\frontend\utils.js
+mklink 021_unicode_utils.js     ..\..\chrome\frontend\unicode_utils.js
 mklink 030_classes.js           ..\..\chrome\frontend\classes.js
 mklink 040_classes_ex.js        ..\..\chrome\frontend\classes_ex.js
 mklink 050_classes_undo.js      ..\..\chrome\frontend\classes_undo.js

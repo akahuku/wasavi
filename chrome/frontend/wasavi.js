@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 243 2012-12-12 23:10:00Z akahuku $
+ * @version $Id: wasavi.js 260 2012-12-21 07:13:33Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -500,6 +500,7 @@ margin:0; \
 overflow-x:hidden; \
 overflow-y:scroll; \
 counter-reset:n; \
+word-wrap:break-word; \
 } \
 #wasavi_singleline_scaler { \
 position:fixed; \
@@ -1783,6 +1784,64 @@ function processInput (code, e, ignoreAbbreviation) {
 			break;
 		}
 	}
+	function processAutoDivide (e) {
+		if (config.vars.textwidth <= 0) return;
+
+		var limitWidth = charWidth * config.vars.textwidth;
+		var tmpMark = 'auto-divide';
+		var scaler = $('wasavi_singleline_scaler');
+
+		inputHandler.ungetText();
+		inputHandler.flush();
+		marks.setPrivate(tmpMark, buffer.selectionStart);
+		var inputStateSaved = {
+			text:inputHandler.text,
+			textFragment:inputHandler.textFragment
+		};
+
+		while (true) {
+			var line = buffer.rows(buffer.selectionStartRow);
+			var overed = false;
+			var breakItem = false;
+			var lastIndex = 0;
+
+			scaler.textContent = '';
+			var lb = lineBreaker.run(line, function (item) {
+				if (!item) return false;
+
+				scaler.textContent += line.substring(lastIndex, item.index + item.length);
+				lastIndex = item.index + item.length;
+
+				if (item.breakProp != unicodeUtils.BREAK_PROP.SP
+				&& scaler.offsetWidth > limitWidth) {
+					overed = true;
+				}
+				if (unicodeUtils.canBreak(item.breakAction)) {
+					breakItem = item;
+				}
+
+				return overed && !!breakItem;
+			});
+
+			if (!overed || !breakItem) break;
+
+			buffer.setSelectionRange(new Position(
+				buffer.selectionStartRow, breakItem.index + breakItem.length));
+			inputHandler.inputHeadPosition = buffer.selectionStart;
+			inputHandler.textFragment = '';
+			var newlineObj = keyManager.objectFromCode(0x000d);
+			inputHandler.updateText(newlineObj);
+			execMap(buffer, newlineObj, editMap, '\u000d', '', '\u000d');
+			inputHandler.flush();
+		}
+
+		buffer.setSelectionRange(marks.getPrivate(tmpMark));
+		marks.setPrivate(tmpMark);
+		inputHandler.inputHeadPosition = buffer.leftPos(buffer.selectionStart);
+		inputHandler.text = inputStateSaved.text;
+		inputHandler.textFragment = inputStateSaved.textFragment;
+		inputHandler.updateText(e);
+	}
 
 	var input = $(LINE_INPUT_ID);
 	var letter = keyManager.code2letter(code);
@@ -1927,6 +1986,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			else if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
+				processAutoDivide(e);
 				processAbbrevs();
 				if (runLevel == 0) {
 					cursor.ensureVisible();
@@ -3359,10 +3419,15 @@ function joinLines (count, asis) {
 			buffer.selectionEnd = new Position(buffer.selectionStartRow + 1, re[0].length);
 			deleteSelection();
 
-			if (asis || /\s+$/.test(t1) || ')]}'.indexOf(t2.charAt(re[0].length)) >= 0) {
+			var t1Last = t1.substr(-1);
+			var t2First = t2.charAt(re[0].length);
+			if (asis || t2.length == re[0].length
+			|| /\s/.test(t1Last) || unicodeUtils.isIdeograph(t1Last)
+			|| unicodeUtils.isClosedPunct(t2First) || unicodeUtils.isIdeograph(t2First)
+			) {
 				// do nothing
 			}
-			else if (/[.!?]$/.test(t1)) {
+			else if (isSTerm(t1.substr(-1))) {
 				insert('  ', {keepPosition:true});
 			}
 			else {
@@ -3772,46 +3837,46 @@ var theme = new Wasavi.Theme(appProxy);
 var config = new Wasavi.Configurator(appProxy,
 	[
 		/* defined by POSIX */
-		['autoindent', 'b', true],    // O
+		['autoindent', 'b', true],
 		['autoprint', 'b', true],     // not used
 		['autowrite', 'b', false],    // not used
 		['beautify', 'b', false],     // not used
 		['directory', 's', '/tmp/'],  // not used
 		['edcompatible', 'b', false], // not used
-		['errorbells', 'b', false],   // O
+		['errorbells', 'b', false],
 		['exrc', 'b', false],         // not used
-		['ignorecase', 'b', true],    // O
+		['ignorecase', 'b', true],
 		['list', 'b', false],         // not used
-		['magic', 'b', true],         // O
+		['magic', 'b', true],
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
 			idealWidthPixels = -1;
 			v && config.setData('norelativenumber');
 			return v;
-		}],											  // O
+		}],
 		['paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
 			searchUtils && searchUtils.setParagraphMacros(v);
 			return v;
-		}],                                           // O
-		['prompt', 'b', true],        // O
-		['readonly', 'b', false],     // O
+		}],
+		['prompt', 'b', true],
+		['readonly', 'b', false],
 		['redraw', 'b', true],        // not used
-		['remap', 'b', true],         // O
-		['report', 'i', 5],           // O
-		['scroll', 'i', 0],           // O
+		['remap', 'b', true],
+		['report', 'i', 5],
+		['scroll', 'i', 0],
 		['sections', 's', 'NHSHH HUnhsh', function (v) {
 			searchUtils && searchUtils.setSectionMacros(v);
 			return v;
-		}],											  // O
+		}],
 		['shell', 's', '/bin/sh'],    // not used
-		['shiftwidth', 'i', 4],       // O
-		['showmatch', 'b', true],     // O
-		['showmode', 'b', true],      // O
+		['shiftwidth', 'i', 4],
+		['showmatch', 'b', true],
+		['showmode', 'b', true],
 		['slowopen', 'b', false],     // not used
 		['tabstop', 'i', 8, function (v) {
 			setTabStop(v);
 			return v;
-		}],											  // O
+		}],
 		['taglength', 'i', 0],        // not used
 		['tags', 's', 'tags'],        // not used
 		['term', 's', 'dom'],         // not used
@@ -3819,18 +3884,18 @@ var config = new Wasavi.Configurator(appProxy,
 		['warn', 'b', true],          // not used
 		['window', 'i', 24],
 		['wrapmargin', 'i', 0],
-		['wrapscan', 'b', true],      // O
+		['wrapscan', 'b', true],
 		['writeany', 'b', false],     // not used
 
 		/* defined by wasavi */
 		['theme', 's', '', function (v) {
 			theme.select(v) && theme.update();
 			return v;
-		}],											  // O
-		['smooth', 'b', true],        // O
-		['bellvolume', 'i', 25],      // O
-		['history', 'i', 20],         // O
-		['monospace', 'i', 20],       // O
+		}],
+		['smooth', 'b', true],
+		['bellvolume', 'i', 25],
+		['history', 'i', 20],
+		['monospace', 'i', 20],
 		['fullscreen', 'b', false, function (v) {
 			!isStandAlone &&
 			targetElement &&
@@ -3840,25 +3905,26 @@ var config = new Wasavi.Configurator(appProxy,
 				modelineHeight:$('wasavi_footer').offsetHeight
 			});
 			return v;
-		}],   // O
-		['jkdenotative', 'b', false],  // O
+		}],
+		['jkdenotative', 'b', false],
 
 		/* defined by vim */
-		['iskeyword', 'r', '^[a-zA-Z0-9_]\\+$'],// O
-		['searchincr', 'b', true],             // O
-		['smartcase', 'b', true],              // O
+		['iskeyword', 'r', '^[a-zA-Z0-9_]\\+$'],
+		['searchincr', 'b', true],
+		['smartcase', 'b', true],
 		['undolevels', 'i', 20, function (v) {
 			if (editLogger) {
 				editLogger.logMax = v;
 			}
 			return v;
-		}],                                           // O
-		['quoteescape', 's', '\\'],   // O
+		}],
+		['quoteescape', 's', '\\'],
 		['relativenumber', 'b', false, function (v) {
 			idealWidthPixels = -1;
 			v && config.setData('nonumber');
 			return v;
-		}],											  // O
+		}],
+		['textwidth', 'i', 0],
 
 		/* defined by nvi */
 		//['altwerase', 'b', false],
@@ -3921,10 +3987,9 @@ var config = new Wasavi.Configurator(appProxy,
 		w: 'window',			wa: 'writeany',		wi: 'window',
 		wl: 'wraplen',			wm: 'wrapmargin',	ws: 'wrapscan',
 
-		isk: 'iskeyword',
-		incsearch: 'searchincr', is: 'searchincr',
-		scs: 'smartcase',		ul: 'undolevels',	qe: 'quoteescape',
-		rnu: 'relativenumber',
+		isk: 'iskeyword', incsearch: 'searchincr',	is: 'searchincr',
+		scs: 'smartcase',		tw: 'textwidth',	ul: 'undolevels',
+		qe: 'quoteescape',		rnu: 'relativenumber',
 
 		fs: 'fullscreen',		jk: 'jkdenotative'
 	}
@@ -3943,6 +4008,7 @@ var lineInputHistories;
 var bell;
 var l10n;
 var ffttDictionary;
+var lineBreaker;
 
 // instance variables
 var targetElement;
@@ -5911,7 +5977,8 @@ if (global.WasaviExtensionWrapper
 			testMode = req.testMode;
 			devMode = req.devMode;
 			wasaviFrame = req.wasaviFrame;
-			ffttDictionary = new Wasavi.FfttDictionary(req.ffttDictData);
+			ffttDictionary = new unicodeUtils.FfttDictionary(req.unicodeDictData.fftt);
+			lineBreaker = new unicodeUtils.LineBreaker(req.unicodeDictData.LineBreak);
 			fstab = req.fstab;
 			version = req.version;
 			document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));

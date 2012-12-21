@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: init.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: init.js 245 2012-12-16 01:59:49Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -51,25 +51,6 @@
 	password: true,
 	number:   true
 };
-
-/*const*/var LATIN1_PROPS = [
-	'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-	'Cc', 'Zs', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-	'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-	'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-	'Zs', 'Po', 'Po', 'Po', 'Sc', 'Po', 'Po', 'Po', //  !"#$%&'
-	'Ps', 'Pe', 'Po', 'Sm', 'Po', 'Pd', 'Po', 'Po', // ()*+,-./
-	'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', // 01234567
-	'Ld', 'Ld', 'Po', 'Po', 'Sm', 'Sm', 'Sm', 'Po', // 89:;<=>?
-	'Po', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // @ABCDEFG
-	'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // HIJKLMNO
-	'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // PQRSTUVW
-	'Lu', 'Lu', 'Lu', 'Ps', 'Po', 'Pe', 'Sk', 'Pc', // XYZ[\]^_
-	'Sk', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // `abcdefg
-	'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // hijklmno
-	'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // pqrstuvw
-	'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'  // xyz{|}~
-];
 
 /*const*/var EXFLAGS = {
 	addr2All: 1<<2,

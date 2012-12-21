@@ -5,7 +5,7 @@ pushd data
 mklink appsweets.png ..\..\chrome\appsweets.png
 mklink beep.ogg.txt ..\..\chrome\beep.ogg.txt
 mklink consumer_keys.json ..\..\chrome\consumer_keys.json
-mklink /d fftt ..\..\chrome\fftt
+mklink /d unicode ..\..\chrome\unicode
 mklink /d frontend ..\..\chrome\frontend
 mklink icon016.png ..\..\chrome\icon016.png
 mklink icon048.png ..\..\chrome\icon048.png
