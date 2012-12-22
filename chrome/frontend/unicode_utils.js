@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 260 2012-12-21 07:13:33Z akahuku $
+ * @version $Id: unicode_utils.js 261 2012-12-22 15:06:26Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -128,10 +128,10 @@ var unicodeUtils = (function () {
 
 		/* Yi */
 		'\uA000-\uA48F',		// Yi Syllables
-		'\uA490-\uA4CF',		// Yi Radicals
+		'\uA490-\uA4CF'			// Yi Radicals
 	].join('') + ']');
 
-	// line break property
+	// line break property in Unicode 6.2.0
 	/*const*/var BREAK_PROP = {
 		OP:  0, CL:  1, CP:  2, QU:  3, GL:  4, NS:  5, EX:  6, SY:  7,
 		IS:  8, PR:  9, PO: 10, NU: 11, AL: 12, HL: 13, ID: 14, IN: 15,
@@ -142,7 +142,7 @@ var unicodeUtils = (function () {
 		AI:253, CJ:254, XX:255
 	};
 
-	// line break pair table
+	// line break pair table in Unicode 6.2.0
 	/*const*/var BREAK_PAIRS_TABLE = [
 		'44444444444444444444434444444',
 		'04411444411000001100424000000',
@@ -175,6 +175,7 @@ var unicodeUtils = (function () {
 		'04411144400000001100424000001'
 	];
 
+	// line break action in Unicode 6.2.0
 	/*const*/var BREAK_ACTION = {
 		DIRECT:0,				// _: B / A
 		INDIRECT:1,				// %: B x A and B SP+ / A
@@ -211,6 +212,14 @@ var unicodeUtils = (function () {
 				result.length++;
 				this.index++;
 			}
+			// special wasavi behavior: control codes are stored as Unicode
+			// Control Pitcures.
+			else if (cp >= 0x2400 && cp <= 0x241f) {
+				cp = cp & 0x00ff;
+			}
+			else if (cp == 0x2421) {
+				cp = 0x007f;
+			}
 			result.codePoint = cp;
 			return result;
 		}
@@ -220,9 +229,14 @@ var unicodeUtils = (function () {
 		this.stream = new StringStream(s);
 		this.dictData = dictData;
 		this.items = [];
+		this.cache = {};
 	}
 	LineBreakArray.prototype = {
 		getProp: function (cp) {
+			if (cp in this.cache) {
+				return this.cache[cp];
+			}
+
 			var units = 7;
 			var left = 0, right = ((this.dictData.length / units) >> 0) - 1;
 			var middle, index, startcp, endcp;
@@ -239,34 +253,39 @@ var unicodeUtils = (function () {
 					right = middle - 1;
 				}
 				else if (startcp <= cp && cp <= endcp) {
-					return this.dictData.charCodeAt(index + 6);
+					return this.cache[cp] = this.dictData.charCodeAt(index + 6);
 				}
 			}
-			return BREAK_PROP.XX;
+			return this.cache[cp] = BREAK_PROP.XX;
+		},
+		get isEnd () {
+			return this.stream.isEnd;
 		},
 		get: function (index) {
 			while (this.items.length <= index && !this.stream.isEnd) {
-				while (!this.stream.isEnd) {
-					var item = this.stream.getItem();
-					var prop = this.getProp(item.codePoint);
-					// LB1 rule
-					switch (prop) {
-					case BREAK_PROP.AI:
-					case BREAK_PROP.SG:
-					case BREAK_PROP.XX:
-						prop = BREAK_PROP.AL;
-						break;
-					case BREAK_PROP.SA:
-						// TODO: distinguish general category: Mn/Mc
-						prop = BREAK_PROP.AL;
-						break;
-					case BREAK_PROP.CJ:
-						prop = BREAK_PROP.NS;
-						break;
-					}
-					item.breakProp = prop;
-					this.items.push(item);
+				var item = this.stream.getItem();
+				var prop = this.getProp(item.codePoint);
+				// LB1 rule
+				switch (prop) {
+				case BREAK_PROP.AI:
+				case BREAK_PROP.SG:
+				case BREAK_PROP.XX:
+					prop = BREAK_PROP.AL;
+					break;
+				case BREAK_PROP.SA:
+					// TODO: distinguish general category: Mn/Mc
+					prop = BREAK_PROP.AL;
+					break;
+				case BREAK_PROP.CJ:
+					prop = BREAK_PROP.NS;
+					break;
+				case BREAK_PROP.CB:
+					// experimental
+					prop = BREAK_PROP.ID;
+					break;
 				}
+				item.breakProp = prop;
+				this.items.push(item);
 			}
 			return this.items[index] || false;
 		}
@@ -295,11 +314,41 @@ var unicodeUtils = (function () {
 			if (prop == BREAK_PROP.SP) {
 				prop = BREAK_PROP.WJ;
 			}
+			if (prop == BREAK_PROP.LF) {
+				prop = BREAK_PROP.BK;
+			}
+			if (prop == BREAK_PROP.NL) {
+				prop = BREAK_PROP.BK;
+			}
 
 			// loop over all pairs in the string up to a hard break
-			for (var i = 1; props.get(i) !== false; i++) {
+			for (var i = 1;
+			props.get(i) !== false
+			&& prop != BREAK_PROP.BK
+			&& (prop != BREAK_PROP.CR || props.get(i).breakProp == BREAK_PROP.LF);
+			i++) {
+				var curProp = props.get(i).breakProp;
+
+				// handle BK, NL and LF explicitly
+				if (curProp == BREAK_PROP.BK
+				||  curProp == BREAK_PROP.NL
+				||  curProp == BREAK_PROP.LF) {
+					props.get(i - 1).breakAction = BREAK_ACTION.PROHIBITED;
+					prop = BREAK_PROP.BK;
+					if (callback(props.get(i - 1)) === true) break;
+					continue;
+				}
+
+				// handle CR explicitly
+				if (curProp == BREAK_PROP.CR) {
+					props.get(i - 1).breakAction = BREAK_ACTION.PROHIBITED;
+					prop = BREAK_PROP.CR;
+					if (callback(props.get(i - 1)) === true) break;
+					continue;
+				}
+
 				// handle spaces explicitly
-				if (props.get(i).breakProp == BREAK_PROP.SP) {
+				if (curProp == BREAK_PROP.SP) {
 					// apply rule LB7: x SP
 					props.get(i - 1).breakAction = BREAK_ACTION.PROHIBITED;
 
@@ -310,7 +359,7 @@ var unicodeUtils = (function () {
 				}
 
 				// handle complex scripts in a separate function
-				if (props.get(i).breakProp == BREAK_PROP.SA) {
+				if (curProp == BREAK_PROP.SA) {
 					i += findComplexBreak(
 						props, prop, i - 1, props.length - (i - 1));
 
@@ -323,7 +372,13 @@ var unicodeUtils = (function () {
 				}
 
 				// look up pair table information in BREAK_PAIRS_TABLE [before, after];
-				var breakAction = BREAK_PAIRS_TABLE[prop].charAt(props.get(i).breakProp) - 0;
+				var breakAction;
+				if (prop in BREAK_PAIRS_TABLE && curProp in BREAK_PAIRS_TABLE) {
+					breakAction = BREAK_PAIRS_TABLE[prop].charAt(curProp) - 0;
+				}
+				else {
+					breakAction = BREAK_ACTION.DIRECT;
+				}
 
 				// save break action in output array
 				props.get(i - 1).breakAction = breakAction;
@@ -375,14 +430,29 @@ var unicodeUtils = (function () {
 				}
 
 				// save prop of 'before' character (unless bypassed by 'continue')
-				prop = props.get(i).breakProp;
+				prop = curProp;
 				if (callback(props.get(i - 1)) === true) break;
 			}
 
 			// always break at the end
 			props.get(i - 1).breakAction = BREAK_ACTION.EXPLICIT;
 
-			return props.items;
+			// purge invalid item
+			while (!('breakAction' in props.items[props.items.length - 1])) {
+				props.items.pop();
+			}
+
+			// return result
+			var last = props.items[props.items.length - 1];
+			if (last.index + last.length >= s.length) {
+				return props.items;
+			}
+			else {
+				return props.items.concat(findLineBreak(
+					s.substring(last.index + last.length),
+					callback
+				));
+			}
 		}
 		function dump (s, props) {
 			var result = [];
