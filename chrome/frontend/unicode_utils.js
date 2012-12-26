@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 261 2012-12-22 15:06:26Z akahuku $
+ * @version $Id: unicode_utils.js 263 2012-12-26 15:33:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -258,9 +258,6 @@ var unicodeUtils = (function () {
 			}
 			return this.cache[cp] = BREAK_PROP.XX;
 		},
-		get isEnd () {
-			return this.stream.isEnd;
-		},
 		get: function (index) {
 			while (this.items.length <= index && !this.stream.isEnd) {
 				var item = this.stream.getItem();
@@ -443,6 +440,8 @@ var unicodeUtils = (function () {
 			}
 
 			// return result
+			return props.items;
+			/*
 			var last = props.items[props.items.length - 1];
 			if (last.index + last.length >= s.length) {
 				return props.items;
@@ -453,6 +452,7 @@ var unicodeUtils = (function () {
 					callback
 				));
 			}
+			*/
 		}
 		function dump (s, props) {
 			var result = [];

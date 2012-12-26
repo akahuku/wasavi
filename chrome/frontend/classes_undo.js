@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: classes_undo.js 263 2012-12-26 15:33:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -195,6 +195,10 @@ Wasavi.EditLogger.prototype = new function () {
 		},
 		restorePosition: function (app) {
 			var n = this.position.clone();
+			if (n.row < app.buffer.rowLength && n.col >= app.buffer.rows(n).length) {
+				n.row++;
+				n.col = 0;
+			}
 			if (n.row >= app.buffer.rowLength) {
 				n.row = app.buffer.rowLength - 1;
 				app.buffer.setSelectionRange(app.buffer.getLineTopOffset2(n));
@@ -394,7 +398,7 @@ Wasavi.EditLogger.prototype = new function () {
 			for (var i = 0; i < this.items.length; i++) {
 				result += this.items[i].redo(app, app.buffer, true) || 0;
 			}
-			result && this.items[0].restorePosition(app);
+			result && this.items[this.items.length - 1].restorePosition(app);
 			return result;
 		},
 		restorePosition: function (app) {

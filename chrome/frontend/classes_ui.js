@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: classes_ui.js 263 2012-12-26 15:33:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -373,6 +373,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 			}
 			buffer.adjustBackgroundImage(app.lineHeight);
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
+			buffer.adjustWrapGuide(app.config.vars.textwidth, app.charWidth);
 			buffer.updateActiveRow();
 			startBlink();
 		};

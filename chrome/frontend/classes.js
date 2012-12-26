@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 251 2012-12-16 04:37:29Z akahuku $
+ * @version $Id: classes.js 263 2012-12-26 15:33:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2236,6 +2236,25 @@ Wasavi.Editor.prototype = new function () {
 			var desc = 'n ' + (isRelative ? (this.selectionStartRow + 1) : 0);
 			if (this.elm.style.counterReset != desc) {
 				this.elm.style.counterReset = desc;
+			}
+		},
+		adjustWrapGuide: function (width, unit) {
+			var o = $('wasavi_textwidth_guide'), display, left;
+			if (!o) return;
+			if (width <= 0) {
+				display = 'none';
+			}
+			else {
+				display = 'block';
+				left = (this.elm.childNodes[0].offsetLeft + width * unit) + 'px';
+			}
+			if (display !== undefined && display != o.style.display) {
+				o.style.display = display;
+			}
+			if (left !== undefined && left != o.style.left) {
+				o.style.left = left;
+				o.style.height = this.elm.offsetHeight + 'px';
+				o.textContent = width;
 			}
 		},
 		updateActiveRow: function () {
