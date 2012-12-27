@@ -604,6 +604,10 @@
 		"message": "{0}: range symbol",
 		"description": "{0}: range symbol"
 	},
+	"last_inputted_text_is_undefined": {
+		"message": "Last inputted text is undefined.",
+		"description": "Last inputted text is undefined."
+	},
 	"@0_literal_input": {
 		"message": "{0}: literal input",
 		"description": "{0}: literal input"

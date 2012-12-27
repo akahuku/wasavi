@@ -604,6 +604,10 @@
 		"message": "{0}: レンジシンボル",
 		"description": "{0}: range symbol"
 	},
+	"last_inputted_text_is_undefined": {
+		"message": "最後の入力文字列は未定義です。",
+		"description": "Last inputted text is undefined."
+	},
 	"@0_literal_input": {
 		"message": "{0}: 文字の入力",
 		"description": "{0}: literal input"

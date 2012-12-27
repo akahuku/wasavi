@@ -112,11 +112,11 @@ Commands implemented
 
 ### operation:
 
-* c y d &gt; &lt;
+* c y d &gt; &lt; gq
 
 ### operation-alias:
 
-* cc yy dd &gt;&gt; &lt;&lt; C Y D 
+* cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
 
 ### motion:
 
@@ -188,7 +188,8 @@ vim-compatible functionalities
 * range symbols (aka, text objects in vim)
 * register ", :, *, / (especially * is important since it accesses to system
   clipboard)
-* auto-reformatting in input mode, and reformat operator (gq)
+* auto-reformatting in input mode, and reformat operator (gq command) on the
+  state of textwidth > 0
 * options: iskeyword, incsearch, smartcase, undolevels, quoteescape,
   relativenumber, textwidth
 
