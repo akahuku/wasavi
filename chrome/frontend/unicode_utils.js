@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 263 2012-12-26 15:33:25Z akahuku $
+ * @version $Id: unicode_utils.js 264 2012-12-27 16:30:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -51,84 +51,84 @@ var unicodeUtils = (function () {
 
 	// letters of General_Category == Pe, in UnicodeData.txt of Unicode 6.2.0
 	/*const*/var REGEX_PE = new RegExp('[' + [
-		'\u0029', '\u005D', '\u007D', '\u0F3B',
-		'\u0F3D', '\u169C', '\u2046', '\u207E',
-		'\u208E', '\u232A', '\u2769', '\u276B',
-		'\u276D', '\u276F', '\u2771', '\u2773',
-		'\u2775', '\u27C6', '\u27E7', '\u27E9',
-		'\u27EB', '\u27ED', '\u27EF', '\u2984',
-		'\u2986', '\u2988', '\u298A', '\u298C',
-		'\u298E', '\u2990', '\u2992', '\u2994',
-		'\u2996', '\u2998', '\u29D9', '\u29DB',
-		'\u29FD', '\u2E23', '\u2E25', '\u2E27',
-		'\u2E29', '\u3009', '\u300B', '\u300D',
-		'\u300F', '\u3011', '\u3015', '\u3017',
-		'\u3019', '\u301B', '\u301E', '\u301F',
-		'\uFD3F', '\uFE18', '\uFE36', '\uFE38',
-		'\uFE3A', '\uFE3C', '\uFE3E', '\uFE40',
-		'\uFE42', '\uFE44', '\uFE48', '\uFE5A',
-		'\uFE5C', '\uFE5E', '\uFF09', '\uFF3D',
-		'\uFF5D', '\uFF60', '\uFF63'
+		'\\u0029', '\\u005D', '\\u007D', '\\u0F3B',
+		'\\u0F3D', '\\u169C', '\\u2046', '\\u207E',
+		'\\u208E', '\\u232A', '\\u2769', '\\u276B',
+		'\\u276D', '\\u276F', '\\u2771', '\\u2773',
+		'\\u2775', '\\u27C6', '\\u27E7', '\\u27E9',
+		'\\u27EB', '\\u27ED', '\\u27EF', '\\u2984',
+		'\\u2986', '\\u2988', '\\u298A', '\\u298C',
+		'\\u298E', '\\u2990', '\\u2992', '\\u2994',
+		'\\u2996', '\\u2998', '\\u29D9', '\\u29DB',
+		'\\u29FD', '\\u2E23', '\\u2E25', '\\u2E27',
+		'\\u2E29', '\\u3009', '\\u300B', '\\u300D',
+		'\\u300F', '\\u3011', '\\u3015', '\\u3017',
+		'\\u3019', '\\u301B', '\\u301E', '\\u301F',
+		'\\uFD3F', '\\uFE18', '\\uFE36', '\\uFE38',
+		'\\uFE3A', '\\uFE3C', '\\uFE3E', '\\uFE40',
+		'\\uFE42', '\\uFE44', '\\uFE48', '\\uFE5A',
+		'\\uFE5C', '\\uFE5E', '\\uFF09', '\\uFF3D',
+		'\\uFF5D', '\\uFF60', '\\uFF63'
 	].join('') + ']');
 
 	// letters of STerm in PropList.txt of Unicode 6.2.0
 	/*const*/var REGEX_STERM = new RegExp('[' + [
-		'\u0021',        '\u002E',        '\u003F',        '\u055C',
-		'\u055E',        '\u0589',        '\u061F',        '\u06D4',
-		'\u0700-\u0702', '\u07F9',        '\u0964-\u0965', '\u104A-\u104B',
-		'\u1362',        '\u1367-\u1368', '\u166E',        '\u1735-\u1736',
-		'\u1803',        '\u1809',        '\u1944-\u1945', '\u1AA8-\u1AAB',
-		'\u1B5A-\u1B5B', '\u1B5E-\u1B5F', '\u1C3B-\u1C3C', '\u1C7E-\u1C7F',
-		'\u203C-\u203D', '\u2047-\u2049', '\u2E2E',        '\u3002',
-		'\uA4FF',        '\uA60E-\uA60F', '\uA6F3',        '\uA6F7',
-		'\uA876-\uA877', '\uA8CE-\uA8CF', '\uA92F',        '\uA9C8-\uA9C9',
-		'\uAA5D-\uAA5F', '\uAAF0-\uAAF1', '\uABEB',        '\uFE52',
-		'\uFE56-\uFE57', '\uFF01',        '\uFF0E',        '\uFF1F',
-		'\uFF61'
+		'\\u0021',        '\\u002E',        '\\u003F',        '\\u055C',
+		'\\u055E',        '\\u0589',        '\\u061F',        '\\u06D4',
+		'\\u0700-\\u0702','\\u07F9',        '\\u0964-\\u0965','\\u104A-\\u104B',
+		'\\u1362',        '\\u1367-\\u1368','\\u166E',        '\\u1735-\\u1736',
+		'\\u1803',        '\\u1809',        '\\u1944-\\u1945','\\u1AA8-\\u1AAB',
+		'\\u1B5A-\\u1B5B','\\u1B5E-\\u1B5F','\\u1C3B-\\u1C3C','\\u1C7E-\\u1C7F',
+		'\\u203C-\\u203D','\\u2047-\\u2049','\\u2E2E',        '\\u3002',
+		'\\uA4FF',        '\\uA60E-\\uA60F','\\uA6F3',        '\\uA6F7',
+		'\\uA876-\\uA877','\\uA8CE-\\uA8CF','\\uA92F',        '\\uA9C8-\\uA9C9',
+		'\\uAA5D-\\uAA5F','\\uAAF0-\\uAAF1','\\uABEB',        '\\uFE52',
+		'\\uFE56-\\uFE57','\\uFF01',        '\\uFF0E',        '\\uFF1F',
+		'\\uFF61'
 	].join('') + ']');
 
 	// ideographic letters
 	/*const*/var REGEX_HAN_FAMILY = new RegExp('[' + [
 		/* Chinese */
-		'\u3100-\u312F',		// Bopomofo
-		'\u31A0-\u31BF',		// Bopomofo Extended
-		'\u4E00-\u9FCF',		// CJK Unified Ideographs (Han)
-		'\u3400-\u4DBF',		// CJK Extension-A
-		//'\u20000-\u2A6DF',	// CJK Extension-B
-		//'\u2A700-\u2B73F',	// CJK Extension-C
-		//'\u2B740-\u2B81F',	// CJK Extension-D
-		'\uF900-\uFAFF',		// CJK Compatibility Ideographs
-		//'\u2F800-\u2FA1F',	// CJK Compatibility Ideographs Supplement
-		'\u2F00-\u2FDF',		// CJK Radicals / KangXi Radicals
-		'\u2E80-\u2EFF',		// CJK Radicals Supplement
-		'\u31C0-\u31EF',		// CJK Strokes
-		'\u2FF0-\u2FFF',		// Ideographic Description Characters
+		'\\u3100-\\u312F',		// Bopomofo
+		'\\u31A0-\\u31BF',		// Bopomofo Extended
+		'\\u4E00-\\u9FCF',		// CJK Unified Ideographs (Han)
+		'\\u3400-\\u4DBF',		// CJK Extension-A
+		//'\\u20000-\\u2A6DF',	// CJK Extension-B
+		//'\\u2A700-\\u2B73F',	// CJK Extension-C
+		//'\\u2B740-\\u2B81F',	// CJK Extension-D
+		'\\uF900-\\uFAFF',		// CJK Compatibility Ideographs
+		//'\\u2F800-\\u2FA1F',	// CJK Compatibility Ideographs Supplement
+		'\\u2F00-\\u2FDF',		// CJK Radicals / KangXi Radicals
+		'\\u2E80-\\u2EFF',		// CJK Radicals Supplement
+		'\\u31C0-\\u31EF',		// CJK Strokes
+		'\\u2FF0-\\u2FFF',		// Ideographic Description Characters
 
 		/* Korean */
-		'\u1100-\u11FF',		// Hangul Jamo
-		'\uA960-\uA97F',		// Hangul Jamo Extended-A
-		'\uD7B0-\uD7FF',		// Hangul Jamo Extended-B
-		'\u3130-\u318F',		// Hangul Compatibility Jamo
-		'\uFFA0-\uFFDC',		// Halfwidth Jamo
-		'\uAC00-\uD7AF',		// Hangul Syllables
+		'\\u1100-\\u11FF',		// Hangul Jamo
+		'\\uA960-\\uA97F',		// Hangul Jamo Extended-A
+		'\\uD7B0-\\uD7FF',		// Hangul Jamo Extended-B
+		'\\u3130-\\u318F',		// Hangul Compatibility Jamo
+		'\\uFFA0-\\uFFDC',		// Halfwidth Jamo
+		'\\uAC00-\\uD7AF',		// Hangul Syllables
 
 		/* Japanese */
-		'\u3040-\u309F',		// Hiragana
-		'\u30A0-\u30FF',		// Katakana
-		'\u31F0-\u31FF',		// Katakana Phonetic Extensions
-		//'\u1B000-\u1B0FF',	// Kana Supplement
-		'\uFF65-\uFF9F',		// Halfwidth Katakana
-		'\u3190-\u319F',		// Kanbun
+		'\\u3040-\\u309F',		// Hiragana
+		'\\u30A0-\\u30FF',		// Katakana
+		'\\u31F0-\\u31FF',		// Katakana Phonetic Extensions
+		//'\\u1B000-\\u1B0FF',	// Kana Supplement
+		'\\uFF65-\\uFF9F',		// Halfwidth Katakana
+		'\\u3190-\\u319F',		// Kanbun
 
 		/* Lisu */
-		'\uA4D0-\uA4FF',		// Lisu
+		'\\uA4D0-\\uA4FF',		// Lisu
 
 		/* Miao */
-		//'\u16F00-\u16F9F',	// Miao
+		//'\\u16F00-\\u16F9F',	// Miao
 
 		/* Yi */
-		'\uA000-\uA48F',		// Yi Syllables
-		'\uA490-\uA4CF'			// Yi Radicals
+		'\\uA000-\\uA48F',		// Yi Syllables
+		'\\uA490-\\uA4CF'			// Yi Radicals
 	].join('') + ']');
 
 	// line break property in Unicode 6.2.0

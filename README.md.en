@@ -188,7 +188,10 @@ vim-compatible functionalities
 * range symbols (aka, text objects in vim)
 * register ", :, *, / (especially * is important since it accesses to system
   clipboard)
-* options: iskeyword, incsearch, smartcase, undolevels, quoteescape, relativenumber
+* auto-reformatting in input mode, and reformat operator (gq)
+* options: iskeyword, incsearch, smartcase, undolevels, quoteescape,
+  relativenumber, textwidth
+
 
 
 

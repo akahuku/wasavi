@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 263 2012-12-26 15:33:25Z akahuku $
+ * @version $Id: wasavi.js 264 2012-12-27 16:30:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3476,6 +3476,9 @@ function reformat () {
 			while (/^[ \t]*$/.test(buffer.rows(paraTail.row))) {
 				paraTail.row--;
 			}
+			if (paraTail.row < curpos.row) {
+				break;
+			}
 
 			marks.setPrivate(nextMark, buffer.getLineTailOffset(paraTail));
 			paraTail.row > curpos.row && joinLines(paraTail.row - curpos.row);
@@ -4392,8 +4395,8 @@ var commandMap = {
 
 			(o.key == '<' ? unshift : shift)(actualCount);
 			buffer.setSelectionRange(buffer.getLineTopOffset2(buffer.selectionStart));
-			//isVerticalMotion = true;
-			//prefixInput.motion = c;
+			isVerticalMotion = true;
+			prefixInput.motion = c;
 			requestSimpleCommandUpdate();
 			return true;
 		}
@@ -5238,6 +5241,7 @@ var commandMap = {
 		// . command repeats the last
 		// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 		//          a, c, d, i, o, p, r, s,    x, y,
+		//          gq,
 		// or ~ command.
 		if (prefixInput.isEmptyOperation) {
 			if (lastSimpleCommand.length) {
@@ -5266,6 +5270,7 @@ var commandMap = {
 			}
 			else {
 				requestShowMessage(_('{0} {operation:0} have reverted.', result));
+				idealWidthPixels= -1;
 				return true;
 			}
 		}
@@ -5282,6 +5287,7 @@ var commandMap = {
 			}
 			else {
 				requestShowMessage(_('{0} {operation:0} have executed again.', result));
+				idealWidthPixels= -1;
 				return true;
 			}
 		}
@@ -5676,7 +5682,7 @@ var editMap = {
 			inputHandler.invalidateHeadPosition();
 		}
 	},
-	'\u0008'/*backspace*/: function (c) {
+	'\u0008'/*^H, backspace*/: function (c) {
 		inputHandler.ungetText();
 
 		if (buffer.selectionStartRow == 0 && buffer.selectionStartCol == 0) {
@@ -5775,14 +5781,14 @@ var editMap = {
 	'\u0015'/*^U*/: function (c) {
 		this['\u0008'].apply(this, arguments);
 	},
-	'\u0009'/*tab*/: function (c) {
+	'\u0009'/*^I, tab*/: function (c) {
 		if (clipOverrun()) return;
 		insert('\t');
 	},
 	'\u000a'/*^J*/: function (c) {
 		this['\u000d'].apply(this, arguments);
 	},
-	'\u000d'/*enter*/: function (c) {
+	'\u000d'/*^M, enter*/: function (c) {
 		if (clipOverrun()) return;
 		var indent = config.vars.autoindent ? buffer.getIndent(buffer.selectionStart) : '';
 		if (indent != '') {

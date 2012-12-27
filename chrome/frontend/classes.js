@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 263 2012-12-26 15:33:25Z akahuku $
+ * @version $Id: classes.js 264 2012-12-27 16:30:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -465,7 +465,7 @@ Wasavi.PrefixInput = function () {
 
 			do {
 				var arg = arguments[0];
-				var re = /^(".)?([1-9][0-9]*)?(.)([1-9][0-9]*)?(.)(.*)$/.exec(arg);
+				var re = /^(".)?([1-9][0-9]*)?(g?.)([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
 				if (re) {
 					if (typeof re[1] == 'string' && re[1] != '') {
 						register = re[1];
@@ -488,7 +488,7 @@ Wasavi.PrefixInput = function () {
 					break;
 				}
 
-				var re = /^(".)?([1-9][0-9]*)?(.)(.*)$/.exec(arg);
+				var re = /^(".)?([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
 				if (re) {
 					if (typeof re[1] == 'string' && re[1] != '') {
 						register = re[1];

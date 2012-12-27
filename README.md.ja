@@ -111,11 +111,11 @@ dropbox 上のファイルを読み書きすることができます。
 
 ### operation:
 
-* c y d &gt; &lt;
+* c y d &gt; &lt; gq
 
 ### operation-alias:
 
-* cc yy dd &gt;&gt; &lt;&lt; C Y D 
+* cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
 
 ### motion:
 
@@ -186,7 +186,10 @@ vim 互換の機能
 * インクリメンタルサーチ
 * レンジシンボル（vim で言うところのテキストオブジェクト）
 * レジスタ "、:、*、/（特に * はクリップボードとのアクセスを行うので重要です）
-* オプション iskeyword、incsearch、smartcase、undolevels、quoteescape、relativenumber
+* textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ
+  （gq コマンド）
+* オプション iskeyword、incsearch、smartcase、undolevels、quoteescape、
+  relativenumber、textwidth
 
 
 

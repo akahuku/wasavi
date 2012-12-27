@@ -175,7 +175,9 @@ public class EditingTest extends WasaviTest {
 	// repeat command tests.
 	// repeat command is affected by the commands below:
 	//   !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
-	//            a, c, d, i,    o, p, r, s, x, y, ~
+	//            a, c, d, i,    o, p, r, s, x, y,
+	//            gq,
+	//   and ~
 
 	@Test
 	public void testRepetitionShiftLeft () {
@@ -317,7 +319,6 @@ public class EditingTest extends WasaviTest {
 		assertEquals("#1-1", "fobaro", Wasavi.getValue());
 		assertEquals("#1-2", "bax\u0008r", Wasavi.getRegister("."));
 
-		System.out.println("*** test #1 ***");
 		Wasavi.send("u");
 		assertEquals("#2-1", "foo", Wasavi.getValue());
 		assertPos("#2-2", 0, 2);
@@ -325,7 +326,6 @@ public class EditingTest extends WasaviTest {
 		assertEquals("#2-3", "fobaro", Wasavi.getValue());
 		assertPos("#2-4", 0, 2);
 
-		System.out.println("*** test #2 ***");
 		Wasavi.send(".");
 		assertEquals("#3-1", "fobarbaro", Wasavi.getValue());
 		Wasavi.send("u");
@@ -335,7 +335,6 @@ public class EditingTest extends WasaviTest {
 		assertEquals("#3-4", "fobarbaro", Wasavi.getValue());
 		assertPos("#3-5", 0, 2);
 
-		System.out.println("*** test #3 ***");
 		Wasavi.send("2.");
 		assertEquals("#4-1", "fobarbarbarbaro", Wasavi.getValue());
 		Wasavi.send("u");
@@ -554,7 +553,51 @@ public class EditingTest extends WasaviTest {
 		assertEquals("#2", "FOOBarbaz", Wasavi.getValue());
 	}
 
-	// undo, redo test is in another file.
+	@Test
+	public void testRepetitionReformat () {
+		Wasavi.send(
+			"i" +
+			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." +
+			"\u001b");
+
+		Wasavi.send(":set tw=30\n");
+		Wasavi.send("1G1|gqq");
+		assertValue("#1-1",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+		assertPos("#1-2", 5, 0);
+		Wasavi.send(".");
+		assertValue("#1-3",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+		assertPos("#1-4", 6, 0);
+		Wasavi.send("6G2.");
+		assertValue("#1-5",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis\n" +
+			"nostrud exercitation ullamco\n" +
+			"laboris nisi ut aliquip ex ea\n" +
+			"commodo consequat.");
+	}
+
+	// undo, redo tests are in another file. see UndoTest.java
 	// function testUndo () {
 	// }
 	//
@@ -824,5 +867,82 @@ public class EditingTest extends WasaviTest {
 
 		String text = driver.findElement(By.id("t2")).getAttribute("value");
 		assertEquals("#1-1", "foobar", text);
+	}
+
+	@Test
+	public void reformat () {
+		//
+		Wasavi.send(
+			"i" +
+			"Lorem ipsum dolor sit amet,\nconsectetur adipisicing elit,\nsed do eiusmod tempor\nincididunt ut labore et dolore\nmagna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." +
+			"\u001b");
+
+		//
+		Wasavi.send(":set tw=40\n");
+		Wasavi.send("1G1|gqap");
+		assertValue("#1-1",
+			"Lorem ipsum dolor sit amet, consectetur\n" +
+			"adipisicing elit, sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore magna\n" +
+			"aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+		assertPos("#1-2", 4, 0);
+
+		//
+		Wasavi.send("gqq");
+		assertPos("#2-1", 5, 0);
+		Wasavi.send("gqq");
+		assertValue("#2-2",
+			"Lorem ipsum dolor sit amet, consectetur\n" +
+			"adipisicing elit, sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore magna\n" +
+			"aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud\n" +
+			"exercitation ullamco laboris nisi ut\n" +
+			"aliquip ex ea commodo consequat.");
+		assertPos("#2-3", 7, 31);
+
+		//
+		Wasavi.send("u");
+		assertValue("#3-1",
+			"Lorem ipsum dolor sit amet, consectetur\n" +
+			"adipisicing elit, sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore magna\n" +
+			"aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+		Wasavi.send("u");
+		assertValue("#3-2",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+
+		//
+		Wasavi.send("\u0012");
+		assertValue("#4-1",
+			"Lorem ipsum dolor sit amet, consectetur\n" +
+			"adipisicing elit, sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore magna\n" +
+			"aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+		Wasavi.send("\u0012");
+		assertValue("#4-2",
+			"Lorem ipsum dolor sit amet, consectetur\n" +
+			"adipisicing elit, sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore magna\n" +
+			"aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud\n" +
+			"exercitation ullamco laboris nisi ut\n" +
+			"aliquip ex ea commodo consequat.");
 	}
 }

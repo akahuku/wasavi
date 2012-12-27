@@ -1069,4 +1069,41 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#1-7", "\t\tFOO\nfoobarbaz");
 	}
+
+	@Test
+	public void autoFormat () {
+		Wasavi.send(":set tw=30\n");
+		Wasavi.send(
+			"i" +
+			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." +
+			"\u001b");
+
+		assertValue("#1-1",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis\n" +
+			"nostrud exercitation ullamco\n" +
+			"laboris nisi ut aliquip ex ea\n" +
+			"commodo consequat.");
+		Wasavi.send("u");
+		assertValue("#1-2", "");
+		Wasavi.send("\u0012");
+		assertValue("#1-3",
+			"Lorem ipsum dolor sit amet,\n" +
+			"consectetur adipisicing elit,\n" +
+			"sed do eiusmod tempor\n" +
+			"incididunt ut labore et dolore\n" +
+			"magna aliqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis\n" +
+			"nostrud exercitation ullamco\n" +
+			"laboris nisi ut aliquip ex ea\n" +
+			"commodo consequat.");
+	}
 }
