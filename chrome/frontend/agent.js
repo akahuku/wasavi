@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 245 2012-12-16 01:59:49Z akahuku $
+ * @version $Id: agent.js 266 2013-01-02 04:23:00Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -243,7 +243,7 @@ function cleanup (value, isImplicit) {
 	extraHeight = 0;
 }
 
-function focusToFrame () {
+function focusToFrame (req) {
 	if (wasaviFrame) {
 		try {
 			wasaviFrame.focus && wasaviFrame.focus();
@@ -252,6 +252,15 @@ function focusToFrame () {
 			wasaviFrame.contentWindow
 			&& wasaviFrame.contentWindow.focus
 			&& wasaviFrame.contentWindow.focus();
+		} catch (e) {}
+		try {
+			extension.postMessage({
+				type:'notify-to-child',
+				childTabId:req.childTabId,
+				payload:{
+					type:'focus-me-response'
+				}
+			});
 		} catch (e) {}
 	}
 }
@@ -657,7 +666,7 @@ extension.setMessageListener(function (req) {
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
 		wasaviFrame.style.visibility = 'visible';
-		focusToFrame();
+		//focusToFrame(req);
 		var currentHeight = wasaviFrame.offsetHeight;
 		var newHeight = req.height || targetElement.offsetHeight;
 		extraHeight = newHeight - currentHeight;
@@ -693,7 +702,7 @@ extension.setMessageListener(function (req) {
 
 	case 'wasavi-focus-me':
 		if (!wasaviFrame) break;
-		focusToFrame();
+		focusToFrame(req);
 		break;
 
 	case 'wasavi-focus-changed':

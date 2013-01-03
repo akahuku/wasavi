@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 264 2012-12-27 16:30:18Z akahuku $
+ * @version $Id: wasavi.js 267 2013-01-03 08:30:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -51,6 +51,7 @@
 		get executeExCommand () {return executeExCommand},
 		get executeViCommand () {return executeViCommand},
 		get processInput () {return processInput},
+		get processInputSupplement () {return processInputSupplement},
 		get getFindRegex () {return getFindRegex},
 		get getFileIoResultInfo () {return getFileIoResultInfo},
 		get getFileInfo () {return getFileInfo},
@@ -724,7 +725,7 @@ resize:none; \
 padding:0; \
 left:-4px; \
 top:0px; \
-width:32px; \
+width:100%; \
 height:32px; \
 background-color:transparent; \
 ime-mode:disabled; \
@@ -739,9 +740,7 @@ ime-mode:disabled; \
 	theme.update();
 
 	// focus holder
-	var focusHolder = document.createElement('textarea');
-	document.body.insertBefore(focusHolder, document.body.firstChild);
-	focusHolder.id = 'wasavi_focus_holder';
+	var focusHolder = $('wasavi_focus_holder');
 
 	// buffer
 	buffer = new Wasavi.Editor($(EDITOR_CORE_ID));
@@ -840,7 +839,7 @@ ime-mode:disabled; \
 
 	inputHandler = new Wasavi.InputHandler(appProxy);
 	marks = new Wasavi.Marks(appProxy, testMode);
-	cursor = new Wasavi.CursorUI(appProxy, cc, ec);
+	cursor = new Wasavi.CursorUI(appProxy, cc, ec, footerInput, focusHolder);
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
 	exCommandExecutor = new ExCommandExecutor(true);
@@ -952,11 +951,6 @@ function setupEventHandlers (install) {
 		cover[method]('mousewheel', handleCoverMousewheel, false);
 	}
 
-	var input = $(LINE_INPUT_ID);
-	if (input) {
-		input[method]('input', handleInput, false);
-	}
-
 	cursor.setupEventHandlers(method);
 }
 function setGeometory (target) {
@@ -1048,20 +1042,19 @@ function setInputMode (newInputMode, newInputModeSub, initial) {
 		case 'normal':
 			state = newState;
 			inputMode = newInputMode;
-			cursor.update({focused:true, visible:!backlog.visible});
+			cursor.update({type:newInputMode, focused:true, visible:!backlog.visible});
 			showPrefixInput();
-			buffer.focus();
 			break;
 		case 'line-input':
 			state = newState;
 			inputMode = newInputMode;
-			cursor.update({focused:false, visible:false});
 			showLineInput(initial);
+			cursor.update({type:newInputMode, focused:true, visible:true});
 			break;
 		case 'console-wait':
 			state = newState;
 			inputMode = newInputMode;
-			cursor.update({visible:!backlog.visible && newInputModeSub != 'ex-s'});
+			cursor.update({type:newInputMode, visible:!backlog.visible && newInputModeSub != 'ex-s'});
 			break;
 		}
 	}
@@ -1164,7 +1157,6 @@ function showLineInput (initial) {
 	$('wasavi_footer_input_indicator').textContent = initial;
 	input.value = '';
 	dataset(input, 'current', '');
-	input.focus();
 }
 function requestShowPrefixInput (message) {
 	if (!requestedState.modeline) {
@@ -2021,7 +2013,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
 				processAbbrevs();
-				if (runLevel == 0) {
+				if (runLevel == 0 || !e.isCompositioned || e.isCompositionedLast) {
 					cursor.ensureVisible();
 					cursor.update({visible:true, focused:true});
 					requestShowPrefixInput(getDefaultPrefixInputString());
@@ -2068,17 +2060,18 @@ function processInput (code, e, ignoreAbbreviation) {
 			setTimeout(function () {
 				var input = $(LINE_INPUT_ID);
 				if (input.value != dataset(input, 'current')) {
-					var ev = document.createEvent('Event');
-					ev.initEvent('input', false, false);
-					input.dispatchEvent(ev);
+					processInputSupplement();
 				}
 			}, 1);
 		}
-		else {
-			if (code >= 32) {
-				lineInputHistories.isInitial = true;
+		else if (code >= 32) {
+			lineInputHistories.isInitial = true;
+			if (!e.isCompositioned) {
 				insertToLineInput(input, letter);
+			}
+			if (!e.isCompositioned || e.isCompositionedLast) {
 				processInputSupplement();
+				keyManager.init(input);
 			}
 		}
 		result = true;
@@ -2147,15 +2140,12 @@ function processInput (code, e, ignoreAbbreviation) {
 	return result;
 }
 function processInputSupplement () {
-	switch (inputMode) {
-	case 'line-input':
-		var input = $(LINE_INPUT_ID);
-		var key = prefixInput.motion || prefixInput.operation;
-		var e = keyManager.nopObjectFromCode();
-		execMap(buffer, e, commandMap, key, '@' + inputMode + '-reset', input.value);
-		execMap(buffer, e, commandMap, key, '@' + inputMode + '-notify', input.value);
-		break;
-	}
+	if (inputMode != 'line-input') return;
+	var input = $(LINE_INPUT_ID);
+	var key = prefixInput.motion || prefixInput.operation;
+	var e = keyManager.nopObjectFromCode();
+	execMap(buffer, e, commandMap, key, '@' + inputMode + '-reset', input.value);
+	execMap(buffer, e, commandMap, key, '@' + inputMode + '-notify', input.value);
 }
 function getFindRegex (src) {
 	var result;
@@ -3819,7 +3809,10 @@ function handleKeydown2 (e) {
 		testMode && fireEvent('notify-keydown', {
 			keyCode:e.code,
 			key:e.fullIdentifier,
-			eventType:'busy now.'
+			eventType:'busy now('
+				+ (scroller.running ? 'scroller' : '')
+				+ (exCommandExecutor.running ? 'exCommandExecutor' : '')
+				+ ')'
 		});
 		return;
 	}
@@ -3842,9 +3835,6 @@ function handleKeydown2 (e) {
 			});
 		});
 }
-function handleInput () {
-	processInputSupplement();
-}
 function handleMousedown (e) {}
 function handleMouseup (e) {}
 
@@ -3855,16 +3845,6 @@ function handleCoverMousedown (e) {
 	e.returnValue = false;
 }
 function handleCoverClick (e) {
-	switch (state) {
-	case 'normal':
-		cursor.update({focused:!isEditing(), visible:!backlog.visible});
-		$('wasavi_focus_holder').focus();
-		break;
-	case 'line-input':
-		cursor.update({focused:false, visible:false});
-		$(LINE_INPUT_ID).focus();
-		break;
-	}
 	fireEvent('focus-me');
 }
 function handleCoverMousewheel (e) {
@@ -3907,6 +3887,17 @@ function handleExtensionChannelMessage (req) {
 			break;
 		}
 		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+		break;
+	case 'focus-me-response':
+		switch (state) {
+		case 'normal':
+			cursor.update({focused:true, visible:!backlog.visible});
+			break;
+		case 'line-input':
+			cursor.update({focused:false, visible:false});
+			$(LINE_INPUT_ID).focus();
+			break;
+		}
 		break;
 	case 'fileio-write-response':
 		if (req.error) {
@@ -5911,16 +5902,20 @@ var editMap = {
 var lineInputEditMap = {
 	'\u0001'/*^A*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = 0;
+		keyManager.init(o.target);
 	},
 	'\u0002'/*^B*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = Math.max(0, o.target.selectionStart - 1);
+		keyManager.init(o.target);
 	},
 	'\u0005'/*^E*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = o.target.value.length;
+		keyManager.init(o.target);
 	},
 	'\u0006'/*^F*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd =
 			Math.min(o.target.value.length, o.target.selectionEnd + 1);
+		keyManager.init(o.target);
 	},
 	'\u0008'/*^H, backspace*/: function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
@@ -5935,6 +5930,7 @@ var lineInputEditMap = {
 			o.target.selectionEnd = o.target.selectionStart;
 		}
 		lineInputHistories.isInitial = true;
+		keyManager.init(o.target);
 	},
 	'\u0009'/*^I, tab*/: function (c, o) {
 		// TODO: some completion?
@@ -5970,6 +5966,7 @@ var lineInputEditMap = {
 				o.target.value = line;
 				o.target.selectionStart = line.length;
 				o.target.selectionEnd = line.length;
+				keyManager.init(o.target);
 			}
 		}
 	},
@@ -5985,12 +5982,14 @@ var lineInputEditMap = {
 			o.target.value = line;
 			o.target.selectionStart = line.length;
 			o.target.selectionEnd = line.length;
+			keyManager.init(o.target);
 		}
 	},
 	'\u0015'/*^U*/: function (c, o) {
 		o.target.value = '';
 		o.target.selectionStart = o.target.selectionEnd = 0;
 		lineInputHistories.isInitial = true;
+		keyManager.init(o.target);
 	},
 	'\u0016'/*^V*/: {
 		'line-input': function (c, o) {
@@ -6031,6 +6030,7 @@ var lineInputEditMap = {
 							ch = toVisibleControl(code);
 						}
 						insertToLineInput(o.target, ch);
+						keyManager.init(o.target);
 					}
 				}
 				else {
@@ -6063,6 +6063,7 @@ var lineInputEditMap = {
 			o.target.selectionEnd = o.target.selectionStart;
 		}
 		lineInputHistories.isInitial = true;
+		keyManager.init(o.target);
 	},
 	'<left>': function () {
 		this['\u0002'].apply(this, arguments);

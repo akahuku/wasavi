@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 263 2012-12-26 15:33:25Z akahuku $
+ * @version $Id: classes_ui.js 267 2013-01-03 08:30:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -124,7 +124,7 @@ Wasavi.Theme = function (app) {
 	function getOverTextMarker (forecolor, backcolor) {
 		return getImageFromCanvas(function (canvas, ctx) {
 			canvas.height = lineHeight;
-			ctx.fontStyle = fontStyle;
+			ctx.font = fontStyle;
 			canvas.width = ctx.measureText('~').width;
 			ctx.fillStyle = backcolor;
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -292,7 +292,7 @@ Wasavi.Bell = function (app, loadCallback) {
 	loadCallback = null;
 };
 
-Wasavi.CursorUI = function (app, comCursor, editCursor) {
+Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	var buffer = app.buffer;
 	var cursorType = 'command';
 	var locked = false;
@@ -300,8 +300,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 	var visible = false;
 	var inComposition = false;
 	var wrapper = null;
-	var commandCursorOffsetLeft = false;
-	var commandCursorOffsetTop = false;
 	var fixed = document.defaultView.getComputedStyle($(CONTAINER_ID), '')
 		.position == 'fixed';
 
@@ -375,6 +373,10 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.adjustWrapGuide(app.config.vars.textwidth, app.charWidth);
 			buffer.updateActiveRow();
+
+			app.keyManager.init();
+
+			comFocusHolder.focus();
 			startBlink();
 		};
 		this.lostFocus = function () {
@@ -395,6 +397,9 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 		};
 		this.compositionUpdate =
 		this.compositionComplete = function () {};
+
+		app.keyManager.target = comFocusHolder;
+		app.keyManager.preserve = false;
 	}
 
 	/*constructor*/function EditWrapper (mode) {
@@ -436,10 +441,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 		this.compositionComplete = function (data) {
 			getCompositionSpan().textContent = leading;
 			removeCompositionSpan();
-			app.low.executeViCommand(data, true);
-			if (app.recordedStrokes) {
-				app.recordedStrokes.strokes += data;
-			}
 		};
 		this.hide = function () {
 			editCursor.style.display = 'none';
@@ -465,15 +466,37 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 			editCursor.value = leading = span.textContent;
 			editCursor.selectionStart = editCursor.value.length;
 			editCursor.selectionEnd = editCursor.value.length;
-			editCursor.focus();
 
 			buffer.adjustBackgroundImage(app.lineHeight);
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.updateActiveRow();
+
+			app.keyManager.init(leading);
+
+			editCursor.focus();
 		};
 		this.lostFocus = function () {};
 		this.dispose = function () {};
+
+		app.keyManager.target = editCursor;
+		app.keyManager.preserve = true;
 	}
+
+	/*constructor*/function LineInputWrapper (mode) {
+		this.hide = function () {};
+		this.show = function () {
+			app.keyManager.init(input.value.substring(0, input.selectionStart));
+			input.focus();
+		};
+		this.lostFocus = function () {};
+		this.dispose = function () {};
+		this.compositionUpdate = function () {};
+		this.compositionComplete = function () {};
+
+		app.keyManager.target = input;
+		app.keyManager.preserve = true;
+	}
+
 	function getCommandCursorCoord () {
 		var r = buffer.charRectAt(buffer.selectionStart);
 		var result3 = {
@@ -567,6 +590,10 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 			case 'edit-overwrite':
 				wrapper = new EditWrapper(cursorType);
 				break;
+
+			case 'line-input':
+				wrapper = new LineInputWrapper(cursorType);
+				break;
 			}
 		}
 
@@ -590,10 +617,11 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 		wrapper.compositionUpdate(e.data);
 	}
 	function handleCompositionEnd (e) {
-		wrapper.compositionComplete(e.data);
+		var result = wrapper.compositionComplete(e.data);
 		inComposition = false;
 		ensureVisible();
 		update();
+		return result;
 	}
 	function handleInput (e) {
 		e.preventDefault();
@@ -601,10 +629,9 @@ Wasavi.CursorUI = function (app, comCursor, editCursor) {
 		e.returnValue = false;
 	}
 	function setupEventHandlers (method) {
-		editCursor[method]('compositionstart', handleCompositionStart, false);
-		editCursor[method]('compositionupdate', handleCompositionUpdate, false);
-		editCursor[method]('compositionend', handleCompositionEnd, false);
-		editCursor[method]('textInput', handleInput, false);
+		app.keyManager[method]('compositionstart', handleCompositionStart);
+		app.keyManager[method]('compositionupdate', handleCompositionUpdate);
+		app.keyManager[method]('compositionend', handleCompositionEnd);
 	}
 	function dispose () {
 		wrapper && wrapper.dispose();
@@ -638,6 +665,9 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 	this.run = function (dest, callback) {
 		if (running || !app.targetElement || !cursor || !modeLine) {
 			return;
+		}
+		if (dest < 0) {
+			dest = 0;
 		}
 		if (!app.config.vars.smooth || cursor.locked) {
 			buffer.scrollTop = dest;

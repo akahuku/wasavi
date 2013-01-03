@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 264 2012-12-27 16:30:18Z akahuku $
+ * @version $Id: classes.js 267 2013-01-03 08:30:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -872,44 +872,81 @@ Wasavi.KeyManager = function () {
 		'f9':120, 'f10':121, 'f11':122, 'f12':123
 	};
 
+	var target;
 	var specialKeyName;
 	var specialKeyCode;
-	var eventHandlers = [];
+	var inputEventHandlers = [];
+	var compositStartEventHandlers = [];
+	var compositUpdateEventHandlers = [];
+	var compositEndEventHandlers = [];
 	var bufferedStrokes = [];
+	var keyDownCode;
+	var lastEvent = '';
+	var lastValue = '';
+	var isPreserve = false;
+	var compositionResult = null;
 
+	// for opera
+	var isInComposition = false;
+	var leading = '';
+	var inputEventInvokedCount = 0;
+
+	// publics
 	function install (handler) {
-		addListener(handler);
+		addListener('input', handler);
 		document.addEventListener('keydown', handleKeydown, true);
 		document.addEventListener('keypress', handleKeypress, true);
+		document.addEventListener('keyup', handleKeyup, true);
+		document.addEventListener('compositionstart', handleCompStart, true);
+		document.addEventListener('compositionupdate', handleCompUpdate, true);
+		document.addEventListener('compositionend', handleCompEnd, true);
+		document.addEventListener('input', getInputHandler(), true);
 	}
 	function uninstall () {
 		document.removeEventListener('keydown', handleKeydown, true);
 		document.removeEventListener('keypress', handleKeypress, true);
+		document.removeEventListener('keyup', handleKeyup, true);
+		document.removeEventListener('compositionstart', handleCompStart, true);
+		document.removeEventListener('compositionupdate', handleCompUpdate, true);
+		document.removeEventListener('compositionend', handleCompEnd, true);
+		document.removeEventListener('input', getInputHandler(), true);
 	}
-	function addListener (handler) {
+	function addListener (type, handler) {
 		if (typeof handler != 'function') return;
-		var index = eventHandlers.indexOf(handler);
+		var handlers = getHandlers(type);
+		var index = handlers.indexOf(handler);
 		if (index < 0) {
-			eventHandlers.push(handler);
+			handlers.push(handler);
 		}
 	}
-	function removeListener (handler) {
+	function removeListener (type, handler) {
 		if (typeof handler != 'function') return;
-		var index = eventHandlers.indexOf(handler);
+		var handlers = getHandlers(type);
+		var index = handlers.indexOf(handler);
 		if (index >= 0) {
-			eventHandlers.splice(index, 1);
+			handlers.splice(index, 1);
 		}
+	}
+	function init (aleading) {
+		if (!target) return;
+		if (typeof aleading == 'object' && 'value' in aleading && 'selectionStart' in aleading) {
+			aleading = aleading.value.substring(0, aleading.selectionStart);
+		}
+		leading = target.value = aleading || '';
 	}
 	function dispose () {
-		eventHandlers = [];
+		inputEventHandlers =
+		compositStartEventHandlers =
+		compositUpdateEventHandlers =
+		compositEndEventHandlers = undefined;
 		uninstall();
 	}
-	function fire (e) {
-		eventHandlers.forEach(function (handler) {
-			handler(e);
-		});
-	}
+
+	// event handlers
 	function handleKeydown (e) {
+		lastEvent = e.type;
+		keyDownCode = e.keyCode;
+		inputEventInvokedCount = 0;
 		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
 		if (window.chrome) {
 			specialKeyName = false;
@@ -950,13 +987,13 @@ Wasavi.KeyManager = function () {
 				specialKeys[e.keyCode] : false;
 			specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
 
-			// workaround for Opera 12.10/12.11
 			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
 				handleKeypress(e);
 			}
 		}
 	}
 	function handleKeypress (e) {
+		'type' in e && (lastEvent = e.type);
 		e.preventDefault();
 
 		var c = [];
@@ -1006,7 +1043,7 @@ Wasavi.KeyManager = function () {
 			}
 		}
 
-		fire({
+		fire(inputEventHandlers, {
 			code:             logicalCharCode,
 			identifier:       baseKeyName,
 			fullIdentifier:   c.join('-'),
@@ -1014,6 +1051,152 @@ Wasavi.KeyManager = function () {
 			ctrl:             e.ctrlKey,
 			isSpecial:        isSpecial
 		});
+	}
+	function handleKeyup (e) {
+		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
+		if (window.opera && (keyDownCode == 229 || isInComposition)) {
+			var s = e.target.value.substring(leading.length);
+			if (inputEventInvokedCount == 3 || e.keyCode == 13 && inputEventInvokedCount == 2) {
+				if (inputEventInvokedCount == 3) {
+					s = s.substring(0, s.length - 1);
+				}
+				bulkFire(s);
+				clear(e);
+				leading = e.target.value.substring(0, e.target.selectionStart);
+				isInComposition = false;
+			}
+			else if (e.keyCode == 27 && inputEventInvokedCount == 0 || s == '') {
+				fireCompositEnd('');
+				isInComposition = false;
+			}
+			else {
+				if (!isInComposition) {
+					fire(compositStartEventHandlers, {data:''});
+					isInComposition = true;
+				}
+				fire(compositUpdateEventHandlers, {data:s});
+			}
+			inputEventInvokedCount = 0;
+			keyDownCode = -1;
+		}
+	}
+	function handleCompStart (e) {
+		if (!ensureTarget(e)) return;
+		lastEvent = e.type;
+		fire(compositStartEventHandlers, {data:e.data});
+	}
+	function handleCompUpdate (e) {
+		if (!ensureTarget(e)) return;
+		lastEvent = e.type;
+		fire(compositUpdateEventHandlers, {data:e.data});
+	}
+	function handleCompEnd (e) {
+		if (!ensureTarget(e)) return;
+		lastEvent = e.type;
+		compositionResult = e.data;
+	}
+	function handleInputChrome (e) {
+		if (!ensureTarget(e)) return;
+		if (lastEvent == 'keydown') {
+			var s = e.target.value.substring(lastValue.length);
+			if (s != '') {
+				fire(compositStartEventHandlers, {data:''});
+				fire(compositUpdateEventHandlers, {data:s});
+				bulkFire(s);
+			}
+			clear(e);
+		}
+		else if (lastEvent == 'compositionend') {
+			bulkFire(compositionResult);
+			clear(e);
+			compositionResult = null;
+		}
+		lastValue = e.target.value;
+		lastEvent = e.type;
+	}
+	function handleInputOpera (e) {
+		if (!ensureTarget(e)) return;
+		inputEventInvokedCount++;
+		lastEvent = e.type;
+	}
+	function handleInputGecko (e) {
+		if (!ensureTarget(e)) return;
+		if (lastEvent == 'compositionend') {
+			bulkFire(compositionResult);
+			clear(e);
+			compositionResult = null;
+		}
+		lastEvent = e.type;
+	}
+
+	// privates
+	function getInputHandler () {
+		if (window.chrome) return handleInputChrome;
+		if (window.opera) return handleInputOpera;
+		return handleInputGecko;
+	}
+	function getHandlers (type) {
+		var handlers;
+		switch (type) {
+		case 'input':
+			handlers = inputEventHandlers;
+			break;
+		case 'compositionstart':
+			handlers = compositStartEventHandlers;
+			break;
+		case 'compositionupdate':
+			handlers = compositUpdateEventHandlers;
+			break;
+		case 'compositionend':
+			handlers = compositEndEventHandlers;
+			break;
+		default:
+			handlers = [];
+		}
+		return handlers;
+	}
+	function fire (handlers, e) {
+		for (var i = 0, goal = handlers.length; i < goal; i++) {
+			handlers[i](e);
+		}
+	}
+	function fireCompositEnd (data) {
+		var e = {data:data};
+		for (var i = 0, goal = compositEndEventHandlers.length; i < goal; i++) {
+			if (compositEndEventHandlers[i](e) === false) {
+				return false;
+			}
+		}
+		return true;
+	}
+	function bulkFire (data) {
+		if (!fireCompositEnd(data)) return;
+		var e = {
+			code:             0,
+			identifier:       false,
+			fullIdentifier:   false,
+			shift:            false,
+			ctrl:             false,
+			nativeKeyCode:    0,
+			nativeCharCode:   0,
+			nativeIdentifier: '',
+			isCompositioned:  true,
+			isCompositionedLast: false
+		};
+		for (var i = 0, goal = data.length; i < goal; i++) {
+			e.code = data.charCodeAt(i);
+			e.identifier = e.fullIdentifier = data.charAt(i);
+			e.isCompositionedLast = i == goal - 1;
+			fire(inputEventHandlers, e);
+		}
+	}
+	function ensureTarget (e) {
+		return !target || target == e.target;
+	}
+	function clear (e) {
+		if (!isPreserve) {
+			e.target.value = '';
+		}
 	}
 	function code2letter (c, useSpecial) {
 		if (typeof c != 'number') return '';
@@ -1149,16 +1332,18 @@ Wasavi.KeyManager = function () {
 	function sweep () {
 		if (bufferedStrokes.length == 0) return;
 
-		var e;
 		var bs = bufferedStrokes.slice(0);
 		bufferedStrokes.length = 0;
 		while (bs.length) {
-			fire(bs.shift());
+			fire(inputEventHandlers, bs.shift());
 		}
 	}
 
 	this.install = install;
 	this.uninstall = uninstall;
+	this.addEventListener = addListener;
+	this.removeEventListener = removeListener;
+	this.init = init;
 	this.code2letter = code2letter;
 	this.toInternalString = toInternalString;
 	this.objectFromCode = objectFromCode;
@@ -1169,6 +1354,20 @@ Wasavi.KeyManager = function () {
 	this.push = push;
 	this.sweep = sweep;
 	this.dispose = dispose;
+
+	this.__defineGetter__('preserve', function () {
+		return isPreserve;
+	});
+	this.__defineSetter__('preserve', function (v) {
+		isPreserve = !!v;
+	});
+	this.__defineGetter__('target', function () {
+		return target;
+	});
+	this.__defineSetter__('target', function (v) {
+		target = v;
+		init(v.value);
+	});
 };
 
 Wasavi.MapManager = function (app) {
