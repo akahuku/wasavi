@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 267 2013-01-03 08:30:53Z akahuku $
+ * @version $Id: classes.js 268 2013-01-07 14:30:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -876,27 +876,33 @@ Wasavi.KeyManager = function () {
 	var specialKeyName;
 	var specialKeyCode;
 	var inputEventHandlers = [];
+	var lastReceivedEvent = '';
+	var lastFiredEvent = '';
+	var bufferedStrokes = [];
+
+	// for general composition
+	var lastValue = '';
+	var isInComposition = false;
+	var isPreserve = false;
+	var keyDownCode = -1;
+	var compositionResult = null;
 	var compositStartEventHandlers = [];
 	var compositUpdateEventHandlers = [];
 	var compositEndEventHandlers = [];
-	var bufferedStrokes = [];
-	var keyDownCode;
-	var lastEvent = '';
-	var lastValue = '';
-	var isPreserve = false;
-	var compositionResult = null;
 
-	// for opera
-	var isInComposition = false;
-	var leading = '';
+	// for composition on opera
+	var compositionStartPos = -1;
+	var lastCompositionLength = -1;
 	var inputEventInvokedCount = 0;
+	var keydownStack = [];
+	var keyupStack = [];
 
 	// publics
 	function install (handler) {
 		addListener('input', handler);
 		document.addEventListener('keydown', handleKeydown, true);
 		document.addEventListener('keypress', handleKeypress, true);
-		document.addEventListener('keyup', handleKeyup, true);
+		document.addEventListener('keyup', getKeyupHandler(), true);
 		document.addEventListener('compositionstart', handleCompStart, true);
 		document.addEventListener('compositionupdate', handleCompUpdate, true);
 		document.addEventListener('compositionend', handleCompEnd, true);
@@ -905,7 +911,7 @@ Wasavi.KeyManager = function () {
 	function uninstall () {
 		document.removeEventListener('keydown', handleKeydown, true);
 		document.removeEventListener('keypress', handleKeypress, true);
-		document.removeEventListener('keyup', handleKeyup, true);
+		document.removeEventListener('keyup', getKeyupHandler(), true);
 		document.removeEventListener('compositionstart', handleCompStart, true);
 		document.removeEventListener('compositionupdate', handleCompUpdate, true);
 		document.removeEventListener('compositionend', handleCompEnd, true);
@@ -932,7 +938,13 @@ Wasavi.KeyManager = function () {
 		if (typeof aleading == 'object' && 'value' in aleading && 'selectionStart' in aleading) {
 			aleading = aleading.value.substring(0, aleading.selectionStart);
 		}
-		leading = target.value = aleading || '';
+		lastValue = target.value = aleading || '';
+		isInComposition = false;
+		keyDownCode = -1;
+		compositionResult = null;
+		compositionStartPos = -1;
+		lastCompositionLength = -1;
+		inputEventInvokedCount = 0;
 	}
 	function dispose () {
 		inputEventHandlers =
@@ -944,7 +956,13 @@ Wasavi.KeyManager = function () {
 
 	// event handlers
 	function handleKeydown (e) {
-		lastEvent = e.type;
+		lastReceivedEvent = e.type;
+
+		if (window.opera && e.keyCode == 229 && !e.__delayedTrace) {
+			keydownStack.push([e, [], '']);
+			return;
+		}
+
 		keyDownCode = e.keyCode;
 		inputEventInvokedCount = 0;
 		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
@@ -993,7 +1011,7 @@ Wasavi.KeyManager = function () {
 		}
 	}
 	function handleKeypress (e) {
-		'type' in e && (lastEvent = e.type);
+		'type' in e && (lastReceivedEvent = e.type);
 		e.preventDefault();
 
 		var c = [];
@@ -1043,7 +1061,7 @@ Wasavi.KeyManager = function () {
 			}
 		}
 
-		fire(inputEventHandlers, {
+		fire('input', inputEventHandlers, {
 			code:             logicalCharCode,
 			identifier:       baseKeyName,
 			fullIdentifier:   c.join('-'),
@@ -1053,83 +1071,191 @@ Wasavi.KeyManager = function () {
 		});
 	}
 	function handleKeyup (e) {
-		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
-		if (window.opera && (keyDownCode == 229 || isInComposition)) {
-			var s = e.target.value.substring(leading.length);
-			if (inputEventInvokedCount == 3 || e.keyCode == 13 && inputEventInvokedCount == 2) {
-				if (inputEventInvokedCount == 3) {
-					s = s.substring(0, s.length - 1);
+		/*if (e.keyCode == 16 || e.keyCode == 17) {
+			return;
+		}*/
+
+	}
+	function handleKeyupOpera (e) {
+		if (keydownStack.length) {
+			keydownStack = keydownStack.filter(function (item) {return !item[0].repeat});
+			if (keyupStack.length != keydownStack.length - 1 && !e.__delayedTrace) {
+				keyupStack.push(e);
+				return;
+			}
+			if (!e.__delayedTrace) {
+				while (keyupStack.length) {
+					var keyup = keyupStack.shift();
+					keyup.__delayedValue = e.target.value;
+					var inputs = keydownStack.shift();
+					inputs[0].__delayedTrace = true;
+					handleKeydown(inputs[0]);
+					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
+						inputs[1][i].__delayedTrace = true;
+						keyup.__delayedValue = inputs[2];
+						handleInputOpera(inputs[1][i]);
+					}
+					keyup.__delayedTrace = true;
+					handleKeyupOpera(keyup);
 				}
-				bulkFire(s);
+				if (keydownStack.length != 1 || keyupStack.length != 0) {
+					//console.error('keyup: balance mismatch. 1:' + keydownStack.length + ', 2:' + keyupStack.length);
+					return;
+				}
+				else {
+					var inputs = keydownStack.shift();
+					inputs[0].__delayedTrace = true;
+					handleKeydown(inputs[0]);
+					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
+						inputs[1][i].__delayedTrace = true;
+						handleInputOpera(inputs[1][i]);
+					}
+				}
+			}
+		}
+
+		if (e.keyCode == 16 || e.keyCode == 17) return;
+		if (keyDownCode == 229 || isInComposition) {
+			var value = e.__delayedValue || e.target.value;
+			var composition, increment;
+
+			if (isInComposition && inputEventInvokedCount == 3) {
+				composition = value.substr(
+					compositionStartPos,
+					lastCompositionLength);
+				bulkFire(composition);
 				clear(e);
-				leading = e.target.value.substring(0, e.target.selectionStart);
-				isInComposition = false;
+				compositionStartPos += lastCompositionLength;
+				lastCompositionLength = value.length - lastValue.length;
+				fire('compositionstart', compositStartEventHandlers, {data:''});
 			}
-			else if (e.keyCode == 27 && inputEventInvokedCount == 0 || s == '') {
+			else if (isInComposition && inputEventInvokedCount == 2) {
+				isInComposition = false;
+				composition = value.substr(
+					compositionStartPos,
+					lastCompositionLength + value.length - lastValue.length);
+				bulkFire(composition);
+				clear(e);
+				value = e.target.value;
+			}
+			else if (
+				isInComposition &&
+				(e.keyCode == 27 && inputEventInvokedCount == 0)
+			) {
+				isInComposition = false;
 				fireCompositEnd('');
-				isInComposition = false;
+				clear(e);
+				value = e.target.value;
 			}
-			else {
+			else if (value != lastValue) {
 				if (!isInComposition) {
-					fire(compositStartEventHandlers, {data:''});
 					isInComposition = true;
+					fire('compositionstart', compositStartEventHandlers, {data:''});
+					compositionStartPos = getCompositionStartPos(lastValue, value);
+					lastCompositionLength = 0;
 				}
-				fire(compositUpdateEventHandlers, {data:s});
+				increment = value.length - lastValue.length;
+				lastCompositionLength += increment;
+				if (lastCompositionLength > 0) {
+					composition = value.substr(
+						compositionStartPos,
+						lastCompositionLength);
+					fire('compositionupdate', compositUpdateEventHandlers, {data:composition});
+				}
+				else {
+					isInComposition = false;
+					fireCompositEnd('');
+					clear(e);
+					value = e.target.value;
+				}
 			}
 			inputEventInvokedCount = 0;
 			keyDownCode = -1;
+			lastValue = value;
 		}
 	}
 	function handleCompStart (e) {
 		if (!ensureTarget(e)) return;
-		lastEvent = e.type;
-		fire(compositStartEventHandlers, {data:e.data});
+		lastReceivedEvent = e.type;
+		isInComposition = true;
+		fire('compositionstart', compositStartEventHandlers, {data:e.data});
 	}
 	function handleCompUpdate (e) {
 		if (!ensureTarget(e)) return;
-		lastEvent = e.type;
-		fire(compositUpdateEventHandlers, {data:e.data});
+		lastReceivedEvent = e.type;
+		fire('compositionupdate', compositUpdateEventHandlers, {data:e.data});
 	}
 	function handleCompEnd (e) {
 		if (!ensureTarget(e)) return;
-		lastEvent = e.type;
+		lastReceivedEvent = e.type;
 		compositionResult = e.data;
+		isInComposition = false;
 	}
 	function handleInputChrome (e) {
 		if (!ensureTarget(e)) return;
-		if (lastEvent == 'keydown') {
+		if (lastReceivedEvent == 'keydown') {
 			var s = e.target.value.substring(lastValue.length);
 			if (s != '') {
-				fire(compositStartEventHandlers, {data:''});
-				fire(compositUpdateEventHandlers, {data:s});
+				fire('compositionstart', compositStartEventHandlers, {data:''});
+				fire('compositionupdate', compositUpdateEventHandlers, {data:s});
 				bulkFire(s);
 			}
 			clear(e);
 		}
-		else if (lastEvent == 'compositionend') {
+		else if (lastReceivedEvent == 'compositionend') {
 			bulkFire(compositionResult);
 			clear(e);
 			compositionResult = null;
 		}
 		lastValue = e.target.value;
-		lastEvent = e.type;
+		lastReceivedEvent = e.type;
 	}
 	function handleInputOpera (e) {
+		if (keydownStack.length && !e.__delayedTrace) {
+			var last = keydownStack[keydownStack.length - 1];
+			if (!last[0].repeat) {
+				last[1].push(e);
+				last[2] = e.target.value;
+			}
+			return;
+		}
 		if (!ensureTarget(e)) return;
 		inputEventInvokedCount++;
-		lastEvent = e.type;
+		lastReceivedEvent = e.type;
 	}
 	function handleInputGecko (e) {
 		if (!ensureTarget(e)) return;
-		if (lastEvent == 'compositionend') {
+		if (lastReceivedEvent == 'compositionend') {
 			bulkFire(compositionResult);
 			clear(e);
 			compositionResult = null;
 		}
-		lastEvent = e.type;
+		lastReceivedEvent = e.type;
 	}
 
 	// privates
+	function logit (s) {
+		//console.log(s);
+	}
+	function getCompositionStartPos (before, current) {
+		var length = current.length - before.length;
+		if (length <= 0) {
+			return -1;
+		}
+		for (var i = 0, goal = (current.length - length) + 1; i < goal; i++) {
+			var tmp = before.substring(0, i)
+				+ current.substring(i, i + length)
+				+ before.substring(i);
+			if (tmp == current) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	function getKeyupHandler () {
+		if (window.opera) return handleKeyupOpera;
+		return handleKeyup;
+	}
 	function getInputHandler () {
 		if (window.chrome) return handleInputChrome;
 		if (window.opera) return handleInputOpera;
@@ -1155,12 +1281,14 @@ Wasavi.KeyManager = function () {
 		}
 		return handlers;
 	}
-	function fire (handlers, e) {
+	function fire (eventName, handlers, e) {
+		lastFiredEvent = eventName;
 		for (var i = 0, goal = handlers.length; i < goal; i++) {
 			handlers[i](e);
 		}
 	}
 	function fireCompositEnd (data) {
+		lastFiredEvent = 'compositionend';
 		var e = {data:data};
 		for (var i = 0, goal = compositEndEventHandlers.length; i < goal; i++) {
 			if (compositEndEventHandlers[i](e) === false) {
@@ -1170,7 +1298,7 @@ Wasavi.KeyManager = function () {
 		return true;
 	}
 	function bulkFire (data) {
-		if (!fireCompositEnd(data)) return;
+		if (lastFiredEvent == 'compositionupdate' && !fireCompositEnd(data)) return;
 		var e = {
 			code:             0,
 			identifier:       false,
@@ -1187,16 +1315,14 @@ Wasavi.KeyManager = function () {
 			e.code = data.charCodeAt(i);
 			e.identifier = e.fullIdentifier = data.charAt(i);
 			e.isCompositionedLast = i == goal - 1;
-			fire(inputEventHandlers, e);
+			fire('input', inputEventHandlers, e);
 		}
 	}
 	function ensureTarget (e) {
 		return !target || target == e.target;
 	}
 	function clear (e) {
-		if (!isPreserve) {
-			e.target.value = '';
-		}
+		!isPreserve && init('');
 	}
 	function code2letter (c, useSpecial) {
 		if (typeof c != 'number') return '';
@@ -1367,6 +1493,9 @@ Wasavi.KeyManager = function () {
 	this.__defineSetter__('target', function (v) {
 		target = v;
 		init(v.value);
+	});
+	this.__defineGetter__('isInComposition', function () {
+		return isInComposition;
 	});
 };
 

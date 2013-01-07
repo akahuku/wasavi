@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 267 2013-01-03 08:30:53Z akahuku $
+ * @version $Id: wasavi.js 268 2013-01-07 14:30:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1709,9 +1709,16 @@ function processInput (code, e, ignoreAbbreviation) {
 		else {
 			needEmitEvent = true;
 		}
-		cursor.ensureVisible(isSmoothScrollRequested);
-		cursor.update(scroller.running || state != 'normal' ?
-			{visible:false} : {focused:true, visible:true});
+		if (requestedState.inputMode) {
+			cursor.ensureVisible(false);
+		}
+		else {
+			cursor.ensureVisible(isSmoothScrollRequested);
+		}
+		if (!requestedState.inputMode || !requestedState.inputMode.updateCursor) {
+			cursor.update(scroller.running || state != 'normal' ?
+				{visible:false} : {focused:true, visible:true});
+		}
 	}
 	function execEditMap (t, key, subkey, code) {
 		if (editMap[key]) {
@@ -2013,7 +2020,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
 				processAbbrevs();
-				if (runLevel == 0 || !e.isCompositioned || e.isCompositionedLast) {
+				if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
 					cursor.ensureVisible();
 					cursor.update({visible:true, focused:true});
 					requestShowPrefixInput(getDefaultPrefixInputString());
@@ -2437,8 +2444,9 @@ function getCurrentViewPositionIndices () {
 	return result;
 }
 function isDenotativeState () {
-	return prefixInput.motion == 'g' && !config.vars.jkdenotative
-		|| prefixInput.motion != 'g' &&  config.vars.jkdenotative;
+	var isAlterMotion = prefixInput.motion.charAt(0) == 'g';
+	return isAlterMotion  && !config.vars.jkdenotative
+		|| !isAlterMotion &&  config.vars.jkdenotative;
 }
 function callDenotativeFunction () {
 	return (isDenotativeState() ? motionUpDownDenotative : motionUpDown).apply(null, arguments);
@@ -3724,7 +3732,7 @@ function startEdit (c, opts) {
 		}
 		buffer.setSelectionRange(n);
 		cursor.ensureVisible();
-		cursor.update({type:'edit'});
+		cursor.update({type:'edit', visible:true});
 		requestShowPrefixInput(getDefaultPrefixInputString());
 		prefixInput.operation = c;
 		prefixInput.isLocked = true;
@@ -3816,9 +3824,9 @@ function handleKeydown2 (e) {
 		});
 		return;
 	}
-	if (cursor.inComposition) {
+	/*if (cursor.inComposition) {
 		return;
-	}
+	}*/
 	isInteractive = true;
 	(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
 		.call(extensionChannel, function () {

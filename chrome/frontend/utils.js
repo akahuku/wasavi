@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 245 2012-12-16 01:59:49Z akahuku $
+ * @version $Id: utils.js 268 2013-01-07 14:30:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -294,6 +294,23 @@ function setTabStop (ts) {
 		});
 		return true;
 	});
+}
+function stacktrace () {
+	var x = {};
+	var result = '';
+	try {
+		x.y.z += 0;
+	}
+	catch (e) {
+		if (window.opera && e.stack) {
+			result = e.stack
+				.replace(/^[^\n]+\n/, '')
+				.replace(/@/g, '\t@')
+				.replace(/<anonymous function:\s*([^>]+)>/g, '<$1>')
+				.replace(/\(\[arguments not available\]\)/g, '(?)');
+		}
+	}
+	return result;
 }
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

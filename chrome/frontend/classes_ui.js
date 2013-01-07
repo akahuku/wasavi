@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 267 2013-01-03 08:30:53Z akahuku $
+ * @version $Id: classes_ui.js 268 2013-01-07 14:30:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -298,7 +298,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	var locked = false;
 	var focused = false;
 	var visible = false;
-	var inComposition = false;
 	var wrapper = null;
 	var fixed = document.defaultView.getComputedStyle($(CONTAINER_ID), '')
 		.position == 'fixed';
@@ -434,28 +433,37 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		}
 		this.compositionUpdate = function (data) {
 			var span = getCompositionSpan();
-			if (span) {
-				span.textContent = leading + data;
-			}
+			if (!span) return;
+			span.textContent = leading + data;
+			buffer.setSelectionRange(new Wasavi.Position(
+				buffer.selectionStartRow, span.textContent.length));
+			ensureVisible(false);
 		}
 		this.compositionComplete = function (data) {
-			getCompositionSpan().textContent = leading;
-			removeCompositionSpan();
+			var span = getCompositionSpan();
+			if (!span) return;
+			span.textContent = leading;
+			buffer.setSelectionRange(new Wasavi.Position(
+				buffer.selectionStartRow, span.textContent.length));
+			if (data == '') {
+				this.show();
+			}
+			else {
+				removeCompositionSpan();
+			}
 		};
 		this.hide = function () {
 			editCursor.style.display = 'none';
 			removeCompositionSpan();
 		};
 		this.show = function () {
-			if (app.runLevel || inComposition) {
-				return;
-			}
-			editCursor.style.display = 'block';
+			if (app.runLevel) return;
 
 			var s = buffer.selectionStart;
 			var c = $(CONTAINER_ID).getBoundingClientRect();
 			var r = buffer.rowNodes(s).getBoundingClientRect();
 
+			editCursor.style.display = 'block';
 			editCursor.style.left = Math.floor(r.left - c.left) + 'px';
 			editCursor.style.top = Math.floor(r.top - c.top) + 'px';
 			editCursor.style.width = Math.floor(r.right - r.left) + 'px';
@@ -463,15 +471,16 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 
 			removeCompositionSpan();
 			var span = createCompositionSpan();
-			editCursor.value = leading = span.textContent;
-			editCursor.selectionStart = editCursor.value.length;
-			editCursor.selectionEnd = editCursor.value.length;
-
+			leading = span.textContent;
 			buffer.adjustBackgroundImage(app.lineHeight);
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.updateActiveRow();
 
-			app.keyManager.init(leading);
+			if (!app.keyManager.isInComposition) {
+				app.keyManager.init(leading);
+				editCursor.selectionStart = editCursor.value.length;
+				editCursor.selectionEnd = editCursor.value.length;
+			}
 
 			editCursor.focus();
 		};
@@ -610,7 +619,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		}
 	}
 	function handleCompositionStart (e) {
-		inComposition = true;
 		wrapper.compositionUpdate(e.data);
 	}
 	function handleCompositionUpdate (e) {
@@ -618,9 +626,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	}
 	function handleCompositionEnd (e) {
 		var result = wrapper.compositionComplete(e.data);
-		inComposition = false;
-		ensureVisible();
-		update();
 		return result;
 	}
 	function handleInput (e) {
@@ -648,7 +653,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	this.__defineGetter__('visible', function () {return visible;});
 	this.__defineGetter__('commandCursor', function () {return comCursor;});
 	this.__defineGetter__('editCursor', function () {return editCursor;});
-	this.__defineGetter__('inComposition', function () {return inComposition;});
 	this.__defineGetter__('locked', function () {return locked;});
 	this.__defineSetter__('locked', function (v) {locked = v;});
 };
