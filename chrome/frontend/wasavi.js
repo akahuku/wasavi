@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 268 2013-01-07 14:30:36Z akahuku $
+ * @version $Id: wasavi.js 269 2013-01-11 12:28:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -856,6 +856,7 @@ ime-mode:disabled; \
 	 * execute exrc
 	 */
 
+	console.log('wasavi.js: exrc:"' + exrc + '"');
 	isInteractive = false;
 	var result = executeExCommand(exrc, true);
 	typeof result == 'string' && showMessage(result, true);
@@ -921,6 +922,7 @@ function uninstall (save, implicit) {
 		targetElement.tabId = extensionChannel.tabId;
 		targetElement.isTopFrame = !!WasaviExtensionWrapper.isTopFrame;
 		targetElement.isImplicit = !!implicit;
+		targetElement.ros = config.dumpScript(true).join('\n');
 		fireEvent('terminated', targetElement);
 		extensionChannel = extensionChannel.disconnect();
 	}
@@ -1950,14 +1952,14 @@ function processInput (code, e, ignoreAbbreviation) {
 
 	switch (inputMode) {
 	case 'command':
-		cursor.update({visible:false});
+		cursor.windup();
 		execCommandMap(buffer, mapkey, subkey, code);
 		result = true;
 		break;
 
 	case 'edit':
 	case 'edit-overwrite':
-		cursor.update({visible:false});
+		cursor.windup();
 
 		if (subkey == inputMode && code == 0x1b) {
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
@@ -2014,12 +2016,14 @@ function processInput (code, e, ignoreAbbreviation) {
 				pairBracketsIndicator = null;
 			}
 			if (execEditMap(buffer, mapkey, subkey, code)) {
-				// do nothing
+				requestShowPrefixInput(getDefaultPrefixInputString());
 			}
-			else if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
-				(inputMode == 'edit' ? insert : overwrite)(letterActual);
-				processAutoDivide(e);
-				processAbbrevs();
+			else {
+				if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
+					(inputMode == 'edit' ? insert : overwrite)(letterActual);
+					processAutoDivide(e);
+					processAbbrevs();
+				}
 				if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
 					cursor.ensureVisible();
 					cursor.update({visible:true, focused:true});
@@ -4077,7 +4081,7 @@ var config = new Wasavi.Configurator(appProxy,
 		//['backup', 's', ''],
 		//['cdpath', 's', ':'],
 		//['cedit', 's', ''],
-		['columns', 'i', 0],
+		['columns', 'i', 0, null, true],
 		//['combined', 'b', false],
 		//['comment', 'b', false],
 		//['escapetime', 'i', 6],
@@ -4090,7 +4094,7 @@ var config = new Wasavi.Configurator(appProxy,
 		//['inputencoding', 's', ''],
 		//['keytime', 'i', 6],
 		//['leftright', 'b', false],
-		['lines', 'i', 0],
+		['lines', 'i', 0, null, true],
 		//['lisp', 'b', false],
 		//['lock', 'b', true],
 		['matchtime', 'i', 5],
@@ -6131,7 +6135,7 @@ if (global.WasaviExtensionWrapper
 		}
 		switch (req.type) {
 		case 'init-response':
-			exrc = req.exrc;
+			exrc = req.exrc + '\n' + req.ros;
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
 			l10n = new Wasavi.L10n(appProxy, req.messageCatalog);

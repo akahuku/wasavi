@@ -2,14 +2,14 @@
 // @include http://wasavi.appsweets.net/
 // @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
-//
+
 /**
  * wasavi: vi clone implemented in javascript
  * =============================================================================
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 268 2013-01-07 14:30:36Z akahuku $
+ * @version $Id: classes.js 269 2013-01-11 12:28:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -160,10 +160,11 @@ Wasavi.L10n = function (app, catalog) {
 }
 
 Wasavi.Configurator = function (app, internals, abbrevs) {
-	function VariableItem (name, type, defaultValue, subSetter) {
+	function VariableItem (name, type, defaultValue, subSetter, isDynamic) {
 		this.name = name;
 		this.type = type;
 		this.isLateBind = type == 'r';
+		this.isDynamic = !!isDynamic;
 		this.defaultValue = defaultValue;
 		this.subSetter = subSetter;
 		this.nativeValue = defaultValue;
@@ -250,7 +251,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			for (var j = value.length; j < 4; j++) {
 				value.push(undefined);
 			}
-			var v = new VariableItem(value[0], value[1], value[2], value[3]);
+			var v = new VariableItem(value[0], value[1], value[2], value[3], value[4]);
 			names[v.name] = i;
 			if (v.isLateBind) {
 				v.value = v.nativeValue;
@@ -320,9 +321,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			for (var j = 0; j < internals.length; j++) {
 				var item = internals[j];
 				var line = item.visibleString;
-				if (!all && item.value == item.defaultValue) {
-					continue;
-				}
+				if (!all && item.value == item.defaultValue) continue;
 				if (i == 0 && line.length <= phaseThreshold - gap
 				||  i == 1 && line.length >  phaseThreshold - gap) {
 					tmp.push(line);
@@ -358,7 +357,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 	this.dumpData = function () {
 		var result = [];
 		var ab = reverseObject(abbrevs);
-		for (var i = 0; i < internals.length; i++) {
+		for (var i = 0, goal = internals.length; i < goal; i++) {
 			var v = internals[i];
 			var type = '';
 			switch (v.type) {
@@ -377,6 +376,16 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				tmp.abbrev = ab[v.name];
 			}
 			result.push(tmp);
+		}
+		return result;
+	};
+	this.dumpScript = function (modifiedOnly) {
+		var result = [];
+		for (var i = 0, goal = internals.length; i < goal; i++) {
+			var v = internals[i];
+			if (modifiedOnly && v.value == v.defaultValue) continue;
+			if (v.isDynamic) continue;
+			result.push('set ' + v.visibleString);
 		}
 		return result;
 	};
@@ -960,12 +969,14 @@ Wasavi.KeyManager = function () {
 
 		if (window.opera && e.keyCode == 229 && !e.__delayedTrace) {
 			keydownStack.push([e, [], '']);
+			//logit('[keydown] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
 			return;
 		}
 
 		keyDownCode = e.keyCode;
 		inputEventInvokedCount = 0;
 		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
+		logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which);
 		if (window.chrome) {
 			specialKeyName = false;
 
@@ -1075,15 +1086,18 @@ Wasavi.KeyManager = function () {
 			return;
 		}*/
 
+		//logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which);
 	}
 	function handleKeyupOpera (e) {
 		if (keydownStack.length) {
 			keydownStack = keydownStack.filter(function (item) {return !item[0].repeat});
 			if (keyupStack.length != keydownStack.length - 1 && !e.__delayedTrace) {
 				keyupStack.push(e);
+				//logit('[  keyup] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
 				return;
 			}
 			if (!e.__delayedTrace) {
+				//logit('[  keyup] *** delayed tracing start. 1:' + keydownStack.length + ', 2:' + keyupStack.length + ' ***');
 				while (keyupStack.length) {
 					var keyup = keyupStack.shift();
 					keyup.__delayedValue = e.target.value;
@@ -1098,6 +1112,7 @@ Wasavi.KeyManager = function () {
 					keyup.__delayedTrace = true;
 					handleKeyupOpera(keyup);
 				}
+				//logit('[  keyup] *** delayed tracing end ***');
 				if (keydownStack.length != 1 || keyupStack.length != 0) {
 					//console.error('keyup: balance mismatch. 1:' + keydownStack.length + ', 2:' + keyupStack.length);
 					return;
@@ -1115,6 +1130,7 @@ Wasavi.KeyManager = function () {
 		}
 
 		if (e.keyCode == 16 || e.keyCode == 17) return;
+		//logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', __v:"' + e.__delayedValue + '", v:"' + e.target.value + '"');
 		if (keyDownCode == 229 || isInComposition) {
 			var value = e.__delayedValue || e.target.value;
 			var composition, increment;
@@ -1124,10 +1140,12 @@ Wasavi.KeyManager = function () {
 					compositionStartPos,
 					lastCompositionLength);
 				bulkFire(composition);
+				logit('[  keyup] composition end(1) with:"' + composition + '"');
 				clear(e);
 				compositionStartPos += lastCompositionLength;
 				lastCompositionLength = value.length - lastValue.length;
 				fire('compositionstart', compositStartEventHandlers, {data:''});
+				logit('[  keyup] composition start(1)');
 			}
 			else if (isInComposition && inputEventInvokedCount == 2) {
 				isInComposition = false;
@@ -1135,6 +1153,7 @@ Wasavi.KeyManager = function () {
 					compositionStartPos,
 					lastCompositionLength + value.length - lastValue.length);
 				bulkFire(composition);
+				logit('[  keyup] composition end(2) with:"' + composition + '"');
 				clear(e);
 				value = e.target.value;
 			}
@@ -1144,6 +1163,7 @@ Wasavi.KeyManager = function () {
 			) {
 				isInComposition = false;
 				fireCompositEnd('');
+				logit('[  keyup] composition end(3)');
 				clear(e);
 				value = e.target.value;
 			}
@@ -1151,6 +1171,7 @@ Wasavi.KeyManager = function () {
 				if (!isInComposition) {
 					isInComposition = true;
 					fire('compositionstart', compositStartEventHandlers, {data:''});
+					logit('[  keyup] composition start(2)');
 					compositionStartPos = getCompositionStartPos(lastValue, value);
 					lastCompositionLength = 0;
 				}
@@ -1165,6 +1186,7 @@ Wasavi.KeyManager = function () {
 				else {
 					isInComposition = false;
 					fireCompositEnd('');
+					logit('[  keyup] composition end(4)');
 					clear(e);
 					value = e.target.value;
 				}
@@ -1193,6 +1215,7 @@ Wasavi.KeyManager = function () {
 	}
 	function handleInputChrome (e) {
 		if (!ensureTarget(e)) return;
+		logit('[  input]\tvalue:"' + e.target.value + '"');
 		if (lastReceivedEvent == 'keydown') {
 			var s = e.target.value.substring(lastValue.length);
 			if (s != '') {
@@ -1217,14 +1240,18 @@ Wasavi.KeyManager = function () {
 				last[1].push(e);
 				last[2] = e.target.value;
 			}
+			//logit('[  input] *** stacked: "' + e.target.value + '", ' + keydownStack.length + ' ***');
 			return;
 		}
 		if (!ensureTarget(e)) return;
+		var a = [document.activeElement.nodeName, document.activeElement.id, document.activeElement.style.display].join(', ');
+		logit('[  input]\tvalue:"' + e.target.value + '", activeElement:' + a);
 		inputEventInvokedCount++;
 		lastReceivedEvent = e.type;
 	}
 	function handleInputGecko (e) {
 		if (!ensureTarget(e)) return;
+		logit('[  input]\tvalue:"' + e.target.value + '"');
 		if (lastReceivedEvent == 'compositionend') {
 			bulkFire(compositionResult);
 			clear(e);

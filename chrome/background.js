@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 260 2012-12-21 07:13:33Z akahuku $
+ * @version $Id: background.js 269 2013-01-11 12:28:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -90,6 +90,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	var wasaviFrame;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
+	var runtimeOverwriteSettings;
 
 	/*
 	 * classes
@@ -166,8 +167,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			}
 
 			var xhr = transportGetter();
+			var sync = 'sync' in opts && opts.sync;
 			var isText;
-			xhr.open('GET', locationGetter(resourcePath), true);
+			xhr.open('GET', locationGetter(resourcePath), !sync);
 			if (opts.responseType && opts.responseType != 'text') {
 				xhr.responseType = opts.responseType;
 				isText = false;
@@ -1444,6 +1446,152 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		restoreAcessTokenPersistents();
 	}
 
+	/**
+	 * runtime overwrite settings
+	 */
+
+	function RuntimeOverwriteSettings () {
+		var ROS_URL_MAX = 20;
+		var ROS_NODE_MAX = 20;
+		var ROS_MATCH_RATIO = 0.8;
+
+		var cache;
+
+		function getKeyParts (url, path) {
+			var re, fragment = '', queries = '';
+			re = /^(.*)(#[^#]*)$/.exec(url);
+			if (re) {
+				url = re[1];
+				fragment = re[2];
+			}
+			re = /^(.*)\?([^\?]*)$/.exec(url);
+			if (re) {
+				url = re[1] + fragment;
+				queries = re[2];
+			}
+
+			var hash = SHA1.calc(queries + ' ' + path);
+
+			if (queries != '') {
+				queries = queries.split('&').sort().map(function (q) {
+					return extension.isDev ? q : SHA1.calc(q);
+				});
+			}
+			else {
+				queries = [];
+			}
+
+			return {
+				hash:hash,
+				url:extension.isDev ? url : SHA1.calc(url),
+				queries:queries,
+				path:path.split(' ')
+			};
+		}
+		function getSimilarityRatio (target, candidate) {
+			/*
+			 * TODO: rewrite
+			 */
+			if (target.length != candidate.length) return 0;
+			for (var i = 0, goal = target.length; i < goal; i++) {
+				if (target[i] != candidate[i]) return 0;
+			}
+			return 1;
+		}
+		function findCacheIndex (keyParts) {
+			var url = keyParts.url;
+			for (var i = 0, goal = cache[url].length; i < goal; i++) {
+				if (cache[url][i].hash == keyParts.hash) {
+					return i;
+				}
+			}
+			return false;
+		}
+		function get (url, path) {
+			path || (path = '');
+			if (path == '') {
+				console.log('ros#get: path is empty');
+				return '';
+			}
+
+			if (!cache) {
+				cache = parseJson(extension.storage.getItem('ros'), {});
+			}
+
+			var keyParts = getKeyParts(url, path);
+			var rosInfo = cache[keyParts.url];
+			if (!rosInfo) {
+				console.log('ros#get: rosInfo is empty');
+				return '';
+			}
+
+			var index = -1, qscoreMax, pscoreMax;
+			for (var i = 0, goal = rosInfo.length; i < goal; i++) {
+				var qscore = getSimilarityRatio(keyParts.queries, rosInfo[i].queries);
+				var pscore = getSimilarityRatio(keyParts.path, rosInfo[i].path);
+				if (index < 0 ||
+				(  qscore >= ROS_MATCH_RATIO && qscore > qscoreMax
+				&& pscore >= ROS_MATCH_RATIO && pscore > pscoreMax)) {
+					index = i;
+					qscoreMax = qscore;
+					pscoreMax = pscore;
+				}
+			}
+
+			console.log('ros#get: index: ' + index);
+
+			if (index < 0) return '';
+
+			console.log('ros#get: script: ' + rosInfo[index].script);
+
+			return rosInfo[index].script;
+		}
+		function set (url, nodePath, script) {
+			nodePath || (nodePath = '');
+			if (nodePath == '') return;
+
+			var keyParts = getKeyParts(url, nodePath);
+
+			if (!cache[keyParts.url]) {
+				cache[keyParts.url] = [];
+			}
+
+			var index = findCacheIndex(keyParts);
+			if (index === false) {
+				cache[keyParts.url].push({
+					date:Date.now(),
+					hash:keyParts.hash,
+					queries:keyParts.queries,
+					path:keyParts.path,
+					script:script
+				});
+			}
+			else {
+				cache[keyParts.url][index].date = Date.now();
+				cache[keyParts.url][index].script = script;
+			}
+
+			cache[keyParts.url] = cache[keyParts.url].sort(function (k1, k2) {
+				return k1.date - k2.date;
+			});
+			while (cache[keyParts.url].length > ROS_NODE_MAX) {
+				cache[keyParts.url].shift();
+			}
+
+			var keys = Object.keys(cache).sort(function (k1, k2) {
+				return cache[k1][0].date - cache[k2][0].date;
+			});
+			while (keys.length > ROS_URL_MAX) {
+				delete cache[keys.shift()];
+			}
+
+			extension.storage.setItem('ros', JSON.stringify(cache));
+		}
+
+		this.get = get;
+		this.set = set;
+	}
+
 	/*
 	 * functions
 	 * ----------------
@@ -1749,14 +1897,16 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	 * request handler
 	 */
 
-	function handleRequest (req, tabId, res) {
-		if (!req || !req.type) {
-			return;
-		}
+	function handleRequest (req, tabId, resFunc) {
+		var replied = false;
 
-		switch (req.type) {
-		case 'init':
-		case 'init-agent':
+		function res () {
+			if (!replied) {
+				resFunc.apply(null, arguments)
+				replied = true;
+			}
+		}
+		function handleInit () {
 			var init = req.type == 'init';
 			init && extension.registerTabId(tabId);
 			res({
@@ -1765,6 +1915,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				tabId:tabId,
 				targets:extension.storage.getItem('targets'),
 				exrc:extension.storage.getItem('exrc'),
+				ros:payload ? runtimeOverwriteSettings.get(payload.url, payload.nodePath) : '',
 				shortcut:extension.storage.getItem('shortcut'),
 				shortcutCode:JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut'))),
 				fontFamily:extension.storage.getItem('fontFamily'),
@@ -1778,27 +1929,24 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				version:extension.version,
 				payload:payload || null
 			});
-			break;
-
-		case 'init-options':
+			payload = null;
+		}
+		function handleInitOptions () {
 			extension.storage.clear();
 			initStorage();
 			initMessageCatalog();
 			initFileSystem();
 			broadcastStorageUpdate('targets exrc shortcut shortcutCode quickActivate'.split(' '));
-			res();
-			break;
-
-		case 'get-storage':
+		}
+		function handleGetStorage () {
 			if ('key' in req) {
 				res({key:req.key, value:extension.storage.getItem(req.key)});
 			}
 			else {
 				res({key:req.key, value:undefined});
 			}
-			break;
-
-		case 'set-storage':
+		}
+		function handleSetStorage () {
 			var items;
 			if ('key' in req && 'value' in req) {
 				items = [{key:req.key, value:req.value}];
@@ -1829,62 +1977,58 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				});
 				broadcastStorageUpdate(keys);
 			}
-			res();
-			break;
-
-		case 'bell':
+		}
+		function handleBell () {
 			if ('file' in req) {
 				resourceLoader.get(req.file, function (data) {
 					res({data:data || ''});
-				}, {noCache:true});
+				}, {sync:true});
 			}
-			else {
-				res();
-			}
-			break;
-
-		case 'open-options-page':
+		}
+		function handleOpenOptionsPage () {
 			extension.openTabWithFile('options.html');
-			res();
-			break;
-
-		case 'notify-to-child':
+		}
+		function handleNotifyToChild () {
 			var childTabId = 'childTabId' in req ? req.childTabId : extension.lastRegisteredTab;
 			if (childTabId !== undefined && extension.isExistsTabId(childTabId)) {
 				'tabId' in req && (req.payload.parentTabId = req.tabId);
 				extension.sendRequest(childTabId, req.payload);
 			}
-			res();
-			break;
-
-		case 'notify-to-parent':
-			if (!('payload' in req)) {
-				res();
-				break;
-			}
+		}
+		function handleNotifyToParent () {
+			if (!('payload' in req)) return;
 
 			var needForward = true;
 			switch (req.payload.type) {
 			case 'wasavi-read':
-				if ('tabId' in req &&
-					'path' in req.payload && req.payload.path != '') {
+				if ('tabId' in req
+				&& 'path' in req.payload
+				&& req.payload.path != '') {
 					needForward = false;
 					getFileSystem(req.payload.path)
 						.read(req.payload.path, req.tabId);
 				}
 				break;
 			case 'wasavi-saved':
-				if ('tabId' in req &&
-					'path' in req.payload && req.payload.path != '') {
+				if ('tabId' in req
+				&& 'path' in req.payload
+				&& req.payload.path != '') {
 					needForward = false;
 					getFileSystem(req.payload.path)
 						.write(req.payload.path, req.payload.value, req.tabId);
 				}
 				break;
 			case 'wasavi-terminated':
-				if (!('parentTabId' in req) &&
-					'tabId' in req &&
-					'isTopFrame' in req.payload && req.payload.isTopFrame) {
+				if ('url' in req.payload
+				&& 'nodePath' in req.payload
+				&& 'ros' in req.payload) {
+					runtimeOverwriteSettings.set(
+						req.payload.url, req.payload.nodePath, req.payload.ros);
+				}
+				if (!('parentTabId' in req)
+				&& 'tabId' in req
+				&& 'isTopFrame' in req.payload
+				&& req.payload.isTopFrame) {
 					needForward = false;
 					extension.closeTabByWasaviId(req.tabId);
 				}
@@ -1894,24 +2038,38 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				'tabId' in req && (req.payload.childTabId = req.tabId);
 				extension.sendRequest(req.parentTabId, req.payload);
 			}
-			res();
-			break;
-
-		case 'set-clipboard':
+		}
+		function handleSetClipboard () {
 			if ('data' in req) {
 				extension.clipboard.set(req.data);
 			}
-			res();
-			break;
-
-		case 'get-clipboard':
+		}
+		function handleGetClipboard () {
 			res({data:extension.clipboard.get()});
-			break;
-
-		case 'push-payload':
+		}
+		function handlePushPayload () {
 			payload = req;
+		}
+
+		if (!req || !req.type) return;
+		try {
+			switch (req.type) {
+			case 'init':
+			case 'init-agent':			handleInit(); break;
+			case 'init-options':		handleInitOptions(); break;
+			case 'get-storage':			handleGetStorage(); break;
+			case 'set-storage':			handleSetStorage(); break;
+			case 'bell':				handleBell(); break;
+			case 'open-options-page':	handleOpenOptionsPage(); break;
+			case 'notify-to-child':		handleNotifyToChild(); break;
+			case 'notify-to-parent':	handleNotifyToParent(); break;
+			case 'set-clipboard':		handleSetClipboard(); break;
+			case 'get-clipboard':		handleGetClipboard(); break;
+			case 'push-payload':		handlePushPayload(); break;
+			}
+		}
+		finally {
 			res();
-			break;
 		}
 	}
 
@@ -1923,6 +2081,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		window.removeEventListener && window.removeEventListener(e.type, handleLoad, false);
 		resourceLoader = ResourceLoader.create();
 		extension = ExtensionWrapper.create();
+		runtimeOverwriteSettings = new RuntimeOverwriteSettings;
 
 		initWasaviFrame();
 		initShortcutKeyTable();

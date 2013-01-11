@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 231 2012-11-24 04:21:47Z akahuku $
+ * @version $Id: classes_ex.js 269 2013-01-11 12:28:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -435,11 +435,17 @@ flag23_loop:
 				}
 
 				if (s.charAt(0) == ',') {
+					if (rows.length == 0) {
+						rows.push(t.selectionStartRow);
+					}
 					s = s.substring(1);
 					!found && rows.push(t.selectionStartRow);
 				}
 				else if (s.charAt(0) == ';') {
-					if (rows[rows.length - 1] >= t.rowLength) {
+					if (rows.length == 0) {
+						rows.push(t.selectionStartRow);
+					}
+					if (rows[rows.length - 1] > t.rowLength) {
 						error = _('Out of range.');
 						break;
 					}

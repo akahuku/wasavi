@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 266 2013-01-02 04:23:00Z akahuku $
+ * @version $Id: agent.js 269 2013-01-11 12:28:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -126,7 +126,7 @@ function run (element) {
 	 *     |(background recoginizes the iframe)
 	 *     |              |           |
 	 *     |<-------------|           |
-	 *     |"request-wasavi"          |
+	 *     |"push-payload"            |
 	 *     |              |           |
 	 *     |<-------------------------|
 	 *     |           "init"         |
@@ -154,6 +154,17 @@ function run (element) {
 	function getFontStyle (s, fontFamilyOverride) {
 		return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
 			'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
+	}
+
+	function getNodePath (element) {
+		var result = [];
+		for (var node = element; node && node.parentNode; node = node.parentNode) {
+			var nodeName = node.nodeName.toLowerCase();
+			var index = Array.prototype.indexOf.call(
+				node.parentNode.getElementsByTagName(node.nodeName), node);
+			result.unshift(nodeName + '[' + index + ']');
+		}
+		return result.join(' ');
 	}
 
 	//
@@ -185,6 +196,7 @@ function run (element) {
 		testMode:isTestFrame,
 		id:element.id,
 		nodeName:element.nodeName,
+		nodePath:getNodePath(element),
 		elementType:element.type,
 		selectionStart:element.selectionStart,
 		selectionEnd:element.selectionEnd,
