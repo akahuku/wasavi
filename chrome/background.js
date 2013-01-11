@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 269 2013-01-11 12:28:39Z akahuku $
+ * @version $Id: background.js 270 2013-01-11 18:29:48Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1510,7 +1510,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		function get (url, path) {
 			path || (path = '');
 			if (path == '') {
-				console.log('ros#get: path is empty');
 				return '';
 			}
 
@@ -1521,7 +1520,6 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			var keyParts = getKeyParts(url, path);
 			var rosInfo = cache[keyParts.url];
 			if (!rosInfo) {
-				console.log('ros#get: rosInfo is empty');
 				return '';
 			}
 
@@ -1538,11 +1536,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				}
 			}
 
-			console.log('ros#get: index: ' + index);
-
 			if (index < 0) return '';
-
-			console.log('ros#get: script: ' + rosInfo[index].script);
 
 			return rosInfo[index].script;
 		}

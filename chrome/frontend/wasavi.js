@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 269 2013-01-11 12:28:39Z akahuku $
+ * @version $Id: wasavi.js 270 2013-01-11 18:29:48Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1822,7 +1822,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				&& scaler.offsetWidth > limitWidth) {
 					overed = true;
 				}
-				if (unicodeUtils.canBreak(item.breakAction)) {
+				else if (unicodeUtils.canBreak(item.breakAction)) {
 					breakItem = item;
 				}
 
@@ -3432,7 +3432,7 @@ function reformat () {
 					&& scaler.offsetWidth > limitWidth) {
 						overed = true;
 					}
-					if (unicodeUtils.canBreak(item.breakAction)) {
+					else if (unicodeUtils.canBreak(item.breakAction)) {
 						breakItem = item;
 					}
 					return overed && !!breakItem;
