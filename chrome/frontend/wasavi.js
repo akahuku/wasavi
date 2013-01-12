@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 270 2013-01-11 18:29:48Z akahuku $
+ * @version $Id: wasavi.js 271 2013-01-12 13:22:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -56,6 +56,7 @@
 		get getFileIoResultInfo () {return getFileIoResultInfo},
 		get getFileInfo () {return getFileInfo},
 		get fireEvent () {return fireEvent},
+		get fireNotifyKeydownEvent () {return fireNotifyKeydownEvent},
 		get fireCommandCompleteEvent () {return fireCommandCompleteEvent},
 		get setSubstituteWorker () {return setSubstituteWorker}
 	};
@@ -2294,29 +2295,36 @@ function fireEvent (eventName, payload) {
 	}
 	extensionChannel.postMessage(message);
 }
+function fireNotifyKeydownEvent (code, key, note) {
+	if (!testMode) return;
+	fireEvent('notify-keydown', {
+		keyCode:code,
+		key:key,
+		eventType:note
+	});
+}
 function fireCommandCompleteEvent (eventName) {
-	if (testMode) {
-		eventName || (eventName = 'command-completed');
-		var pt = new Position(getCurrentViewPositionIndices().top, 0);
-		fireEvent(eventName, {
-			state:{
-				running:    !!targetElement,
-				state:      state,
-				inputMode:  inputMode,
-				lastMessage:lastMessage,
-				lastSimpleCommand: lastSimpleCommand,
-				value:      buffer.value,
-				row:        buffer.selectionStartRow,
-				col:        buffer.selectionStartCol,
-				topRow:     pt.row,
-				topCol:     pt.col,
-				rowLength:  buffer.elm.childNodes.length,
-				registers:  registers.dumpData(),
-				marks:      marks.dumpData(),
-				lines:      config.vars.lines
-			}
-		});
-	}
+	if (!testMode) return;
+	eventName || (eventName = 'command-completed');
+	var pt = new Position(getCurrentViewPositionIndices().top, 0);
+	fireEvent(eventName, {
+		state:{
+			running:    !!targetElement,
+			state:      state,
+			inputMode:  inputMode,
+			lastMessage:lastMessage,
+			lastSimpleCommand: lastSimpleCommand,
+			value:      buffer.value,
+			row:        buffer.selectionStartRow,
+			col:        buffer.selectionStartCol,
+			topRow:     pt.row,
+			topCol:     pt.col,
+			rowLength:  buffer.elm.childNodes.length,
+			registers:  registers.dumpData(),
+			marks:      marks.dumpData(),
+			lines:      config.vars.lines
+		}
+	});
 }
 function setSubstituteWorker (obj) {
 	if (!(obj instanceof Wasavi.SubstituteWorker)) {
@@ -3818,19 +3826,15 @@ function handleWindowResize (e) {
 function handleKeydown2 (e) {
 	if (scroller.running || exCommandExecutor.running) {
 		keyManager.push(e);
-		testMode && fireEvent('notify-keydown', {
-			keyCode:e.code,
-			key:e.fullIdentifier,
-			eventType:'busy now('
+		fireNotifyKeydownEvent(
+			e.code, e.fullIdentifier,
+			'busy now('
 				+ (scroller.running ? 'scroller' : '')
 				+ (exCommandExecutor.running ? 'exCommandExecutor' : '')
 				+ ')'
-		});
+		);
 		return;
 	}
-	/*if (cursor.inComposition) {
-		return;
-	}*/
 	isInteractive = true;
 	(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
 		.call(extensionChannel, function () {
@@ -3838,11 +3842,7 @@ function handleKeydown2 (e) {
 				recordedStrokes.strokes += keyManager.toInternalString(e);
 			}
 			mapManager.process(e, function (code, e) {
-				testMode && fireEvent('notify-keydown', {
-					keyCode:e.code,
-					key:e.fullIdentifier,
-					eventType:''
-				});
+				fireNotifyKeydownEvent(e.code, e.fullIdentifier, '');
 				processInput(code, e);
 			});
 		});

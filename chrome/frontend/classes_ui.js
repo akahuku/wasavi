@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 269 2013-01-11 12:28:39Z akahuku $
+ * @version $Id: classes_ui.js 271 2013-01-12 13:22:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -684,45 +684,44 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 		if (dest < 0) {
 			dest = 0;
 		}
-		if (!app.config.vars.smooth || cursor.locked) {
+		scrollTopStart = buffer.scrollTop;
+		scrollTopDest = dest;
+		if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
 			buffer.scrollTop = dest;
+			app.low.fireNotifyKeydownEvent(0, '', 'scroller exit (1)');
 			callback && callback();
 			return;
 		}
-		scrollTopStart = buffer.scrollTop;
-		scrollTopDest = dest;
+		distance = scrollTopDest - scrollTopStart;
+		running = true;
+		lastRan = +Date.now();
+		(function doScroll () {
+			var now = +Date.now();
+			var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
-		if (scrollTopStart != scrollTopDest) {
-			distance = scrollTopDest - scrollTopStart;
-			running = true;
-			lastRan = +Date.now();
-			(function doScroll () {
-				var now = +Date.now();
-				var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
+			if (!app.targetElement || !cursor || !modeLine) {
+				app.low.fireCommandCompleteEvent();
+				running = false;
+				app.keyManager.sweep();
+				return;
+			}
 
-				if (!app.targetElement || !cursor || !modeLine) {
-					running = false;
-					app.keyManager.sweep();
-					return;
-				}
-
-				if (distance > 0 && y >= scrollTopDest
-				||  distance < 0 && y <= scrollTopDest) {
-					buffer.scrollTop = scrollTopDest;
-					callback && callback();
-					cursor.ensureVisible();
-					cursor.update({visible:true});
-					modeLine.style.display == '' && app.low.showPrefixInput();
-					app.low.fireCommandCompleteEvent();
-					running = false;
-					app.keyManager.sweep();
-				}
-				else {
-					buffer.scrollTop = parseInt(y);
-					setTimeout(doScroll, timerPrecision);
-				}
-			})();
-		}
+			if (distance > 0 && y >= scrollTopDest
+			||  distance < 0 && y <= scrollTopDest) {
+				buffer.scrollTop = scrollTopDest;
+				callback && callback();
+				cursor.ensureVisible();
+				cursor.update({visible:true});
+				modeLine.style.display == '' && app.low.showPrefixInput();
+				app.low.fireCommandCompleteEvent();
+				running = false;
+				app.keyManager.sweep();
+			}
+			else {
+				buffer.scrollTop = parseInt(y);
+				setTimeout(doScroll, timerPrecision);
+			}
+		})();
 	};
 	this.dispose = function () {
 		app = buffer = cursor = modeLine = null;

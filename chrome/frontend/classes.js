@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 269 2013-01-11 12:28:39Z akahuku $
+ * @version $Id: classes.js 271 2013-01-12 13:22:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1488,7 +1488,7 @@ Wasavi.KeyManager = function () {
 		var bs = bufferedStrokes.slice(0);
 		bufferedStrokes.length = 0;
 		while (bs.length) {
-			fire(inputEventHandlers, bs.shift());
+			fire('input', inputEventHandlers, bs.shift());
 		}
 	}
 
