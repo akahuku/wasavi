@@ -11,17 +11,17 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 269 2013-01-11 12:28:39Z akahuku $
+ * @version $Id: agent.js 272 2013-01-13 01:20:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -100,11 +100,11 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		var isFixed = isFixedPosition(target);
 		iframe.style.position = isFixed ? 'fixed' : 'absolute';
 		iframe.style.left = (
-			rect.left + 
+			rect.left +
 			(isFixed ? 0 : Math.max(document.documentElement.scrollLeft, document.body.scrollLeft))
 		) + 'px';
 		iframe.style.top = (
-			rect.top + 
+			rect.top +
 			(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
 		) + 'px';
 		iframe.style.width = rect.width + 'px';
@@ -348,7 +348,7 @@ function handleWasaviFrameRemoved (e) {
 function handleKeydown (e) {
 	if (targetElement || !e || !e.target || !enableList) return;
 	if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
-	if (!(e.target.type in ACCEPTABLE_TYPES) 
+	if (!(e.target.type in ACCEPTABLE_TYPES)
 	||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
 
 	/*
@@ -383,7 +383,7 @@ function handleKeydown (e) {
 function handleTargetFocus (e) {
 	if (targetElement || !e || !e.target) return;
 	if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
-	if (!(e.target.type in ACCEPTABLE_TYPES) 
+	if (!(e.target.type in ACCEPTABLE_TYPES)
 	||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
 
 	var current = e.target.getAttribute(EXTENSION_CURRENT);
@@ -508,7 +508,7 @@ function handleOptionsSave () {
 	if (count) {
 		items.push({key:'targets', value:JSON.stringify(tmpEnableList)});
 	}
-	
+
 	var el = document.getElementById('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		items.push({key:'exrc', value:el.value});

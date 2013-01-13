@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 264 2012-12-27 16:30:18Z akahuku $
+ * @version $Id: unicode_utils.js 272 2013-01-13 01:20:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -554,7 +554,7 @@ var unicodeUtils = (function () {
 			return false;
 		}
 		function init () {
-			if (!dictData) return; 
+			if (!dictData) return;
 			for (var i in dictData) {
 				var m = 'add' + i + 'Data';
 				m in this && this[m](dictData[i]);

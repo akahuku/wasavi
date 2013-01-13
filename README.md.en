@@ -156,8 +156,9 @@ relative line number, regal expression. also, wasavi accepts offset.
 Commands in input mode
 --------------------
 
-* ^D ^H ^T ^U ^V ^W
+* ^@ ^D ^H ^T ^U ^V ^W
 
+^@ is actually <ctrl+space>.
 ^D accepts the last ^ and 0.
 
 

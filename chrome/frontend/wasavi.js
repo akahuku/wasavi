@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 271 2013-01-12 13:22:07Z akahuku $
+ * @version $Id: wasavi.js 272 2013-01-13 01:20:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -5704,7 +5704,7 @@ var editMap = {
 			}
 			return false;
 		}
-		
+
 		function backToPrevWord () {
 			if (selectNewline()) return;
 			motionPrevWord(c, 1, false, [
@@ -5855,7 +5855,7 @@ var editMap = {
 					inputHandler.popStroke();
 					inputHandler.ungetStroke();
 				}
-				if (result.trail) { 
+				if (result.trail) {
 					inputHandler.ungetStroke();
 					var e = keyManager.objectFromCode(result.trail.charCodeAt(0));
 					processInput(e.code, e);

@@ -9,17 +9,17 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 224 2012-11-19 08:32:36Z akahuku $
+ * @version $Id: extension_wrapper.js 272 2013-01-13 01:20:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -61,7 +61,7 @@
 		window.opera  ? 'widget://' + extensionHostname + '/wasavi_frame.html' :
 		IS_FX_JETPACK ? 'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html' :
 		'';
-		
+
 
 	/**
 	 * extension wrapper base class
@@ -143,7 +143,7 @@
 	ExtensionWrapper.isTopFrame = (function () {
 		if (IS_GECKO) {
 			var result;
-			try { result = !!!window.frameElement; } catch (e) {} 
+			try { result = !!!window.frameElement; } catch (e) {}
 			return result;
 		}
 		else {
