@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 273 2013-01-14 09:22:57Z akahuku $
+ * @version $Id: classes_ui.js 274 2013-01-14 18:04:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -449,10 +449,11 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			var c = $(CONTAINER_ID).getBoundingClientRect();
 			var r = buffer.rowNodes(buffer.selectionStart).getBoundingClientRect();
 			var x = buffer.charRectAt(updateLeadingPos());
+			var x0 = buffer.charRectAt(buffer.selectionStartRow, 0);
 
 			editCursor.style.display = 'block';
 			editCursor.style.left = Math.floor(x.left - c.left) + 'px';
-			editCursor.style.top = Math.floor(x.top - c.top) + 'px';
+			editCursor.style.top = Math.floor(x.top - c.top - (x0.top - r.top)) + 'px';
 			editCursor.style.width = Math.floor(r.right - r.left) + 'px';
 			editCursor.style.height = Math.floor(docClientHeight() - x.top - 1) + 'px';
 		}

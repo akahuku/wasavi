@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 273 2013-01-14 09:22:57Z akahuku $
+ * @version $Id: wasavi.js 274 2013-01-14 18:04:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -502,7 +502,7 @@ margin:0; \
 overflow-x:hidden; \
 overflow-y:scroll; \
 counter-reset:n; \
-word-wrap:break-word; \
+word-break:break-all \
 } \
 #wasavi_textwidth_guide { \
 display:none; \
@@ -857,7 +857,6 @@ ime-mode:disabled; \
 	 * execute exrc
 	 */
 
-	console.log('wasavi.js: exrc:"' + exrc + '"');
 	isInteractive = false;
 	var result = executeExCommand(exrc, true);
 	typeof result == 'string' && showMessage(result, true);
@@ -2465,7 +2464,7 @@ function callDenotativeFunction () {
 }
 function inputEscape () {
 	if (arguments.length) {
-		requestRegisterNotice(_('{0} canceled.', arguments[0]));
+		requestRegisterNotice(_('{0} canceled.', prefixInput.operation || arguments[0]));
 	}
 	else {
 		inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
