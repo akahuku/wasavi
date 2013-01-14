@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes.js 273 2013-01-14 09:22:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2454,6 +2454,33 @@ Wasavi.Editor.prototype = new function () {
 			var a = arg2pos(arguments);
 			var re = /^([\t ]*).*\n$/.exec(this.elm.childNodes[a.row].textContent);
 			a.col = re ? re[1].length : 0;
+			return a;
+		},
+		getLineTopDenotativeOffset: function () {
+			var a = arg2pos(arguments);
+			a.col && a.col--;
+			var curRect = this.charRectAt(a);
+			while (--a.col >= 0) {
+				var newRect = this.charRectAt(a);
+				if (newRect.top < curRect.top) {
+					a.col++;
+					break;
+				}
+			}
+			a.col = Math.max(a.col, 0);
+			return a;
+		},
+		getLineTailDenotativeOffset: function () {
+			var a = arg2pos(arguments);
+			var curRect = this.charRectAt(a);
+			while (!this.isEndOfText(a) && !this.isNewline(a)) {
+				a.col++;
+				var newRect = this.charRectAt(a);
+				if (newRect.top > curRect.top) {
+					a.col--;
+					break;
+				}
+			}
 			return a;
 		},
 		getIndent: function () {

@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: agent.js 273 2013-01-14 09:22:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -256,38 +256,36 @@ function cleanup (value, isImplicit) {
 }
 
 function focusToFrame (req) {
-	if (wasaviFrame) {
-		try {
-			wasaviFrame.focus && wasaviFrame.focus();
-		} catch (e) {}
-		try {
-			wasaviFrame.contentWindow
-			&& wasaviFrame.contentWindow.focus
-			&& wasaviFrame.contentWindow.focus();
-		} catch (e) {}
-		try {
-			extension.postMessage({
-				type:'notify-to-child',
-				childTabId:req.childTabId,
-				payload:{
-					type:'focus-me-response'
-				}
-			});
-		} catch (e) {}
-	}
+	if (!wasaviFrame) return;
+	try {
+		wasaviFrame.focus && wasaviFrame.focus();
+	} catch (e) {}
+	try {
+		wasaviFrame.contentWindow
+		&& wasaviFrame.contentWindow.focus
+		&& wasaviFrame.contentWindow.focus();
+	} catch (e) {}
+	try {
+		extension.postMessage({
+			type:'notify-to-child',
+			childTabId:req.childTabId,
+			payload:{
+				type:'focus-me-response'
+			}
+		});
+	} catch (e) {}
 }
 
 function blurFromFrame () {
-	if (wasaviFrame) {
-		try {
-			wasaviFrame.contentWindow
-			&& wasaviFrame.contentWindow.blur
-			&& wasaviFrame.contentWindow.blur();
-		} catch (e) {}
-		try {
-			wasaviFrame.blur && wasaviFrame.blur();
-		} catch (e) {}
-	}
+	if (!wasaviFrame) return;
+	try {
+		wasaviFrame.contentWindow
+		&& wasaviFrame.contentWindow.blur
+		&& wasaviFrame.contentWindow.blur();
+	} catch (e) {}
+	try {
+		wasaviFrame.blur && wasaviFrame.blur();
+	} catch (e) {}
 }
 
 function getFocusables () {
@@ -564,14 +562,13 @@ function handleOptionsInit () {
  */
 
 function handleTargetResize (e) {
-	if (!targetElementResizedTimer) {
-		targetElementResizedTimer = setTimeout(function () {
-			if (wasaviFrame && targetElement) {
-				locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
-			}
-			targetElementResizedTimer = null;
-		}, 100);
-	}
+	if (targetElementResizedTimer) return;
+	targetElementResizedTimer = setTimeout(function () {
+		if (wasaviFrame && targetElement) {
+			locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
+		}
+		targetElementResizedTimer = null;
+	}, 100);
 }
 
 /**
@@ -678,7 +675,7 @@ extension.setMessageListener(function (req) {
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
 		wasaviFrame.style.visibility = 'visible';
-		//focusToFrame(req);
+		document.activeElement != wasaviFrame && focusToFrame(req);
 		var currentHeight = wasaviFrame.offsetHeight;
 		var newHeight = req.height || targetElement.offsetHeight;
 		extraHeight = newHeight - currentHeight;

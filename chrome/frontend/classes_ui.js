@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes_ui.js 273 2013-01-14 09:22:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -403,25 +403,37 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	}
 
 	/*constructor*/function EditWrapper (mode) {
+		var leadingPos;
 		var leading;
 
 		function getCompositionSpan () {
 			var spans = buffer.getSpans(COMPOSITION_CLASS);
 			return spans.length ? spans[0] : null;
 		}
+		function updateLeadingPos () {
+			if (!leadingPos) {
+				leadingPos = buffer.getLineTopDenotativeOffset(buffer.selectionStart);
+			}
+			return leadingPos;
+		}
 		function createCompositionSpan () {
 			var n = buffer.selectionStart;
 			var span = getCompositionSpan();
 			if (!span) {
-				if (n.col == 0) {
+				updateLeadingPos();
+				if (n.col == leadingPos.col) {
 					span = document.createElement('span');
 					span.className = COMPOSITION_CLASS;
+					var r = document.createRange();
 					var node = buffer.rowNodes(n);
-					node.insertBefore(span, node.firstChild);
+					r.setStart(node.firstChild, leadingPos.col);
+					r.setEnd(node.firstChild, n.col);
+					r.surroundContents(span);
+					r.detach();
 				}
 				else {
 					span = buffer.emphasis(
-						new Wasavi.Position(n.row, 0), n.col, COMPOSITION_CLASS)[0];
+						leadingPos, n.col - leadingPos.col, COMPOSITION_CLASS)[0];
 				}
 			}
 			var s = document.defaultView.getComputedStyle(span, '');
@@ -431,23 +443,25 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		}
 		function removeCompositionSpan () {
 			buffer.unEmphasis(COMPOSITION_CLASS);
+			leadingPos = null;
 		}
 		function relocate () {
 			var c = $(CONTAINER_ID).getBoundingClientRect();
 			var r = buffer.rowNodes(buffer.selectionStart).getBoundingClientRect();
+			var x = buffer.charRectAt(updateLeadingPos());
 
 			editCursor.style.display = 'block';
-			editCursor.style.left = Math.floor(r.left - c.left) + 'px';
-			editCursor.style.top = Math.floor(r.top - c.top) + 'px';
+			editCursor.style.left = Math.floor(x.left - c.left) + 'px';
+			editCursor.style.top = Math.floor(x.top - c.top) + 'px';
 			editCursor.style.width = Math.floor(r.right - r.left) + 'px';
-			editCursor.style.height = Math.floor(docClientHeight() - r.top - 1) + 'px';
+			editCursor.style.height = Math.floor(docClientHeight() - x.top - 1) + 'px';
 		}
 		this.compositionUpdate = function (data) {
 			var span = getCompositionSpan();
 			if (!span) return;
 			span.textContent = leading + data;
 			buffer.setSelectionRange(new Wasavi.Position(
-				buffer.selectionStartRow, span.textContent.length));
+				leadingPos.row, leadingPos.col + span.textContent.length));
 			ensureVisible(false);
 			relocate();
 		}
@@ -456,7 +470,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			if (!span) return;
 			span.textContent = leading;
 			buffer.setSelectionRange(new Wasavi.Position(
-				buffer.selectionStartRow, span.textContent.length));
+				leadingPos.row, leadingPos.col + span.textContent.length));
 			if (data == '') {
 				this.show();
 			}

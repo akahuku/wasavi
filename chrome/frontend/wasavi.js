@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: wasavi.js 273 2013-01-14 09:22:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2535,16 +2535,7 @@ function motionLineEnd (c) {
 	return true;
 }
 function motionLineStartDenotative (c, realTop) {
-	var n = buffer.selectionStart;
-	var curRect = buffer.charRectAt(n);
-	while (--n.col >= 0) {
-		var newRect = buffer.charRectAt(n);
-		if (newRect.top < curRect.top) {
-			n.col++;
-			break;
-		}
-	}
-	n.col = Math.max(n.col, 0);
+	var n = buffer.getLineTopDenotativeOffset(buffer.selectionStart);
 	if (!realTop) {
 		while (!buffer.isEndOfText(n) && !buffer.isNewline(n) && /[ \t]/.test(buffer.charAt(n))) {
 			n.col++;
@@ -2556,16 +2547,7 @@ function motionLineStartDenotative (c, realTop) {
 	return true;
 }
 function motionLineEndDenotative (c) {
-	var n = buffer.selectionEnd;
-	var curRect = buffer.charRectAt(n);
-	while (!buffer.isEndOfText(n) && !buffer.isNewline(n)) {
-		n.col++;
-		var newRect = buffer.charRectAt(n);
-		if (newRect.top > curRect.top) {
-			n.col--;
-			break;
-		}
-	}
+	var n = buffer.getLineTailDenotativeOffset(buffer.selectionEnd);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
 	idealWidthPixels = -1;
