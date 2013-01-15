@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 270 2013-01-11 18:29:48Z akahuku $
+ * @version $Id: background.js 276 2013-01-15 11:30:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -527,17 +527,26 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return tabId in tabIds;
 		};
 		this.sendRequest = function (tabId, message) {
-			chrome.tabs.sendRequest(tabId, message);
+			try {
+				chrome.tabs.sendRequest(tabId, message);
+			}
+			catch (e) {}
 		};
 		this.broadcast = function (message, exceptId) {
 			if (exceptId === undefined) {
 				for (var i in tabIds) {
-					chrome.tabs.sendRequest(i - 0, message);
+					try {
+						chrome.tabs.sendRequest(i - 0, message);
+					}
+					catch (e) {}
 				}
 			}
 			else {
 				for (var i in tabIds) {
-					i - exceptId != 0 && chrome.tabs.sendRequest(i - 0, message);
+					try {
+						i - exceptId != 0 && chrome.tabs.sendRequest(i - 0, message);
+					}
+					catch (e) {}
 				}
 			}
 		};
@@ -548,7 +557,10 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			typeof handler == 'function' && chrome.extension.onRequest.addListener(function (req, sender, res) {
 				if (req && (req.type == 'init' || req.type == 'init-agent')) {
 					handler(req, sender.tab.id, function (reply) {
-						chrome.tabs.sendRequest(sender.tab.id, reply);
+						try {
+							chrome.tabs.sendRequest(sender.tab.id, reply);
+						}
+						catch (e) {}
 					});
 				}
 				else {
@@ -799,7 +811,10 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				if ('__messageId' in req) {
 					res.__messageId = req.__messageId;
 				}
-				theWorker.postMessage(res);
+				try {
+					theWorker.postMessage(res);
+				}
+				catch (e) {}
 			});
 		}
 
@@ -878,17 +893,26 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			return tabId in tabIds;
 		};
 		this.sendRequest = function (tabId, message) {
-			tabIds[tabId].postMessage(message);
+			try {
+				tabIds[tabId].postMessage(message);
+			}
+			catch (e) {}
 		};
 		this.broadcast = function (message, exceptId) {
 			if (exceptId === undefined) {
 				for (var i in tabIds) {
-					tabIds[i].postMessage(message);
+					try {
+						tabIds[i].postMessage(message);
+					}
+					catch (e) {}
 				}
 			}
 			else {
 				for (var i in tabIds) {
-					i - exceptId != 0 && tabIds[i].postMessage(message);
+					try {
+						i - exceptId != 0 && tabIds[i].postMessage(message);
+					}
+					catch (e) {}
 				}
 			}
 		};

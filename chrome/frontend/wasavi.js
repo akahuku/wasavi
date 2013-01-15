@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 275 2013-01-15 05:30:29Z akahuku $
+ * @version $Id: wasavi.js 276 2013-01-15 11:30:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2374,8 +2374,9 @@ function refreshIdealWidthPixels () {
 		}
 		idealWidthPixels = textspan.offsetWidth;
 
+		var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
 		var curRect = buffer.charRectAt(n);
-		idealDenotativeWidthPixels = curRect.left + parseInt((curRect.right - curRect.left) / 2);
+		idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
 	}
 }
 function getCurrentViewPositionIndices () {
@@ -3134,12 +3135,13 @@ function motionUpDownDenotative (c, count, isDown) {
 			n.col = isDown ? 0 : Math.max(buffer.rows(n).length - 1, 0);
 		}
 
+		var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
 		var widthp = 0;
 		while (isDown && !buffer.isEndOfText(n) && !buffer.isNewline(n)
 		|| !isDown && n.col >= 0) {
 			// TODO: more optimization
 			var newRect = buffer.charRectAt(n);
-			var width = newRect.left + parseInt((newRect.right - newRect.left) / 2);
+			var width = newRect.left - curRectTop.left + parseInt((newRect.right - newRect.left) / 2);
 			if (isDown && width >= goalWidth || !isDown && width <= goalWidth) {
 				var closer = Math.abs(widthp - goalWidth) < Math.abs(width - goalWidth) ? 1 : 0;
 				n.col += closer * -dir;

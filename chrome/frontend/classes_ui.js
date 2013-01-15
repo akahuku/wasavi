@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 274 2013-01-14 18:04:58Z akahuku $
+ * @version $Id: classes_ui.js 276 2013-01-15 11:30:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -703,7 +703,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 		scrollTopDest = dest;
 		if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
 			buffer.scrollTop = dest;
-			app.low.fireNotifyKeydownEvent(0, '', 'scroller exit (1)');
+			app.low.fireNotifyKeydownEvent('', '', 'scroller exit (1)');
 			callback && callback();
 			return;
 		}
