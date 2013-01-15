@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 274 2013-01-14 18:04:58Z akahuku $
+ * @version $Id: wasavi.js 275 2013-01-15 05:30:29Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -5214,7 +5214,7 @@ var commandMap = {
 	},
 	J: function (c, o) {
 		if (prefixInput.isEmptyOperation
-		&& buffer.selectionStartRow + prefixInput.count <= buffer.rowLength - 1) {
+		&& buffer.selectionStartRow < buffer.rowLength - 1) {
 			prefixInput.operation = c;
 			requestSimpleCommandUpdate();
 			return joinLines(prefixInput.count);
