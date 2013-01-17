@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 273 2013-01-14 09:22:57Z akahuku $
+ * @version $Id: classes.js 277 2013-01-17 01:18:31Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1336,11 +1336,13 @@ Wasavi.KeyManager = function () {
 			nativeCharCode:   0,
 			nativeIdentifier: '',
 			isCompositioned:  true,
+			isCompositionedFirst: false,
 			isCompositionedLast: false
 		};
 		for (var i = 0, goal = data.length; i < goal; i++) {
 			e.code = data.charCodeAt(i);
 			e.identifier = e.fullIdentifier = data.charAt(i);
+			e.isCompositionedFirst = i == 0;
 			e.isCompositionedLast = i == goal - 1;
 			fire('input', inputEventHandlers, e);
 		}

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 276 2013-01-15 11:30:04Z akahuku $
+ * @version $Id: classes_ui.js 277 2013-01-17 01:18:31Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -405,14 +405,18 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	/*constructor*/function EditWrapper (mode) {
 		var leadingPos;
 		var leading;
+		var cursorRect;
 
 		function getCompositionSpan () {
 			var spans = buffer.getSpans(COMPOSITION_CLASS);
 			return spans.length ? spans[0] : null;
 		}
 		function updateLeadingPos () {
-			if (!leadingPos) {
-				leadingPos = buffer.getLineTopDenotativeOffset(buffer.selectionStart);
+			var n = buffer.selectionStart;
+			var r = buffer.charRectAt(n);
+			if (!app.keyManager.isInComposition && (!cursorRect || r.top != cursorRect.top)) {
+				leadingPos = buffer.getLineTopDenotativeOffset(n);
+				cursorRect = r;
 			}
 			return leadingPos;
 		}
@@ -443,7 +447,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		}
 		function removeCompositionSpan () {
 			buffer.unEmphasis(COMPOSITION_CLASS);
-			leadingPos = null;
 		}
 		function relocate () {
 			var c = $(CONTAINER_ID).getBoundingClientRect();
@@ -482,6 +485,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		this.hide = function () {
 			editCursor.style.display = 'none';
 			removeCompositionSpan();
+			cursorRect = null;
 		};
 		this.show = function () {
 			if (app.runLevel) return;

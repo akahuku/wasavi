@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 276 2013-01-15 11:30:04Z akahuku $
+ * @version $Id: wasavi.js 277 2013-01-17 01:18:31Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1726,6 +1726,7 @@ function processInput (code, e, ignoreAbbreviation) {
 		if (editMap[key]) {
 			var ss = t.selectionStart;
 			var se = t.selectionEnd;
+			cursor.update({visible:false});
 			execMap(t, e, editMap, key, subkey, code);
 			completeSelectionRange(ss, se);
 			cursor.ensureVisible();
@@ -2024,7 +2025,12 @@ function processInput (code, e, ignoreAbbreviation) {
 					processAutoDivide(e);
 					processAbbrevs();
 				}
+				if (runLevel == 0 && e.isCompositionedFirst) {
+					cursor.editCursor.style.display = 'none';
+					isBulkInputting = true;
+				}
 				if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
+					isBulkInputting = false;
 					cursor.ensureVisible();
 					cursor.update({visible:true, focused:true});
 					requestShowPrefixInput(getDefaultPrefixInputString());
@@ -3807,15 +3813,18 @@ function handleWindowResize (e) {
 
 // editor (document)
 function handleKeydown2 (e) {
-	if (scroller.running || exCommandExecutor.running) {
+	if (scroller.running
+	|| exCommandExecutor.running
+	|| isBulkInputting && !e.isCompositioned) {
 		keyManager.push(e);
-		fireNotifyKeydownEvent(
+		/*fireNotifyKeydownEvent(
 			e.code, e.fullIdentifier,
 			'busy now('
 				+ (scroller.running ? 'scroller' : '')
 				+ (exCommandExecutor.running ? 'exCommandExecutor' : '')
+				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
 				+ ')'
-		);
+		);*/
 		return;
 	}
 	isInteractive = true;
@@ -4182,6 +4191,7 @@ var isSmoothScrollRequested;
 var isSimpleCommandUpdateRequested;
 var isJumpBaseUpdateRequested;
 var isLastKeyCodeLocked;
+var isBulkInputting;
 
 var lastKeyCode;
 var lastSimpleCommand;
