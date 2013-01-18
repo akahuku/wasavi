@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 277 2013-01-17 01:18:31Z akahuku $
+ * @version $Id: classes.js 280 2013-01-18 19:32:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -976,7 +976,7 @@ Wasavi.KeyManager = function () {
 		keyDownCode = e.keyCode;
 		inputEventInvokedCount = 0;
 		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
-		logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which);
+		logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
 		if (window.chrome) {
 			specialKeyName = false;
 
@@ -1042,7 +1042,7 @@ Wasavi.KeyManager = function () {
 			var keyCode = e.keyCode || e.charCode;
 
 			// ctrl code shortcuts: ctrl + *
-			if (e.ctrlKey && keyCode >= 64 && keyCode <= 95) {
+			if (e.ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
 				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
 				c.push(baseKeyName);
 				logicalCharCode = keyCode & 0x1f;
