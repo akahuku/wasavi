@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes_ex.js 279 2013-01-18 16:56:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1347,6 +1347,7 @@ Wasavi.ExCommand.commands = [
 		app.lastRegexFindCommand.setPattern('');
 		app.lastSubstituteInfo.clear();
 		app.low.requestShowMessage('Whassup?');
+		app.devMode && console.log('*** undo info ***\n' + app.editLogger.logs.dump());
 		return undefined;
 	}),
 	new Wasavi.ExCommand('storage', 'st', '', 0, function (app, t, a) {
