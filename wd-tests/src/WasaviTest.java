@@ -332,6 +332,13 @@ class WasaviUtils {
 		StringSelection ss = new StringSelection(s);
 		cb.setContents(ss, ss);
 	}
+
+	public static void sleep (long ms) {
+		try {
+			Thread.sleep(ms);
+		}
+		catch (InterruptedException e) {}
+	}
 }
 
 

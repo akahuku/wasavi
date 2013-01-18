@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 276 2013-01-15 11:30:04Z akahuku $
+ * @version $Id: background.js 278 2013-01-18 00:08:06Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1470,142 +1470,182 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		restoreAcessTokenPersistents();
 	}
 
+	/*
+	 * string similarity computer
+	 */
+
+	function SimilarityComputer (unitSize) {
+		function getNgram (text) {
+			text = text.replace(/\s/g, '');
+			var result = {};
+			for (var i = 0, goal = text.length - (unitSize - 1); i < goal; i++) {
+				result[text.substr(i, unitSize)] = 1;
+			}
+			return result;
+		}
+		function getCommonLength (t1ngram, t2ngram) {
+			var result = 0;
+			for (var i in t1ngram) {
+				i in t2ngram && result++;
+			}
+			return result;
+		}
+		function getUnionLength (t1ngram, t2ngram) {
+			return Object.keys(t1ngram).length + Object.keys(t2ngram).length;
+		}
+		function getNgramRatio (t1, t2) {
+			var t1ngram, t2ngram;
+
+			if (t1 && t2 && typeof t1 == 'object' && typeof t2 == 'object') {
+				t1ngram = t1;
+				t2ngram = t2;
+			}
+			else if (typeof t1 == 'string' && typeof t2 == 'string') {
+				if (t1.length < unitSize || t2.length < unitSize) {
+					return getLevenshteinRatio(t1, t2);
+				}
+				t1ngram = getNgram(t1 + '');
+				t2ngram = getNgram(t2 + '');
+			}
+			else {
+				throw new Error('invalid arguments');
+			}
+
+			var commonLength = getCommonLength(t1ngram, t2ngram);
+			var unionLength = getUnionLength(t1ngram, t2ngram);
+			var result = 2.0 * commonLength / unionLength;
+			return result;
+		}
+		function getLevenshteinRatio (t1, t2) {
+			if (t1 == '' && t2 == '') return 1.0;
+
+			var x = t1.length;
+			var y = t2.length;
+			var m = [];
+			for (var i = 0; i <= x; i++) {
+				m[i] = [];
+				m[i][0] = i;
+			}
+			for (var i = 0; i <= y; i++) {
+				m[0][i] = i;
+			}
+			for (var i = 1; i <= x; i++) {
+				for (var j = 1; j <= y; j++) {
+					var cost = t1.charAt(i - 1) == t2.charAt(j - 1) ? 0 : 1;
+					m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + cost);
+				}
+			}
+			var result = 1.0 - (m[x][y] / Math.max(x, y));
+			return result;
+		}
+		function getNgramRatio2 (t1, t2, t1data, t2data) {
+			if (t1.length < unitSize || t2.length < unitSize) {
+				return getNgramRatio(t1, t2);
+			}
+			else {
+				return getNgramRatio(t1data, t2data);
+			}
+		}
+		unitSize || (unitSize = 3);
+		this.getNgram = getNgram;
+		this.getNgramRatio = getNgramRatio;
+		this.getNgramRatio2 = getNgramRatio2;
+		this.getLevenshteinRatio = getLevenshteinRatio;
+	}
+
 	/**
 	 * runtime overwrite settings
 	 */
 
 	function RuntimeOverwriteSettings () {
-		var ROS_URL_MAX = 20;
-		var ROS_NODE_MAX = 20;
+		var ROS_URL_MAX = 30;
 		var ROS_MATCH_RATIO = 0.8;
 
+		var similarityComputer = new SimilarityComputer;
 		var cache;
 
 		function getKeyParts (url, path) {
-			var re, fragment = '', queries = '';
-			re = /^(.*)(#[^#]*)$/.exec(url);
-			if (re) {
-				url = re[1];
-				fragment = re[2];
-			}
-			re = /^(.*)\?([^\?]*)$/.exec(url);
-			if (re) {
-				url = re[1] + fragment;
-				queries = re[2];
-			}
-
-			var hash = SHA1.calc(queries + ' ' + path);
-
-			if (queries != '') {
-				queries = queries.split('&').sort().map(function (q) {
-					return extension.isDev ? q : SHA1.calc(q);
-				});
-			}
-			else {
-				queries = [];
-			}
-
+			var re = /^([^?#]*)([?#].*)?$/.exec(url);
+			var query = re[2] || '';
 			return {
-				hash:hash,
 				url:extension.isDev ? url : SHA1.calc(url),
-				queries:queries,
-				path:path.split(' ')
+				urlBase:extension.isDev ? re[1] : SHA1.calc(re[1]),
+				query:query,
+				queryData:similarityComputer.getNgram(query),
+				nodePath:path
 			};
 		}
-		function getSimilarityRatio (target, candidate) {
-			/*
-			 * TODO: rewrite
-			 */
-			if (target.length != candidate.length) return 0;
-			for (var i = 0, goal = target.length; i < goal; i++) {
-				if (target[i] != candidate[i]) return 0;
-			}
-			return 1;
-		}
 		function findCacheIndex (keyParts) {
-			var url = keyParts.url;
-			for (var i = 0, goal = cache[url].length; i < goal; i++) {
-				if (cache[url][i].hash == keyParts.hash) {
+			for (var i = 0, goal = cache.length; i < goal; i++) {
+				if (cache[i].url == keyParts.url) {
 					return i;
 				}
 			}
 			return false;
 		}
-		function get (url, path) {
-			path || (path = '');
-			if (path == '') {
-				return '';
-			}
+		function get (url, nodePath) {
+			nodePath || (nodePath = '');
+			if (nodePath == '') return '';
+			if (url == TEST_MODE_URL) return '';
 
 			if (!cache) {
-				cache = parseJson(extension.storage.getItem('ros'), {});
+				cache = parseJson(extension.storage.getItem('ros'), []);
+			}
+			if (!('length' in cache)) {
+				cache = [];
 			}
 
-			var keyParts = getKeyParts(url, path);
-			var rosInfo = cache[keyParts.url];
-			if (!rosInfo) {
-				return '';
-			}
+			var keyParts = getKeyParts(url, nodePath);
+			var index = -1, qscoreMax = 0, pscoreMax = 0;
+			for (var i = 0, goal = cache.length; i < goal; i++) {
+				if (keyParts.url == cache[i].url) {
+					index = i;
+					break;
+				}
+				if (keyParts.urlBase != cache[i].urlBase) continue;
 
-			var index = -1, qscoreMax, pscoreMax;
-			for (var i = 0, goal = rosInfo.length; i < goal; i++) {
-				var qscore = getSimilarityRatio(keyParts.queries, rosInfo[i].queries);
-				var pscore = getSimilarityRatio(keyParts.path, rosInfo[i].path);
-				if (index < 0 ||
-				(  qscore >= ROS_MATCH_RATIO && qscore > qscoreMax
-				&& pscore >= ROS_MATCH_RATIO && pscore > pscoreMax)) {
+				var qscore = similarityComputer.getNgramRatio2(
+					keyParts.query, cache[i].query,
+					keyParts.queryData, cache[i].queryData);
+				var pscore = similarityComputer.getLevenshteinRatio(
+					keyParts.nodePath, cache[i].nodePath);
+
+				if (qscore >= ROS_MATCH_RATIO && qscore > qscoreMax
+				&&  pscore >= ROS_MATCH_RATIO && pscore > pscoreMax) {
 					index = i;
 					qscoreMax = qscore;
 					pscoreMax = pscore;
 				}
 			}
 
-			if (index < 0) return '';
+			if (index >= 0) {
+				var item = cache.splice(index, 1)[0];
+				cache.unshift(item);
+				return item.script;
+			}
 
-			return rosInfo[index].script;
+			return '';
 		}
 		function set (url, nodePath, script) {
 			nodePath || (nodePath = '');
 			if (nodePath == '') return;
 
+			if (!cache) {
+				cache = [];
+			}
+
 			var keyParts = getKeyParts(url, nodePath);
-
-			if (!cache[keyParts.url]) {
-				cache[keyParts.url] = [];
-			}
-
 			var index = findCacheIndex(keyParts);
-			if (index === false) {
-				cache[keyParts.url].push({
-					date:Date.now(),
-					hash:keyParts.hash,
-					queries:keyParts.queries,
-					path:keyParts.path,
-					script:script
-				});
-			}
-			else {
-				cache[keyParts.url][index].date = Date.now();
-				cache[keyParts.url][index].script = script;
-			}
+			var item = index === false ? keyParts : cache.splice(index, 1)[0];
+			item.script = script;
+			cache.unshift(item);
 
-			cache[keyParts.url] = cache[keyParts.url].sort(function (k1, k2) {
-				return k1.date - k2.date;
-			});
-			while (cache[keyParts.url].length > ROS_NODE_MAX) {
-				cache[keyParts.url].shift();
-			}
-
-			var keys = Object.keys(cache).sort(function (k1, k2) {
-				return cache[k1][0].date - cache[k2][0].date;
-			});
-			while (keys.length > ROS_URL_MAX) {
-				delete cache[keys.shift()];
+			while (cache.length > ROS_URL_MAX) {
+				cache.pop();
 			}
 
 			extension.storage.setItem('ros', JSON.stringify(cache));
 		}
-
 		this.get = get;
 		this.set = set;
 	}

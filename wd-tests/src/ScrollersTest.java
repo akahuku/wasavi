@@ -32,7 +32,7 @@ public class ScrollersTest extends WasaviTest {
 		int rowBefore = Wasavi.getRow();
 		int colBefore = Wasavi.getCol();
 		Wasavi.send("d\u0015");
-		assertEquals("#3", "^U canceled.", Wasavi.getLastMessage());
+		assertEquals("#3", "d canceled.", Wasavi.getLastMessage());
 		assertTrue("#4", rowBefore == Wasavi.getRow() && colBefore == Wasavi.getCol());
 	}
 
