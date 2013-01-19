@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 280 2013-01-18 19:32:04Z akahuku $
+ * @version $Id: classes.js 281 2013-01-19 14:25:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -945,9 +945,18 @@ Wasavi.KeyManager = function () {
 	function init (aleading) {
 		if (!target) return;
 		if (typeof aleading == 'object' && 'value' in aleading && 'selectionStart' in aleading) {
-			aleading = aleading.value.substring(0, aleading.selectionStart);
+			var element = aleading;
+			lastValue = aleading = element.value.substring(0, element.selectionStart);
+			if (target != element && !isPreserve) {
+				target.value = aleading;
+			}
 		}
-		lastValue = target.value = aleading || '';
+		else {
+			lastValue = target.value = aleading || '';
+			if (!isPreserve) {
+				target.value = lastValue;
+			}
+		}
 		isInComposition = false;
 		keyDownCode = -1;
 		compositionResult = null;

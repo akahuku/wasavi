@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 279 2013-01-18 16:56:38Z akahuku $
+ * @version $Id: wasavi.js 281 2013-01-19 14:25:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -6077,7 +6077,7 @@ var lineInputEditMap = {
 		this['\u0002'].apply(this, arguments);
 	},
 	'<right>': function (c) {
-		this['\u0005'].apply(this, arguments);
+		this['\u0006'].apply(this, arguments);
 	},
 	'<up>': function () {
 		this['\u0010'].apply(this, arguments);

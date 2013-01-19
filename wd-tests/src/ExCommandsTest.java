@@ -1794,6 +1794,92 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":%@a\n");
 		assertValue("#2-1", "1\n2\n\tfoo\u001b\n\t");
 	}
+
+	@Test
+	public void commandlineMoveToTop () {
+		Wasavi.send(":ersion\u0001v\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineMoveToTopHome () {
+		Wasavi.send(":ersion" + Keys.HOME + "v\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineMoveToEnd () {
+		Wasavi.send(":versio\u0001\u0005n\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineMoveToEndEnd () {
+		Wasavi.send(":versio\u0001" + Keys.END + "n\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineBack () {
+		Wasavi.send(":versin\u0002o\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineBackLeft () {
+		Wasavi.send(":versin" + Keys.ARROW_LEFT + "o\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineForward () {
+		Wasavi.send(":vrsion\u0001\u0006e\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineForwardRight () {
+		Wasavi.send(":vrsion\u0001" + Keys.ARROW_RIGHT + "e\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineBackspace () {
+		Wasavi.send(":versiom\u0008n\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineBackspaceBackspace () {
+		Wasavi.send(":versiom" + Keys.BACK_SPACE + "n\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineNextHistory () {
+		Wasavi.send(":wow!\n");
+		Wasavi.send(":version" + Keys.ARROW_UP + Keys.ARROW_DOWN + "\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlinePreviousHistory () {
+		Wasavi.send(":version\n");
+		Wasavi.send(":set ai?" + Keys.ARROW_UP + "\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineDeleteLine () {
+		Wasavi.send(":howdy?\u0015version\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void commandlineDeleteWord () {
+		Wasavi.send(":word\u0017version\n");
+		assertEquals("#1-1", "wasavi/0.0.1", Wasavi.getLastMessage());
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */
