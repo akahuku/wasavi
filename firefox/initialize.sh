@@ -1,6 +1,5 @@
 #!/bin/sh
 
-mkdir -p data
 pushd data
 ln -s ../../chrome/appsweets.png
 ln -s ../../chrome/beep.ogg.txt

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 282 2013-01-21 08:49:36Z akahuku $
+ * @version $Id: background.js 283 2013-01-21 09:10:23Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1004,8 +1004,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				context:cm.SelectorContext('input,textarea'),
 				image:self.data.url('icon016.png'),
 				label:'#',
-				contentScript:'self.on("context", function(){self.postMessage(1);return true});' +
-					'self.on("click", function(){self.postMessage(2)});',
+				contentScriptFile:self.data.url('context_menu.js'),
 				onMessage:function (phase) {
 					switch (phase) {
 					case 1:

@@ -1,6 +1,5 @@
 @echo off
 
-mkdir data
 pushd data
 mklink appsweets.png ..\..\chrome\appsweets.png
 mklink beep.ogg.txt ..\..\chrome\beep.ogg.txt
