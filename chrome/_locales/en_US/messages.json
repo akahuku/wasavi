@@ -65,6 +65,10 @@
 		"message": "Are you sure?",
 		"description": "Are you sure?"
 	},
+	"edit_with_wasavi": {
+		"message": "Edit with wasavi",
+		"description": "Edit with wasavi"
+	},
 	"_plural_rule@function": {
 		"message": "isone(one)"
 	},

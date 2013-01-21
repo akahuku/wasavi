@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes_undo.js 282 2013-01-21 08:49:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -132,8 +132,8 @@ Wasavi.EditLogger.prototype = new function () {
 					'       LO: ' + this.isLineOrient,
 					'       ss: ' + ss,
 					'       se: ' + se,
-					'selection: ' + toVisibleString(t.getSelection(ss, se)),
-					'this.data: ' + toVisibleString(this.data)
+					'selection: "' + toVisibleString(t.getSelection(ss, se)) + '"',
+					'this.data: "' + toVisibleString(this.data) + '"'
 				].join('\n'));
 				return 0;
 			}

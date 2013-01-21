@@ -65,6 +65,10 @@
 		"message": "本当にいいですか？",
 		"description": "Are you sure?"
 	},
+	"edit_with_wasavi": {
+		"message": "wasavi で編集",
+		"description": "Edit with wasavi"
+	},
 	"_plural_rule@function": {
 		"message": "isone(one)"
 	},

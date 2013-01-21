@@ -10,6 +10,7 @@
     <content src="background.html" encoding="UTF-8" type="text/html" />
     <update-description href="http://appsweets.net/wasavi/queryversion.php?opera-xml" />
     <access origin="https://dropbox.com/" subdomains="true" />
+	<feature name="opera:contextmenus"/>
 </widget>
 
 

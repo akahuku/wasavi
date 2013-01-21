@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 278 2013-01-18 00:08:06Z akahuku $
+ * @version $Id: background.js 282 2013-01-21 08:49:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -76,6 +76,8 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		'f9':120, 'f10':121, 'f11':122, 'f12':123
 	};
 	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
+	var TEST_VERSION = '0.0.1';
+	var MENU_EDIT_WITH_WASAVI = 'edit_with_wasavi';
 
 	/*
 	 * variables
@@ -482,6 +484,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.closeTabByWasaviId = function (id) {};
 		this.focusTab = function (id) {};
 		this.createTransport = function () {};
+		this.initContextMenu = function () {};
 		this.storage = new StorageWrapper;
 		this.clipboard = new ClipboardManager;
 		this.tabWatcher = new TabWatcher;
@@ -594,6 +597,18 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.createTransport = function () {
 			return new XMLHttpRequest;
 		};
+		this.initContextMenu = function () {
+			chrome.contextMenus.removeAll(function () {
+				chrome.contextMenus.create({
+					contexts:['editable'],
+					title:chrome.i18n.getMessage(MENU_EDIT_WITH_WASAVI),
+					onclick:function (info, tab) {
+						if (!info.editable) return;
+						chrome.tabs.sendRequest(tab.id, {type:'request-run'});
+					}
+				});
+			});
+		};
 		this.storage = StorageWrapper.create();
 		this.clipboard = ClipboardManager.create();
 		this.tabWatcher = TabWatcher.create();
@@ -607,7 +622,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		(function (self) {
 			resourceLoader.get('manifest.json', function (data) {
 				self.version = JSON.parse(data).version;
-				self.isDev = self.version == '0.0.1';
+				self.isDev = self.version == TEST_VERSION;
 			}, {noCache:true});
 		})(this);
 	}
@@ -748,6 +763,23 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.createTransport = function () {
 			return new XMLHttpRequest;
 		};
+		this.initContextMenu = function () {
+			if (!opera.contexts || !opera.contexts.menu) return;
+			while (opera.contexts.menu.length) {
+				opera.contexts.menu.removeItem(0);
+			}
+			opera.contexts.menu.addItem(opera.contexts.menu.createItem({
+				contexts:['editable'],
+				icon:'icon016.png',
+				title:getContextMenuLabel(MENU_EDIT_WITH_WASAVI),
+				onclick:function (e) {
+					if (!e.isEditable) return;
+					getTabId(e.source, function () {
+						e.source.postMessage({type:'request-run'});
+					});
+				}
+			}));
+		};
 		this.storage = StorageWrapper.create();
 		this.clipboard = ClipboardManager.create();
 		this.tabWatcher = TabWatcher.create();
@@ -760,7 +792,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.messageCatalogPath = 'messages.json';
 		this.cryptKeyPath = 'includes/wasavi.js';
 		this.version = widget.version;
-		this.isDev = widget.version == '0.0.1';
+		this.isDev = widget.version == TEST_VERSION;
 	}
 
 	/**
@@ -964,6 +996,34 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		this.createTransport = function () {
 			return new XMLHttpRequest;
 		};
+		this._contextMenuInitialized = false;
+		this.initContextMenu = function () {
+			if (this._contextMenuInitialized) return;
+			var cm = require('context-menu');
+			cm.Item({
+				context:cm.SelectorContext('input,textarea'),
+				image:self.data.url('icon016.png'),
+				label:'#',
+				contentScript:'self.on("context", function(){self.postMessage(1);return true});' +
+					'self.on("click", function(){self.postMessage(2)});',
+				onMessage:function (phase) {
+					switch (phase) {
+					case 1:
+						this.label = getContextMenuLabel(MENU_EDIT_WITH_WASAVI);
+						break;
+					case 2:
+						var activeTab = tabs.activeTab;
+						for (var i in tabIds) {
+							if (tabIds[i].tab == activeTab) {
+								tabIds[i].postMessage({type:'request-run'});
+								break;
+							}
+						}
+					}
+				}
+			});
+			this._contextMenuInitialized = true;
+		};
 		this.storage = StorageWrapper.create();
 		this.clipboard = ClipboardManager.create();
 		this.tabWatcher = TabWatcher.create();
@@ -998,7 +1058,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		})();
 		this.cryptKeyPath = 'frontend/wasavi.js';
 		this.version = require('self').version;
-		this.isDev = this.version == '0.0.1';
+		this.isDev = this.version == TEST_VERSION;
 	}
 
 	/**
@@ -1699,6 +1759,10 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 		}
 	}
 
+	function getContextMenuLabel (id) {
+		return messageCatalog && messageCatalog[id].message || id;
+	}
+
 	/**
 	 * storage initializer
 	 */
@@ -1744,6 +1808,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 	function initMessageCatalog () {
 		if (typeof extension.messageCatalogPath != 'string') {
 			messageCatalog = false;
+			extension.initContextMenu();
 			return;
 		}
 		resourceLoader.get(extension.messageCatalogPath, function (text) {
@@ -1751,6 +1816,7 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 			for (var i in messageCatalog) {
 				delete messageCatalog[i].description;
 			}
+			extension.initContextMenu();
 		}, {noCache:true});
 	}
 

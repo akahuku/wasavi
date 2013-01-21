@@ -10,7 +10,7 @@
     "128": "icon128.png"
   },
   "permissions": [
-    "tabs", "clipboardRead", "clipboardWrite",
+    "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
     "https://*.dropbox.com/*"
   ],
   "background": {

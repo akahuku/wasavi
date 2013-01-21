@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 273 2013-01-14 09:22:57Z akahuku $
+ * @version $Id: agent.js 282 2013-01-21 08:49:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -169,6 +169,7 @@ function run (element) {
 
 	//
 	targetElement = element;
+	targetElement.setAttribute(EXTENSION_CURRENT, 'wasavi');
 	wasaviFrame = document.createElement('iframe');
 	wasaviFrame.style.border = 'none';
 	wasaviFrame.style.overflow = 'hidden';
@@ -367,7 +368,6 @@ function handleKeydown (e) {
 	if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
 
 	if (matchWithShortcut(e)) {
-		e.target.setAttribute(EXTENSION_CURRENT, 'wasavi');
 		e.preventDefault();
 		run(e.target);
 	}
@@ -389,7 +389,6 @@ function handleTargetFocus (e) {
 	if (current !== null) return;
 	if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
 
-	e.target.setAttribute(EXTENSION_CURRENT, 'wasavi');
 	e.preventDefault();
 	run(e.target);
 }
@@ -620,8 +619,10 @@ window.addEventListener('keydown', handleKeydown, true);
 extension = WasaviExtensionWrapper.create();
 extension.setMessageListener(function (req) {
 	if (!req || !req.type) return;
-
 	switch (req.type) {
+	/*
+	 * messages from background
+	 */
 	case 'init-response':
 		enableList = JSON.parse(req.targets);
 		exrc = req.exrc;
@@ -672,6 +673,18 @@ extension.setMessageListener(function (req) {
 		});
 		break;
 
+	case 'request-run':
+		if (wasaviFrame || targetElement) break;
+		var target = document.activeElement;
+		if ((target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
+		&&  target.type in ACCEPTABLE_TYPES && enableList[ACCEPTABLE_TYPES[target.type]]) {
+			run(target);
+		}
+		break;
+
+	/*
+	 * messages from wasavi iframe
+	 */
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
 		wasaviFrame.style.visibility = 'visible';
