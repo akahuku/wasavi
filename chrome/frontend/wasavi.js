@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 281 2013-01-19 14:25:09Z akahuku $
+ * @version $Id: wasavi.js 287 2013-01-22 14:01:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -129,8 +129,8 @@
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
 
-		get isTextDirty () {return isTextDirty},
-		set isTextDirty (v) {isTextDirty = v},
+		get isTextDirty () {return config.vars.modified},
+		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
 		get isEditCompleted () {return isEditCompleted},
 		set isEditCompleted (v) {isEditCompleted = v},
 		get isVerticalMotion () {return isVerticalMotion},
@@ -654,7 +654,8 @@ outline:none; \
 font-family:' + fontFamily + '; \
 font-size:10pt; \
 line-height:1; \
-width:100% \
+width:100%; \
+ime-mode:inactive \
 } \
 #wasavi_console_container { \
 visibility:hidden; \
@@ -824,7 +825,7 @@ ime-mode:disabled; \
 	inputModeSub = '';
 	prefixInput = new Wasavi.PrefixInput;
 	idealWidthPixels = idealDenotativeWidthPixels = -1;
-	isTextDirty = isEditCompleted = isVerticalMotion = isReadonlyWarned =
+	isEditCompleted = isVerticalMotion = isReadonlyWarned =
 	isSmoothScrollRequested = isSimpleCommandUpdateRequested =
 	isJumpBaseUpdateRequested = recordedStrokes = false;
 	lastSimpleCommand = '';
@@ -886,7 +887,7 @@ ime-mode:disabled; \
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
-	if (save && isTextDirty) {
+	if (save && config.vars.modified) {
 		targetElement.value = buffer.value;
 	}
 
@@ -1662,7 +1663,7 @@ function processInput (code, e, ignoreAbbreviation) {
 		}
 	}
 	function doEditComplete () {
-		isTextDirty = true;
+		config.setData('modified');
 		lastRegexFindCommand.text = null;
 		if (config.vars.readonly && !isReadonlyWarned) {
 			isReadonlyWarned = true;
@@ -2208,23 +2209,27 @@ function getFindRegex (src) {
 	return result;
 }
 function getFileNameString () {
+	var result = '';
 	if (extensionChannel && WasaviExtensionWrapper.isTopFrame) {
 		if (fileName == '') {
-			return _('*Untitled*');
+			result = _('*Untitled*');
 		}
 		else {
-			return fileName;
+			result = fileName;
 		}
 	}
 	else if (targetElement) {
 		if (targetElement.id != '') {
-			return targetElement.nodeName + '#' + targetElement.id;
+			result = targetElement.nodeName + '#' + targetElement.id;
 		}
 		else {
-			return targetElement.nodeName;
+			result = targetElement.nodeName;
 		}
 	}
-	return '';
+	if (config.vars.modified) {
+		result += ' [+]';
+	}
+	return result;
 }
 function getCaretPositionString () {
 	if (buffer.rowLength == 1 && buffer.rows(0) == '') {
@@ -2275,7 +2280,7 @@ function getFileInfo () {
 
 	// attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
-	isTextDirty && attribs.push(_('modified')); // modified
+	config.vars.modified && attribs.push(_('modified')); // modified
 	config.vars.readonly && attribs.push(_('readonly')); // read only
 	result.push('[' + attribs.join(', ') + ']');
 
@@ -4070,6 +4075,7 @@ var config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['textwidth', 'i', 0],
+		['modified', 'b', false, null, true],
 
 		/* defined by nvi */
 		//['altwerase', 'b', false],
@@ -4185,7 +4191,6 @@ var searchUtils;
 var recordedStrokes;
 var literalInput;
 
-var isTextDirty;
 var isEditCompleted;
 var isVerticalMotion;
 var isReadonlyWarned;
@@ -5270,6 +5275,7 @@ var commandMap = {
 			else {
 				requestShowMessage(_('{0} {operation:0} have reverted.', result));
 				idealWidthPixels= -1;
+				config.setData(editLogger.isClean ? 'nomodified' : 'modified');
 				return true;
 			}
 		}
@@ -5287,6 +5293,7 @@ var commandMap = {
 			else {
 				requestShowMessage(_('{0} {operation:0} have executed again.', result));
 				idealWidthPixels= -1;
+				config.setData(editLogger.isClean ? 'nomodified' : 'modified');
 				return true;
 			}
 		}

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 279 2013-01-18 16:56:38Z akahuku $
+ * @version $Id: classes_ex.js 287 2013-01-22 14:01:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -811,6 +811,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == app.targetElement) {
 		app.isTextDirty = false;
+		app.editLogger.notifySave();
 	}
 	return undefined;
 };
@@ -1347,7 +1348,12 @@ Wasavi.ExCommand.commands = [
 		app.lastRegexFindCommand.setPattern('');
 		app.lastSubstituteInfo.clear();
 		app.low.requestShowMessage('Whassup?');
-		app.devMode && console.log('*** undo info ***\n' + app.editLogger.logs.dump());
+		app.devMode && console.log([
+			'*** undo info ***',
+			app.editLogger.dump(),
+			'item length: ' + app.editLogger.logLength,
+			'current pos: ' + app.editLogger.currentPosition
+		].join('\n'));
 		return undefined;
 	}),
 	new Wasavi.ExCommand('storage', 'st', '', 0, function (app, t, a) {

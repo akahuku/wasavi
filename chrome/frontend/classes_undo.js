@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 282 2013-01-21 08:49:36Z akahuku $
+ * @version $Id: classes_undo.js 287 2013-01-22 14:01:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -30,17 +30,6 @@
 'use strict';
 
 Wasavi.EditLogger = function (app, max) {
-	this.init(app, max);
-};
-Wasavi.EditLogger.ITEM_TYPE = {
-	NOP: 0,
-	INSERT: 1,
-	OVERWRITE: 2,
-	DELETE: 3,
-	SHIFT: 4,
-	UNSHIFT: 5
-};
-Wasavi.EditLogger.prototype = new function () {
 	/*constructor*/function EditLogItemBase () {
 		this.position = undefined;
 		this.data = undefined;
@@ -408,9 +397,12 @@ Wasavi.EditLogger.prototype = new function () {
 				this.items.shift();
 			}
 		},
+		item: function (index) {
+			return this.items[index];
+		},
 
 		toString: function () {
-			return '[object EditLogItemCluster]';
+			return '[object EditLogItemCluster<' + (this.tag || '') + '>]';
 		},
 		dump: function (depth) {
 			depth || (depth = 0);
@@ -445,103 +437,143 @@ Wasavi.EditLogger.prototype = new function () {
 		EditLogItemShift,
 		EditLogItemUnshift
 	];
+	var self = this;
+	var logs, cluster, currentPosition, savedAt;
 
-	return {
-		init: function (app, max) {
-			this.app = app;
-			this.editor = app.buffer;
-			this.max = max;
-			this.clear();
-		},
-		clear: function () {
-			this.logs = new EditLogItemCluster;
-			this.cluster = null;
-			this.currentPosition = this.logs.length - 1;
-			return this;
-		},
-		open: function (tag, func) {
-			if (this.cluster) {
-				this.cluster.nestLevel++;
-			}
-			else {
-				this.cluster = new EditLogItemCluster();
-			}
-			if (func) {
-				try {
-					func();
-				}
-				finally {
-					this.close();
-				}
-			}
-			return this;
-		},
-		write: function (type) {
-			var item;
-			if (this.cluster && pool[type]) {
-				var args = Array.prototype.slice.call(arguments, 1);
-				item = new pool[type];
-				item.init.apply(item, args);
-				this.cluster.push(item);
-			}
-			else {
-				throw new Error('EditLogger: invalid undo item type');
-			}
-			return item;
-		},
-		close: function () {
-			if (this.cluster) {
-				if (--this.cluster.nestLevel < 0) {
-					var representer = this.cluster.representer;
-					if (representer) {
-						this.logs.items.length = this.currentPosition + 1;
-						this.logs.push(representer);
-						this.logs.trim(this.max);
-						this.currentPosition = this.logs.length - 1;
-					}
-					this.cluster = null;
-					//this.app.devMode && console.log('*** editLogger dump ***\n' + this.logs.dump());
-				}
-			}
-			else {
-				throw new Error('EditLogger: edit logger doesn\'t open');
-			}
-			return this;
-		},
-		undo: function () {
-			if (!this.cluster && this.currentPosition >= 0) {
-				return this.logs.items[this.currentPosition--].undo(this.app, this.app.buffer);
-			}
-			else {
-				return false;
-			}
-		},
-		redo: function () {
-			if (!this.cluster && this.currentPosition < this.logs.length - 1) {
-				return this.logs.items[++this.currentPosition].redo(this.app, this.app.buffer);
-			}
-			else {
-				return false;
-			}
-		},
-		dispose: function () {
-			this.app = this.editor = this.logs = this.cluster = null;
-		},
-		get logMax () {
-			return this.max;
-		},
-		set logMax (v) {
-			if (typeof v != 'number' || v < 0) {
-				throw new Exeception('EditLogger: invalid logMax');
-			}
-			this.max = v;
-			this.logs.trim(this.max);
-			this.currentPosition = this.logs.length - 1;
-		},
-		get clusterNestLevel () {
-			return this.cluster ? this.cluster.nestLevel : -1;
+	function clear () {
+		logs = new EditLogItemCluster;
+		cluster = savedAt = null;
+		currentPosition = logs.length - 1;
+		return self;
+	}
+	function open (tag, func) {
+		if (cluster) {
+			cluster.nestLevel++;
 		}
-	};
+		else {
+			cluster = new EditLogItemCluster();
+			cluster.tag = tag;
+		}
+		if (func) {
+			try {
+				func();
+			}
+			finally {
+				close();
+			}
+		}
+		return self;
+	}
+	function write (type) {
+		var item;
+		if (cluster && pool[type]) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			item = new pool[type];
+			item.init.apply(item, args);
+			cluster.push(item);
+		}
+		else {
+			throw new Error('EditLogger: invalid undo item type');
+		}
+		return item;
+	}
+	function close () {
+		if (cluster) {
+			if (--cluster.nestLevel < 0) {
+				var tag = cluster.tag;
+				var representer = cluster.representer;
+				if (representer) {
+					representer.tag = tag;
+					logs.items.length = currentPosition + 1;
+					logs.push(representer);
+					logs.trim(max);
+					currentPosition = logs.length - 1;
+				}
+				cluster = null;
+				//app.devMode && console.log('*** editLogger dump ***\n' + logs.dump());
+			}
+		}
+		else {
+			throw new Error('EditLogger: edit logger doesn\'t open');
+		}
+		return self;
+	}
+	function undo () {
+		if (!cluster && currentPosition >= 0) {
+			return logs.items[currentPosition--].undo(app, app.buffer);
+		}
+		else {
+			return false;
+		}
+	}
+	function redo () {
+		if (!cluster && currentPosition < logs.length - 1) {
+			return logs.items[++currentPosition].redo(app, app.buffer);
+		}
+		else {
+			return false;
+		}
+	}
+	function dump () {
+		return logs.dump();
+	}
+	function notifySave () {
+		savedAt = logs.item(currentPosition) || null;
+	}
+	function dispose () {
+		app = logs = cluster = savedAt = null;
+	}
+
+	Object.defineProperties(this, {
+		clear: {value:clear},
+		open: {value:open},
+		close: {value:close},
+		write: {value:write},
+		undo: {value:undo},
+		redo: {value:redo},
+		dump: {value:dump},
+		notifySave: {value:notifySave},
+		dispose: {value:dispose},
+		logMax: {
+			get: function () {return max},
+			set: function (v) {
+				if (typeof v != 'number' || v < 0) {
+					throw new Error('EditLogger: invalid logMax');
+				}
+				max = v;
+				logs.trim(max);
+				currentPosition = logs.length - 1;
+			}
+		},
+		clusterNestLevel: {
+			get: function () {return cluster ? cluster.nestLevel : -1}
+		},
+		logLength: {
+			get: function () {return logs.length}
+		},
+		isClean: {
+			get: function () {
+				var result;
+				if (currentPosition < 0 || currentPosition >= logs.length) {
+					result = !savedAt;
+				}
+				else {
+					result = logs.item(currentPosition) == savedAt;
+				}
+				return result;
+			}
+		}
+	});
+
+	clear();
+};
+Wasavi.EditLogger.ITEM_TYPE = {
+	NOP: 0,
+	INSERT: 1,
+	OVERWRITE: 2,
+	DELETE: 3,
+	SHIFT: 4,
+	UNSHIFT: 5
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
