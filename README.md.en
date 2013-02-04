@@ -1,106 +1,115 @@
 wasavi (VI editor for any web page)
 ====================================
 
-What is it?
------------
+wasavi is an extension for Chrome, Opera and Firefox. wasavi transforms TEXTAREA element of any page into a VI editor, so you can edit the text in VI.  wasavi supports almost all VI commands and some ex commands.
 
-wasavi is an extension for Chrome, Opera, Firefox browser. wasavi extends 
-TEXTAREA element on any page. 
+wasavi is underdevelopment. Any bug report or feature request is welcomed.
 
-wasavi supports almost all of vi commands and some ex commands, so you can edit
-a text with vi's interface.
+A Quick Walkthrough
+====================
 
-making of wasavi is under continuation. any request for function, or any bug
-information will be welcomed!
+* Here is a native TEXTAREA
 
-
-
-Screenshots
------------
-
-* there is native TEXTAREA element:
   ![native textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
 
-* focus the TEXTAREA, and press Ctrl+Enter. then wasavi will be executed:
+* Focus the TEXTAREA, and press `Ctrl+Enter` to launch wasavi
+
   ![wasavi running](http://appsweets.net/wasavi/wasavi.jpg)
 
-* wasavi supports some ex commands. ":set all" command output is as follows:
+Salient Features
+----------------
+
+* wasavi supports some ex commands. This is the output of `:set all`
+
   ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
 
-* incremental-search ported from vim:
+* Vim's incremental search 
+
   ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
 
-* <http://wasavi.appsweets.net/> is special address. open this address with the
-  browser which installed wasavi, wasavi will be executed automatically.
-  on this page, you can load and save from/to dropbox.
+* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox account.
+
   ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
 
 
-
 How to install
---------------
+==============
 
-Currently, there are extension packages for the following browsers:
+Currently, wasavi is available for following browsers only. Select your browser and click the link. Standard extension installation procedure of your browser will follow. These extensions are hosted at the addons store of their respective browser.
 
-* Google Chrome
+* [Google Chrome extension](https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe)
 
-  <https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe>
+* [Opera addon](https://addons.opera.com/en/extensions/details/wasavi/)
 
-* Opera
+* [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/wasavi/)
 
-  <https://addons.opera.com/en/extensions/details/wasavi/>
+Latest development releases can be downloaded from [this link](http://appsweets.net/wasavi/).
 
-* Firefox
+Source code is hosted at [Github](https://github.com/akahuku/wasavi). 
 
-  <https://addons.mozilla.org/en-US/firefox/addon/wasavi/>
+### A note for Opera users 
 
-Click one of link above, and install in accordance with the standard manners
-of each browser.
+Opera does not support DOM3 Composition Event therefore input via IME is not available.
 
-Opera note: since Opera does not support "DOM3 Composition Event", so the input
-via IME is not available.
+Frequently Asked Questions
+==========================
 
-Source code is hosted on <https://github.com/akahuku/wasavi>. 
-Latest develop versions are hosted on <http://appsweets.net/wasavi/>.
+## How to launch wasavi  
 
-
-
-How to use
-----------
-
-### extend a textarea
-
-focus to TEXTAREA element of a web page, and press Ctrl+Enter. Of course, to
-quit wasavi, press ZZ / :q / :wq etc.
-
-### use under environment of vimperator on Firefox
-
-put
-<https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js>
-into your vimperator plugin directory (~/.vimperator/plugin or %HOME%\vimperator\plugin).
-this plugin controls the pass-through mode of vimperator according to the state
-of wasavi.
-
-And, on <http://wasavi.appsweets.net/>, enter
-`:ignorekeys add ^http://wasavi\\.appsweets\\.net/` to vimperator.
-then on the page, vimperator always becomes pass-through mode.
-
-settings of ignorekeys command are saved automatically, therefore it's enough to do once.
-
-### use as a independent text editor
-
-Browse <http://wasavi.appsweets.net/>. wasavi will be executed automaticaly.
-In this mode, ex command edit, read, file, write are available. these commands
-can save and load file on dropbox.
+Focus TEXTAREA and press `Ctrl+Enter`. 
 
 
+## How to quit wasavi
 
-* * *
+To quit wasavi press `ZZ` or `:q` or `:wq` or any other VI quit command.
+
+## How to use wasavi with Vimperator on Firefox
+
+Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js) in your Vimperator plugin directory, for example,  `~/.vimperator/plugin` or `%HOME%\vimperator\plugin`.
+
+This plugin will control the pass-through mode of Vimperator according to the state of wasavi.
+
+On [wasavi online app](http://wasavi.appsweets.net/), enter `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` in Vimperator. Then Vimperator will always use pass-through mode for the online app. `ignorekeys` settings is stored automatically therefore you will not have to reenter it.
 
 
+## How to use wasavi as an independent text editor
+
+Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox files. You will have to authorize wasavi via OAuth to access Dropbox.
+
+## I Have noticed a bug
+
+Please create an issue on [wasavi issue tracker](http://github.com/akahuku/wasavi/issues)
+
+Tips and Tricks
+===============
+
+* to maximize the wasavi: `:set fullscreen` or `:set fs`
+* to restore the wasavi: `:set nofullscreen` or `:set nofs`
+* to change a color theme: `:set theme=blight` or `:set theme=charcoal`
+* to modify initial settings:
+  open preference wasavi extension (or enter `:options` on wasavi), and edit "exrc" textbox.
+* abbreviate syntax is
+	+ `:abbreviate` displays all the abbreviations currently registered.
+	+ `:abbreviate [clear]` clears all the abbreviations.
+	+ `:abbreviate lhs` displays the abbreviation corresponding to lhs.
+	+ `:abbreviate lhs rhs` registers a abbreviation which
+	  expands lhs to rhs.
+* map syntax is
+	+ `:map` displays all the mappings currently registered.
+	+ `:map [clear]` clears all the mappings.
+	+ `:map lhs rhs` registers a rule which translates lhs to rhs. Its translation is recursive.
+	+ `:map [noremap] lhs rhs` also registers, but it is
+	  non-recursive.
+	+ `:map` targets the normal mode mappings. On the other hand,
+	  `:map!` targets the insert mode.
+* j k ^ $ moves cursor by physical row, on the other hand,
+  gj gk g^ g$ moves by wrapped row. To swap the behavior: `:set jkdenotative`
+* f/F/t/T extension for Japanese: these commands recognizes reading (ro-ma ji
+  expression) of hiragana, katakana, and kanji. For example, `fk` will place
+  a cursor on '漢'.
 
 Commands implemented
---------------------
+====================
 
 * [count] operation [count] motion
 * [count] operation [count] range-symbol
@@ -110,61 +119,63 @@ Commands implemented
 * [count] edit-command
 * : ex-command
 
-### operation:
+Operations
+----------
 
-* c y d &gt; &lt; gq
+c y d &gt; &lt; gq
 
-### operation-alias:
+Operations Aliases
+------------------
 
-* cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
+cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
 
-### motion:
+Motion
+------
 
-* &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
+&#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
   w W b B e E gg gj gk g^ g$ gi G H M L f F t T n N
 
-### range-symbol (also known as "text object" in vim):
+Vim text objects (range symbol)
 
 * a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
 * i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
 
-### scroll-command:
+Scroll commands
+---------------
 
-* ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
-  z&lt;enter&gt; z. zz z-
+^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt; z&lt;enter&gt; z. zz z-
 
-### edit-command:
+Edit commands
+-------------
 
-* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R
-  a A i I o O & s S ZZ
+x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R a A i I o O & s S ZZ
 
-### ex-command:
+ex commands
+-----------
 
-* abbreviate copy delete edit file global join k map mark marks move
-  options print put quit read redo s & ~ set registers to
-  unabbreviate undo unmap version v write wq xit yank
-  > < @ &#42;
+abbreviate copy delete edit file global join k map mark marks move options print put quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
 
-Specifying addresses in ex command is full supported: absolute line number,
-relative line number, regal expression. also, wasavi accepts offset.
+ex commands to specify address are fully supported. 
+
+absolute line number, relative line number, regal expression. 
+
+wasavi also accepts offset.
 
 
+Input mode commands
+-------------------
 
-Commands in input mode
---------------------
+^@ ^D ^H ^T ^U ^V ^W
 
-* ^@ ^D ^H ^T ^U ^V ^W
+^@ is actually `ctrl+space`.
 
-^@ is actually <ctrl+space>.
 ^D accepts the last ^ and 0.
 
-
-
-Commands in line input mode
---------------------
+Line input mode commands
+------------------------
 
 * ^A: move cursor to top of line
 * ^B: back
@@ -178,65 +189,15 @@ Commands in line input mode
 * ^W: delete a word
 
 
+Vim features in wasavi
+----------------------
 
-* * *
-
-vim-compatible functionalities
-----------------
-
-* multiple leveled undo/redo
-* incremental searching
-* range symbols (aka, text objects in vim)
-* register ", :, *, / (especially * is important since it accesses to system
-  clipboard)
-* auto-reformatting in input mode, and reformat operator (gq command) on the
+* multiple level undo/redo
+* incremental search
+* range symbols (aka, Vim text objects)
+* register `"`, `:`, `*`, `/` (`*` is used to access system clipboard)
+* auto-reformat in input mode, and reformat operator (gq command) on the
   state of textwidth > 0
 * options: iskeyword, incsearch, smartcase, undolevels, quoteescape,
   relativenumber, textwidth
 
-
-
-
-* * *
-
-tips
-----------------
-
-* to maximize the wasavi: `:set fullscreen` or `:set fs`
-* to restore the wasavi: `:set nofullscreen` or `:set nofs`
-* to change a color theme: `:set theme=blight` or `:set theme=charcoal`
-* to modify initial settings:
-  open preference page of wasavi via extension management functionality
-  of each browser (or enter `:options` on wasavi), and edit "exrc" textbox.
-* :abbreviate syntax is:
-	+ `:abbreviate` displays all the abbreviations currently registered.
-	+ `:abbreviate [clear]` clears all the abbreviations.
-	+ `:abbreviate lhs` displays the abbreviation corresponding to lhs.
-	+ `:abbreviate lhs rhs` registers a abbreviation which
-	  expands lhs to rhs.
-* :map syntax is:
-	+ `:map` displays all the mappings currently registered.
-	+ `:map [clear]` clears all the mappings.
-	+ `:map lhs rhs` registers a rule which translates lhs to rhs.
-	  its translation is recursive.
-	+ `:map [noremap] lhs rhs` also registers, but it is
-	  non-recursive.
-	+ `:map` targets the normal mode mappings. on the other hand,
-	  `:map!` targets the insert mode.
-* j k ^ $ moves cursor by physical row, on the other hand,
-  gj gk g^ g$ moves by wrapped row.
-  to swap each behavior: `:set jkdenotative`
-* f/F/t/T extension for Japanese: these commands recognizes reading (ro-ma ji
-  expression) of hiragana, katakana, and kanji. for example, `fk` will place
-  a cursor on '漢'.
-
-
-
-* * *
-
-I found the bug!
-----------------
-
-Please create an issue on GitHub.
-
-* <http://github.com/akahuku/wasavi/issues>

@@ -14,20 +14,20 @@
 		"description": "wasavi options"
 	},
 	"option_exrc_desc": {
-		"message": "The contents of this text box are the initialization commands for wasavi. There commands will be executed for every starting of wasavi editor. You can write any ex commands you like.",
-		"description": "The contents of this text box are the initialization commands for wasavi. There commands will be executed for every starting of wasavi editor. You can write any ex commands you like."
+		"message": "Enter initialization commands for wasavi. These commands will be executed every time wasavi is launched. You can write any ex commands you like.",
+		"description": "Enter initialization commands for wasavi. These commands will be executed every time wasavi is launched. You can write any ex commands you like."
 	},
 	"option_quick_activation_on": {
-		"message": "when an element gets a focus",
-		"description": "when an element gets a focus"
+		"message": "when an element is focused",
+		"description": "when an element is focused"
 	},
 	"option_quick_activation_off": {
-		"message": "when a shortcut key stroke is inputted",
-		"description": "when a shortcut key stroke is inputted"
+		"message": "when a key combination is entered",
+		"description": "when a key combination is entered"
 	},
 	"option_target_elements_desc": {
-		"message": "* Shortcut format is <(modifier-)*key>,...\nFor example, <c-enter>, <insert> means \"If ctrl+enter or insert is pressed, then invoke wasavi.\"\n* Following keys can be used as shortcut: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (means SHIFT), c (means CTRL).\n* Leaving the text field empty, default shortcut <c-enter>, <insert> will be used.",
-		"description": "* Shortcut format is <(modifier-)*key>,...\nFor example, <c-enter>, <insert> means \"If ctrl+enter or insert is pressed, then invoke wasavi.\"\n* Following keys can be used as shortcut: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (means SHIFT), c (means CTRL).\n* Leaving the text field empty, default shortcut <c-enter>, <insert> will be used."
+		"message": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used.",
+		"description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
 	},
 	"option_save": {
 		"message": "Save",
@@ -42,8 +42,8 @@
 		"description": "target elements"
 	},
 	"option_starting_type_head": {
-		"message": "the trigger of a start",
-		"description": "the trigger of a start"
+		"message": "Launch wasavi",
+		"description": "Launch wasavi"
 	},
 	"option_font_family_head": {
 		"message": "font family",
