@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 287 2013-01-22 14:01:12Z akahuku $
+ * @version $Id: wasavi.js 292 2013-02-06 01:23:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -128,6 +128,7 @@
 		get backlog () {return backlog},
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
+		get scriptInterface () {return scriptInterface},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -342,6 +343,115 @@ ExCommandExecutor.prototype = {
 	}
 };
 
+/*constructor*/function ScriptInterface () {
+	var nest;
+	var key;
+	var oninitialized;
+	var oncompleted;
+	function init () {
+		nest = 0;
+		key = Math.random() + '';
+		window.addEventListener('WasaviScriptInitialized', handleScriptInitialized, false);
+		window.addEventListener('WasaviScriptComplete', handleScriptComplete, false);
+		window.addEventListener('WasaviScriptRequest', handleScriptRequest, false);
+		initScriptFrame(function () {run(key)});
+	}
+	function initScriptFrame (callback) {
+		var cover = $('wasavi_cover');
+
+		var frame = cover.parentNode.insertBefore(document.createElement('iframe'), cover);
+		frame.id = 'wasavi_script';
+		frame.setAttribute('sandbox', 'allow-same-origin allow-scripts');
+		frame.src = 'script_frame.html';
+
+		var script = document.createElement('script');
+		script.onload = function () {
+			callback();
+			this.onload = callback = null;
+			this.parentNode.removeChild(this);
+		};
+		script.type = 'text/javascript';
+		script.src = [
+			'data:text/javascript,',
+			'document.addEventListener("WasaviScriptRequest", function (e) {',
+			'  var ev = document.createEvent("CustomEvent");',
+			'  ev.initCustomEvent("WasaviScriptRequest", false, false, e.detail);',
+			'  document.getElementById("wasavi_script").contentWindow.dispatchEvent(ev);',
+			'}, false);'
+		].join('\n');
+		document.head.appendChild(script);
+	}
+	function getEventObject (code) {
+		var ev = document.createEvent('CustomEvent');
+		ev.initCustomEvent('WasaviScriptRequest', false, false, {
+			key:key,
+			code:code || ''
+		});
+		return ev;
+	}
+	function run (code) {
+		nest++;
+		try {
+			$('wasavi_script').contentWindow.dispatchEvent(getEventObject(code));
+		}
+		catch (e) {
+			document.dispatchEvent(getEventObject(code));
+		}
+	}
+	function handleScriptInitialized (e) {
+		oninitialized && oninitialized();
+	}
+	function handleScriptComplete (e) {
+		if (e.detail.key !== key) return;
+		oncompleted && oncompleted(e.detail);
+		nest--;
+	}
+	function handleScriptRequest (e) {
+		if (e.detail.key !== key) return;
+		var result = '';
+		var errorMessage = '';
+		switch (e.detail.type) {
+		case 'run-command':
+			result = 'not implemented';
+			break;
+		case 'rows':
+			try {
+				result = buffer.rows(e.detail.data);
+			}
+			catch (e) {
+				result = '';
+				errorMessage = e.message;
+			}
+			break;
+		case 'position':
+			result = {
+				row:buffer.selectionStartRow,
+				col:buffer.selectionStartCol
+			};
+			break;
+		}
+		document.documentElement.setAttribute('data-script-result', JSON.stringify({
+			result:result,
+			errorMessage:errorMessage
+		}));
+	}
+	Object.defineProperties(this, {
+		init:{value:init},
+		run:{value:run},
+		running:{
+			get:function () {return nest > 0}
+		},
+		oninitialized:{
+			get:function () {return oninitialized},
+			set:function (v) {oninitialized = typeof v == 'function' ? v : undefined}
+		},
+		oncompleted:{
+			get:function () {return oncompleted},
+			set:function (v) {oncompleted = typeof v == 'function' ? v : undefined}
+		}
+	});
+}
+
 /*
  * low-level functions for application management {{{1
  * ----------------
@@ -380,6 +490,23 @@ function install (x) {
 		--count;
 		count == 0 && installCore(x);
 	}
+	function initScriptFrame () {
+		scriptInterface.oninitialized = function () {
+			scriptInterface.oninitialized = null;
+			scriptInterface.run();
+			handleLoaded();
+		};
+		scriptInterface.oncompleted = function (detail) {
+			if (detail.errorMessage != '') {
+				showMessage(detail.errorMessage, true);
+			}
+			else if (detail.message) {
+				showMessage(detail.message);
+			}
+			exCommandExecutor && exCommandExecutor.runAsyncNext();
+		};
+		scriptInterface.init();
+	}
 	if (extensionChannel) {
 		load(function () {
 			registers = new Wasavi.Registers(appProxy, handleLoaded, testMode);
@@ -392,12 +519,14 @@ function install (x) {
 		load(function () {
 			bell = new Wasavi.Bell(appProxy, handleLoaded);
 		});
+		load(initScriptFrame);
 	}
 	else {
 		registers = new Wasavi.Registers(appProxy);
 		lineInputHistories = new Wasavi.LineInputHistories(
 			appProxy, config.vars.history, ['/', ':']);
 		bell = new Wasavi.Bell;
+		initScriptFrame();
 		installCore(x);
 	}
 }
@@ -731,6 +860,12 @@ width:100%; \
 height:32px; \
 background-color:transparent; \
 ime-mode:disabled; \
+} \
+#wasavi_script { \
+visibility:hidden; \
+position:fixed; \
+width:32px; height:32px; \
+left:0; top:0; \
 }'
 	].join('')));
 
@@ -859,9 +994,12 @@ ime-mode:disabled; \
 	 */
 
 	isInteractive = false;
-	var result = executeExCommand(exrc, true);
-	typeof result == 'string' && showMessage(result, true);
-	exrc = '';
+	for (var i = 0; i < exrc.length; i++) {
+		var result = executeExCommand(exrc[i]);
+		typeof result == 'string' && showMessage(result, true);
+	}
+	exrc = null;
+	config.setData('nomodified');
 
 	/*
 	 * show cursor
@@ -1210,16 +1348,28 @@ function executeExCommand (source, isRoot, parseOnly) {
 	var lastTerminator;
 	var commandName = '';
 	var commandArg = '';
-	var commandArgSups;
+	var commandArgSups = null;
 	var commandObj = null;
 	var range = null;
+	var literalKey = false;
+	var literalExitKey = '';
 	var executor = isRoot ? exCommandExecutor : new ExCommandExecutor();
 
 	function getRegex (delimiter) {
 		delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
 		return new RegExp('\\n|' + delimiter, 'g');
 	}
-
+	function pushLiteral (key, value) {
+		if (!literalBuffer) {
+			literalBuffer = {};
+		}
+		if (!(key in literalBuffer)) {
+			literalBuffer[key] = [];
+		}
+		if (value !== undefined) {
+			literalBuffer[key].push(value);
+		}
+	}
 	function skipblank () {
 		var re = /^[ \t]+/.exec(source);
 		if (re) {
@@ -1339,6 +1489,26 @@ function executeExCommand (source, isRoot, parseOnly) {
 	executor.source = source.replace(/\n+$/, '');
 
 	while (source.length && !terminated) {
+		// in literal mode, store a string
+		if (literalKey !== false) {
+			skipto(/\n/g);
+			source = source.substring(1);
+			if (commandArgSups.length
+			&&  commandArgSups[commandArgSups.length - 1].replace(/[ \t]+$/, '') == literalExitKey) {
+				commandArgSups.pop();
+				if (commandObj && !pushCommand()) {
+					break;
+				}
+				commandArgSups = null;
+				literalKey = false;
+			}
+			if (source.length == 0) {
+				commandObj && pushCommand();
+				break;
+			}
+			continue;
+		}
+
 		commandName = commandArg = '';
 		commandObj = null;
 
@@ -1572,6 +1742,24 @@ function executeExCommand (source, isRoot, parseOnly) {
 			}
 			else {
 				paragraph12();
+			}
+		}
+
+		//
+		else if (commandName == 'script') {
+			skipto(/\n/g);
+			lastTerminator = source.charAt(0);
+			source = source.substring(1);
+
+			if (/^\s*$/.test(commandArg)) {
+				if (isInteractive) {
+					resultMessage = _('Cannot use the multi-lined script interactively.');
+					break;
+				}
+				commandArgSups = [];
+				literalKey = commandName;
+				literalExitKey = commandName + 'end';
+				continue;
 			}
 		}
 
@@ -3984,6 +4172,7 @@ var keyManager = new Wasavi.KeyManager;
 var regexConverter = new Wasavi.RegexConverter(appProxy);
 var mapManager = new Wasavi.MapManager(appProxy);
 var theme = new Wasavi.Theme(appProxy);
+var scriptInterface = new ScriptInterface;
 var config = new Wasavi.Configurator(appProxy,
 	[
 		/* defined by POSIX */
@@ -6138,7 +6327,7 @@ if (global.WasaviExtensionWrapper
 		}
 		switch (req.type) {
 		case 'init-response':
-			exrc = req.exrc + '\n' + req.ros;
+			exrc = [req.exrc, req.ros];
 			fontFamily = req.fontFamily;
 			quickActivation = req.quickActivation;
 			l10n = new Wasavi.L10n(appProxy, req.messageCatalog);

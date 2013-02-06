@@ -1,0 +1,42 @@
+<!doctype html>
+<!--
+	index page of wasavi for google chrome/opera/firefox extension
+
+	@version $Id: index.html 288 2013-01-25 01:42:13Z akahuku $
+	@author akahuku@gmail.com
+ -->
+<!--
+	Copyright 2012 akahuku, akahuku@gmail.com
+	
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+	
+	    http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+ -->
+<html manifest="wasavi.appcache">
+	<head>
+		<meta charset="UTF-8">
+		<title>wasavi - online vi editor</title>
+		<link rel="shortcut icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
+		<link rel="icon" href="favicon.ico" type="image/vnd.microsoft.icon" />
+		<style>body{margin:0;padding:0;overflow:hidden;visibility:hidden;}</style>
+		<style id="wasavi_global_styles"></style>
+		<style id="wasavi_theme_styles"></style>
+		<script>
+			document.addEventListener('DOMContentLoaded', function () {
+				setTimeout(function () {
+					var wasaviPresent = document.documentElement.getAttribute('data-wasavi-present');
+					wasaviPresent != '1' && location.replace('http://appsweets.net/wasavi/');
+				}, 1000);
+			}, false);
+		</script>
+	</head>
+	<body></body>
+</html>

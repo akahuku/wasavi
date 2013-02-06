@@ -24,10 +24,12 @@
       ],
       "exclude_matches": [
         "http://wasavi.appsweets.net/",
-        "https://ss1.xrea.com/wasavi.appsweets.net/"
+        "http://wasavi.appsweets.net/script_frame.html",
+        "https://ss1.xrea.com/wasavi.appsweets.net/",
+        "https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html"
       ],
       "js": [
-        "frontend/extension_wrapper.js", 
+        "frontend/extension_wrapper.js",
         "frontend/agent.js"
       ],
       "run_at": "document_start",
@@ -50,6 +52,17 @@
         "frontend/classes_search.js",
         "frontend/classes_ui.js",
         "frontend/wasavi.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "http://wasavi.appsweets.net/script_frame.html",
+        "https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html"
+      ],
+      "js": [
+        "frontend/script_frame.js"
       ],
       "run_at": "document_start",
       "all_frames": true

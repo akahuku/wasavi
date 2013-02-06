@@ -1,0 +1,12 @@
+CACHE MANIFEST
+# $Id: wasavi.appcache 290 2013-01-30 20:10:25Z akahuku $
+
+CACHE:
+favicon.ico
+index.html
+script_frame.html
+authorized.html
+
+NETWORK:
+test_frame.html
+

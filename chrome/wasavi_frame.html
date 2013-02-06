@@ -2,7 +2,7 @@
 <!--
 	frame page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: wasavi_frame.html 266 2013-01-02 04:23:00Z akahuku $
+	@version $Id: wasavi_frame.html 292 2013-02-06 01:23:17Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -29,17 +29,6 @@
 		<style>body{margin:0;padding:0;overflow:hidden;}</style>
 		<style id="wasavi_global_styles"></style>
 		<style id="wasavi_theme_styles"></style>
-		<script src="frontend/extension_wrapper.js"></script>
-		<script src="frontend/init.js"></script>
-		<script src="frontend/utils.js"></script>
-		<script src="frontend/unicode_utils.js"></script>
-		<script src="frontend/classes.js"></script>
-		<script src="frontend/classes_ex.js"></script>
-		<script src="frontend/classes_undo.js"></script>
-		<script src="frontend/classes_subst.js"></script>
-		<script src="frontend/classes_search.js"></script>
-		<script src="frontend/classes_ui.js"></script>
-		<script src="frontend/wasavi.js"></script>
 	</head>
 	<body>
 		<input id="wasavi_focus_holder" type="password">
@@ -70,7 +59,7 @@
 			<span id="wasavi_singleline_scaler"></div>
 			<div id="wasavi_console_scaler"></div>
 			<div id="wasavi_command_cursor"><span id="wasavi_command_cursor_inner"></span></div>
-			<textarea id="wasavi_edit_cursor" spellcheck="false"></textarea>
+			<textarea id="wasavi_edit_cursor" spellcheck="true"></textarea>
 			<div id="wasavi_cover" tabindex="0"></div>
 		</div>
 	</body>

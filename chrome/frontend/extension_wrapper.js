@@ -1,6 +1,8 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
+// @exclude http://wasavi.appsweets.net/script_frame.html
+// @exclude https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html
 // ==/UserScript==
 //
 /**
@@ -9,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: extension_wrapper.js 290 2013-01-30 20:10:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

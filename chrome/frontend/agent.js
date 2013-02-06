@@ -1,8 +1,8 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
-// @exclude http://wasavi.appsweets.net/
-// @exclude https://ss1.xrea.com/wasavi.appsweets.net/
+// @exclude http://wasavi.appsweets.net/script_frame.html
+// @exclude https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html
 // ==/UserScript==
 //
 /**
@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 282 2013-01-21 08:49:36Z akahuku $
+ * @version $Id: agent.js 292 2013-02-06 01:23:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -174,12 +174,12 @@ function run (element) {
 	wasaviFrame.style.border = 'none';
 	wasaviFrame.style.overflow = 'hidden';
 	wasaviFrame.style.visibility = 'hidden';
-	wasaviFrame.style.zIndex = getHighestZindex(element) + 100; //0x00ffffff;
+	wasaviFrame.style.zIndex = 0x7fffffff; //getHighestZindex(element) + 100;
 
-	if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
+	/*if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
 		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
 	}
-	else if (window.location.protocol == 'https:') {
+	else*/ if (window.location.protocol == 'https:') {
 		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.externalSecure;
 	}
 	else {
@@ -227,7 +227,7 @@ function run (element) {
 	wasaviFrameTimeoutTimer = setTimeout(function () {
 		wasaviFrame.parentNode.removeChild(wasaviFrame);
 		wasaviFrameTimeoutTimer = null;
-	}, 1000 * 5);
+	}, 1000 * 5 * 3600);
 }
 
 function cleanup (value, isImplicit) {

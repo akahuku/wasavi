@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<title>wasavi test frame</title>
+		<style>
+			body { background-color:#fff; color:#333; }
+			#container { margin:32px 0 0 32px; }
+			#log-container { margin:16px 0 0 32px; }
+			#t2 { 
+			    width:400px; 
+			    height:300px; 
+			    padding:0;
+			    font:normal normal normal medium/1 "Conslas";
+			}
+			#test-log {
+				width:100%;
+				height:300px;
+				box-sizing:border-box;
+			}
+			#log-container > table {
+				border-collapse:collapse;
+				width:100%;
+			}
+			#log-container td {
+				width:50%;
+			}
+			#state {
+				background-color:#eee;
+				height:300px;
+			}
+		</style>
+		<script>
+			var section_test_text = [
+				"\tfirst line", // * 1
+				"dummy line",
+				"",
+				"\f line whose first character is form-feed", // * 4
+				"\t\f line whose second character is form-feed",
+				"dummy line",
+				"",
+				"{ line whose first character is curly brace", // * 8
+				"\t{ line whose second character is curly brace",
+				"dummy line",
+				"",
+				".SH", // * 12
+				"dummy line",
+				"",
+				".IP",
+				"",
+				"\tLorem ipsum dolor sit amet. consectetur adipisicing elit.  sed do eiusmod",
+				"\ttempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam",
+				"",
+				".H ", // * 20
+				"dummy line",
+				"" // * 22
+			].join('\n');
+			var wrap_test_text = [
+				'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+				'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. ',
+				'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ',
+				'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.			'
+			].join('\n');
+			document.addEventListener('DOMContentLoaded', function () {
+				document
+				.getElementById('init-section-button')
+				.addEventListener('click', function (e) {
+					e.preventDefault();
+					document.getElementById('t2').value = section_test_text;
+				}, false);
+
+				document
+				.getElementById('init-wrap-button')
+				.addEventListener('click', function (e) {
+					e.preventDefault();
+					document.getElementById('t2').value = wrap_test_text;
+				}, false);
+			}, false);
+		</script>
+	</head>
+	<body>
+		<h1>wasavi test frame</h1>
+		<hr>
+		<form id="container">
+			<textarea id="t2" data-textarea-extension="wasavi"></textarea>
+			<input type="reset" id="reset-button">
+			<button id="init-section-button">init section test</button>
+			<button id="init-wrap-button">init wrap test</button>
+		</form>
+		<div id="log-container">
+			<table>
+				<tr>
+					<td><textarea id="test-log"></textarea></td>
+					<td><div id="state"></div></td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

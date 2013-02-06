@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 283 2013-01-21 09:10:23Z akahuku $
+ * @version $Id: background.js 292 2013-02-06 01:23:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -861,7 +861,9 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 						return false;
 					}
 					if (url == 'http://wasavi.appsweets.net/'
-					||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/') {
+					||  url == 'http://wasavi.appsweets.net/script_frame.html'
+					||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/'
+					||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html') {
 						return false;
 					}
 					return true;
@@ -910,6 +912,17 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 				worker.on('detach', handleWorkerDetach);
 				worker.on('message', handleWorkerMessage);
 			}
+		});
+
+		pagemod.PageMod({
+			include:[
+				'http://wasavi.appsweets.net/script_frame.html',
+				'https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html'
+			],
+			contentScriptWhen:'start',
+			contentScriptFile:[
+				self.data.url('frontend/script_frame.js')
+			]
 		});
 
 		require('simple-prefs').on('optionsOpener', function () {
@@ -2225,5 +2238,4 @@ if (typeof window.setTimeout == 'undefined' && typeof require == 'function') {
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :
-
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
