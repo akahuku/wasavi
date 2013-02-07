@@ -139,6 +139,7 @@ Motion
   w W b B e E gg gj gk g^ g$ gi G H M L f F t T n N
 
 Vim text objects (range symbol)
+-------------------------------
 
 * a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
 * i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is

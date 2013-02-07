@@ -424,6 +424,10 @@
 		"message": "Cannot use the global or v command recursively.",
 		"description": "Cannot use the global or v command recursively."
 	},
+	"cannot_use_the_multilined_script_interactively": {
+		"message": "Cannot use the multi-lined script interactively.",
+		"description": "Cannot use the multi-lined script interactively."
+	},
 	"@0_unknown_command": {
 		"message": "{0}: unknown command.",
 		"description": "{0}: unknown command."

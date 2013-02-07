@@ -1,105 +1,115 @@
 wasavi (VI editor for any web page)
 ====================================
 
-これはなに？
-------------
+wasavi は Chrome、Opera、Firefox 用のエクステンションです。 wasavi はあらゆるページ上の TEXTAREA 要素を VI エディタ化します。wasavi はほぼすべての VI コマンド、およびいくつかの ex コマンドをサポートします。
 
-wasavi はいくつかの web ブラウザ用のエクステンションで、web ページ上の textarea
-要素を vi エディタ化します。
+wasavi の作成は継続中です。バグレポートや機能の要請はどんなものでも歓迎します。
 
-wasavi はほぼすべての vi コマンド、およびいくつかの ex コマンドをサポートします。
+簡単な使い方
+============
 
-wasavi の作成は継続中です。機能の要請やバグ情報はどんなものでも歓迎します！
+* ネイティブな TEXTAREA があったとき
 
+  ![ネイティブな textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
 
+* TEXTAREA にフォーカスし、`Ctrl+Enter` を押すと wasavi が起動します
 
-スクリーンショット
-------------
+  ![wasavi が実行中](http://appsweets.net/wasavi/wasavi.jpg)
 
-* ネイティブな textarea があったとき:
-  ![native textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
+込み入った使い方
+----------------
 
-* Ctrl+Enter を押すと wasavi が起動します:
-  ![wasavi running](http://appsweets.net/wasavi/wasavi.jpg)
+* wasavi はいくつかの ex コマンドをサポートします。これは `:set all` したところ
 
-* ex コマンドもいくつかサポートしています。:set all したところ:
   ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
 
-* vim からインクリメンタルサーチをポートしています:
-  ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
+* Vim のインクリメンタルサーチ
 
-* <http://wasavi.appsweets.net/> は特別なアドレスです。wasavi をインストールした
-  ブラウザでこのアドレスを開くと、自動的に wasavi が起動します。
-  この状態では、dropbox に対するファイルの読み書きが可能です。
+  ![インクリメンタルサーチ](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
+
+* [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox アカウント上のファイルを読み書きできます。
+
   ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
 
 
-
 インストール
-------------
+============
 
-現在、以下の web ブラウザ用のエクステンションが用意されています。
+現在、wasavi は以下のブラウザで動作します。各ブラウザで以下のリンクをクリックし、標準的なエクステンションのインストール方法に従ってください。これらのエクステンションは各ブラウザのアドオン・ストアに登録されています。
 
-* Google Chrome
+* [Google Chrome extension](https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe?hl=ja)
 
-  <https://chrome.google.com/webstore/detail/dgogifpkoilgiofhhhodbodcfgomelhe?hl=ja>
+* [Opera addon](https://addons.opera.com/ja/extensions/details/wasavi/)
 
-* Opera
+* [Firefox addon](https://addons.mozilla.org/ja/firefox/addon/wasavi/)
 
-  <https://addons.opera.com/ja/extensions/details/wasavi/>
+最新の開発版は [ここ](http://appsweets.net/wasavi/) でダウンロードできます。
 
-* Firefox
+ソースコードは [Github](https://github.com/akahuku/wasavi) で管理しています。
 
-  <https://addons.mozilla.org/ja/firefox/addon/wasavi/>
+### Opera ユーザへの注意
 
-以上のブラウザ用のエクステンションの標準的なインストール方法に従って導入してく
-ださい。ただし、Opera 版は試験公開です。Opera が DOM3 Composition Event に対応
-していないので insert モードにおいて IME を経由した入力が正しく機能しません。
+Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。
 
-Google Chrome において、github に公開されているソースを実行する場合は、「パッ
-ケージ化されていない拡張機能を読み込む...」で manifest.json を与えてください。
+よく聞かれる質問
+================
 
-ソースコードは <https://github.com/akahuku/wasavi> で管理しています。
-最新の開発バージョンは <http://appsweets.net/wasavi/> にあります。
+## wasavi の起動
 
+TEXTAREA にフォーカスし、`Ctrl+Enter` を押してください。
 
 
-使い方
-------
+## wasavi の終了
 
-### textarea の拡張
+wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマンドを入力してください。
 
-適当な web ページの textarea 要素にフォーカスがある状態で Ctrl+Enter、もしくは
-Insert を押下してください。言うまでもありませんが、終了するには ZZ、:q、:wq
-などを入力します。
+## Firefox で Vimperator と共存する
 
-### Firefox で、vimperator の環境下で使う
+[wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js) を Vimperator のプラグインディレクトリに置いてください。たとえば `~/.vimperator/plugin` や `%HOME%\vimperator\plugin` です。
 
-<https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js>
-を vimperator のプラグインディレクトリ（~/.vimperator/plugin、もしくは
-%HOME%\vimperator\plugin）に置いてください。このプラグインは wasavi の状態に
-従って vimperator のパススルーモードを制御します。
+このプラグインは wasavi の状態に従って Vimperator のパススルーモードを制御します。
 
-また、<http://wasavi.appsweets.net/> を利用する場合は、vimperator に対して
-`:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは
-常にパススルーモードになります。
-
-ignorekeys コマンドの設定は自動的に保存されるので、コマンドは 1 度実行すれば十分です。
-
-### 単体のテキストエディタとしての利用
-
-<http://wasavi.appsweets.net/> へアクセスします。自動的に wasavi が起動します。
-この状態では、ex コマンド edit、read、file、write が有効です。これらのコマンドは
-dropbox 上のファイルを読み書きすることができます。
+[オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) では、Vimperator に対して `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは Vimperator は常にパススルーモードになります。`ignorekeys` の設定は自動的に保存されるので、コマンドは再入力する必要はありません。
 
 
+## 単体のテキストエディタとしての利用
 
-* * *
+wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox のファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox へのアクセスのために OAuth による承認が必要です。
 
+## バグを見つけた
 
+[wasavi issue tracker](http://github.com/akahuku/wasavi/issues) で issue を作成してください。
+
+Tips and Tricks
+===============
+
+* wasavi の最大化: `:set fullscreen` or `:set fs`
+* wasavi を元に戻す: `:set nofullscreen` or `:set nofs`
+* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal`
+* 初期設定を変更する:
+  各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
+  （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集する
+* :abbreviate の文法は:
+	+ `:abbreviate` は、登録されている全ての略語を表示します
+	+ `:abbreviate [clear]` は、全ての略語を削除します
+	+ `:abbreviate lhs` は、lhs に対応する略語を表示します
+	+ `:abbreviate lhs rhs` は、lhs を rhs に展開する略語を登録します
+* :map の文法は:
+	+ `:map` は、登録されている全てのマップを表示します
+	+ `:map [clear]` は、全てのマップを削除します
+	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。この変換は再帰します
+	+ `:map [noremap] lhs rhs` も登録しますが、
+	  こちらは再帰しません
+	+ `:map` はノーマルモード用のマップを対象とします。一方、
+	  `:map!` は挿入モード用です
+* j k ^ $ はカーソルを物理行単位で移動させます。一方、gj gk g^ g$ は
+  折り返し行単位で移動させます。この振る舞いを交換するには: `:set jkdenotative`
+* 日本語のための f/F/t/T の拡張: これらのコマンドはひらがな、カタカナ、および
+  漢字の読み（ローマ字での表現）を認識します。たとえば、`fk` は「漢」の上に
+  カーソルを置きます。
 
 実装済みコマンド
---------------------
+================
 
 * [count] operation [count] motion
 * [count] operation [count] range-symbol
@@ -109,61 +119,60 @@ dropbox 上のファイルを読み書きすることができます。
 * [count] edit-command
 * : ex-command
 
-### operation:
+Operations
+----------
 
-* c y d &gt; &lt; gq
+c y d &gt; &lt; gq
 
-### operation-alias:
+Operations Aliases
+------------------
 
-* cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
+cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
 
-### motion:
+Motion
+------
 
-* &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
+&#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
   &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
   j k h l ^N ^P ^H
   &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
   w W b B e E gg gj gk g^ g$ gi G H M L f F t T n N
 
-### range-symbol（vim の "テキストオブジェクト"）:
+Vim のテキストオブジェクト（レンジシンボル）
+-------------------------------------------
 
 * a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
 * i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
 
-### scroll-command:
+Scroll commands
+---------------
 
-* ^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt;
-  z&lt;enter&gt; z. zz z-
+^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt; z&lt;enter&gt; z. zz z-
 
-### edit-command:
+Edit commands
+-------------
 
-* x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R
-  a A i I o O & s S ZZ
+x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R a A i I o O & s S ZZ
 
-### ex-command:
+ex commands
+-----------
 
-* abbreviate copy delete edit file global join k map mark marks move
-  options print put quit read redo s & ~ set registers to
-  unabbreviate undo unmap version v write wq xit yank
-  > < @ &#42;
+abbreviate copy delete edit file global join k map mark marks move options print put quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
 
-ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現のいずれも可能です。
-オフセットを付加することも可能です。
-
+ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現のいずれも可能です。オフセットを付加することも可能です。
 
 
 入力モードのコマンド
 --------------------
 
-* ^@ ^D ^H ^T ^U ^V ^W
+^@ ^D ^H ^T ^U ^V ^W
 
-^@ は実際には <ctrl+space> です。
+^@ は実際には `ctrl+space` です。
+
 ^D は最後に入力された 0 と ^ を認識します。
 
-
-
 行入力モードのコマンド
---------------------
+---------------------
 
 * ^A: カーソルを行頭へ
 * ^B: 1 文字戻る
@@ -176,69 +185,12 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 * ^V: 1 文字入力のためのエスケープシーケンス
 * ^W: 1 単語削除
 
-
-
-* * *
-
-vim 互換の機能
-------------
+Vim 互換の機能
+--------------
 
 * 多段 undo/redo
 * インクリメンタルサーチ
-* レンジシンボル（vim で言うところのテキストオブジェクト）
+* レンジシンボル（Vim で言うところのテキストオブジェクト）
 * レジスタ "、:、*、/（特に * はクリップボードとのアクセスを行うので重要です）
-* textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ
-  （gq コマンド）
-* オプション iskeyword、incsearch、smartcase、undolevels、quoteescape、
-  relativenumber、textwidth
-
-
-
-* * *
-
-tips
-------------
-
-* wasavi の最大化: `:set fullscreen` or `:set fs`
-* wasavi を元に戻す: `:set nofullscreen` or `:set nofs`
-* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal`
-* 初期設定を変更する:
-  各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
-  （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを
-  編集する
-* :abbreviate の文法は:
-	+ `:abbreviate` は、登録されている全ての略語を表示します
-	+ `:abbreviate [clear]` は、全ての略語を削除します
-	+ `:abbreviate lhs` は、lhs に対応する略語を表示します
-	+ `:abbreviate lhs rhs` は、lhs を rhs に展開する
-	  略語を登録します
-* :map の文法は:
-	+ `:map` は、登録されている全てのマップを表示します
-	+ `:map [clear]` は、全てのマップを削除します
-	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。
-	  この変換は再帰します
-	+ `:map [noremap] lhs rhs` も登録しますが、こちらは再帰しません
-	+ `:map` はノーマルモード用のマップを対象とします。一方、
-	  `:map!` は挿入モード用です
-* j k ^ $ はカーソルを物理行単位で移動させます。一方、
-  gj gk g^ g$ は折り返し行単位で移動させます。
-  この振る舞いを交換するには: `:set jkdenotative`
-* 日本語のための f/F/t/T の拡張: これらのコマンドはひらがな、カタカナ、
-  および漢字の読み（ローマ字での表現）を認識します。たとえば、`fk` は
-  「漢」の上にカーソルを置きます。
-
-
-
-* * *
-
-バグってる！
-------------
-
-ぜひ現象と再現方法を教えてください。
-バグレポートや要望の受け付けは以下の場所で行います。
-
-* <http://appsweets.net/wasavi/#forum>
-
-github のアカウントを持っているなら issue でも構いません。
-
-* <http://github.com/akahuku/wasavi/issues>
+* textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ（gq コマンド）
+* オプション iskeyword、incsearch、smartcase、undolevels、quoteescape、relativenumber、textwidth

@@ -15,19 +15,19 @@
 	},
 	"option_exrc_desc": {
 		"message": "このテキストボックスは、wasavi の初期化コマンドです。コマンドは wasavi エディタが開始するごとに実行されます。任意の ex コマンドを書くことができます。",
-		"description": "The contents of this text box are the initialization commands for wasavi. There commands will be executed for every starting of wasavi editor. You can write any ex commands you like."
+		"description": "Enter initialization commands for wasavi. These commands will be executed every time wasavi is launched. You can write any ex commands you like."
 	},
 	"option_quick_activation_on": {
 		"message": "要素がフォーカスを得たとき",
-		"description": "when an element gets a focus"
+		"description": "when an element is focused"
 	},
 	"option_quick_activation_off": {
 		"message": "ショートカットキーが入力されたとき",
-		"description": "when a shortcut key stroke is inputted"
+		"description": "when a key combination is entered"
 	},
 	"option_target_elements_desc": {
 		"message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace、bs、tab、enter、return、ret、pageup、pagedown、end、home、left、up、right、down、insert、ins、delete、del、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
-		"description": "* Shortcut format is <(modifier-)*key>,...\nFor example, <c-enter>, <insert> means \"If ctrl+enter or insert is pressed, then invoke wasavi.\"\n* Following keys can be used as shortcut: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (means SHIFT), c (means CTRL).\n* Leaving the text field empty, default shortcut <c-enter>, <insert> will be used."
+		"description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
 	},
 	"option_save": {
 		"message": "保存",
@@ -43,7 +43,7 @@
 	},
 	"option_starting_type_head": {
 		"message": "開始トリガー",
-		"description": "the trigger of a start"
+		"description": "Launch wasavi"
 	},
 	"option_font_family_head": {
 		"message": "フォントファミリー",
@@ -423,6 +423,10 @@
 	"cannot_use_the_global_or_v_command_recursively": {
 		"message": "global や v コマンドを入れ子で使うことはできません。",
 		"description": "Cannot use the global or v command recursively."
+	},
+	"cannot_use_the_multilined_script_interactively": {
+		"message": "複数行のスクリプトを対話的に入力することはできません。",
+		"description": "Cannot use the multi-lined script interactively."
 	},
 	"@0_unknown_command": {
 		"message": "{0}: 未知のコマンドです。",
