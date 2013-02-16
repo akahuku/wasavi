@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 292 2013-02-06 01:23:17Z akahuku $
+ * @version $Id: agent.js 294 2013-02-16 14:56:06Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -368,6 +368,9 @@ function handleKeydown (e) {
 	if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
 
 	if (matchWithShortcut(e)) {
+		var ev = document.createEvent('CustomEvent');
+		ev.initCustomEvent('WasaviStarting', false, false, 0);
+		document.dispatchEvent(ev);
 		e.preventDefault();
 		run(e.target);
 	}
@@ -611,11 +614,85 @@ function handleAgentInitialized (req) {
 }
 
 /**
+ * page agent
+ * ----------------
+ */
+
+function createPageAgent () {
+	var result = false;
+
+	var s = document.createElement('script');
+	s.onload = function () {
+		this.onload = null;
+		this.parentNode.removeChild(this);
+	};
+	s.type = 'text/javascript';
+	s.src = 'data:text/javascript,' +
+"(function () { \
+	var wasaviRunning = false; \
+	function isHookEvent (eventName) {return eventName == 'keydown' || eventName == 'keypress'} \
+	function getKey (eventName, useCapture) {return eventName + '_' + !!useCapture} \
+	function hook (target) { \
+		if (!target || !target.addEventListener || !target.removeEventListener) return; \
+		var addOriginal = target.addEventListener; \
+		var removeOriginal = target.removeEventListener; \
+		var listeners = []; \
+		target.addEventListener = function (eventName, listener, useCapture) { \
+			if (!isHookEvent(eventName)) { \
+				addOriginal.call(this, eventName, listener, useCapture); \
+				return; \
+			} \
+			var key = getKey(eventName, useCapture); \
+			if (!listeners[key]) { \
+				listeners[key] = []; \
+			} \
+			if (!listeners[key].some(function (o) { return o[0] == listener; })) { \
+				var wrappedListener = function (e) {!wasaviRunning && listener && listener(e)}; \
+				listeners[key].push([listener, wrappedListener]); \
+				addOriginal.call(this, eventName, wrappedListener, useCapture); \
+			} \
+		}; \
+		target.removeEventListener = function (eventName, listener, useCapture) { \
+			if (!isHookEvent(eventName)) { \
+				removeOriginal.call(this, eventName, listener, useCapture); \
+				return; \
+			} \
+			var key = getKey(eventName, useCapture); \
+			if (!listeners[key]) { \
+				return; \
+			} \
+			listeners[key] = listeners[key].filter(function (o) { \
+				if (o[0] == listener) { \
+					removeOriginal.call(this, eventName, o[1], useCapture); \
+					return false; \
+				} \
+				return true; \
+			}, this); \
+		}; \
+	} \
+	hook(window.HTMLInputElement && window.HTMLInputElement.prototype); \
+	hook(window.HTMLTextAreaElement && window.HTMLTextAreaElement.prototype); \
+	hook(window.Node && window.Node.prototype); \
+	document.addEventListener('WasaviStarting', function (e) {wasaviRunning = true}, false); \
+	document.addEventListener('WasaviTerminated', function (e) {wasaviRunning = false}, false); \
+})();";
+
+	var parent = document.head || document.body || document.documentElement;
+	if (parent) {
+		parent.appendChild(s);
+		result = true;
+	}
+
+	return result;
+}
+
+/**
  * bootstrap
  * ----------------
  */
 
 window.addEventListener('keydown', handleKeydown, true);
+createPageAgent();
 extension = WasaviExtensionWrapper.create();
 extension.setMessageListener(function (req) {
 	if (!req || !req.type) return;

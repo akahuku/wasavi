@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: script_frame.js 292 2013-02-06 01:23:17Z akahuku $
+ * @version $Id: script_frame.js 294 2013-02-16 14:56:06Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -79,6 +79,7 @@ function install () {
 					finally {
 						doc.removeAttribute('data-script-result');
 					}
+					return false;
 				}
 
 				function getLastId () {
@@ -226,10 +227,9 @@ function install () {
 		this.parentNode.removeChild(this);
 	};
 	script.type = 'text/javascript';
-	script.src = [
-		'data:text/javascript;base64,',
-		window.btoa(unescape(encodeURIComponent('(' + init.toString().replace(/\n\s*/g, '\n') + ')();')))
-	].join('\n');
+	script.src =
+		'data:text/javascript;base64,' +
+		window.btoa(unescape(encodeURIComponent('(' + init.toString().replace(/\n\s*/g, '\n') + ')();')));
 	document.head.appendChild(script);
 }
 
