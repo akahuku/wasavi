@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 292 2013-02-06 01:23:17Z akahuku $
+ * @version $Id: wasavi.js 296 2013-06-02 20:29:21Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4609,8 +4609,8 @@ var commandMap = {
 	C: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
 			this.$('', buffer);
-			isVerticalMotion = false;
 			prefixInput.operation = c;
+			isVerticalMotion = false;
 			return this.c['@op'].call(this, '', buffer);
 		}
 		return inputEscape(o.e.fullIdentifier);
@@ -4628,9 +4628,10 @@ var commandMap = {
 	// Y: yank the lines (equivalents to yy)
 	Y: function (c, o) {
 		if (prefixInput.isEmptyOperation) {
+			this._('', buffer);
 			prefixInput.operation = c;
 			isVerticalMotion = true;
-			return this.y['@op'].call(this, c, buffer);
+			return this.y['@op'].call(this, '', buffer);
 		}
 		return inputEscape(o.e.fullIdentifier);
 	},
@@ -4757,6 +4758,7 @@ var commandMap = {
 		var count = Math.min(prefixInput.count, buffer.rowLength - buffer.selectionStartRow);
 		count > 1 && motionDown(c, count - 1);
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(buffer.selectionEnd));
+		prefixInput.motion = c;
 		isVerticalMotion = true;
 		return true;
 	},

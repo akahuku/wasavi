@@ -515,7 +515,43 @@ public class EditingTest extends WasaviTest {
 	}
 
 	@Test
+	public void testRepetitionDeleteLines () {
+		Wasavi.send("i1\n2\n3\n4\n5\u001b", "gg");
+
+		Wasavi.send("dd");
+
+		Wasavi.send(".");
+		assertEquals("#1", "3\n4\n5", Wasavi.getValue());
+
+		Wasavi.send("2.");
+		assertEquals("#2", "5", Wasavi.getValue());
+	}
+
+	@Test
+	public void testRepetitionDeleteLines2 () {
+		Wasavi.send("i1\n2\n3\n4\n5\u001b", "gg");
+
+		Wasavi.send("2dd");
+
+		Wasavi.send(".");
+		assertEquals("#2", "5", Wasavi.getValue());
+	}
+
+	@Test
 	public void testRepetitionYankLines () {
+		Wasavi.send("ifirst\nsecond\nthird\nfourth\u001b", "gg");
+
+		Wasavi.send("yy");
+
+		Wasavi.send("2G", ".");
+		assertEquals("#1", "second\n", Wasavi.getRegister("\""));
+
+		Wasavi.send("3G", "2.");
+		assertEquals("#2", "third\nfourth\n", Wasavi.getRegister("\""));
+	}
+
+	@Test
+	public void testRepetitionYankLinesAlias () {
 		Wasavi.send("ifirst\nsecond\nthird\nfourth\u001b", "gg");
 
 		Wasavi.send("Y");
