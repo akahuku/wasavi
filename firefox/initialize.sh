@@ -29,7 +29,14 @@ ln -s ../../chrome/libs/blowfish/blowfish.js
 ln -s ../../chrome/libs/jsOAuth/jsOAuth.js
 ln -s ../../chrome/background.js main.js
 ln -s ../../chrome/libs/sha1/sha1.js
-ln -s ../../chrome/libs/fftt/fftt.js
+ln -s ../../chrome/libs/WasaviUtils.js
+ln -s ../../chrome/libs/ClipboardManager.js
+ln -s ../../chrome/libs/ResourceLoader.js
+ln -s ../../chrome/libs/TabWatcher.js
+ln -s ../../chrome/libs/FileSystem.js
+ln -s ../../chrome/libs/RuntimeOverwriteSettings.js
+ln -s ../../chrome/libs/SimilarityComputer.js
+ln -s ../../chrome/libs/StorageWrapper.js
 popd
 
 ln -s ../LICENSE

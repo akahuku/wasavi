@@ -29,7 +29,14 @@ mklink blowfish.js ..\..\chrome\libs\blowfish\blowfish.js
 mklink jsOAuth.js ..\..\chrome\libs\jsOAuth\jsOAuth.js
 mklink main.js ..\..\chrome\background.js
 mklink sha1.js ..\..\chrome\libs\sha1\sha1.js
-mklink fftt.js ..\..\chrome\libs\fftt\fftt.js
+mklink WasaviUtils.js ..\..\chrome\libs\WasaviUtils\WasaviUtils.js
+mklink ClipboardManager.js ..\..\chrome\libs\ClipboardManager.js
+mklink ResourceLoader.js ..\..\chrome\libs\ResourceLoader.js
+mklink TabWatcher.js ..\..\chrome\libs\TabWatcher.js
+mklink FileSystem.js ..\..\chrome\libs\FileSystem.js
+mklink RuntimeOverwriteSettings.js ..\..\chrome\libs\RuntimeOverwriteSettings.js
+mklink SimilarityComputer.js ..\..\chrome\libs\SimilarityComputer.js
+mklink StorageWrapper.js ..\..\chrome\libs\StorageWrapper.js
 popd
 
 mklink LICENSE ..\LICENSE

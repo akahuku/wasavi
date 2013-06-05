@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 294 2013-02-16 14:56:06Z akahuku $
+ * @version $Id: agent.js 297 2013-06-05 21:35:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -176,10 +176,10 @@ function run (element) {
 	wasaviFrame.style.visibility = 'hidden';
 	wasaviFrame.style.zIndex = 0x7fffffff; //getHighestZindex(element) + 100;
 
-	/*if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
+	if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
 		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
 	}
-	else*/ if (window.location.protocol == 'https:') {
+	else if (window.location.protocol == 'https:') {
 		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.externalSecure;
 	}
 	else {
@@ -710,7 +710,7 @@ extension.setMessageListener(function (req) {
 		extraHeight = 0;
 		devMode = req.devMode;
 
-		if (window.chrome && !isTestFrame) {
+		if (window.chrome) {
 			WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
 		}
 		if (document.readyState == 'interactive' || document.readyState == 'complete') {

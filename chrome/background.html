@@ -2,7 +2,7 @@
 <!--
 	background page of wasavi for google chrome/opera/firefox extension
 
-	@version $Id: background.html 242 2012-12-12 18:50:42Z akahuku $
+	@version $Id: background.html 297 2013-06-05 21:35:32Z akahuku $
 	@author akahuku@gmail.com
  -->
 <!--
@@ -24,9 +24,19 @@
 	<head>
 		<title>wasavi Background</title>
 		<script src="exports_init.js"></script>
+
 		<script src="libs/jsOAuth/jsOAuth.js"></script>
 		<script src="libs/sha1/sha1.js"></script>
 		<script src="libs/blowfish/blowfish.js"></script>
+		<script src="libs/WasaviUtils.js"></script>
+		<script src="libs/StorageWrapper.js"></script>
+		<script src="libs/ClipboardManager.js"></script>
+		<script src="libs/ResourceLoader.js"></script>
+		<script src="libs/TabWatcher.js"></script>
+		<script src="libs/FileSystem.js"></script>
+		<script src="libs/SimilarityComputer.js"></script>
+		<script src="libs/RuntimeOverwriteSettings.js"></script>
+
 		<script src="background.js"></script>
 	</head>
 	<body>

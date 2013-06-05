@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 294 2013-02-16 14:56:06Z akahuku $
+ * @version $Id: classes_ex.js 299 2013-06-05 21:56:30Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1276,7 +1276,6 @@ Wasavi.ExCommand.commands = [
 		return (new Wasavi.SubstituteWorker(app)).run(a.range, pattern, '~', a.argv[0]);
 	}),
 	new Wasavi.ExCommand('script', 'sc', 's', 2 | EXFLAGS.addrZero | EXFLAGS.multiAsync, function (app, t, a) {
-		//app.scriptInterface.run(a.argv.join(' '));
 		return 'Under development!';
 	}),
 	new Wasavi.ExCommand('set', 'se', 'wN', 0, function (app, t, a) {

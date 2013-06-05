@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 296 2013-06-02 20:29:21Z akahuku $
+ * @version $Id: wasavi.js 299 2013-06-05 21:56:30Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -128,7 +128,6 @@
 		get backlog () {return backlog},
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
-		get scriptInterface () {return scriptInterface},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -343,115 +342,6 @@ ExCommandExecutor.prototype = {
 	}
 };
 
-/*constructor*/function ScriptInterface () {
-	var nest;
-	var key;
-	var oninitialized;
-	var oncompleted;
-	function init () {
-		nest = 0;
-		key = Math.random() + '';
-		window.addEventListener('WasaviScriptInitialized', handleScriptInitialized, false);
-		window.addEventListener('WasaviScriptComplete', handleScriptComplete, false);
-		window.addEventListener('WasaviScriptRequest', handleScriptRequest, false);
-		initScriptFrame(function () {run(key)});
-	}
-	function initScriptFrame (callback) {
-		var cover = $('wasavi_cover');
-
-		var frame = cover.parentNode.insertBefore(document.createElement('iframe'), cover);
-		frame.id = 'wasavi_script';
-		frame.setAttribute('sandbox', 'allow-same-origin allow-scripts');
-		frame.src = 'script_frame.html';
-
-		var script = document.createElement('script');
-		script.onload = function () {
-			callback();
-			this.onload = callback = null;
-			this.parentNode.removeChild(this);
-		};
-		script.type = 'text/javascript';
-		script.src = [
-			'data:text/javascript,',
-			'document.addEventListener("WasaviScriptRequest", function (e) {',
-			'  var ev = document.createEvent("CustomEvent");',
-			'  ev.initCustomEvent("WasaviScriptRequest", false, false, e.detail);',
-			'  document.getElementById("wasavi_script").contentWindow.dispatchEvent(ev);',
-			'}, false);'
-		].join('\n');
-		document.head.appendChild(script);
-	}
-	function getEventObject (code) {
-		var ev = document.createEvent('CustomEvent');
-		ev.initCustomEvent('WasaviScriptRequest', false, false, {
-			key:key,
-			code:code || ''
-		});
-		return ev;
-	}
-	function run (code) {
-		nest++;
-		try {
-			$('wasavi_script').contentWindow.dispatchEvent(getEventObject(code));
-		}
-		catch (e) {
-			document.dispatchEvent(getEventObject(code));
-		}
-	}
-	function handleScriptInitialized (e) {
-		oninitialized && oninitialized();
-	}
-	function handleScriptComplete (e) {
-		if (e.detail.key !== key) return;
-		oncompleted && oncompleted(e.detail);
-		nest--;
-	}
-	function handleScriptRequest (e) {
-		if (e.detail.key !== key) return;
-		var result = '';
-		var errorMessage = '';
-		switch (e.detail.type) {
-		case 'run-command':
-			result = 'not implemented';
-			break;
-		case 'rows':
-			try {
-				result = buffer.rows(e.detail.data);
-			}
-			catch (e) {
-				result = '';
-				errorMessage = e.message;
-			}
-			break;
-		case 'position':
-			result = {
-				row:buffer.selectionStartRow,
-				col:buffer.selectionStartCol
-			};
-			break;
-		}
-		document.documentElement.setAttribute('data-script-result', JSON.stringify({
-			result:result,
-			errorMessage:errorMessage
-		}));
-	}
-	Object.defineProperties(this, {
-		init:{value:init},
-		run:{value:run},
-		running:{
-			get:function () {return nest > 0}
-		},
-		oninitialized:{
-			get:function () {return oninitialized},
-			set:function (v) {oninitialized = typeof v == 'function' ? v : undefined}
-		},
-		oncompleted:{
-			get:function () {return oncompleted},
-			set:function (v) {oncompleted = typeof v == 'function' ? v : undefined}
-		}
-	});
-}
-
 /*
  * low-level functions for application management {{{1
  * ----------------
@@ -490,23 +380,6 @@ function install (x) {
 		--count;
 		count == 0 && installCore(x);
 	}
-	function initScriptFrame () {
-		scriptInterface.oninitialized = function () {
-			scriptInterface.oninitialized = null;
-			scriptInterface.run();
-			handleLoaded();
-		};
-		scriptInterface.oncompleted = function (detail) {
-			if (detail.errorMessage != '') {
-				showMessage(detail.errorMessage, true);
-			}
-			else if (detail.message) {
-				showMessage(detail.message);
-			}
-			exCommandExecutor && exCommandExecutor.runAsyncNext();
-		};
-		scriptInterface.init();
-	}
 	if (extensionChannel) {
 		load(function () {
 			registers = new Wasavi.Registers(appProxy, handleLoaded, testMode);
@@ -519,14 +392,12 @@ function install (x) {
 		load(function () {
 			bell = new Wasavi.Bell(appProxy, handleLoaded);
 		});
-		load(initScriptFrame);
 	}
 	else {
 		registers = new Wasavi.Registers(appProxy);
 		lineInputHistories = new Wasavi.LineInputHistories(
 			appProxy, config.vars.history, ['/', ':']);
 		bell = new Wasavi.Bell;
-		initScriptFrame();
 		installCore(x);
 	}
 }
@@ -4172,7 +4043,6 @@ var keyManager = new Wasavi.KeyManager;
 var regexConverter = new Wasavi.RegexConverter(appProxy);
 var mapManager = new Wasavi.MapManager(appProxy);
 var theme = new Wasavi.Theme(appProxy);
-var scriptInterface = new ScriptInterface;
 var config = new Wasavi.Configurator(appProxy,
 	[
 		/* defined by POSIX */
