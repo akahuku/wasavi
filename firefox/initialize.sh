@@ -11,7 +11,7 @@ ln -s ../../chrome/icon048.png
 ln -s ../../chrome/icon128.png
 ln -s ../../chrome/options.html
 ln -s ../../chrome/options.js
-ln -s ../../chrome/wasavi_frame.html
+ln -s ../../chrome/wasavi_frame_noscript.html
 
 mkdir -p xlocale
 pushd xlocale

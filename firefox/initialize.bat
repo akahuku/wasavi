@@ -11,7 +11,7 @@ mklink icon048.png ..\..\chrome\icon048.png
 mklink icon128.png ..\..\chrome\icon128.png
 mklink options.html ..\..\chrome\options.html
 mklink options.js ..\..\chrome\options.js
-mklink wasavi_frame.html ..\..\chrome\wasavi_frame.html
+mklink wasavi_frame.html ..\..\chrome\wasavi_frame_noscript.html
 
 mkdir xlocale
 pushd xlocale
