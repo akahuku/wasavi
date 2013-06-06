@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 299 2013-06-05 21:56:30Z akahuku $
+ * @version $Id: background.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -37,16 +37,22 @@ if (typeof window == 'undefined') {
 
 if (window.jetpack && typeof require == 'function') {
 	[
-		/*[require('./jsOAuth'),				'OAuth'],*/
+		[require('sdk/base64'), function (lib, global) {
+			global.atob = lib.decode;
+			global.btoa = lib.encode;
+		}],
+
+		//[require('./jsOAuth'),				'OAuth'],
 		[require('./sha1'),						'SHA1'],
 		[require('./blowfish'),					'Blowfish'],
+
 		[require('./WasaviUtils'),				'WasaviUtils'],
 		[require('./StorageWrapper'),			'StorageWrapper'],
 		[require('./ClipboardManager'),			'ClipboardManager'],
 		[require('./ResourceLoader'),			'ResourceLoader'],
 		[require('./TabWatcher'),				'TabWatcher'],
 		[require('./FileSystem'),				'FileSystem'],
-		/*[require('./SimilarityComputer'),		'SimilarityComputer'],*/
+		//[require('./SimilarityComputer'),		'SimilarityComputer'],
 		[require('./RuntimeOverwriteSettings'), 'RuntimeOverwriteSettings']
 	]
 	.forEach(
@@ -104,6 +110,7 @@ if (window.jetpack && typeof require == 'function') {
 	var messageCatalog;
 	var unicodeDictData;
 	var wasaviFrame;
+	var wasaviFrame2;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
 	var runtimeOverwriteSettings;
@@ -437,10 +444,10 @@ if (window.jetpack && typeof require == 'function') {
 	/** {{{2 extension wrapper class for firefox (Add-on SDK) */
 
 	function FirefoxJetpackExtensionWrapper () {
-		var self = require('self');
-		var pagemod = require('page-mod');
-		var tabs = require('tabs');
-		var l10n = require('l10n/locale');
+		var self = require('sdk/self');
+		var pagemod = require('sdk/page-mod');
+		var tabs = require('sdk/tabs');
+		var l10n = require('sdk/l10n/locale');
 		var XMLHttpRequest = require('sdk/net/xhr').XMLHttpRequest;
 
 		var tabIds = {};
@@ -465,6 +472,14 @@ if (window.jetpack && typeof require == 'function') {
 			return undefined;
 		}
 
+		function handleWorkerAttach (worker) {
+			var tabId = getNewTabId();
+			tabIds[tabId] = worker;
+			lastRegisteredTab = tabId;
+			worker.on('detach', handleWorkerDetach);
+			worker.on('message', handleWorkerMessage);
+		}
+
 		function handleWorkerDetach () {
 			getTabId(this, function (i) {
 				delete tabIds[i];
@@ -487,45 +502,53 @@ if (window.jetpack && typeof require == 'function') {
 			});
 		}
 
-		pagemod.PageMod({
-			include:{
-				test:function (url) {
-					if (url.indexOf(self.data.url('options.html')) == 0) {
-						return true;
-					}
-					if (url.substring(0, 5) != 'http:'
-					&&  url.substring(0, 6) != 'https:') {
-						return false;
-					}
-					if (url == 'http://wasavi.appsweets.net/'
-					||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/') {
-						return false;
-					}
-					return true;
-				},
-				exec:function (url) {
-					return this.test(url) ? [url] : null;
-				}
+		function PseudoRegexRule (name, test) {
+			this._name = name;
+			this.test = test;
+		}
+
+		PseudoRegexRule.prototype = {
+			toString:function () {
+				return '[object PseudoRegexRule(' + this._name + ')]';
 			},
+			exec:function (url) {
+				return this.test(url) ? [url] : null;
+			}
+		};
+
+		// agent
+		pagemod.PageMod({
+			include:new PseudoRegexRule('agent', function (url) {
+				if (url.indexOf(self.data.url('options.html')) == 0) {
+					return true;
+				}
+				if (url.substring(0, 5) != 'http:' && url.substring(0, 6) != 'https:') {
+					return false;
+				}
+				if (url.substring(0, 256) == wasaviFrame2.substring(0, 256)) {
+					return false;
+				}
+				return true;
+			}),
 			contentScriptWhen:'start',
 			contentScriptFile:[
 				self.data.url('frontend/extension_wrapper.js'),
 				self.data.url('frontend/agent.js')
 			],
-			onAttach:function (worker) {
-				var tabId = getNewTabId();
-				tabIds[tabId] = worker;
-				lastRegisteredTab = tabId;
-				worker.on('detach', handleWorkerDetach);
-				worker.on('message', handleWorkerMessage);
-			}
+			contentScriptOptions:{
+				extensionId:self.id
+			},
+			onAttach:handleWorkerAttach
 		});
 
+		// wasavi
 		pagemod.PageMod({
-			include:[
-				'http://wasavi.appsweets.net/',
-				'https://ss1.xrea.com/wasavi.appsweets.net/'
-			],
+		    include:new PseudoRegexRule('wasavi-core', function (url) {
+				if (url.substring(0, 256) == wasaviFrame2.substring(0, 256)) {
+					return true;
+				}
+				return false;
+			}),
 			contentScriptWhen:'start',
 			contentScriptFile:[
 				self.data.url('frontend/extension_wrapper.js'),
@@ -540,16 +563,10 @@ if (window.jetpack && typeof require == 'function') {
 				self.data.url('frontend/classes_ui.js'),
 				self.data.url('frontend/wasavi.js')
 			],
-			onAttach:function (worker) {
-				var tabId = getNewTabId();
-				tabIds[tabId] = worker;
-				lastRegisteredTab = tabId;
-				worker.on('detach', handleWorkerDetach);
-				worker.on('message', handleWorkerMessage);
-			}
+			onAttach:handleWorkerAttach
 		});
 
-		require('simple-prefs').on('optionsOpener', function () {
+		require('sdk/simple-prefs').on('optionsOpener', function () {
 			tabs.open(self.data.url('options.html'));
 		});
 
@@ -636,7 +653,7 @@ if (window.jetpack && typeof require == 'function') {
 		this._contextMenuInitialized = false;
 		this.initContextMenu = function () {
 			if (this._contextMenuInitialized) return;
-			var cm = require('context-menu');
+			var cm = require('sdk/context-menu');
 			cm.Item({
 				context:cm.SelectorContext('input,textarea'),
 				image:self.data.url('icon016.png'),
@@ -693,7 +710,7 @@ if (window.jetpack && typeof require == 'function') {
 			return 'xlocale/' + result + '/messages.json';
 		})();
 		this.cryptKeyPath = 'frontend/wasavi.js';
-		this.version = require('self').version;
+		this.version = self.version;
 		this.isDev = this.version == TEST_VERSION;
 	}
 
@@ -909,6 +926,7 @@ if (window.jetpack && typeof require == 'function') {
 
 	function initWasaviFrame () {
 		resourceLoader.get('wasavi_frame.html', function (data) {
+			wasaviFrame2 = 'data:text/html;charset=UTF-8;class=wasavi;base64,' + btoa(data);
 			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
 				.exec(data)[1]
 				.replace(/\n/g, '')
@@ -1137,6 +1155,9 @@ if (window.jetpack && typeof require == 'function') {
 			case 'set-clipboard':		handleSetClipboard(); break;
 			case 'get-clipboard':		handleGetClipboard(); break;
 			case 'push-payload':		handlePushPayload(); break;
+			case 'request-wasavi-frame':
+				res({data:wasaviFrame2});
+				break;
 			}
 		}
 		finally {

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: ResourceLoader.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: ResourceLoader.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -23,6 +23,8 @@
  */
 
 (function () {
+	'use strict';
+
 	function ResourceLoader (transportGetter, locationGetter, emitter) {
 		var data = {};
 		emitter || (emitter = function (callback, data) {callback(data)});
@@ -103,7 +105,7 @@
 			 */
 			var chrome = require('chrome');
 			var Cc = chrome.Cc, Ci = chrome.Ci;
-			var self = require('self');
+			var self = require('sdk/self');
 			return new ResourceLoader(
 				function () {
 					var xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1']

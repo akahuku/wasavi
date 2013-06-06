@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 290 2013-01-30 20:10:25Z akahuku $
+ * @version $Id: extension_wrapper.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -39,31 +39,50 @@
 		 typeof global.getInterface == 'function'
 		 && /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' '));
+	/*const*/var EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
+	/*const*/var EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 
-	var extensionId =
-		window.chrome ? chrome.extension.getURL('').split('/')[2] :
-		window.opera  ? widget.preferences['widget-id'] :
-		IS_FX_JETPACK ? 'jid1-bmmwunrx3u5hqq@jetpack' :
-		'';
-	var extensionHostname =
-		window.chrome ? extensionId :
-		window.opera  ? extensionId :
-		IS_FX_JETPACK ? extensionId
-			.toLowerCase()
-			.replace(/@/g, '-at-')
-			.replace(/\./g, '-dot-') :
-		'';
-	var optionsPageUrl =
-		window.chrome ? 'chrome-extension://' + extensionHostname + '/options.html' :
-		window.opera  ? 'widget://' + extensionHostname + '/options.html' :
-		IS_FX_JETPACK ? 'resource://' + extensionHostname + '/wasavi/data/options.html' :
-		'';
-	var framePageUrl =
-		window.chrome ? 'chrome-extension://' + extensionHostname + '/wasavi_frame.html' :
-		window.opera  ? 'widget://' + extensionHostname + '/wasavi_frame.html' :
-		IS_FX_JETPACK ? 'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html' :
-		'';
+	/**
+	 * url information class
+	 * ----------------
+	 */
 
+	function UrlInfo (optionsUrl, internalUrl, canUseInternal, canUseExtensionContent) {
+		this.externalUrl = EXTERNAL_FRAME_URL;
+		this.externalSecureUrl = EXTERNAL_SECURE_FRAME_URL;
+
+		this.optionsUrl = optionsUrl;
+		this.internalUrl = internalUrl;
+		this.canUseInternal = canUseInternal;
+		this.canUseExtensionContent = canUseExtensionContent;
+	}
+
+	UrlInfo.prototype = {
+		eq: function (u1, u2) {
+			return u1.replace(/\?.*/, '') == u2.replace(/\?.*/, '');
+		},
+		get isInternal () {
+			return this.eq(window.location.href, this.internalUrl)
+				|| /^data:text\/html;charset=UTF-8;class=wasavi;base64,/.test(window.location.href);
+		},
+		get isExternal () {
+			return this.eq(window.location.href, this.externalUrl)
+			    || this.eq(window.location.href, this.externalSecureUrl);
+		},
+		get isAny () {
+			return this.isInternal || this.isExternal;
+		},
+		get frameSource () {
+			if (this.canUseInternal) {
+				return this.canUseExtensionContent ?
+					this.internalUrl : false;
+			}
+			else {
+				return window.location.protocol == 'https:' ?
+					this.externalSecureUrl : this.externalUrl;
+			}
+		}
+	};
 
 	/**
 	 * extension wrapper base class
@@ -119,29 +138,7 @@
 		 window.chrome && chrome.extension
 		 || global.opera && global.opera.extension
 		 || IS_GECKO && IS_FX_JETPACK;
-
-	ExtensionWrapper.extensionId = extensionId;
-	ExtensionWrapper.extensionHostname = extensionHostname;
-	ExtensionWrapper.optionsPageUrl = optionsPageUrl;
-	ExtensionWrapper.framePageUrl = {
-		internalAvailable:false,
-		internal:      framePageUrl,
-		external:      'http://wasavi.appsweets.net/',
-		externalSecure:'https://ss1.xrea.com/wasavi.appsweets.net/',
-		eq: function (u1, u2) {
-			return u1.replace(/\?.*/, '') == u2.replace(/\?.*/, '');
-		},
-		get isInternal () {
-			return this.eq(window.location.href, this.internal);
-		},
-		get isExternal () {
-			return this.eq(window.location.href, this.external)
-			    || this.eq(window.location.href, this.externalSecure);
-		},
-		get isAny () {
-			return this.isInternal || this.isExternal;
-		}
-	};
+	ExtensionWrapper.urlInfo = new UrlInfo;
 	ExtensionWrapper.isTopFrame = (function () {
 		if (IS_GECKO) {
 			var result;
@@ -153,22 +150,23 @@
 		}
 	})();
 
-
-
 	/**
 	 * extension wrapper class for chrome
 	 * ----------------
 	 */
 
 	function ChromeExtensionWrapper () {
-		var theObj = this;
-		var onMessageHandler;
 		function handleMessage (req, sender, res) {
 			if (req && req.type == 'init-response') {
 				theObj.tabId = req.tabId;
 			}
 			onMessageHandler && onMessageHandler(req);
 		}
+
+		var extensionId = chrome.extension.getURL('').split('/')[2];
+		var theObj = this;
+		var onMessageHandler;
+
 		this.constructor = ExtensionWrapper;
 		this.runType = 'chrome-extension';
 		this.sendRequest = function (data, callback) {
@@ -185,6 +183,12 @@
 			onMessageHandler = null;
 			chrome.extension.onRequest.removeListener(handleMessage);
 		};
+		this.urlInfo = new UrlInfo(
+			'chrome-extension://' + extensionId + '/options.html',
+			'chrome-extension://' + extensionId + '/wasavi_frame.html',
+			true, true
+		);
+
 		chrome.extension.onRequest.addListener(handleMessage);
 	}
 	ChromeExtensionWrapper.prototype = ExtensionWrapper.prototype;
@@ -195,14 +199,17 @@
 	 */
 
 	function OperaExtensionWrapper () {
-		var theObj = this;
-		var onMessageHandler;
 		function handleMessage (e) {
 			if (e.data && e.data.type == 'init-response') {
 				theObj.tabId = e.data.tabId;
 			}
 			onMessageHandler && onMessageHandler(e.data);
 		};
+
+		var extensionId =  widget.preferences['widget-id'];
+		var theObj = this;
+		var onMessageHandler;
+
 		this.constructor = ExtensionWrapper;
 		this.runType = 'opera-extension';
 		this.sendRequest = function (data, callback) {
@@ -227,6 +234,12 @@
 			onMessageHandler = null;
 			opera.extension.onmessage = null;
 		};
+		this.urlInfo = new UrlInfo(
+			'widget://' + extensionId + '/options.html',
+			'widget://' + extensionId + '/wasavi_frame.html',
+			false, false
+		);
+
 		opera.extension.onmessage = handleMessage;
 	}
 	OperaExtensionWrapper.prototype = ExtensionWrapper.prototype;
@@ -253,11 +266,6 @@
 			}
 		};
 
-		var theObj = this;
-		var messageId = 0;
-		var callbacks = {};
-		var onMessageHandler;
-
 		function getNewMessageId () {
 			messageId = (messageId + 1) & 0xffff;
 			return messageId;
@@ -283,18 +291,15 @@
 			}
 		}
 
-		self.on('message', function (data) {
-			if (data && data.type == 'init-response') {
-				theObj.tabId = data.tabId;
-			}
-			if ('__messageId' in data) {
-				handleMessage(data);
-			}
-			else {
-				onMessageHandler && onMessageHandler(data);
-			}
-		});
-		setInterval(handleMessage, 1000 * 60 * 2);
+		var extensionId = 'jid1-bmmwunrx3u5hqq@jetpack';
+		var extensionHostname = extensionId
+			.toLowerCase()
+			.replace(/@/g, '-at-')
+			.replace(/\./g, '-dot-');
+		var theObj = this;
+		var messageId = 0;
+		var callbacks = {};
+		var onMessageHandler;
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'firefox-jetpack-extension';
@@ -313,10 +318,29 @@
 			onMessageHandler = null;
 			self.on('message', null);
 		};
+		this.urlInfo = new UrlInfo(
+			'resource://' + extensionHostname + '/wasavi/data/options.html',
+			'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
+			true, false
+		);
+
+		self.on('message', function (data) {
+			if (data && data.type == 'init-response') {
+				theObj.tabId = data.tabId;
+			}
+			if ('__messageId' in data) {
+				handleMessage(data);
+			}
+			else {
+				onMessageHandler && onMessageHandler(data);
+			}
+		});
+		setInterval(handleMessage, 1000 * 60 * 2);
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
 
-	ExtensionWrapper.framePageUrl.isExternal &&
+	//
+	ExtensionWrapper.urlInfo.isExternal &&
 		document.documentElement.setAttribute('data-wasavi-present', 1);
 	global.WasaviExtensionWrapper = ExtensionWrapper;
 

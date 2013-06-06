@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: RuntimeOverwriteSettings.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: RuntimeOverwriteSettings.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -23,6 +23,8 @@
  */
 
 (function (global) {
+	'use strict';
+
 	var SHA1;
 	var SimilarityComputer;
 	var u;

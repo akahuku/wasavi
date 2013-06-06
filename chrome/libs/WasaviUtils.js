@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: WasaviUtils.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -21,6 +21,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+'use strict';
 
 exports.WasaviUtils = {
 	baseUrl: function (s) {

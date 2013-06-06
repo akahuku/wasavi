@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 299 2013-06-05 21:56:30Z akahuku $
+ * @version $Id: wasavi.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -6168,8 +6168,7 @@ var lineInputEditMap = {
 
 if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
-&&  WasaviExtensionWrapper.framePageUrl.isAny) {
-	extensionChannel = WasaviExtensionWrapper.create();
+&&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
 	extensionChannel.setMessageListener(function (req) {
 		if (!req) return;
 		function run (callback) {
@@ -6183,7 +6182,9 @@ if (global.WasaviExtensionWrapper
 				 * from the outside.
 				 * Thus we leave innerHTML.
 				 */
-				document.body.innerHTML = wasaviFrame;
+				if (/^https?:$/.test(window.location.protocol)) {
+					document.body.innerHTML = wasaviFrame;
+				}
 				wasaviFrame = '';
 				callback();
 			}

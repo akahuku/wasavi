@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: agent.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -32,7 +32,7 @@
 'use strict';
 
 typeof WasaviExtensionWrapper != 'undefined'
-&& !WasaviExtensionWrapper.framePageUrl.isExternal
+&& !WasaviExtensionWrapper.urlInfo.isExternal
 && (function (global) {
 
 /*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
@@ -114,6 +114,15 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 }
 
 function run (element) {
+	extension.postMessage(
+		{type:'request-wasavi-frame'},
+		function (res) {
+			runCore(element, res.data);
+		}
+	);
+}
+
+function runCore (element, frameSource) {
 	/*
 	 * boot sequence:
 	 *
@@ -140,17 +149,6 @@ function run (element) {
 	 *
 	 */
 
-	function getHighestZindex (element) {
-		var result = 0;
-		var view = document.defaultView;
-		for (; element; element = element.parentNode) {
-			if (element.nodeType != 1) continue;
-			var z = (element.style.zIndex || view.getComputedStyle(element, '').zIndex) - 0;
-			if (z > result) result = z;
-		}
-		return result;
-	}
-
 	function getFontStyle (s, fontFamilyOverride) {
 		return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
 			'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
@@ -174,17 +172,8 @@ function run (element) {
 	wasaviFrame.style.border = 'none';
 	wasaviFrame.style.overflow = 'hidden';
 	wasaviFrame.style.visibility = 'hidden';
-	wasaviFrame.style.zIndex = 0x7fffffff; //getHighestZindex(element) + 100;
-
-	if (WasaviExtensionWrapper.framePageUrl.internalAvailable) {
-		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.internal;
-	}
-	else if (window.location.protocol == 'https:') {
-		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.externalSecure;
-	}
-	else {
-		wasaviFrame.src = WasaviExtensionWrapper.framePageUrl.external;
-	}
+	wasaviFrame.style.zIndex = 0x7fffffff;
+	wasaviFrame.src = extension.urlInfo.frameSource || frameSource;
 
 	document.body.appendChild(wasaviFrame);
 
@@ -596,8 +585,7 @@ function matchWithShortcut (e) {
 function handleAgentInitialized (req) {
 	isTestFrame = window.location.href == 'http://wasavi.appsweets.net/test_frame.html';
 
-	if (window.location.href == WasaviExtensionWrapper.optionsPageUrl) {
-		//WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
+	if (window.location.href == extension.urlInfo.optionsUrl) {
 		handleOptionsPageLoaded(req);
 	}
 
@@ -710,9 +698,6 @@ extension.setMessageListener(function (req) {
 		extraHeight = 0;
 		devMode = req.devMode;
 
-		if (window.chrome) {
-			WasaviExtensionWrapper.framePageUrl.internalAvailable = true;
-		}
 		if (document.readyState == 'interactive' || document.readyState == 'complete') {
 			handleAgentInitialized(req);
 		}

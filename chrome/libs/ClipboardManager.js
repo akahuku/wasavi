@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: ClipboardManager.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: ClipboardManager.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -23,6 +23,8 @@
  */
 
 (function () {
+	'use strict';
+
 	function ClipboardManager () {
 		this.set = function (data) {};
 		this.get = function () {return '';}
@@ -57,7 +59,7 @@
 	};
 
 	function JetpackClipboardManager () {
-		this.cb = require('clipboard');
+		this.cb = require('sdk/clipboard');
 		this.constructor = ClipboardManager;
 	}
 

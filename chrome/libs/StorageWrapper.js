@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: StorageWrapper.js 297 2013-06-05 21:35:32Z akahuku $
+ * @version $Id: StorageWrapper.js 300 2013-06-06 16:31:37Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -23,6 +23,8 @@
  */
 
 (function () {
+	'use strict';
+
 	function StorageWrapper () {
 		this.getItem = function (key) {};
 		this.setItem = function (key, value) {};
@@ -43,7 +45,7 @@
 	}
 
 	function JetpackStorageWrapper () {
-		var ss = require('simple-storage');
+		var ss = require('sdk/simple-storage');
 		this.constructor = StorageWrapper;
 		this.getItem = function (key) {
 			var result = ss.storage[key];
