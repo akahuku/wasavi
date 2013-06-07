@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: background.js 302 2013-06-07 14:22:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -53,7 +53,8 @@ if (window.jetpack && typeof require == 'function') {
 		[require('./TabWatcher'),				'TabWatcher'],
 		[require('./FileSystem'),				'FileSystem'],
 		//[require('./SimilarityComputer'),		'SimilarityComputer'],
-		[require('./RuntimeOverwriteSettings'), 'RuntimeOverwriteSettings']
+		[require('./RuntimeOverwriteSettings'), 'RuntimeOverwriteSettings'],
+		[require('./Hotkey'),					'Hotkey']
 	]
 	.forEach(
 		function (lib) {
@@ -77,24 +78,6 @@ if (window.jetpack && typeof require == 'function') {
 
 	/* {{{1 consts */
 
-	var KEY_TABLE = {
-		'backspace':8, 'bs':8,
-		'tab':9,
-		'enter':13, 'return':13, 'ret':13,
-		'pageup':33,
-		'pagedown':34,
-		'end':35,
-		'home':36,
-		'left':37,
-		'up':38,
-		'right':39,
-		'down':40,
-		'insert':45, 'ins':45,
-		'delete':46, 'del':46,
-		'f1':112, 'f2':113, 'f3':114, 'f4':115,
-		'f5':116, 'f6':117, 'f7':118, 'f8':119,
-		'f9':120, 'f10':121, 'f11':122, 'f12':123
-	};
 	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
 	var TEST_VERSION = '0.0.1';
 	var MENU_EDIT_WITH_WASAVI = 'edit_with_wasavi';
@@ -110,10 +93,11 @@ if (window.jetpack && typeof require == 'function') {
 	var messageCatalog;
 	var unicodeDictData;
 	var wasaviFrame;
-	var wasaviFrame2;
+	var wasaviFrameData;
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var payload;
 	var runtimeOverwriteSettings;
+	var hotkey;
 
 
 
@@ -177,27 +161,26 @@ if (window.jetpack && typeof require == 'function') {
 		this.isExistsTabId = function (tabId) {
 			return tabId in tabIds;
 		};
-		this.sendRequest = function (tabId, message) {
-			try {
-				chrome.tabs.sendRequest(tabId, message);
+		this.sendRequest = function () {
+			if (arguments.length == 1) {
+				var message = arguments[0];
+				chrome.tabs.query({active:true}, function (tab) {
+					try {chrome.tabs.sendRequest(tab.id, message)} catch (e) {}
+				});
 			}
-			catch (e) {}
+			else {
+				try {chrome.tabs.sendRequest(arguments[0], arguments[1])} catch (e) {}
+			}
 		};
 		this.broadcast = function (message, exceptId) {
 			if (exceptId === undefined) {
 				for (var i in tabIds) {
-					try {
-						chrome.tabs.sendRequest(i - 0, message);
-					}
-					catch (e) {}
+					try {chrome.tabs.sendRequest(i - 0, message)} catch (e) {}
 				}
 			}
 			else {
 				for (var i in tabIds) {
-					try {
-						i - exceptId != 0 && chrome.tabs.sendRequest(i - 0, message);
-					}
-					catch (e) {}
+					try {i - exceptId != 0 && chrome.tabs.sendRequest(i - 0, message)} catch (e) {}
 				}
 			}
 		};
@@ -208,10 +191,7 @@ if (window.jetpack && typeof require == 'function') {
 			typeof handler == 'function' && chrome.extension.onRequest.addListener(function (req, sender, res) {
 				if (req && (req.type == 'init' || req.type == 'init-agent')) {
 					handler(req, sender.tab.id, function (reply) {
-						try {
-							chrome.tabs.sendRequest(sender.tab.id, reply);
-						}
-						catch (e) {}
+						try {chrome.tabs.sendRequest(sender.tab.id, reply)} catch (e) {}
 					});
 				}
 				else {
@@ -322,27 +302,29 @@ if (window.jetpack && typeof require == 'function') {
 			return tabId in tabIds;
 		};
 		this.sendRequest = function (tabId, message) {
-			try {
-				tabIds[tabId].postMessage(message);
+			if (arguments.length == 1) {
+				try {
+					opera.extension.tabs
+						.getAll()
+						.filter(function (tab) {return tab.selected})[0]
+						.postMessage(arguments[0]);
+				}
+				catch (e) {}
 			}
-			catch (e) {}
+			else {
+				try {tabIds[arguments[0]].postMessage(arguments[1])} catch (e) {}
+			}
 		};
 		this.broadcast = function (message, exceptId) {
 			if (exceptId === undefined) {
 				for (var i in tabIds) {
-					try {
-						tabIds[i].postMessage(message);
-					}
-					catch (e) {}
+					try {tabIds[i].postMessage(message)} catch (e) {}
 				}
 			}
 			else {
 				for (var i in tabIds) {
 					if (i - exceptId != 0) {
-						try {
-							tabIds[i].postMessage(message);
-						}
-						catch (e) {}
+						try {tabIds[i].postMessage(message)} catch (e) {}
 					}
 				}
 			}
@@ -356,19 +338,13 @@ if (window.jetpack && typeof require == 'function') {
 			opera.extension.onmessage = function (e) {
 				if (e.ports && e.ports.length > 0) {
 					handler(e.data, null, function (data) {
-						try {
-							e.ports[0].postMessage(data);
-						}
-						catch (e) {}
+						try {e.ports[0].postMessage(data)} catch (e) {}
 					});
 				}
 				else {
 					var tabId = getTabId(e.source);
 					handler(e.data, tabId, function (data) {
-						try {
-							e.source.postMessage(data);
-						}
-						catch (e) {}
+						try {e.source.postMessage(data)} catch (e) {}
 					});
 				}
 			}
@@ -445,7 +421,7 @@ if (window.jetpack && typeof require == 'function') {
 
 	function FirefoxJetpackExtensionWrapper () {
 		var self = require('sdk/self');
-		var pagemod = require('sdk/page-mod');
+		var PageMod = require('sdk/page-mod').PageMod;
 		var tabs = require('sdk/tabs');
 		var l10n = require('sdk/l10n/locale');
 		var XMLHttpRequest = require('sdk/net/xhr').XMLHttpRequest;
@@ -495,10 +471,7 @@ if (window.jetpack && typeof require == 'function') {
 				if ('__messageId' in req) {
 					res.__messageId = req.__messageId;
 				}
-				try {
-					theWorker.postMessage(res);
-				}
-				catch (e) {}
+				try {theWorker.postMessage(res)} catch (e) {}
 			});
 		}
 
@@ -517,7 +490,7 @@ if (window.jetpack && typeof require == 'function') {
 		};
 
 		// agent
-		pagemod.PageMod({
+		PageMod({
 			include:new PseudoRegexRule('agent', function (url) {
 				if (url.indexOf(self.data.url('options.html')) == 0) {
 					return true;
@@ -525,7 +498,7 @@ if (window.jetpack && typeof require == 'function') {
 				if (url.substring(0, 5) != 'http:' && url.substring(0, 6) != 'https:') {
 					return false;
 				}
-				if (url.substring(0, 256) == wasaviFrame2.substring(0, 256)) {
+				if (url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
 					return false;
 				}
 				return true;
@@ -542,9 +515,9 @@ if (window.jetpack && typeof require == 'function') {
 		});
 
 		// wasavi
-		pagemod.PageMod({
+		PageMod({
 		    include:new PseudoRegexRule('wasavi-core', function (url) {
-				if (url.substring(0, 256) == wasaviFrame2.substring(0, 256)) {
+				if (url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
 					return true;
 				}
 				return false;
@@ -578,27 +551,29 @@ if (window.jetpack && typeof require == 'function') {
 		this.isExistsTabId = function (tabId) {
 			return tabId in tabIds;
 		};
-		this.sendRequest = function (tabId, message) {
-			try {
-				tabIds[tabId].postMessage(message);
+		this.sendRequest = function () {
+			if (arguments.length == 1) {
+				var activeTab = tabs.activeTab;
+				for (var i in tabIds) {
+					if (tabIds[i].tab == activeTab) {
+						try {tabIds[i].postMessage(arguments[0])} catch (e) {}
+						break;
+					}
+				}
 			}
-			catch (e) {}
+			else {
+				try {tabIds[arguments[0]].postMessage(arguments[1])} catch (e) {}
+			}
 		};
 		this.broadcast = function (message, exceptId) {
 			if (exceptId === undefined) {
 				for (var i in tabIds) {
-					try {
-						tabIds[i].postMessage(message);
-					}
-					catch (e) {}
+					try {tabIds[i].postMessage(message)} catch (e) {}
 				}
 			}
 			else {
 				for (var i in tabIds) {
-					try {
-						i - exceptId != 0 && tabIds[i].postMessage(message);
-					}
-					catch (e) {}
+					try {i - exceptId != 0 && tabIds[i].postMessage(message)} catch (e) {}
 				}
 			}
 		};
@@ -630,7 +605,7 @@ if (window.jetpack && typeof require == 'function') {
 		};
 		this.closeTab = function (id) {
 			if (typeof id.close == 'function') {
-				try {id.close();} catch (e) {}
+				try {id.close()} catch (e) {}
 			}
 			else {
 				getTabId(id, function (worker) {worker.tab.close();});
@@ -641,7 +616,7 @@ if (window.jetpack && typeof require == 'function') {
 		};
 		this.focusTab = function (id) {
 			if (typeof id.activate == 'function') {
-				try {id.activate();} catch (e) {}
+				try {id.activate()} catch (e) {}
 			}
 			else {
 				getTabId(id, function (worker) {worker.activate();});
@@ -654,6 +629,7 @@ if (window.jetpack && typeof require == 'function') {
 		this.initContextMenu = function () {
 			if (this._contextMenuInitialized) return;
 			var cm = require('sdk/context-menu');
+			var that = this;
 			cm.Item({
 				context:cm.SelectorContext('input,textarea'),
 				image:self.data.url('icon016.png'),
@@ -665,13 +641,8 @@ if (window.jetpack && typeof require == 'function') {
 						this.label = getContextMenuLabel(MENU_EDIT_WITH_WASAVI);
 						break;
 					case 2:
-						var activeTab = tabs.activeTab;
-						for (var i in tabIds) {
-							if (tabIds[i].tab == activeTab) {
-								tabIds[i].postMessage({type:'request-run'});
-								break;
-							}
-						}
+						that.sendRequest({type:'request-run'});
+						break;
 					}
 				}
 			});
@@ -742,6 +713,16 @@ if (window.jetpack && typeof require == 'function') {
 		return messageCatalog && messageCatalog[id].message || id;
 	}
 
+	function broadcastStorageUpdate (keys, originTabId) {
+		var items = [];
+
+		keys.forEach(function (key) {
+			items.push({key:key, value:extension.storage.getItem(key)});
+		});
+
+		extension.broadcast({type:'update-storage', items:items}, originTabId);
+	}
+
 	/** {{{2 storage initializer */
 
 	function initStorage () {
@@ -762,9 +743,9 @@ if (window.jetpack && typeof require == 'function') {
 				enableNumber: false
 			})],
 			['exrc', '" exrc for wasavi'],
-			['shortcut', '<c-enter>, <insert>'],
+			['shortcut', Hotkey.DEFAULT_HOTKEYS_DESC],
 			['shortcutCode', function () {
-				return JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut')));
+				return JSON.stringify(Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut')));
 			}],
 			['fontFamily', defaultFont],
 			['fstab', JSON.stringify({
@@ -793,57 +774,6 @@ if (window.jetpack && typeof require == 'function') {
 			}
 			extension.initContextMenu();
 		}, {noCache:true});
-	}
-
-	/** {{{2 key table initializer */
-
-	function initShortcutKeyTable () {
-		for (var i = '0'.charCodeAt(0), goal = '9'.charCodeAt(0); i <= goal; i++) {
-			KEY_TABLE[i] = String.fromCharCode(i);
-		}
-		for (var i = 'a'.charCodeAt(0), goal = 'z'.charCodeAt(0); i <= goal; i++) {
-			KEY_TABLE[i] = String.fromCharCode(i);
-		}
-	}
-
-	/** {{{2 shortcut code generator */
-
-	function getShortcutCode (shortcuts) {
-		shortcuts = shortcuts.replace(/^\s+|\s+$/g, '');
-		if (shortcuts == '') {
-			shortcuts = '<insert>,<c-enter>';
-		}
-
-		var result = [];
-
-		shortcuts.toLowerCase().split(/\s*,\s*/).forEach(function (sc) {
-			var re = /^<([^>]+)>$/.exec(sc);
-			if (!re) return;
-
-			var modifiers = re[1].split('-');
-			var key = modifiers.pop();
-			if (!(key in KEY_TABLE)) return;
-
-			var codes = {keyCode:KEY_TABLE[key], shiftKey:false, ctrlKey:false};
-			modifiers.forEach(function (m) {
-				switch (m.toLowerCase()) {
-				case 's':
-					codes['shiftKey'] = true;
-					break;
-				case 'c':
-					codes['ctrlKey'] = true;
-					break;
-				}
-			});
-
-			result.push(codes);
-		});
-
-		if (result.length == 0) {
-			result = getShortcutCode('');
-		}
-
-		return result;
 	}
 
 	/** {{{2 file system initializer */
@@ -924,9 +854,11 @@ if (window.jetpack && typeof require == 'function') {
 		return result;
 	}
 
+	/** {{{2 initialize main part of wasavi */
+
 	function initWasaviFrame () {
 		resourceLoader.get('wasavi_frame.html', function (data) {
-			wasaviFrame2 = 'data:text/html;charset=UTF-8;class=wasavi;base64,' + btoa(data);
+			wasaviFrameData = 'data:text/html;charset=UTF-8;class=wasavi;base64,' + btoa(data);
 			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
 				.exec(data)[1]
 				.replace(/\n/g, '')
@@ -971,16 +903,15 @@ if (window.jetpack && typeof require == 'function') {
 		});
 	}
 
-	/** {{{2 broadcasts to all content scripts that storage updated */
+	/** {{{2 hotkey */
 
-	function broadcastStorageUpdate (keys, originTabId) {
-		var items = [];
+	function initHotkey () {
+		hotkey.register(extension.storage.getItem('shortcut'));
+		hotkey.onPress = handleHotkeyPress;
+	}
 
-		keys.forEach(function (key) {
-			items.push({key:key, value:extension.storage.getItem(key)});
-		});
-
-		extension.broadcast({type:'update-storage', items:items}, originTabId);
+	function handleHotkeyPress (hotkey) {
+		extension.sendRequest({type:'request-run'});
 	}
 
 	/** {{{2 request handler */
@@ -1005,8 +936,10 @@ if (window.jetpack && typeof require == 'function') {
 				exrc:extension.storage.getItem('exrc'),
 				ros:payload && payload.url != TEST_MODE_URL ?
 					runtimeOverwriteSettings.get(payload.url, payload.nodePath) : '',
-				shortcut:extension.storage.getItem('shortcut'),
-				shortcutCode:JSON.stringify(getShortcutCode(extension.storage.getItem('shortcut'))),
+				shortcut:hotkey.canProcess ? null :
+					extension.storage.getItem('shortcut'),
+				shortcutCode:hotkey.canProcess ? null :
+					JSON.stringify(Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut'))),
 				fontFamily:extension.storage.getItem('fontFamily'),
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
 				messageCatalog:messageCatalog,
@@ -1060,7 +993,7 @@ if (window.jetpack && typeof require == 'function') {
 							keys.push('shortcutCode');
 							extension.storage.setItem(
 								'shortcutCode',
-								JSON.stringify(getShortcutCode(item.value)));
+								JSON.stringify(Hotkey.getObjectsForDOM(item.value)));
 						}
 					}
 				});
@@ -1156,7 +1089,7 @@ if (window.jetpack && typeof require == 'function') {
 			case 'get-clipboard':		handleGetClipboard(); break;
 			case 'push-payload':		handlePushPayload(); break;
 			case 'request-wasavi-frame':
-				res({data:wasaviFrame2});
+				res({data:wasaviFrameData});
 				break;
 			}
 		}
@@ -1173,10 +1106,10 @@ if (window.jetpack && typeof require == 'function') {
 		resourceLoader = ResourceLoader.create(window, emit);
 		extension = ExtensionWrapper.create();
 		runtimeOverwriteSettings = RuntimeOverwriteSettings.create(extension);
+		hotkey = Hotkey.create(window, emit);
 
 		initWasaviFrame();
-		initShortcutKeyTable();
-
+		initHotkey();
 		initStorage();
 		initMessageCatalog();
 		initFileSystem();

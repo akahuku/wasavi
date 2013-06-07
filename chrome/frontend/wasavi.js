@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: wasavi.js 302 2013-06-07 14:22:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -930,7 +930,7 @@ function uninstall (save, implicit) {
 		delete targetElement.getAttribute;
 		delete targetElement.setAttribute;
 		targetElement.tabId = extensionChannel.tabId;
-		targetElement.isTopFrame = !!WasaviExtensionWrapper.isTopFrame;
+		targetElement.isTopFrame = !!WasaviExtensionWrapper.IS_TOP_FRAME;
 		targetElement.isImplicit = !!implicit;
 		targetElement.ros = config.dumpScript(true).join('\n');
 		fireEvent('terminated', targetElement);
@@ -2269,7 +2269,7 @@ function getFindRegex (src) {
 }
 function getFileNameString () {
 	var result = '';
-	if (extensionChannel && WasaviExtensionWrapper.isTopFrame) {
+	if (extensionChannel && WasaviExtensionWrapper.IS_TOP_FRAME) {
 		if (fileName == '') {
 			result = _('*Untitled*');
 		}
@@ -6213,7 +6213,7 @@ if (global.WasaviExtensionWrapper
 			fstab = req.fstab;
 			version = req.version;
 			document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));
-			if (WasaviExtensionWrapper.isTopFrame) {
+			if (WasaviExtensionWrapper.IS_TOP_FRAME) {
 				run(function() {
 					!targetElement && install({
 						id:'wasavi',

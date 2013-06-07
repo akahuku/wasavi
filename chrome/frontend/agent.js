@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: agent.js 302 2013-06-07 14:22:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -595,7 +595,7 @@ function handleAgentInitialized (req) {
 	}
 
 	devMode
-	&& WasaviExtensionWrapper.isTopFrame
+	&& WasaviExtensionWrapper.IS_TOP_FRAME
 	&& document.querySelectorAll('textarea').length
 	&& console.info(
 		'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
@@ -607,71 +607,21 @@ function handleAgentInitialized (req) {
  */
 
 function createPageAgent () {
-	var result = false;
+	extension.getExtensionFileURL('/key_hook.js', function (url) {
+		if (!url) return;
 
-	var s = document.createElement('script');
-	s.onload = function () {
-		this.onload = null;
-		this.parentNode.removeChild(this);
-	};
-	s.type = 'text/javascript';
-	s.src = 'data:text/javascript,' +
-"(function () { \
-	var wasaviRunning = false; \
-	function isHookEvent (eventName) {return eventName == 'keydown' || eventName == 'keypress'} \
-	function getKey (eventName, useCapture) {return eventName + '_' + !!useCapture} \
-	function hook (target) { \
-		if (!target || !target.addEventListener || !target.removeEventListener) return; \
-		var addOriginal = target.addEventListener; \
-		var removeOriginal = target.removeEventListener; \
-		var listeners = []; \
-		target.addEventListener = function (eventName, listener, useCapture) { \
-			if (!isHookEvent(eventName)) { \
-				addOriginal.call(this, eventName, listener, useCapture); \
-				return; \
-			} \
-			var key = getKey(eventName, useCapture); \
-			if (!listeners[key]) { \
-				listeners[key] = []; \
-			} \
-			if (!listeners[key].some(function (o) { return o[0] == listener; })) { \
-				var wrappedListener = function (e) {!wasaviRunning && listener && listener(e)}; \
-				listeners[key].push([listener, wrappedListener]); \
-				addOriginal.call(this, eventName, wrappedListener, useCapture); \
-			} \
-		}; \
-		target.removeEventListener = function (eventName, listener, useCapture) { \
-			if (!isHookEvent(eventName)) { \
-				removeOriginal.call(this, eventName, listener, useCapture); \
-				return; \
-			} \
-			var key = getKey(eventName, useCapture); \
-			if (!listeners[key]) { \
-				return; \
-			} \
-			listeners[key] = listeners[key].filter(function (o) { \
-				if (o[0] == listener) { \
-					removeOriginal.call(this, eventName, o[1], useCapture); \
-					return false; \
-				} \
-				return true; \
-			}, this); \
-		}; \
-	} \
-	hook(window.HTMLInputElement && window.HTMLInputElement.prototype); \
-	hook(window.HTMLTextAreaElement && window.HTMLTextAreaElement.prototype); \
-	hook(window.Node && window.Node.prototype); \
-	document.addEventListener('WasaviStarting', function (e) {wasaviRunning = true}, false); \
-	document.addEventListener('WasaviTerminated', function (e) {wasaviRunning = false}, false); \
-})();";
+		var parent = document.head || document.body || document.documentElement;
+		if (!parent) return;
 
-	var parent = document.head || document.body || document.documentElement;
-	if (parent) {
+		var s = document.createElement('script');
+		s.onload = function () {
+			this.onload = null;
+			this.parentNode.removeChild(this);
+		};
+		s.type = 'text/javascript';
+		s.src = url;
 		parent.appendChild(s);
-		result = true;
-	}
-
-	return result;
+	});
 }
 
 /**
@@ -679,9 +629,13 @@ function createPageAgent () {
  * ----------------
  */
 
-window.addEventListener('keydown', handleKeydown, true);
-createPageAgent();
 extension = WasaviExtensionWrapper.create();
+
+if (!WasaviExtensionWrapper.HOTKEY_ENABLED) {
+	window.addEventListener('keydown', handleKeydown, true);
+	createPageAgent();
+}
+
 extension.setMessageListener(function (req) {
 	if (!req || !req.type) return;
 	switch (req.type) {

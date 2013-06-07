@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 299 2013-06-05 21:56:30Z akahuku $
+ * @version $Id: classes_ex.js 302 2013-06-07 14:22:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -773,7 +773,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	}
 
 	path || (path = app.fileName);
-	if (path != '' && !WasaviExtensionWrapper.isTopFrame) {
+	if (path != '' && !WasaviExtensionWrapper.IS_TOP_FRAME) {
 		return _('Only stand alone form can write.');
 	}
 	if (isAppend) {
@@ -833,7 +833,7 @@ Wasavi.ExCommand.read = function (app, t, a, content, meta) {
 };
 Wasavi.ExCommand.edit = function (app, t, a, content, meta) {
 	var charCount = content.length;
-	if (WasaviExtensionWrapper.isTopFrame) {
+	if (WasaviExtensionWrapper.IS_TOP_FRAME) {
 		app.fileName = meta.path;
 		document.title = /[^\/]+$/.exec(app.fileName)[0] + ' - wasavi';
 		var empty = [];
@@ -1031,7 +1031,7 @@ Wasavi.ExCommand.commands = [
 		}
 		path = path.replace(/\\(.)/g, '$1');
 
-		if (WasaviExtensionWrapper.isTopFrame) {
+		if (WasaviExtensionWrapper.IS_TOP_FRAME) {
 			if (path == '' && app.fileName == '') {
 				return _('File name is empty.');
 			}
@@ -1046,7 +1046,7 @@ Wasavi.ExCommand.commands = [
 		return undefined;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
-		if (!app.extensionChannel || !WasaviExtensionWrapper.isTopFrame) {
+		if (!app.extensionChannel || !WasaviExtensionWrapper.IS_TOP_FRAME) {
 			return _('Only stand alone form can edit.');
 		}
 		if (a.argv.length > 1) {

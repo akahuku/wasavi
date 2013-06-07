@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: extension_wrapper.js 302 2013-06-07 14:22:27Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -116,6 +116,9 @@
 				callback && callback(result);
 			});
 			return result;
+		},
+		getExtensionFileURL: function (path, callback) {
+			callback && callback();
 		}
 	};
 
@@ -135,13 +138,15 @@
 	ExtensionWrapper.IS_GECKO = IS_GECKO;
 	ExtensionWrapper.IS_FX_JETPACK = IS_FX_JETPACK;
 	ExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION =
-		 window.chrome && chrome.extension
-		 || global.opera && global.opera.extension
-		 || IS_GECKO && IS_FX_JETPACK;
-	ExtensionWrapper.urlInfo = new UrlInfo;
-	ExtensionWrapper.isTopFrame = (function () {
+		window.chrome && chrome.extension
+		|| global.opera && global.opera.extension
+		|| IS_GECKO && IS_FX_JETPACK;
+	ExtensionWrapper.HOTKEY_ENABLED =
+		/*window.chrome && chrome.extension
+		||*/ IS_GECKO && IS_FX_JETPACK;
+	ExtensionWrapper.IS_TOP_FRAME = (function () {
 		if (IS_GECKO) {
-			var result;
+			var result = false;
 			try { result = !!!window.frameElement; } catch (e) {}
 			return result;
 		}
@@ -149,6 +154,7 @@
 			return window.self == window.top;
 		}
 	})();
+	ExtensionWrapper.urlInfo = new UrlInfo;
 
 	/**
 	 * extension wrapper class for chrome
@@ -188,6 +194,11 @@
 			'chrome-extension://' + extensionId + '/wasavi_frame.html',
 			true, true
 		);
+		this.getExtensionFileURL = function (path, callback) {
+			if (!callback) return;
+			var url = chrome.runtime.getURL(path);
+			callback(url);
+		};
 
 		chrome.extension.onRequest.addListener(handleMessage);
 	}
@@ -239,6 +250,26 @@
 			'widget://' + extensionId + '/wasavi_frame.html',
 			false, false
 		);
+		this.getExtensionFileURL = function (path, callback) {
+			if (!callback) return;
+
+			var file = opera.extension.getFile(path);
+			if (!file) {
+				callback();
+				return;
+			}
+
+			var r = new FileReader();
+			r.onload = function (e) {
+				callback(r.result)
+				file = r = callback = null;
+			};
+			r.onerror = function (e) {
+				callback()
+				file = r = callback = null;
+			};
+			r.readAsDataURL(file);
+		};
 
 		opera.extension.onmessage = handleMessage;
 	}
