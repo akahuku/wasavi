@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: utils.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -102,7 +102,7 @@ function removeChild () {
 	}
 }
 function isMultilineTextInput (target) {
-	return target.nodeName.toLowerCase() == 'textarea';
+	return target.nodeName.toLowerCase() == 'textarea' || target.isContentEditable;
 }
 function reverseObject (o) {
 	var result = {};

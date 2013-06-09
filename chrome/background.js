@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: background.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -249,7 +249,7 @@ if (window.jetpack && typeof require == 'function') {
 		this.cryptKeyPath = 'frontend/wasavi.js';
 		(function (self) {
 			resourceLoader.get('manifest.json', function (data) {
-				self.version = JSON.parse(data).version;
+				self.version = u.parseJson(data).version;
 				self.isDev = self.version == TEST_VERSION;
 			}, {noCache:true});
 		})(this);
@@ -732,7 +732,7 @@ if (window.jetpack && typeof require == 'function') {
 		);
 
 		[
-			['targets', JSON.stringify({
+			['targets', {
 				enableTextArea: true,
 				enableText: false,
 				enableSearch: false,
@@ -740,21 +740,44 @@ if (window.jetpack && typeof require == 'function') {
 				enableUrl: false,
 				enableEmail: false,
 				enablePassword: false,
-				enableNumber: false
-			})],
+				enableNumber: false,
+				enableContentEditable:false
+			}],
 			['exrc', '" exrc for wasavi'],
 			['shortcut', Hotkey.DEFAULT_HOTKEYS_DESC],
 			['shortcutCode', function () {
-				return JSON.stringify(Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut')));
+				return Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut'));
 			}],
 			['fontFamily', defaultFont],
-			['fstab', JSON.stringify({
+			['fstab', {
 				dropbox: {isDefault:true, enabled:true}
-			})],
+			}],
 			['quickActivation', false]
-		].forEach(function (item) {
-			if (extension.storage.getItem(item[0]) === null) {
-				extension.storage.setItem(item[0], typeof item[1] == 'function' ? item[1]() : item[1]);
+		]
+		.forEach(function (item) {
+			var key = item[0];
+			var defaultValue = typeof item[1] == 'function' ? item[1]() : item[1];
+			var currentValue = extension.storage.getItem(key);
+
+			if (currentValue === undefined) {
+				extension.storage.setItem(key, defaultValue);
+			}
+			else {
+				switch (/^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(defaultValue))[1]) {
+				case 'Object':
+					Object.keys(currentValue).forEach(function (key) {
+						if (!(key in defaultValue)) {
+							delete currentValue[key];
+						}
+					});
+					Object.keys(defaultValue).forEach(function (key) {
+						if (!(key in currentValue)) {
+							currentValue[key] = defaultValue[key];
+						}
+					});
+					extension.storage.setItem(key, currentValue);
+					break;
+				}
 			}
 		});
 	}
@@ -939,7 +962,7 @@ if (window.jetpack && typeof require == 'function') {
 				shortcut:hotkey.canProcess ? null :
 					extension.storage.getItem('shortcut'),
 				shortcutCode:hotkey.canProcess ? null :
-					JSON.stringify(Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut'))),
+					Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut')),
 				fontFamily:extension.storage.getItem('fontFamily'),
 				quickActivation:extension.storage.getItem('quickActivation') == '1',
 				messageCatalog:messageCatalog,
@@ -993,7 +1016,7 @@ if (window.jetpack && typeof require == 'function') {
 							keys.push('shortcutCode');
 							extension.storage.setItem(
 								'shortcutCode',
-								JSON.stringify(Hotkey.getObjectsForDOM(item.value)));
+								Hotkey.getObjectsForDOM(item.value));
 						}
 					}
 				});

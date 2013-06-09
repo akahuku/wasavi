@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: wasavi.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -841,7 +841,7 @@ left:0; top:0; \
 	lastMessage = '';
 	requestedState = {};
 
-	buffer.value = x.value || '';
+	buffer.value = x.value;
 	buffer.selectionStart = x.selectionStart || 0;
 	buffer.selectionEnd = x.selectionEnd || 0;
 
@@ -897,7 +897,8 @@ left:0; top:0; \
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
 	if (save && config.vars.modified) {
-		targetElement.value = buffer.value;
+		targetElement.value = targetElement.isContentEditable ?
+			buffer.value.split('\n') : buffer.value;
 	}
 
 	// remove all event handlers
@@ -923,7 +924,6 @@ function uninstall (save, implicit) {
 	keyManager = keyManager.dispose();
 	theme = theme.dispose();
 	l10n = l10n.dispose();
-	emptyNodeContents($('wasavi_global_styles'));
 
 	//
 	if (extensionChannel) {

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: classes_ex.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -804,10 +804,16 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	if (a.range[1] == t.rowLength - 1) {
 		content = trimTerm(content);
 	}
+	if (app.targetElement.isContentEditable) {
+		content = content.split('\n');
+	}
+	else {
+		content = content.replace(/\n/g, app.preferredNewline);
+	}
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',
 		path:path,
-		value:content.replace(/\n/g, app.preferredNewline)
+		value:content
 	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == app.targetElement) {
 		app.isTextDirty = false;

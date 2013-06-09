@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: agent.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -187,13 +187,14 @@ function runCore (element, frameSource) {
 		id:element.id,
 		nodeName:element.nodeName,
 		nodePath:getNodePath(element),
+		isContentEditable:element.isContentEditable,
 		elementType:element.type,
 		selectionStart:element.selectionStart,
 		selectionEnd:element.selectionEnd,
 		scrollTop:element.scrollTop,
 		scrollLeft:element.scrollLeft,
 		readOnly:element.readOnly,
-		value:element.value,
+		value:getValue(element),
 		rect:{width:rect.width, height:rect.height},
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily)
 	});
@@ -309,6 +310,155 @@ function log (eventType, keyCode, key) {
 	keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
 }
 
+function getValue (element) {
+	var result = '';
+
+	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
+		result = element.value;
+	}
+	else if (element.isContentEditable) {
+		result = toPlainText(element);
+	}
+
+	return result;
+}
+
+function setValue (element, value) {
+	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
+		element.value = value;
+	}
+	else if (element.isContentEditable && Object.prototype.toString.call(value) == '[object Array]') {
+		var r = document.createRange();
+		r.selectNodeContents(element);
+		r.deleteContents();
+		r.detach();
+
+		var f = document.createDocumentFragment();
+		for (var i = 0, goal = value.length; i < goal; i++) {
+			f.appendChild(document.createElement('p')).textContent = value[i];
+		}
+
+		try {element.appendChild(f)} catch (e) {}
+	}
+}
+
+function toPlainText (input) {
+	function hr2rule (node) {
+		var nodes = node.getElementsByTagName('hr');
+		var rule = '--------------------------------------------------------------------------------';
+		while (nodes.length) {
+			var newNode = document.createElement('div');
+			nodes[0].parentNode.replaceChild(newNode, nodes[0]);
+			newNode.textContent = rule;
+		}
+	}
+
+	function getStyle (node, prop) {
+		if (node.style[prop]) return node.style[prop];
+		if (node.nodeName == 'SCRIPT') return 'none';
+		var style = node.ownerDocument.defaultView.getComputedStyle(node, '');
+		return style[prop];
+	}
+
+	function isBlock (display) {
+		return 'table-row block list-item'.indexOf(display) >= 0;
+	}
+
+	function isForceInline (display) {
+		return 'table-row'.indexOf(display) >= 0;
+	}
+
+	function newBlock (nodeName) {
+		t.push({text:'', display:'', nodeName:nodeName || ''});
+	}
+
+	function loop (node) {
+		var display = getStyle(node, 'display');
+		if (display == 'none') {
+			return '';
+		}
+
+		var block = isBlock(display);
+		var forceInline = isForceInline(display);
+
+		if (isBlock(display)) {
+			newBlock(node.nodeName);
+			t[t.length - 1].display = display;
+			t[t.length - 1].whiteSpace = getStyle(node, 'whiteSpace');
+		}
+
+		var c, last = -1;
+		for (var i = 0, goal = node.childNodes.length; i < goal; i++) {
+			c = node.childNodes[i];
+			if (c.nodeType == 3) {
+				if (last >= 0 && last != t.length - 1) {
+					newBlock();
+					t[t.length - 1].display = getStyle(c.parentNode, 'display');
+					t[t.length - 1].whiteSpace = getStyle(c.parentNode, 'whiteSpace');
+					t[t.length - 1].nodeName = c.parentNode.nodeName;
+				}
+				var nodeValue = c.nodeValue.replace(/^\s+|\s+$/g, '');
+				if (forceInline) {
+					nodeValue = ' ' + nodeValue.replace(/\n/g, ' ');
+				}
+				last = t.length - 1;
+				t[last].text += nodeValue;
+			}
+			else if (c.nodeName == 'BR') {
+				newBlock(c.nodeName);
+			}
+			else if (c.childNodes.length) {
+				loop(c);
+			}
+		}
+		return t;
+	}
+
+	function normalize () {
+		t.forEach(function (b, i) {
+			if (/pre/.test(b.whiteSpace)) {
+				b.text = b.text
+					.replace(/^[\n ]+|[\n ]+$/g, '');
+			}
+			else {
+				b.text = b.text
+					.replace(/^[\n ]+|[\n ]+$/g, '')
+					.replace(/\s+/g, ' ');
+			}
+
+			/*if (b.text != '' && b.display == 'block') {
+				if (i > 0 && t[i - 1].nodeName != 'BR') {
+					b.text = '\n' + b.text;
+				}
+				if (i < t.length - 1 && t[i + 1].nodeName != 'BR') {
+					b.text = b.text + '\n';
+				}
+			}*/
+		});
+	}
+
+	function getResult () {
+		var result = [];
+		t.forEach(function (b) {b.text != '' && result.push(b.text)});
+		result = result.join('\n').replace(/\n\n+/g, '\n\n');
+		return result;
+	}
+
+	var t = [];
+	var inputTmp = input.cloneNode(true);
+	input.parentNode.insertBefore(inputTmp, input.nextSibling);
+	try {
+		hr2rule(inputTmp);
+		newBlock();
+		loop(inputTmp);
+		normalize();
+		return getResult();
+	}
+	finally {
+		inputTmp.parentNode.removeChild(inputTmp);
+	}
+}
+
 /**
  * unexpected wasavi frame deletion handler
  * ----------------
@@ -334,34 +484,37 @@ function handleWasaviFrameRemoved (e) {
  */
 
 function handleKeydown (e) {
-	if (targetElement || !e || !e.target || !enableList) return;
-	if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
-	if (!(e.target.type in ACCEPTABLE_TYPES)
-	||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
+	if (targetElement || !e || !e.target || !enableList || e.keyCode == 16 || e.keyCode == 17) return;
 
-	/*
-	 * <textarea>
-	 * <textarea data-texteditor-extension="auto">
-	 *     one of extensions installed into browser is executed.
-	 *
-	 * <textarea data-texteditor-extension="none">
-	 *     no extension is executed.
-	 *
-	 * <textarea data-texteditor-extension="wasavi">
-	 *     wasavi extension is executed.
-	 */
+	if (e.target.isContentEditable && enableList.enableContentEditable
+	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
+		&& e.target.type in ACCEPTABLE_TYPES
+		&& enableList[ACCEPTABLE_TYPES[e.target.type]]) {
 
-	var current = e.target.getAttribute(EXTENSION_CURRENT);
-	var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
-	if (current !== null) return;
-	if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+		/*
+		 * <textarea>
+		 * <textarea data-texteditor-extension="auto">
+		 *     one of extensions installed into browser is executed.
+		 *
+		 * <textarea data-texteditor-extension="none">
+		 *     no extension is executed.
+		 *
+		 * <textarea data-texteditor-extension="wasavi">
+		 *     wasavi extension is executed.
+		 */
 
-	if (matchWithShortcut(e)) {
-		var ev = document.createEvent('CustomEvent');
-		ev.initCustomEvent('WasaviStarting', false, false, 0);
-		document.dispatchEvent(ev);
-		e.preventDefault();
-		run(e.target);
+		var current = e.target.getAttribute(EXTENSION_CURRENT);
+		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
+		if (current !== null) return;
+		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+
+		if (matchWithShortcut(e)) {
+			var ev = document.createEvent('CustomEvent');
+			ev.initCustomEvent('WasaviStarting', false, false, 0);
+			document.dispatchEvent(ev);
+			e.preventDefault();
+			run(e.target);
+		}
 	}
 }
 
@@ -371,18 +524,21 @@ function handleKeydown (e) {
  */
 
 function handleTargetFocus (e) {
-	if (targetElement || !e || !e.target) return;
-	if (e.target.nodeName != 'TEXTAREA' && e.target.nodeName != 'INPUT') return;
-	if (!(e.target.type in ACCEPTABLE_TYPES)
-	||  !enableList[ACCEPTABLE_TYPES[e.target.type]]) return;
+	if (targetElement || !e || !e.target || !enableList) return;
 
-	var current = e.target.getAttribute(EXTENSION_CURRENT);
-	var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
-	if (current !== null) return;
-	if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+	if (e.target.isContentEditable && enableList.enableContentEditable
+	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
+		&& e.target.type in ACCEPTABLE_TYPES
+		&& enableList[ACCEPTABLE_TYPES[e.target.type]]) {
 
-	e.preventDefault();
-	run(e.target);
+		var current = e.target.getAttribute(EXTENSION_CURRENT);
+		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
+		if (current !== null) return;
+		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+
+		e.preventDefault();
+		run(e.target);
+	}
 }
 
 /**
@@ -495,7 +651,7 @@ function handleOptionsSave () {
 		}
 	}
 	if (count) {
-		items.push({key:'targets', value:JSON.stringify(tmpEnableList)});
+		items.push({key:'targets', value:tmpEnableList});
 	}
 
 	var el = document.getElementById('exrc');
@@ -643,10 +799,10 @@ extension.setMessageListener(function (req) {
 	 * messages from background
 	 */
 	case 'init-response':
-		enableList = JSON.parse(req.targets);
+		enableList = req.targets;
 		exrc = req.exrc;
 		shortcut = req.shortcut;
-		shortcutCode = JSON.parse(req.shortcutCode);
+		shortcutCode = req.shortcutCode;
 		fontFamily = req.fontFamily;
 		quickActivation = req.quickActivation;
 		extraHeight = 0;
@@ -667,7 +823,7 @@ extension.setMessageListener(function (req) {
 		req.items.forEach(function (item) {
 			switch (item.key) {
 			case 'targets':
-				enableList = JSON.parse(item.value);
+				enableList = item.value;
 				break;
 
 			case 'exrc':
@@ -679,7 +835,7 @@ extension.setMessageListener(function (req) {
 				break;
 
 			case 'shortcutCode':
-				shortcutCode = JSON.parse(item.value);
+				shortcutCode = item.value;
 				break;
 
 			case 'quickActivate':
@@ -691,9 +847,13 @@ extension.setMessageListener(function (req) {
 
 	case 'request-run':
 		if (wasaviFrame || targetElement) break;
+
 		var target = document.activeElement;
-		if ((target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
-		&&  target.type in ACCEPTABLE_TYPES && enableList[ACCEPTABLE_TYPES[target.type]]) {
+		if (target.isContentEditable && enableList.enableContentEditable
+		||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
+			&& target.type in ACCEPTABLE_TYPES
+			&& enableList[ACCEPTABLE_TYPES[target.type]]) {
+
 			run(target);
 		}
 		break;
@@ -818,7 +978,7 @@ extension.setMessageListener(function (req) {
 	case 'wasavi-saved':
 		if (!wasaviFrame) break;
 		try {
-			targetElement.value = req.value;
+			setValue(targetElement, req.value);
 			extension.postMessage({
 				type:'notify-to-child',
 				childTabId:req.childTabId,

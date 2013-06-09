@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: StorageWrapper.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: StorageWrapper.js 303 2013-06-09 15:45:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -25,40 +25,76 @@
 (function () {
 	'use strict';
 
-	function StorageWrapper () {
-		this.getItem = function (key) {};
-		this.setItem = function (key, value) {};
-		this.clear = function () {};
-	}
+	function StorageWrapper () {}
+
+	StorageWrapper.prototype = {
+		getItem: function (key) {},
+		setItem: function (key, value) {},
+		clear: function () {},
+		toExternal: function (value) {
+			if (value.charAt(0) == '{' && value.substr(-1) == '}'
+			||  value.charAt(0) == '[' && value.substr(-1) == ']') {
+				try {value = JSON.parse(value)} catch (e) {}
+			}
+			return value;
+		},
+		toInternal: function (value) {
+			switch (/^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(value))[1]) {
+			case 'Object':
+				/*FALLTHRU*/
+			case 'Array':
+				value = JSON.stringify(value);
+				break;
+			case 'Function':
+				return;
+			}
+			return value;
+		}
+	};
 
 	function WebStorageWrapper () {
 		this.constructor = StorageWrapper;
-		this.getItem = function (key) {
-			return localStorage.getItem(key)
-		};
-		this.setItem = function (key, value) {
-			localStorage.setItem(key, value);
-		};
-		this.clear = function () {
-			localStorage.clear();
-		};
 	}
 
+	WebStorageWrapper.prototype = {
+		getItem: function (key) {
+			return StorageWrapper.prototype.toExternal(localStorage.getItem(key));
+		},
+		setItem: function (key, value) {
+			if (value === undefined) {
+				localStorage.removeItem(key);
+			}
+			else {
+				localStorage.setItem(key, StorageWrapper.prototype.toInternal(value));
+			}
+		},
+		clear: function () {
+			localStorage.clear();
+		}
+	};
+
 	function JetpackStorageWrapper () {
-		var ss = require('sdk/simple-storage');
+		this.ss = require('sdk/simple-storage');
 		this.constructor = StorageWrapper;
-		this.getItem = function (key) {
-			var result = ss.storage[key];
-			return result === undefined ? null : result;
-		};
-		this.setItem = function (key, value) {
-			ss.storage[key] = value;
-		};
-		this.clear = function () {
-			Object.keys(ss.storage).forEach(function (key) {
-				delete ss.storage[key];
+	}
+
+	JetpackStorageWrapper.prototype = {
+		getItem: function (key) {
+			return StorageWrapper.prototype.toExternal(this.ss.storage[key]);
+		},
+		setItem: function (key, value) {
+			if (value === undefined) {
+				delete this.ss.storage[key];
+			}
+			else {
+				this.ss.storage[key] = StorageWrapper.prototype.toIntevalue(value);
+			}
+		},
+		clear: function () {
+			Object.keys(this.ss.storage).forEach(function (key) {
+				delete this.ss.storage[key];
 			});
-		};
+		}
 	}
 
 	function create (window) {
