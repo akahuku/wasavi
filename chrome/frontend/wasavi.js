@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 303 2013-06-09 15:45:32Z akahuku $
+ * @version $Id: wasavi.js 305 2013-06-10 17:33:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -6216,7 +6216,7 @@ if (global.WasaviExtensionWrapper
 			if (WasaviExtensionWrapper.IS_TOP_FRAME) {
 				run(function() {
 					!targetElement && install({
-						id:'wasavi',
+						id:extensionChannel.name,
 						nodeName:'textarea',
 						value:'',
 						selectionStart:0,

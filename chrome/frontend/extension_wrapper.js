@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: extension_wrapper.js 305 2013-06-10 17:33:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -32,6 +32,7 @@
 'use strict';
 
 (function (global) {
+	/*const*/var EXTENSION_NAME = 'wasavi';
 	/*const*/var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
@@ -91,6 +92,7 @@
 
 	function ExtensionWrapper () {}
 	ExtensionWrapper.prototype = {
+		get name () {return EXTENSION_NAME},
 		clipboardData: '',
 		setMessageListener: function (handler) {},
 		sendRequest: function (data, callback) {},

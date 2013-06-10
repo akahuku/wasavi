@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 303 2013-06-09 15:45:32Z akahuku $
+ * @version $Id: agent.js 305 2013-06-10 17:33:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -167,7 +167,7 @@ function runCore (element, frameSource) {
 
 	//
 	targetElement = element;
-	targetElement.setAttribute(EXTENSION_CURRENT, 'wasavi');
+	targetElement.setAttribute(EXTENSION_CURRENT, extension.name);
 	wasaviFrame = document.createElement('iframe');
 	wasaviFrame.style.border = 'none';
 	wasaviFrame.style.overflow = 'hidden';
@@ -324,10 +324,12 @@ function getValue (element) {
 }
 
 function setValue (element, value) {
+	value || (value = '');
+
 	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
 		element.value = value;
 	}
-	else if (element.isContentEditable && Object.prototype.toString.call(value) == '[object Array]') {
+	else if (Object.prototype.toString.call(value) != '[object Array]') {
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
@@ -506,7 +508,7 @@ function handleKeydown (e) {
 		var current = e.target.getAttribute(EXTENSION_CURRENT);
 		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
 		if (current !== null) return;
-		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
 
 		if (matchWithShortcut(e)) {
 			var ev = document.createEvent('CustomEvent');
@@ -534,7 +536,7 @@ function handleTargetFocus (e) {
 		var current = e.target.getAttribute(EXTENSION_CURRENT);
 		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
 		if (current !== null) return;
-		if (spec !== null && spec !== 'auto' && spec !== 'wasavi') return;
+		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
 
 		e.preventDefault();
 		run(e.target);
@@ -580,57 +582,60 @@ function handleOptionsPageLoaded (req) {
 		el.addEventListener('click', handleOptionsInit, false);
 	}
 
-	function replaceMessage (messageId, callback) {
+	[
+		'title',
+		'exrc_head',
+		'target_elements_head',
+		'starting_type_head',
+		'font_family_head',
+		'exrc_desc',
+		'quick_activation_on',
+		'quick_activation_off',
+		['target_elements_desc', function (node, message) {
+			node.textContent = '';
+			var ul = node.appendChild(document.createElement('ul'));
+			message.replace(/^\s*\*\s*/, '').split(/\n\*\s*/).map(function (line) {
+				var li = ul.appendChild(document.createElement('li'));
+				li.textContent = line;
+			});
+		}],
+		'preferred_storage_head',
+		'init_head',
+		'init_desc',
+		'init_confirm',
+		'save'
+	]
+	.forEach(function (key) {
+		if (Object.prototype.toString.call(key) != '[object Array]') {
+			key = [key];
+		}
+
+		var messageId = 'option_' + key[0];
+		var callback = key[1] || function (node, message) {node.textContent = message};
 		var fallbackMessage = '(translated message not found)';
-		var message;
-		if (req.messageCatalog) {
-			message = messageId in req.messageCatalog ?
-				req.messageCatalog[messageId].message : fallbackMessage;
-		}
-		else {
-			message = extension.getMessage(messageId) || fallbackMessage;
-		}
+		var message = req.messageCatalog ?
+			(messageId in req.messageCatalog ? req.messageCatalog[messageId].message : fallbackMessage) :
+			(extension.getMessage(messageId) || fallbackMessage);
 		var nodes = document.evaluate(
 			'//*[text()="__MSG_' + messageId + '__"]', document.documentElement, null,
 			window.XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
 
 		for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
-			var node = nodes.snapshotItem(i);
-			if (callback) {
-				callback(node, message);
-			}
-			else {
-				node.textContent = message;
-			}
+			callback(nodes.snapshotItem(i), message);
 		}
-	}
-	replaceMessage('option_title');
-	replaceMessage('option_exrc_head');
-	replaceMessage('option_target_elements_head');
-	replaceMessage('option_starting_type_head');
-	replaceMessage('option_font_family_head');
-	replaceMessage('option_exrc_desc');
-	replaceMessage('option_quick_activation_on');
-	replaceMessage('option_quick_activation_off');
-	replaceMessage('option_target_elements_desc', function (node, message) {
-		node.textContent = '';
-		var ul = node.appendChild(document.createElement('ul'));
-		message.replace(/^\s*\*\s*/, '').split(/\n\*\s*/).map(function (line) {
-			var li = ul.appendChild(document.createElement('li'));
-			li.textContent = line;
-		});
 	});
-	replaceMessage('option_preferred_storage_head');
-	replaceMessage('option_init_head');
-	replaceMessage('option_init_desc');
-	replaceMessage('option_init_confirm');
-
-	replaceMessage('option_save');
 
 	document.evaluate(
 		'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
 		document.body, null,
 		window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
+
+	// transition
+	var overlay = document.getElementById('overlay');
+	var tend = function (e) {e.target.parentNode && e.target.parentNode.removeChild(e.target)};
+	'transitionend webkitTransitionEnd oTransitionEnd msTransitionEnd'
+		.split(' ').forEach(function (p) {overlay.addEventListener(p, tend, false)});
+	overlay.className = 'overlay';
 }
 
 /**

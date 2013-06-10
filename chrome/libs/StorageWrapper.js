@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: StorageWrapper.js 303 2013-06-09 15:45:32Z akahuku $
+ * @version $Id: StorageWrapper.js 305 2013-06-10 17:33:18Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -93,7 +93,7 @@
 		clear: function () {
 			Object.keys(this.ss.storage).forEach(function (key) {
 				delete this.ss.storage[key];
-			});
+			}, this);
 		}
 	}
 
