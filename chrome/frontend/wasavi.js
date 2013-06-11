@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: wasavi.js 307 2013-06-11 03:17:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -37,60 +37,60 @@
  */
 
 /*constructor*/function AppProxy () {
-	var low = {
-		get getLocalStorage () {return getLocalStorage},
-		get setLocalStorage () {return setLocalStorage},
-		get isEditing () {return isEditing},
-		get pushInputMode () {return pushInputMode},
-		get popInputMode () {return popInputMode},
-		get showPrefixInput () {return showPrefixInput},
-		get showMessage () {return showMessage},
-		get requestShowMessage () {return requestShowMessage},
-		get requestRegisterNotice () {return requestRegisterNotice},
-		get requestInputMode () {return requestInputMode},
-		get executeExCommand () {return executeExCommand},
-		get executeViCommand () {return executeViCommand},
-		get processInput () {return processInput},
-		get processInputSupplement () {return processInputSupplement},
-		get getFindRegex () {return getFindRegex},
-		get getFileIoResultInfo () {return getFileIoResultInfo},
-		get getFileInfo () {return getFileInfo},
-		get fireEvent () {return fireEvent},
-		get fireNotifyKeydownEvent () {return fireNotifyKeydownEvent},
-		get fireCommandCompleteEvent () {return fireCommandCompleteEvent},
-		get setSubstituteWorker () {return setSubstituteWorker}
-	};
-	var motion = {
-		get left () {return motionLeft},
-		get right () {return motionRight},
-		get lineStart () {return motionLineStart},
-		get lineEnd () {return motionLineEnd},
-		get lineStartDenotative () {return motionLineStartDenotative},
-		get lineEndDenotative () {return motionLineEndDenotative},
-		get nextWord () {return motionNextWord},
-		get prevWord () {return motionPrevWord},
-		get findForward () {return motionFindForward},
-		get findBackward () {return motionFindBackward},
-		get findByRegexFacade () {return motionFindByRegexFacade},
-		get findByRegexForward () {return motionFindByRegexForward},
-		get findByRegexBackward () {return motionFindByRegexBackward},
-		get replaceOne () {return motionReplaceOne},
-		get upDown () {return motionUpDown},
-		get up () {return motionUp},
-		get down () {return motionDown},
-		get upDownDenotative () {return motionUpDownDenotative}
-	};
-	var edit = {
-		get deleteSelection () {return deleteSelection},
-		get insert () {return insert},
-		get overwrite () {return overwrite},
-		get shift () {return shift},
-		get unshift () {return unshift},
-		get joinLines () {return joinLines},
-		get yank () {return yank},
-		get paste () {return paste}
-	};
-	return {
+	var low = Object.freeze({
+		getLocalStorage:getLocalStorage,
+		setLocalStorage:setLocalStorage,
+		isEditing:isEditing,
+		pushInputMode:pushInputMode,
+		popInputMode:popInputMode,
+		showPrefixInput:showPrefixInput,
+		showMessage:showMessage,
+		requestShowMessage:requestShowMessage,
+		requestRegisterNotice:requestRegisterNotice,
+		requestInputMode:requestInputMode,
+		executeExCommand:executeExCommand,
+		executeViCommand:executeViCommand,
+		processInput:processInput,
+		processInputSupplement:processInputSupplement,
+		getFindRegex:getFindRegex,
+		getFileIoResultInfo:getFileIoResultInfo,
+		getFileInfo:getFileInfo,
+		fireEvent:fireEvent,
+		fireNotifyKeydownEvent:fireNotifyKeydownEvent,
+		fireCommandCompleteEvent:fireCommandCompleteEvent,
+		setSubstituteWorker:setSubstituteWorker
+	});
+	var motion = Object.freeze({
+		left:motionLeft,
+		right:motionRight,
+		lineStart:motionLineStart,
+		lineEnd:motionLineEnd,
+		lineStartDenotative:motionLineStartDenotative,
+		lineEndDenotative:motionLineEndDenotative,
+		nextWord:motionNextWord,
+		prevWord:motionPrevWord,
+		findForward:motionFindForward,
+		findBackward:motionFindBackward,
+		findByRegexFacade:motionFindByRegexFacade,
+		findByRegexForward:motionFindByRegexForward,
+		findByRegexBackward:motionFindByRegexBackward,
+		replaceOne:motionReplaceOne,
+		upDown:motionUpDown,
+		up:motionUp,
+		down:motionDown,
+		upDownDenotative:motionUpDownDenotative
+	});
+	var edit = Object.freeze({
+		deleteSelection:deleteSelection,
+		insert:insert,
+		overwrite:overwrite,
+		shift:shift,
+		unshift:unshift,
+		joinLines:joinLines,
+		yank:yank,
+		paste:paste
+	});
+	return Object.freeze({
 		get extensionChannel () {return extensionChannel},
 		get quickActivation () {return quickActivation},
 		get devMode () {return devMode},
@@ -169,7 +169,7 @@
 				dataset(targetElement, key, value) :
 				dataset(targetElement, key);
 		}
-	};
+	});
 }
 
 /*constructor*/function Collection () {
