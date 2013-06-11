@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: WasaviUtils.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -49,6 +49,10 @@ exports.WasaviUtils = {
 		var result = 0;
 		for (var i in o) result++;
 		return result;
+	},
+
+	objectType: function (o) {
+		return /^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(o))[1];
 	}
 };
 

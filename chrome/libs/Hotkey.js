@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: Hotkey.js 302 2013-06-07 14:22:27Z akahuku $
+ * @version $Id: Hotkey.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -59,13 +59,9 @@
 			return this.parseHotkeys(hotkeys);
 		},
 		parseHotkeys:function (hotkeys) {
-			hotkeys = hotkeys.replace(/^\s+|\s+$/g, '');
-			if (hotkeys == '') {
-				hotkeys = DEFAULT_HOTKEYS_DESC;
-			}
-
 			var result = [];
 
+			hotkeys = (hotkeys || '').replace(/^\s+|\s+$/g, '') || DEFAULT_HOTKEYS_DESC;
 			hotkeys.toLowerCase().split(/\s*,\s*/).forEach(function (sc) {
 				var re = /^<([^>]+)>$/.exec(sc);
 				if (!re) return;
@@ -144,13 +140,9 @@
 			}, this);
 		},
 		parseHotkeys:function (hotkeys) {
-			hotkeys = hotkeys.replace(/^\s+|\s+$/g, '');
-			if (hotkeys == '') {
-				hotkeys = DEFAULT_HOTKEYS_DESC;
-			}
-
 			var result = [];
 
+			hotkeys = (hotkeys || '').replace(/^\s+|\s+$/g, '') || DEFAULT_HOTKEYS_DESC;
 			hotkeys.toLowerCase().split(/\s*,\s*/).forEach(function (sc) {
 				var re = /^<([^>]+)>$/.exec(sc);
 				if (!re) return;

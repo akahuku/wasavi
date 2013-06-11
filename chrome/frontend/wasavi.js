@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 305 2013-06-10 17:33:18Z akahuku $
+ * @version $Id: wasavi.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -190,6 +190,8 @@ Collection.prototype = Object.create({}, {
 });
 
 /*constructor*/function ExCommandExecutor (isRoot, onFinish) {
+	var running = false;
+
 	this.commands = [];
 	this.editLogLevel = 0;
 	this.isRoot = !!isRoot;
@@ -200,12 +202,15 @@ Collection.prototype = Object.create({}, {
 	this.lastError = undefined;
 	this.lastCommand = undefined;
 
-	var running = false;
-	this.__defineGetter__('running', function () {return running;});
-	this.__defineSetter__('running', function (v) {
-		if (v == running) return;
-		running = v;
-		$('wasavi_cover').className = v ? 'dim' : '';
+	publish(this, {
+		running:[
+			function () {return running},
+			function (v) {
+				if (v == running) return;
+				running = v;
+				$('wasavi_cover').className = v ? 'dim' : '';
+			}
+		]
 	});
 }
 ExCommandExecutor.prototype = {

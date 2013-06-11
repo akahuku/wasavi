@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: StorageWrapper.js 305 2013-06-10 17:33:18Z akahuku $
+ * @version $Id: StorageWrapper.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -32,9 +32,14 @@
 		setItem: function (key, value) {},
 		clear: function () {},
 		toExternal: function (value) {
-			if (value.charAt(0) == '{' && value.substr(-1) == '}'
-			||  value.charAt(0) == '[' && value.substr(-1) == ']') {
-				try {value = JSON.parse(value)} catch (e) {}
+			if (typeof value == 'string') {
+				if (value.charAt(0) == '{' && value.substr(-1) == '}'
+				||  value.charAt(0) == '[' && value.substr(-1) == ']') {
+					try {value = JSON.parse(value)} catch (e) {}
+				}
+			}
+			else if (value === null) {
+				value = undefined;
 			}
 			return value;
 		},

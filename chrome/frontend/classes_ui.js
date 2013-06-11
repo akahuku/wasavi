@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 294 2013-02-16 14:56:06Z akahuku $
+ * @version $Id: classes_ui.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -216,13 +216,14 @@ Wasavi.Theme = function (app) {
 		emptyNodeContents(getStyleElement());
 	}
 
-	this.select = select;
-	this.update = update;
-	this.dispose = dispose;
-
-	this.__defineSetter__('container', function (v) {container = v;});
-	this.__defineSetter__('fontStyle', function (v) {fontStyle = v;});
-	this.__defineSetter__('lineHeight', function (v) {lineHeight = v;});
+	publish(this,
+		select, update, dispose,
+		{
+			container:[function () {}, function (v) {container = v}],
+			fontStyle:[function () {}, function (v) {fontStyle = v}],
+			lineHeight:[function () {}, function (v) {lineHeight = v}]
+		}
+	);
 };
 
 Wasavi.Bell = function (app, loadCallback) {
@@ -678,19 +679,17 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		app = buffer = comCursor = editCursor = wrapper = null;
 	}
 
-	this.ensureVisible = ensureVisible;
-	this.update = update;
-	this.setupEventHandlers = setupEventHandlers;
-	this.windup = windup;
-	this.dispose = dispose;
-
-	this.__defineGetter__('type', function () {return cursorType;});
-	this.__defineGetter__('focused', function () {return focused;});
-	this.__defineGetter__('visible', function () {return visible;});
-	this.__defineGetter__('commandCursor', function () {return comCursor;});
-	this.__defineGetter__('editCursor', function () {return editCursor;});
-	this.__defineGetter__('locked', function () {return locked;});
-	this.__defineSetter__('locked', function (v) {locked = v;});
+	publish(this,
+		ensureVisible, update, setupEventHandlers, windup, dispose,
+		{
+			type:function () {return cursorType},
+			focused:function () {return focused},
+			visible:function () {return visible},
+			commandCursor:function () {return comCursor},
+			editCursor:function () {return editCursor},
+			locked:[function () {return locked}, function (v) {locked = v}]
+		}
+	);
 };
 
 Wasavi.Scroller = function (app, cursor, modeLine) {
@@ -702,7 +701,8 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 	var distance;
 	var scrollTopStart;
 	var scrollTopDest;
-	this.run = function (dest, callback) {
+
+	function run (dest, callback) {
 		if (running || !app.targetElement || !cursor || !modeLine) {
 			return;
 		}
@@ -747,37 +747,49 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 				setTimeout(doScroll, timerPrecision);
 			}
 		})();
-	};
-	this.dispose = function () {
+	}
+
+	function dispose () {
 		app = buffer = cursor = modeLine = null;
-	};
-	this.__defineGetter__('running', function () {return running;});
-	this.__defineGetter__('consumeMsecs', function () {return consumeMsecs;});
-	this.__defineGetter__('timerPrecision', function () {return timerPrecision;});
-	this.__defineSetter__('consumeMsecs', function (v) {consumeMsecs = v;});
-	this.__defineSetter__('timerPrecision', function (v) {timerPrecision = v;});
+	}
+
+	publish(this,
+		run, dispose,
+		{
+			running:function () {return running},
+			consumeMsecs:[
+				function () {return consumeMsecs},
+				function (v) {consumeMsecs = v}
+			],
+			timerPrecision:[
+				function () {return timerPrecision},
+				function (v) {timerPrecision = v}
+			]
+		}
+	);
 };
 
 Wasavi.Backlog = function (app, container, con, scaler) {
 	var buffer = [];
-	this.push = function (arg) {
+
+	function push (arg) {
 		arg instanceof Array ?
 			buffer.push.apply(buffer, arg) :
 			buffer.push(arg);
-	};
-	this.show = function () {
+	}
+	function show () {
 		container.style.visibility = 'visible';
-	};
-	this.hide = function () {
+	}
+	function hide () {
 		container.style.visibility = 'hidden';
-	};
-	this.clear = function () {
+	}
+	function clear () {
 		buffer.length = 0;
-	};
-	this.write = function (byLine, preserveMessage) {
-		if (!this.visible) {
-			this.show();
-			con.value = multiply('\n', this.rows);
+	}
+	function write (byLine, preserveMessage) {
+		if (!getVisible()) {
+			show();
+			con.value = multiply('\n', getRows());
 		}
 
 		var totalHeight = 0;
@@ -828,26 +840,37 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 								_('Press any key to continue, or enter more ex command:'),
 				false, true, true);
 		}
-	};
-	this.dispose = function () {
+	}
+	function dispose () {
 		app = container = con = scaler = null;
-	};
-	this.__defineGetter__('queued', function () {
+	}
+
+	function getQueued () {
 		return buffer.length > 0;
-	});
-	this.__defineGetter__('rows', function () {
+	}
+	function getRows () {
 		scaler.textContent = '0';
 		return Math.floor(con.offsetHeight / scaler.offsetHeight);
-	});
-	this.__defineGetter__('cols', function () {
+	}
+	function getCols () {
 		emptyNodeContents(scaler);
 		var span = scaler.appendChild(document.createElement('span'));
 		span.textContent = '0';
 		return Math.floor(con.offsetWidth / span.offsetWidth);
-	});
-	this.__defineGetter__('visible', function () {
+	}
+	function getVisible () {
 		return document.defaultView.getComputedStyle(container, '').visibility != 'hidden';
-	});
+	}
+
+	publish(this,
+		push, show, hide, clear, write, dispose,
+		{
+			queued:getQueued,
+			rows:getRows,
+			cols:getCols,
+			visible:getVisible
+		}
+	);
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

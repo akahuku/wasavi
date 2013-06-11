@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 281 2013-01-19 14:25:09Z akahuku $
+ * @version $Id: classes.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -153,10 +153,8 @@ Wasavi.L10n = function (app, catalog) {
 		app = null;
 	}
 
+	publish(this, getMessage, getTranslator, dispose);
 	init();
-	this.getMessage = getMessage;
-	this.getTranslator = getTranslator;
-	this.dispose = dispose;
 }
 
 Wasavi.Configurator = function (app, internals, abbrevs) {
@@ -255,7 +253,11 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			names[v.name] = i;
 			if (v.isLateBind) {
 				v.value = v.nativeValue;
-				vars.__defineGetter__(v.name, v.getBinder());
+				Object.defineProperty(vars, v.name, {
+					get:v.getBinder(),
+					configurable:false,
+					enumerable:true
+				});
 			}
 			else {
 				v.value = v.nativeValue;
@@ -273,15 +275,17 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		}
 		return name in names ? internals[names[name]] : null;
 	}
-	this.getInfo = function (name) {
+
+	//
+	function getInfo (name) {
 		var item = getItem(name);
 		return item ? {name:item.name, type:item.type} : null;
-	};
-	this.getData = function (name, reformat) {
+	}
+	function getData (name, reformat) {
 		var item = getItem(name);
 		return item ? (reformat ? item.visibleString : item.value) : null;
-	};
-	this.setData = function (name, value) {
+	}
+	function setData (name, value) {
 		var off = false;
 		if (/^no/.test(name)) {
 			name = name.substring(2);
@@ -310,8 +314,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		}
 		vars[item.name] = item.value;
 		return null;
-	};
-	this.dump = function (cols, all) {
+	}
+	function dump (cols, all) {
 		var result = [_('*** options ***')];
 		var phaseThreshold = 20;
 		var gap = 1;
@@ -353,8 +357,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			}
 		}
 		return result;
-	};
-	this.dumpData = function () {
+	}
+	function dumpData () {
 		var result = [];
 		var ab = reverseObject(abbrevs);
 		for (var i = 0, goal = internals.length; i < goal; i++) {
@@ -378,8 +382,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			result.push(tmp);
 		}
 		return result;
-	};
-	this.dumpScript = function (modifiedOnly) {
+	}
+	function dumpScript (modifiedOnly) {
 		var result = [];
 		for (var i = 0, goal = internals.length; i < goal; i++) {
 			var v = internals[i];
@@ -388,8 +392,14 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			result.push('set ' + v.visibleString);
 		}
 		return result;
-	};
-	this.__defineGetter__('vars', function () {return vars;});
+	}
+
+	publish(this,
+		getInfo, getData, setData, dump, dumpData, dumpScript,
+		{
+			vars:function () {return vars}
+		}
+	);
 	init();
 };
 
@@ -412,7 +422,7 @@ Wasavi.RegexConverter = function (app) {
 		'?':   '\\?',
 		'+':   '\\+'
 	};
-	function convert (s) {
+	function toJsRegexString (s) {
 		if (typeof s == 'string') {
 			return s.replace(/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g, function ($0) {
 				return flips[$0] || $0;
@@ -423,10 +433,10 @@ Wasavi.RegexConverter = function (app) {
 		}
 		throw new Error('invalid regex source');
 	}
-	function getRegex (s, opts) {
+	function toJsRegex (s, opts) {
 		var result;
 		try {
-			result = new RegExp(convert(s), opts || '');
+			result = new RegExp(toJsRegexString(s), opts || '');
 		}
 		catch (e) {
 			result = null;
@@ -445,10 +455,8 @@ Wasavi.RegexConverter = function (app) {
 			magic: app.config.vars.magic
 		};
 	}
-	this.toJsRegexString = convert;
-	this.toJsRegex = getRegex;
-	this.getCS = getCS;
-	this.getDefaultOption = getDefaultOption;
+
+	publish(this, toJsRegexString, toJsRegex, getCS, getDefaultOption);
 };
 
 Wasavi.PrefixInput = function () {
@@ -587,9 +595,9 @@ Wasavi.PrefixInput = function () {
 	function toString () {
 		return register + count1 + operation + count2 + motion + trailer;
 	}
-	function _toVisibleString () {
+	function toVisibleString () {
 		return [register, count1, operation, count2, motion, trailer]
-			.map(function (s) {return toVisibleString(s);})
+			.map(function (s) {return window.toVisibleString(s);})
 			.join('');
 	}
 
@@ -651,36 +659,23 @@ Wasavi.PrefixInput = function () {
 		isLocked = v;
 	}
 
-	this.__defineGetter__('register', function () {return register.substring(1) || '';});
-	this.__defineGetter__('operation', function () {return operation;});
-	this.__defineGetter__('motion', function () {return motion;});
-	this.__defineGetter__('count1', function () {return count1 || 0;});
-	this.__defineGetter__('count2', function () {return count2 || 0;});
-	this.__defineGetter__('count', function () {return (count1 || 1) * (count2 || 1);});
-	this.__defineGetter__('trailer', function () {return trailer;});
-	this.__defineGetter__('isEmpty', function () {return isEmpty;});
-	this.__defineGetter__('isEmptyOperation', function () {return operation == '';});
-	this.__defineGetter__('isCountSpecified', function () {return !!(count1 || count2);});
-	this.__defineGetter__('isLocked', function () {return isLocked;});
-
-	this.__defineSetter__('register', setRegister);
-	this.__defineSetter__('operation', setOperation);
-	this.__defineSetter__('motion', setMotion);
-	this.__defineSetter__('trailer', setTrailer);
-	this.__defineSetter__('isLocked', setLocked);
-
-	this.reset = reset;
-	this.clone = clone;
-	this.assign = assign;
-	this.toString = toString;
-	this.toVisibleString = _toVisibleString;
-
-	this.appendCount = appendCount;
-	this.appendRegister = appendRegister;
-	this.appendOperation = appendOperation;
-	this.appendMotion = appendMotion;
-	this.appendTrailer = appendTrailer;
-
+	publish(this,
+		reset, clone, assign, toString, toVisibleString,
+		appendCount, appendRegister, appendOperation, appendMotion, appendTrailer,
+		{
+			register: [function () {return register.substring(1) || ''}, setRegister],
+			operation: [function () {return operation}, setOperation],
+			motion: [function () {return motion}, setMotion],
+			count1: function () {return count1 || 0},
+			count2: function () {return count2 || 0},
+			count: function () {return (count1 || 1) * (count2 || 1)},
+			trailer: [function () {return trailer}, setTrailer],
+			isEmpty: function () {return isEmpty},
+			isEmptyOperation: function () {return operation == ''},
+			isCountSpecified: function () {return !!(count1 || count2)},
+			isLocked: [function () {return isLocked}, setLocked],
+		}
+	);
 	init.apply(null, arguments);
 };
 
@@ -717,17 +712,20 @@ Wasavi.RegexFinderInfo = function () {
 			}
 		}
 	}
-	this.__defineGetter__('head', function () {return head;});
-	this.__defineGetter__('direction', function () {return direction;});
-	this.__defineGetter__('offset', function () {return offset;});
-	this.__defineGetter__('scrollTop', function () {return scrollTop;});
-	this.__defineGetter__('scrollLeft', function () {return scrollLeft;});
-	this.__defineGetter__('pattern', function () {return pattern;});
-	this.__defineGetter__('verticalOffset', function () {return verticalOffset;});
-	this.__defineGetter__('text', function () {return text;});
-	this.__defineSetter__('text', function (v) {text = v;});
-	this.push = push;
-	this.setPattern = setPattern;
+
+	publish(this,
+		push, setPattern,
+		{
+			head: function () {return head},
+			direction: function () {return direction},
+			offset: function () {return offset},
+			scrollTop: function () {return scrollTop},
+			scrollLeft: function () {return scrollLeft},
+			pattern: function () {return pattern},
+			verticalOffset: function () {return verticalOffset},
+			text: [function () {return text}, function (v) {text = v}]
+		}
+	);
 };
 
 Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreStorage) {
@@ -805,34 +803,28 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 		return null;
 	}
 
-	this.__defineGetter__('isInitial', function () {
-		return s[name].current == s[name].lines.length;
-	});
-	this.__defineSetter__('isInitial', function (v) {
-		s[name].current = s[name].lines.length;
-	});
-	this.__defineGetter__('defaultName', function () {
-		return name;
-	});
-	this.__defineSetter__('defaultName', function (v) {
-		if (v in s) {
-			name = v;
-			s[name].current = s[name].lines.length;
+	publish(this,
+		push, prev, next, save, load,
+		{
+			isInitial:[
+				function () {return s[name].current == s[name].lines.length},
+				function (v) {s[name].current = s[name].lines.length}
+			],
+			defaultName:[
+				function () {return name},
+				function (v) {
+					if (v in s) {
+						name = v;
+						s[name].current = s[name].lines.length;
+					}
+					else {
+						throw new Error('LineInputHistories: unregistered name: ' + name);
+					}
+				}
+			],
+			storageKey:function () {return storageKey}
 		}
-		else {
-			throw new Error('LineInputHistories: unregistered name: ' + name);
-		}
-	});
-	this.__defineGetter__('storageKey', function () {
-		return storageKey;
-	});
-
-	this.push = push;
-	this.prev = prev;
-	this.next = next;
-	this.save = save;
-	this.load = load;
-
+	);
 	load(loadCallback);
 	loadCallback = null;
 };
@@ -908,7 +900,7 @@ Wasavi.KeyManager = function () {
 
 	// publics
 	function install (handler) {
-		addListener('input', handler);
+		addEventListener('input', handler);
 		document.addEventListener('keydown', handleKeydown, true);
 		document.addEventListener('keypress', handleKeypress, true);
 		document.addEventListener('keyup', getKeyupHandler(), true);
@@ -926,7 +918,7 @@ Wasavi.KeyManager = function () {
 		document.removeEventListener('compositionend', handleCompEnd, true);
 		document.removeEventListener('input', getInputHandler(), true);
 	}
-	function addListener (type, handler) {
+	function addEventListener (type, handler) {
 		if (typeof handler != 'function') return;
 		var handlers = getHandlers(type);
 		var index = handlers.indexOf(handler);
@@ -934,7 +926,7 @@ Wasavi.KeyManager = function () {
 			handlers.push(handler);
 		}
 	}
-	function removeListener (type, handler) {
+	function removeEventListener (type, handler) {
 		if (typeof handler != 'function') return;
 		var handlers = getHandlers(type);
 		var index = handlers.indexOf(handler);
@@ -1503,50 +1495,38 @@ Wasavi.KeyManager = function () {
 		}
 	}
 
-	this.install = install;
-	this.uninstall = uninstall;
-	this.addEventListener = addListener;
-	this.removeEventListener = removeListener;
-	this.init = init;
-	this.code2letter = code2letter;
-	this.toInternalString = toInternalString;
-	this.objectFromCode = objectFromCode;
-	this.nopObjectFromCode = nopObjectFromCode;
-	this.insertFnKeyHeader = insertFnKeyHeader;
-	this.parseKeyDesc = parseKeyDesc;
-	this.createSequences = createSequences;
-	this.push = push;
-	this.sweep = sweep;
-	this.dispose = dispose;
-
-	this.__defineGetter__('preserve', function () {
-		return isPreserve;
-	});
-	this.__defineSetter__('preserve', function (v) {
-		isPreserve = !!v;
-	});
-	this.__defineGetter__('target', function () {
-		return target;
-	});
-	this.__defineSetter__('target', function (v) {
-		target = v;
-		init(v.value);
-	});
-	this.__defineGetter__('isInComposition', function () {
-		return isInComposition;
-	});
+	publish(this,
+		install, uninstall, addEventListener, removeEventListener,
+		init, code2letter, toInternalString, objectFromCode,
+		nopObjectFromCode, insertFnKeyHeader, parseKeyDesc, createSequences,
+		push, sweep, dispose,
+		{
+			preverve:[
+				function () {return isPreserve},
+				function (v) {isPreserve = !!v}
+			],
+			target:[
+				function () {return target},
+				function (v) {
+					target = v;
+					init(v.value);
+				}
+			],
+			isInComposition:function () {return isInComposition}
+		}
+	);
 };
 
 Wasavi.MapManager = function (app) {
 
 	function MapItem (name, rules, sequences, sequencesExpanded, options) {
-		this.register = function (lhs, rhs, remap) {
+		function register (lhs, rhs, remap) {
 			rules[lhs] = rhs;
 			sequences[lhs] = app.keyManager.createSequences(lhs);
 			sequencesExpanded[lhs] = app.keyManager.createSequences(rhs);
 			options[lhs] = {remap:!!remap};
-		};
-		this.remove = function () {
+		}
+		function remove () {
 			for (var i = 0; i < arguments.length; i++) {
 				var lhs = arguments[i];
 				delete rules[lhs];
@@ -1554,23 +1534,26 @@ Wasavi.MapManager = function (app) {
 				delete sequencesExpanded[lhs];
 				delete options[lhs];
 			}
-		};
-		this.removeAll = function () {
+		}
+		function removeAll () {
 			for (var i in rules) {
-				this.remove(i);
+				remove(i);
 			}
-		};
-		this.isMapped = function (key) {
+		}
+		function isMapped (key) {
 			return key in rules;
-		};
-		this.toArray = function () {
+		}
+		function toArray () {
 			var result = [];
 			for (var i in rules) {
 				result.push([i, rules[i]]);
 			}
 			return result;
-		};
-		this.__defineGetter__('name', function () {return name;});
+		}
+
+		publish(this,
+			register, remove, removeAll, isMapped, toArray,
+			{name:function () {return name}});
 	}
 
 	/*const*/var NEST_MAX = 100;
@@ -1765,11 +1748,13 @@ Wasavi.MapManager = function (app) {
 		}
 	}
 
-	this.__defineGetter__('commandMap', function () {return maps[0];});
-	this.__defineGetter__('editMap', function () {return maps[1];});
-	this.reset = reset;
-	this.getMap = getMap;
-	this.process = process;
+	publish(this,
+		reset, getMap, process,
+		{
+			commandMap:function () {return maps[0]},
+			editMap:function () {return maps[1]}
+		}
+	);
 };
 
 Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
@@ -1975,17 +1960,12 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 		return a;
 	}
 
-	this.__defineGetter__('storageKey', function () {return storageKey;});
-	this.set = set;
-	this.get = get;
-	this.isWritable = isWritable;
-	this.isReadable = isReadable;
-	this.exists = exists;
-	this.dump = dump;
-	this.dumpData = dumpData;
-	this.save = save;
-	this.load = load;
-
+	publish(this,
+		set, get, isWritable, isReadable, exists, dump, dumpData, save, load,
+		{
+			storageKey:function () {return storageKey}
+		}
+	);
 	load(loadCallback);
 	loadCallback = null;
 };
@@ -2185,22 +2165,12 @@ Wasavi.Marks = function (app, ignoreStorage) {
 	function dispose () {
 		buffer = null;
 	}
-	this.set = set;
-	this.get = get;
-	this.setPrivate = setPrivate;
-	this.getPrivate = getPrivate;
-	this.setJumpBaseMark = setJumpBaseMark;
-	this.setInputOriginMark = setInputOriginMark;
-	this.getJumpBaseMark = getJumpBaseMark;
-	this.getInputOriginMark = getInputOriginMark;
-	this.update = update;
-	this.dump = dump;
-	this.dumpData = dumpData;
-	this.save = save;
-	this.isValidName = isValidName;
-	this.clear = clear;
-	this.dispose = dispose;
 
+	publish(this,
+		set, get, setPrivate, getPrivate,
+		setJumpBaseMark, setInputOriginMark, getJumpBaseMark, getInputOriginMark,
+		update, dump, dumpData, save, isValidName, clear, dispose
+	);
 	restore(!ignoreStorage && app.dataset('wasaviMarks') || '');
 };
 

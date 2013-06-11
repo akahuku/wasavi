@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 303 2013-06-09 15:45:32Z akahuku $
+ * @version $Id: background.js 306 2013-06-11 01:09:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -763,13 +763,20 @@ if (window.jetpack && typeof require == 'function') {
 				extension.storage.setItem(key, defaultValue);
 			}
 			else {
-				switch (/^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(defaultValue))[1]) {
+				var defaultType = u.objectType(defaultValue);
+				var currentType = u.objectType(currentValue);
+				switch (defaultType) {
 				case 'Object':
-					Object.keys(currentValue).forEach(function (key) {
-						if (!(key in defaultValue)) {
-							delete currentValue[key];
-						}
-					});
+					if (currentType == 'Object') {
+						Object.keys(currentValue).forEach(function (key) {
+							if (!(key in defaultValue)) {
+								delete currentValue[key];
+							}
+						});
+					}
+					else {
+						currentType = {};
+					}
 					Object.keys(defaultValue).forEach(function (key) {
 						if (!(key in currentValue)) {
 							currentValue[key] = defaultValue[key];
