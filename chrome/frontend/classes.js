@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: classes.js 308 2013-06-11 23:18:33Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1501,7 +1501,7 @@ Wasavi.KeyManager = function () {
 		nopObjectFromCode, insertFnKeyHeader, parseKeyDesc, createSequences,
 		push, sweep, dispose,
 		{
-			preverve:[
+			preserve:[
 				function () {return isPreserve},
 				function (v) {isPreserve = !!v}
 			],
