@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 287 2013-01-22 14:01:12Z akahuku $
+ * @version $Id: classes_undo.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -499,20 +499,12 @@ Wasavi.EditLogger = function (app, max) {
 		return self;
 	}
 	function undo () {
-		if (!cluster && currentPosition >= 0) {
-			return logs.items[currentPosition--].undo(app, app.buffer);
-		}
-		else {
-			return false;
-		}
+		return !cluster && currentPosition >= 0 ?
+			logs.items[currentPosition--].undo(app, app.buffer) : false;
 	}
 	function redo () {
-		if (!cluster && currentPosition < logs.length - 1) {
-			return logs.items[++currentPosition].redo(app, app.buffer);
-		}
-		else {
-			return false;
-		}
+		return !cluster && currentPosition < logs.length - 1 ?
+			logs.items[++currentPosition].redo(app, app.buffer) : false;
 	}
 	function dump () {
 		return logs.dump();
@@ -524,46 +516,34 @@ Wasavi.EditLogger = function (app, max) {
 		app = logs = cluster = savedAt = null;
 	}
 
-	Object.defineProperties(this, {
-		clear: {value:clear},
-		open: {value:open},
-		close: {value:close},
-		write: {value:write},
-		undo: {value:undo},
-		redo: {value:redo},
-		dump: {value:dump},
-		notifySave: {value:notifySave},
-		dispose: {value:dispose},
-		logMax: {
-			get: function () {return max},
-			set: function (v) {
-				if (typeof v != 'number' || v < 0) {
-					throw new Error('EditLogger: invalid logMax');
+	publish(this,
+		clear, open, close, write, undo, redo, dump, notifySave, dispose,
+		{
+			logMax:[
+				function () {
+					return max;
+				},
+				function (v) {
+					if (typeof v != 'number' || v < 0) {
+						throw new Error('EditLogger: invalid logMax');
+					}
+					max = v;
+					logs.trim(max);
+					currentPosition = logs.length - 1;
 				}
-				max = v;
-				logs.trim(max);
-				currentPosition = logs.length - 1;
-			}
-		},
-		clusterNestLevel: {
-			get: function () {return cluster ? cluster.nestLevel : -1}
-		},
-		logLength: {
-			get: function () {return logs.length}
-		},
-		isClean: {
-			get: function () {
-				var result;
-				if (currentPosition < 0 || currentPosition >= logs.length) {
-					result = !savedAt;
-				}
-				else {
-					result = logs.item(currentPosition) == savedAt;
-				}
-				return result;
+			],
+			clusterNestLevel:function () {
+				return cluster ? cluster.nestLevel : -1;
+			},
+			logLength:function () {
+				return logs.length;
+			},
+			isClean:function () {
+				return currentPosition < 0 || currentPosition >= logs.length ?
+					!savedAt : logs.item(currentPosition) == savedAt;
 			}
 		}
-	});
+	);
 
 	clear();
 };

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: classes_ui.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -213,7 +213,6 @@ Wasavi.Theme = function (app) {
 	}
 	function dispose () {
 		app = container = null;
-		emptyNodeContents(getStyleElement());
 	}
 
 	publish(this,

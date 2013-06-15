@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: unicode_utils.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -299,7 +299,7 @@ var unicodeUtils = (function () {
 			}
 			return i;
 		}
-		function findLineBreak (s, callback) {
+		function run (s, callback) {
 			var props = new LineBreakArray(s, dictData);
 			if (props.get(0) === false) return props.items;
 			typeof callback != 'function' && (callback = function () {});
@@ -447,7 +447,7 @@ var unicodeUtils = (function () {
 				return props.items;
 			}
 			else {
-				return props.items.concat(findLineBreak(
+				return props.items.concat(run(
 					s.substring(last.index + last.length),
 					callback
 				));
@@ -475,8 +475,7 @@ var unicodeUtils = (function () {
 			return result.join('\n');
 		}
 
-		this.run = findLineBreak;
-		this.dump = dump;
+		publish(this, run, dump);
 	}
 
 	function FfttDictionary (dictData) {
@@ -532,6 +531,7 @@ var unicodeUtils = (function () {
 			})()
 		};
 
+		// private
 		function nop () {}
 		function find (cp, data, units) {
 			var left = 0, right = ((data.length / units) >> 0) - 1;
@@ -561,22 +561,23 @@ var unicodeUtils = (function () {
 			}
 		}
 
-		this.addGeneralData = function (/*binary string*/d) {
+		// public
+		function addGeneralData (/*binary string*/d) {
 			if (typeof d == 'string') {
 				data.general = d;
 			}
-		};
-		this.addHanJaData = function (/*binary string*/d) {
+		}
+		function addHanJaData (/*binary string*/d) {
 			if (typeof d == 'string') {
 				data.han_ja = d;
 			}
-		};
-		this.addData = function (/*string*/name, /*any*/d, /*function*/handler) {
+		}
+		function addData (/*string*/name, /*any*/d, /*function*/handler) {
 			name = '' + name;
 			data[name] = d;
 			handlers[name] = typeof handler == 'function' ? handler : nop;
-		};
-		this.get = function (/*string*/ch) {
+		}
+		function get (/*string*/ch) {
 			var result = false;
 			if (ch.charCodeAt(0) <= 0x7f) {
 				return result;
@@ -597,12 +598,17 @@ var unicodeUtils = (function () {
 				}
 			}
 			return cache[ch] = result;
-		};
-		this.match = function (/*string*/ch, /*string*/target) {
+		}
+		function match (/*string*/ch, /*string*/target) {
 			var o = this.get(ch);
 			return o && target in o;
-		};
+		}
 
+		//
+		publish(this,
+			addGeneralData, addHanJaData, addData,
+			get, match
+		);
 		init.call(this);
 	}
 
@@ -829,7 +835,7 @@ var unicodeUtils = (function () {
 			|| act == BREAK_ACTION.EXPLICIT;
 	}
 
-	return {
+	return Object.freeze({
 		BREAK_PROP:BREAK_PROP,
 		BREAK_ACTION:BREAK_ACTION,
 
@@ -845,7 +851,7 @@ var unicodeUtils = (function () {
 		isLowSurrogate:isLowSurrogate,
 		toUCS32:toUCS32,
 		canBreak:canBreak
-	};
+	});
 })();
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

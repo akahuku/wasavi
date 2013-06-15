@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 303 2013-06-09 15:45:32Z akahuku $
+ * @version $Id: classes_ex.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -57,7 +57,7 @@ Wasavi.ExCommand.prototype = {
 			this.handler
 		);
 	},
-	parseArgs: function (app, range, line, syntax) {
+	parseArgs: function (app, range, line, syntax, ignoreSyntaxError) {
 		function argv_exp0 (s) {
 			result.argv.push(s);
 		}
@@ -283,7 +283,7 @@ flag23_loop:
 			}
 		}
 
-		if (needCheckRest) {
+		if (needCheckRest && !ignoreSyntaxError) {
 			line = line.replace(/^\s+/, '');
 			if (line != '' || /[lr]/.test(syntax.substring(i))) {
 				return _('Invalid argument.');
@@ -500,31 +500,31 @@ flag23_loop:
 			rest: s
 		};
 	},
-	buildArgs: function (app, range, s, sups) {
-		var t = app.buffer;
-		var args = this.parseArgs(app, range, s);
-		if (typeof args == 'string') {
-			return this.name + ': ' + args;
+	buildArgs: function (app, range, commandNameOption, argv, args, syntax, ignoreSyntaxError) {
+		var result = this.parseArgs(app, range, commandNameOption, syntax, ignoreSyntaxError);
+		if (typeof result == 'string') {
+			return this.name + ': ' + result;
 		}
-		if (sups instanceof Array) {
-			sups.push.apply(sups, args.argv);
-			args.argv = sups;
+		if (argv instanceof Array) {
+			argv.push.apply(argv, result.argv);
+			result.argv = argv;
 		}
+		result.args = args || '';
 
-		for (var i = 0, goal = args.range.length; i < goal; i++) {
+		for (var i = 0, goal = result.range.length; i < goal; i++) {
 			if (!this.flags.addrZero) {
-				args.range[i] = Math.max(0, args.range[i]);
+				result.range[i] = Math.max(0, result.range[i]);
 			}
 			if (this.flags.roundMax) {
-				args.range[i] = Math.min(t.rowLength - 1, args.range[i]);
+				result.range[i] = Math.min(app.buffer.rowLength - 1, result.range[i]);
 			}
 			else {
-				if (args.range[i] >= t.rowLength) {
+				if (result.range[i] >= app.buffer.rowLength) {
 					return _('{0}: Out of range.', this.name);
 				}
 			}
 		}
-		return args;
+		return result;
 	},
 	run: function (app, args) {
 		var result;

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_search.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes_search.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -711,20 +711,14 @@ loop:		do {
 		app = buffer = null;
 	}
 
-	this.findQuoteRange = findQuoteRange;
-	this.findSentenceBoundary = findSentenceBoundary;
-	this.findParagraphBoundary = findParagraphBoundary;
-	this.findMatchedBracket = findMatchedBracket;
-	this.quote = quote;
-	this.word = word;
-	this.block = block;
-	this.sentence = sentence;
-	this.paragraph = paragraph;
-	this.dispatchRangeSymbol = dispatchRangeSymbol;
-	this.setParagraphMacros = setParagraphMacros;
-	this.setSectionMacros = setSectionMacros;
-	this.getPairBracketsIndicator = getPairBracketsIndicator;
-	this.dispose = dispose;
+	publish(this,
+		findQuoteRange, findSentenceBoundary, findParagraphBoundary, findMatchedBracket,
+		quote, word, block, sentence, paragraph,
+		dispatchRangeSymbol,
+		setParagraphMacros, setSectionMacros,
+		getPairBracketsIndicator,
+		dispose
+	);
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

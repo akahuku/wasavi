@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 308 2013-06-11 23:18:33Z akahuku $
+ * @version $Id: classes.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -397,7 +397,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 	publish(this,
 		getInfo, getData, setData, dump, dumpData, dumpScript,
 		{
-			vars:function () {return vars}
+			vars:function () {return vars},
+			abbrevs:function () {return abbrevs}
 		}
 	);
 	init();
@@ -3428,6 +3429,283 @@ Wasavi.InputHandler.prototype = {
 			this.textFragment = '';
 		}
 	}
+};
+
+Wasavi.Completer = function (appProxy, alist) {
+
+	function CompleteItem (patterns, index, onRequestCandidates, opts) {
+		this.candidates = null;
+		this.currentIndex = -1;
+		this.lastLoad = 0;
+
+		this.patterns = patterns instanceof Array ? patterns : [patterns];
+		this.index = index;
+		this.onRequestCandidates = onRequestCandidates;
+		this.ttlMsecs = 0;
+
+		if (opts) {
+			if ('onFoundContext' in opts) {
+				this.onFoundContext = opts.onFoundContext;
+			}
+			if ('onComplete' in opts) {
+				this.onComplete = opts.onComplete;
+			}
+			if ('ttlSecs' in opts) {
+				this.ttlMsecs = (opts.ttlSecs || 0) * 1000;
+			}
+		}
+	}
+	CompleteItem.prototype = {
+		get isCandidatesAvailable () {
+			return this.candidates !== null
+				&& (this.ttlMsecs == 0 || Date.now() - this.lastLoad < this.ttlMsecs);
+		},
+		reset: function () {
+			this.currentIndex = -1;
+		},
+		next: function () {
+			var result;
+			if (this.isCandidatesAvailable) {
+				if (this.currentIndex < 0) {
+					this.currentIndex = this.findIndex();
+				}
+				result = this.candidates[this.currentIndex];
+				this.currentIndex = (this.currentIndex + 1) % this.candidates.length;
+			}
+			return result;
+		},
+		initIndex: function (prefix) {
+			if (!this.isCandidatesAvailable) return;
+			if (0 <= this.currentIndex && this.currentIndex < this.candidates.length) return;
+
+			for (var i = 0, goal = this.candidates.length; i < goal; i++) {
+				if (this.candidates[i].indexOf(prefix) == 0) {
+					return this.currentIndex = i;
+				}
+			}
+
+			return this.currentIndex = 0;
+		},
+		requestCandidates: function (callback) {
+			function initCandidates (candidates) {
+				this.candidates = candidates;
+				this.currentIndex = -1;
+				this.lastLoad = Date.now();
+				callback();
+			}
+			if (typeof this.onRequestCandidates == 'function') {
+				this.onRequestCandidates(initCandidates.bind(this));
+			}
+			else {
+				initCandidates.call(this, []);
+			}
+		}
+	};
+
+	function CompleteContext (item, pos, offset, pieceIndex, subPieceIndex, pieces, subPieces) {
+		this.item = item;
+		this.pos = pos;
+		this.offset = offset;
+		this.pieceIndex = pieceIndex;
+		this.subPieceIndex = subPieceIndex;
+		this.pieces = pieces;
+		this.subPieces = subPieces;
+	}
+	CompleteContext.prototype = {
+		getResult: function () {
+			this.item.initIndex(this.subPieces[this.subPieceIndex].substring(0, this.offset));
+
+			var completedPiece = this.item.next();
+			if (completedPiece === undefined) {
+				return false;
+			}
+
+			if (this.item.onComplete) {
+				var tmp = this.item.onComplete(completedPiece, this.subPieces[this.subPieceIndex]);
+				if (typeof tmp == 'string') {
+					completedPiece = tmp;
+					this.item.reset();
+					this.item.initIndex(completedPiece);
+					this.item.next();
+				}
+			}
+
+			/*
+			 * pieces is an array of ex command.
+			 * ---
+			 *
+			 * example: ['ver', 'print', 'write foo.txt']
+			 *
+			 *                                 ^ `pieceIndex` points an element which
+			 *                                   should be completed.
+			 *
+			 * subPieces is an array of token of ex command which shoud be completed.
+			 * ---
+			 *
+			 * example: ['', 'write', 'foo.txt']
+			 *
+			 *                  ^ `subPieceIndex` points an token which
+			 *                    should be completed.
+			 */
+
+			var subPieces = this.subPieces.slice(1);
+			var pos = this.pos - this.offset + completedPiece.length;
+
+			subPieces[this.subPieceIndex - 1] = completedPiece;
+			this.offset = completedPiece.length;
+
+			var pieces = this.pieces.slice(0);
+			pieces[this.pieceIndex] = subPieces.join('');
+
+			return {
+				pos:pos,
+				value:pieces.join('')
+			}
+		}
+	};
+
+	var list;
+	var running = false;
+
+	// privates
+	function init (alist) {
+		list = (alist || []).map(function (arg) {
+			var o = Object.create(CompleteItem.prototype);
+			return CompleteItem.apply(o, arg) || o;
+		});
+	}
+	function getExCommandParseResult (value) {
+		var commands;
+		var parseResult = appProxy.low.executeExCommand(value, true, true, true);
+		if (typeof parseResult == 'string') return result;
+
+		if (/^(?:global|v)$/.test(
+			parseResult.commands.lastItem[0].name)
+		) {
+			var parseResult2 = appProxy.low.executeExCommand(
+				parseResult.commands.lastItem[1].argv.lastItem,
+				false, true, true
+			);
+			if (typeof parseResult2 == 'string') return result;
+
+			commands = parseResult.commands;
+			commands.lastItem[1].args =
+				commands.lastItem[1].args.substring(
+					0,
+					commands.lastItem[1].args.length -
+					commands.lastItem[1].argv.lastItem.length
+				);
+			Array.prototype.push.apply(commands, parseResult2.commands);
+		}
+		else {
+			commands = parseResult.commands;
+		}
+		return commands;
+	}
+	function findCompleteContext (value, pos) {
+		var result = null, pieces;
+		var commands = getExCommandParseResult(value);
+		if (typeof commands == 'string') return result;
+
+		list.some(function (item) {
+			var offset = 0;
+			pieces = [];
+
+			commands.forEach(function (command, i) {
+				var args = command[1].args;
+				pieces.push(args);
+
+				var range = Wasavi.ExCommand.prototype.parseRange(appProxy, args, undefined, true);
+				if (typeof range == 'string') return;
+
+				var argsForMatch = multiply(' ', args.length - range.rest.length) + range.rest;
+
+				item.patterns.forEach(function (pattern, patternIndex) {
+					var re = pattern.exec(argsForMatch);
+					if (!re) return;
+
+					/*
+					 * re:
+					 * "set nu ts=4 tw=80" -> ['...', '', 'set', 'nu ts=4 tw=80']
+					 */
+
+					var subOffset = offset;
+					for (var i = 1; i < re.length; subOffset += re[i++].length) {
+						if (i != item.index || result) continue;
+						if (!(subOffset <= pos && pos <= subOffset + re[i].length)) continue;
+
+						if (item.onFoundContext) {
+							var a = item.onFoundContext(re[i], pos - subOffset);
+							a.subPieces.unshift(i, 1);
+							re.splice.apply(re, a.subPieces);
+							result = new CompleteContext(
+								item, pos, a.cursorOffset,
+								pieces.length - 1, i + a.subPieceIndex,
+								pieces, re
+							);
+						}
+						else {
+							result = new CompleteContext(
+								item, pos, pos - subOffset,
+								pieces.length - 1, i,
+								pieces, re
+							);
+						}
+					}
+					offset += args.length;
+				});
+			});
+
+			return !!result;
+		});
+
+		return result;
+	}
+
+	// publics
+	function add (patterns, index, handler) {
+		list.push(new CompleteItem(patterns, index, handler));
+		return this;
+	}
+	function reset () {
+		list.forEach(function (item) {
+			item.reset();
+		});
+	}
+	function run (value, pos, callback) {
+		if (running) {
+			callback(false);
+			return;
+		}
+
+		var ctx = findCompleteContext(value, pos);
+		if (!ctx) {
+			callback(false);
+			return;
+		}
+
+		if (ctx.item.isCandidatesAvailable) {
+			callback(ctx.getResult());
+			return;
+		}
+
+		running = true;
+		ctx.item.requestCandidates(function () {
+			running = false;
+			callback(ctx.getResult());
+		});
+	}
+	function dispose () {
+		appProxy = list = null;
+	}
+
+	publish(this,
+		add, reset, run, dispose,
+		{
+			running:function () {return running}
+		}
+	);
+	init(alist);
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

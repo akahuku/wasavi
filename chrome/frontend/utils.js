@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: utils.js 309 2013-06-15 08:57:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -28,6 +28,15 @@
  */
 
 'use strict';
+
+/*
+ * prototype extension {{{ 1
+ * ----------------
+ */
+
+Object.defineProperty(Array.prototype, 'lastItem', {
+	get:function () {return this[this.length - 1]}
+});
 
 /*
 /*
