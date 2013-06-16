@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: wasavi.js 310 2013-06-16 05:30:11Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1411,7 +1411,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 		if (literalKey !== false) {
 			skipto(/\n/g);
 			skipby(1);
-			if (arg && argv.length
+			if (argv && argv.length
 			&&  argv[argv.length - 1].replace(/[ \t]+$/, '') == literalExitKey) {
 				argv.pop();
 				if (!pushCommand()) {
@@ -1420,7 +1420,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 				argv = null;
 				literalKey = false;
 			}
-			if (source.length == 0) {
+			else if (source.length == 0) {
 				pushCommand();
 				break;
 			}
@@ -1666,7 +1666,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 			lastTerminator = skipby(1);
 
 			if (/^\s*$/.test(commandNameSupplement)) {
-				if (isInteractive) {
+				if (isInteractive && !ignoreSyntaxError) {
 					resultMessage = _('Cannot use the multi-lined script interactively.');
 					break;
 				}
@@ -1711,6 +1711,10 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 
 	if (typeof resultMessage == 'string') {
 		return resultMessage;
+	}
+
+	if (literalKey !== false) {
+		pushCommand();
 	}
 
 	return parseOnly ? executor : executor.run();
@@ -4116,7 +4120,9 @@ var completer = new Wasavi.Completer(appProxy,
 			},
 			{
 				onFoundContext:function (s, offset) {
-					var regex = /(\s*)((?:\u0016.|[^=?\s])+)(\?|=(?:\u0016.|\S)*)?(\s*)/g, re;
+					var COMPLETION_INDEX = 2;
+
+					var regex = /(\s*)(no)?((?:\u0016.|[^=?\s])+)(\?|=(?:\u0016.|\S)*)?(\s*)/g, re;
 					var pieceOffset = 0;
 					var result = {
 						cursorOffset:0,
@@ -4125,17 +4131,27 @@ var completer = new Wasavi.Completer(appProxy,
 					};
 
 					while ((re = regex.exec(s)) !== null) {
-						if (pieceOffset + re[1].length <= offset
-						&& offset <= pieceOffset + re[1].length + re[2].length) {
-							result.cursorOffset = offset - pieceOffset + re[1].length;
-							result.subPieceIndex = result.subPieces.length + 1;
+						var whole = re.shift(0);
+						var from = 0, to = 0;
+
+						for (var i = 0, goal = re.length; i < goal; i++) {
+							re[i] = re[i] || '';
+
+							if (i < COMPLETION_INDEX) {
+								from += re[i].length;
+							}
+							if (i <= COMPLETION_INDEX) {
+								to += re[i].length;
+							}
 						}
 
-						for (var i = 1; i < re.length; i++) {
-							result.subPieces.push(re[i] || '');
+						if (pieceOffset + from <= offset && offset <= pieceOffset + to) {
+							result.cursorOffset = offset - pieceOffset + from;
+							result.subPieceIndex = result.subPieces.length + COMPLETION_INDEX;
 						}
 
-						pieceOffset += re[0].length;
+						Array.prototype.push.apply(result.subPieces, re);
+						pieceOffset += whole.length;
 					}
 
 					return result;
@@ -6134,7 +6150,7 @@ var lineInputEditMap = {
 	'\u0009'/*^I, tab*/: function (c, o) {
 		lineInputHistories.isInitial = true;
 		isCompleteResetCanceled = true;
-		completer.run(o.target.value, o.target.selectionStart, function (compl) {
+		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
 			if (!compl) return;
 
 			o.target.value = compl.value;

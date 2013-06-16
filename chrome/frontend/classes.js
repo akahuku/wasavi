@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: classes.js 310 2013-06-16 05:30:11Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3435,8 +3435,11 @@ Wasavi.Completer = function (appProxy, alist) {
 
 	function CompleteItem (patterns, index, onRequestCandidates, opts) {
 		this.candidates = null;
+		this.candidatesFiltered = null;
 		this.currentIndex = -1;
+		this.prefix = false;
 		this.lastLoad = 0;
+		this.lastInvert = null;
 
 		this.patterns = patterns instanceof Array ? patterns : [patterns];
 		this.index = index;
@@ -3460,31 +3463,75 @@ Wasavi.Completer = function (appProxy, alist) {
 			return this.candidates !== null
 				&& (this.ttlMsecs == 0 || Date.now() - this.lastLoad < this.ttlMsecs);
 		},
+
+		//
 		reset: function () {
-			this.currentIndex = -1;
+			this.prefix = false;
 		},
-		next: function () {
+		start: function (prefix) {
+			this.prefix = prefix;
+			this.currentIndex = -1;
+			this.candidatesFiltered = null;
+		},
+		prev: function () {
+			return this.next(true);
+		},
+		next: function (invert) {
 			var result;
-			if (this.isCandidatesAvailable) {
-				if (this.currentIndex < 0) {
-					this.currentIndex = this.findIndex();
+
+			if (!this.candidates) {
+				return result;
+			}
+			if (!this.candidatesFiltered) {
+				this.candidatesFiltered = this.updateFilteredCandidates();
+			}
+			if (!this.candidatesFiltered || this.candidatesFiltered.length == 0) {
+				return result;
+			}
+			if (this.currentIndex < 0 || this.currentIndex >= this.candidatesFiltered.length) {
+				this.currentIndex = this.findIndex();
+			}
+
+			invert = !!invert;
+			if (typeof this.lastInvert == 'boolean' && this.lastInvert != invert) {
+				this.currentIndex = (
+					this.currentIndex +
+					(invert ? this.candidatesFiltered.length - 2 : 2)
+				) % this.candidatesFiltered.length;
+			}
+
+			result = this.candidatesFiltered[this.currentIndex];
+
+			this.currentIndex = (
+				this.currentIndex +
+				(invert ? this.candidatesFiltered.length - 1 : 1)
+			) % this.candidatesFiltered.length;
+
+			this.lastInvert = invert;
+
+			return result;
+		},
+
+		//
+		findIndex: function () {
+			var result = 0;
+			for (var i = 0, goal = this.candidatesFiltered.length; i < goal; i++) {
+				if (this.candidatesFiltered[i].indexOf(this.prefix) == 0) {
+					result = i;
+					break;
 				}
-				result = this.candidates[this.currentIndex];
-				this.currentIndex = (this.currentIndex + 1) % this.candidates.length;
 			}
 			return result;
 		},
-		initIndex: function (prefix) {
-			if (!this.isCandidatesAvailable) return;
-			if (0 <= this.currentIndex && this.currentIndex < this.candidates.length) return;
-
-			for (var i = 0, goal = this.candidates.length; i < goal; i++) {
-				if (this.candidates[i].indexOf(prefix) == 0) {
-					return this.currentIndex = i;
-				}
+		setPrefix: function (prefix, force) {
+			if (this.prefix === false || force) {
+				this.start(prefix);
 			}
-
-			return this.currentIndex = 0;
+		},
+		updateFilteredCandidates: function () {
+			return this.candidates.filter(function (a) {
+				return a.indexOf(this.prefix) == 0;
+			}, this);
 		},
 		requestCandidates: function (callback) {
 			function initCandidates (candidates) {
@@ -3510,43 +3557,25 @@ Wasavi.Completer = function (appProxy, alist) {
 		this.subPieceIndex = subPieceIndex;
 		this.pieces = pieces;
 		this.subPieces = subPieces;
+
+		this.item.setPrefix(this.subPieces[this.subPieceIndex].substring(0, this.offset));
 	}
 	CompleteContext.prototype = {
-		getResult: function () {
-			this.item.initIndex(this.subPieces[this.subPieceIndex].substring(0, this.offset));
-
-			var completedPiece = this.item.next();
-			if (completedPiece === undefined) {
-				return false;
-			}
-
+		getResult: function (invert) {
+			var completedPiece = this.item.next(invert);
 			if (this.item.onComplete) {
 				var tmp = this.item.onComplete(completedPiece, this.subPieces[this.subPieceIndex]);
 				if (typeof tmp == 'string') {
 					completedPiece = tmp;
-					this.item.reset();
-					this.item.initIndex(completedPiece);
-					this.item.next();
+					this.item.currentIndex = -1;
+					this.item.setPrefix(tmp, true);
+					this.item.next(invert);
 				}
 			}
 
-			/*
-			 * pieces is an array of ex command.
-			 * ---
-			 *
-			 * example: ['ver', 'print', 'write foo.txt']
-			 *
-			 *                                 ^ `pieceIndex` points an element which
-			 *                                   should be completed.
-			 *
-			 * subPieces is an array of token of ex command which shoud be completed.
-			 * ---
-			 *
-			 * example: ['', 'write', 'foo.txt']
-			 *
-			 *                  ^ `subPieceIndex` points an token which
-			 *                    should be completed.
-			 */
+			if (completedPiece === undefined) {
+				return false;
+			}
 
 			var subPieces = this.subPieces.slice(1);
 			var pos = this.pos - this.offset + completedPiece.length;
@@ -3577,16 +3606,16 @@ Wasavi.Completer = function (appProxy, alist) {
 	function getExCommandParseResult (value) {
 		var commands;
 		var parseResult = appProxy.low.executeExCommand(value, true, true, true);
-		if (typeof parseResult == 'string') return result;
+		if (typeof parseResult == 'string') return commands;
 
-		if (/^(?:global|v)$/.test(
-			parseResult.commands.lastItem[0].name)
-		) {
+		if (/^(?:global|v)$/.test(parseResult.commands.lastItem[0].name)
+		&&  parseResult.commands.lastItem[1].argv.lastItem != undefined) {
+
 			var parseResult2 = appProxy.low.executeExCommand(
 				parseResult.commands.lastItem[1].argv.lastItem,
 				false, true, true
 			);
-			if (typeof parseResult2 == 'string') return result;
+			if (typeof parseResult2 == 'string') return commands;
 
 			commands = parseResult.commands;
 			commands.lastItem[1].args =
@@ -3605,7 +3634,7 @@ Wasavi.Completer = function (appProxy, alist) {
 	function findCompleteContext (value, pos) {
 		var result = null, pieces;
 		var commands = getExCommandParseResult(value);
-		if (typeof commands == 'string') return result;
+		if (!commands) return result;
 
 		list.some(function (item) {
 			var offset = 0;
@@ -3623,11 +3652,6 @@ Wasavi.Completer = function (appProxy, alist) {
 				item.patterns.forEach(function (pattern, patternIndex) {
 					var re = pattern.exec(argsForMatch);
 					if (!re) return;
-
-					/*
-					 * re:
-					 * "set nu ts=4 tw=80" -> ['...', '', 'set', 'nu ts=4 tw=80']
-					 */
 
 					var subOffset = offset;
 					for (var i = 1; i < re.length; subOffset += re[i++].length) {
@@ -3672,7 +3696,7 @@ Wasavi.Completer = function (appProxy, alist) {
 			item.reset();
 		});
 	}
-	function run (value, pos, callback) {
+	function run (value, pos, invert, callback) {
 		if (running) {
 			callback(false);
 			return;
@@ -3685,14 +3709,14 @@ Wasavi.Completer = function (appProxy, alist) {
 		}
 
 		if (ctx.item.isCandidatesAvailable) {
-			callback(ctx.getResult());
+			callback(ctx.getResult(invert));
 			return;
 		}
 
 		running = true;
 		ctx.item.requestCandidates(function () {
 			running = false;
-			callback(ctx.getResult());
+			callback(ctx.getResult(invert));
 		});
 	}
 	function dispose () {
