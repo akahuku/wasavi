@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: background.js 311 2013-06-18 16:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -823,7 +823,7 @@ if (window.jetpack && typeof require == 'function') {
 		 */
 		function initFileSystemCore (data) {
 			data = u.parseJson(data);
-			fstab = u.parseJson(extension.storage.getItem('fstab'));
+			fstab = extension.storage.getItem('fstab');
 			for (var i in fstab) {
 				if (!data[i] || !data[i].key || !data[i].secret) continue;
 				fstab[i].isNull = false;
@@ -944,187 +944,220 @@ if (window.jetpack && typeof require == 'function') {
 		extension.sendRequest({type:'request-run'});
 	}
 
-	/** {{{2 request handler */
+	/** {{{2 request handlers */
+
+	function handleInit (req, res, tabId) {
+		var init = req.type == 'init';
+		init && extension.registerTabId(tabId);
+		res({
+			type:'init-response',
+			extensionId:extension.extensionId,
+			tabId:tabId,
+			targets:extension.storage.getItem('targets'),
+			exrc:extension.storage.getItem('exrc'),
+			ros:payload && payload.url != TEST_MODE_URL ?
+				runtimeOverwriteSettings.get(payload.url, payload.nodePath) : '',
+			shortcut:hotkey.canProcess ? null :
+				extension.storage.getItem('shortcut'),
+			shortcutCode:hotkey.canProcess ? null :
+				Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut')),
+			fontFamily:extension.storage.getItem('fontFamily'),
+			quickActivation:extension.storage.getItem('quickActivation') == '1',
+			messageCatalog:messageCatalog,
+			testMode:req.url == TEST_MODE_URL,
+			devMode:extension.isDev,
+			wasaviFrame:init ? wasaviFrame : null,
+			fstab:init ? getFileSystemInfo() : null,
+			unicodeDictData:init ? unicodeDictData : null,
+			version:extension.version,
+			payload:payload || null
+		});
+		payload = null;
+	}
+
+	function handleInitOptions (req, res) {
+		extension.storage.clear();
+		initStorage();
+		initMessageCatalog();
+		initFileSystem();
+		broadcastStorageUpdate('targets exrc shortcut shortcutCode quickActivate'.split(' '));
+	}
+
+	function handleGetStorage (req, res) {
+		if ('key' in req) {
+			res({key:req.key, value:extension.storage.getItem(req.key)});
+		}
+		else {
+			res({key:req.key, value:undefined});
+		}
+	}
+
+	function handleSetStorage (req, res) {
+		var items;
+		if ('key' in req && 'value' in req) {
+			items = [{key:req.key, value:req.value}];
+		}
+		else if ('items' in req) {
+			items = req.items;
+		}
+		if (items) {
+			var keys = [];
+			items.forEach(function (item) {
+				if ('key' in item && 'value' in item) {
+					if (item.key == 'fontFamily') {
+						if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
+							item.value = defaultFont;
+						}
+					}
+
+					keys.push(item.key);
+					extension.storage.setItem(item.key, item.value);
+
+					if (item.key == 'shortcut') {
+						keys.push('shortcutCode');
+						extension.storage.setItem(
+							'shortcutCode',
+							Hotkey.getObjectsForDOM(item.value));
+					}
+				}
+			});
+			broadcastStorageUpdate(keys);
+		}
+	}
+
+	function handleBell (req, res) {
+		if ('file' in req) {
+			resourceLoader.get(req.file, function (data) {
+				res({data:data || ''});
+			}, {sync:true});
+		}
+	}
+
+	function handleOpenOptionsPage (req, res) {
+		extension.openTabWithFile('options.html');
+	}
+
+	function handleNotifyToChild (req, res) {
+		var childTabId = 'childTabId' in req ? req.childTabId : extension.lastRegisteredTab;
+		if (childTabId !== undefined && extension.isExistsTabId(childTabId)) {
+			'tabId' in req && (req.payload.parentTabId = req.tabId);
+			extension.sendRequest(childTabId, req.payload);
+		}
+	}
+
+	function handleNotifyToParent (req, res) {
+		if (!('payload' in req)) return;
+
+		var needForward = true;
+		switch (req.payload.type) {
+		case 'wasavi-read':
+			if ('tabId' in req
+			&& 'path' in req.payload
+			&& req.payload.path != '') {
+				needForward = false;
+				getFileSystem(req.payload.path)
+					.read(req.payload.path, req.tabId);
+			}
+			break;
+		case 'wasavi-saved':
+			if ('tabId' in req
+			&& 'path' in req.payload
+			&& req.payload.path != '') {
+				needForward = false;
+				getFileSystem(req.payload.path)
+					.write(req.payload.path, req.payload.value, req.tabId);
+			}
+			break;
+		case 'wasavi-terminated':
+			if ('url' in req.payload
+			&& 'nodePath' in req.payload
+			&& 'ros' in req.payload) {
+				runtimeOverwriteSettings.set(
+					req.payload.url, req.payload.nodePath, req.payload.ros);
+			}
+			if (!('parentTabId' in req)
+			&& 'tabId' in req
+			&& 'isTopFrame' in req.payload
+			&& req.payload.isTopFrame) {
+				needForward = false;
+				extension.closeTabByWasaviId(req.tabId);
+			}
+			break;
+		}
+		if (needForward && 'parentTabId' in req && req.parentTabId != undefined) {
+			'tabId' in req && (req.payload.childTabId = req.tabId);
+			extension.sendRequest(req.parentTabId, req.payload);
+		}
+	}
+
+	function handleSetClipboard (req, res) {
+		if ('data' in req) {
+			extension.clipboard.set(req.data);
+		}
+	}
+
+	function handleGetClipboard (req, res) {
+		res({data:extension.clipboard.get()});
+	}
+
+	function handlePushPayload (req, res) {
+		payload = req;
+	}
+
+	function handleRequestWasaviFrame (req, res) {
+		res({data:wasaviFrameData});
+	}
+
+	function handleGetFilesystemEntries (req, res) {
+		getFileSystem(req.path)
+			.ls(req.path, req.tabId, function (data) {
+				res({data:data.contents});
+			});
+		return true;
+	}
+
+	/** {{{2 request handler entry */
 
 	function handleRequest (req, tabId, resFunc) {
+		if (!req || !req.type) return;
+
 		var replied = false;
+		var lateResponse = false;
 
 		function res () {
 			if (!replied) {
-				resFunc.apply(null, arguments)
+				resFunc.apply(null, arguments);
 				replied = true;
 			}
 		}
-		function handleInit () {
-			var init = req.type == 'init';
-			init && extension.registerTabId(tabId);
-			res({
-				type:'init-response',
-				extensionId:extension.extensionId,
-				tabId:tabId,
-				targets:extension.storage.getItem('targets'),
-				exrc:extension.storage.getItem('exrc'),
-				ros:payload && payload.url != TEST_MODE_URL ?
-					runtimeOverwriteSettings.get(payload.url, payload.nodePath) : '',
-				shortcut:hotkey.canProcess ? null :
-					extension.storage.getItem('shortcut'),
-				shortcutCode:hotkey.canProcess ? null :
-					Hotkey.getObjectsForDOM(extension.storage.getItem('shortcut')),
-				fontFamily:extension.storage.getItem('fontFamily'),
-				quickActivation:extension.storage.getItem('quickActivation') == '1',
-				messageCatalog:messageCatalog,
-				testMode:req.url == TEST_MODE_URL,
-				devMode:extension.isDev,
-				wasaviFrame:init ? wasaviFrame : null,
-				fstab:init ? getFileSystemInfo() : null,
-				unicodeDictData:init ? unicodeDictData : null,
-				version:extension.version,
-				payload:payload || null
-			});
-			payload = null;
-		}
-		function handleInitOptions () {
-			extension.storage.clear();
-			initStorage();
-			initMessageCatalog();
-			initFileSystem();
-			broadcastStorageUpdate('targets exrc shortcut shortcutCode quickActivate'.split(' '));
-		}
-		function handleGetStorage () {
-			if ('key' in req) {
-				res({key:req.key, value:extension.storage.getItem(req.key)});
-			}
-			else {
-				res({key:req.key, value:undefined});
-			}
-		}
-		function handleSetStorage () {
-			var items;
-			if ('key' in req && 'value' in req) {
-				items = [{key:req.key, value:req.value}];
-			}
-			else if ('items' in req) {
-				items = req.items;
-			}
-			if (items) {
-				var keys = [];
-				items.forEach(function (item) {
-					if ('key' in item && 'value' in item) {
-						if (item.key == 'fontFamily') {
-							if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
-								item.value = defaultFont;
-							}
-						}
 
-						keys.push(item.key);
-						extension.storage.setItem(item.key, item.value);
-
-						if (item.key == 'shortcut') {
-							keys.push('shortcutCode');
-							extension.storage.setItem(
-								'shortcutCode',
-								Hotkey.getObjectsForDOM(item.value));
-						}
-					}
-				});
-				broadcastStorageUpdate(keys);
-			}
-		}
-		function handleBell () {
-			if ('file' in req) {
-				resourceLoader.get(req.file, function (data) {
-					res({data:data || ''});
-				}, {sync:true});
-			}
-		}
-		function handleOpenOptionsPage () {
-			extension.openTabWithFile('options.html');
-		}
-		function handleNotifyToChild () {
-			var childTabId = 'childTabId' in req ? req.childTabId : extension.lastRegisteredTab;
-			if (childTabId !== undefined && extension.isExistsTabId(childTabId)) {
-				'tabId' in req && (req.payload.parentTabId = req.tabId);
-				extension.sendRequest(childTabId, req.payload);
-			}
-		}
-		function handleNotifyToParent () {
-			if (!('payload' in req)) return;
-
-			var needForward = true;
-			switch (req.payload.type) {
-			case 'wasavi-read':
-				if ('tabId' in req
-				&& 'path' in req.payload
-				&& req.payload.path != '') {
-					needForward = false;
-					getFileSystem(req.payload.path)
-						.read(req.payload.path, req.tabId);
-				}
-				break;
-			case 'wasavi-saved':
-				if ('tabId' in req
-				&& 'path' in req.payload
-				&& req.payload.path != '') {
-					needForward = false;
-					getFileSystem(req.payload.path)
-						.write(req.payload.path, req.payload.value, req.tabId);
-				}
-				break;
-			case 'wasavi-terminated':
-				if ('url' in req.payload
-				&& 'nodePath' in req.payload
-				&& 'ros' in req.payload) {
-					runtimeOverwriteSettings.set(
-						req.payload.url, req.payload.nodePath, req.payload.ros);
-				}
-				if (!('parentTabId' in req)
-				&& 'tabId' in req
-				&& 'isTopFrame' in req.payload
-				&& req.payload.isTopFrame) {
-					needForward = false;
-					extension.closeTabByWasaviId(req.tabId);
-				}
-				break;
-			}
-			if (needForward && 'parentTabId' in req && req.parentTabId != undefined) {
-				'tabId' in req && (req.payload.childTabId = req.tabId);
-				extension.sendRequest(req.parentTabId, req.payload);
-			}
-		}
-		function handleSetClipboard () {
-			if ('data' in req) {
-				extension.clipboard.set(req.data);
-			}
-		}
-		function handleGetClipboard () {
-			res({data:extension.clipboard.get()});
-		}
-		function handlePushPayload () {
-			payload = req;
-		}
-
-		if (!req || !req.type) return;
 		try {
+			var handler;
+
 			switch (req.type) {
 			case 'init':
-			case 'init-agent':			handleInit(); break;
-			case 'init-options':		handleInitOptions(); break;
-			case 'get-storage':			handleGetStorage(); break;
-			case 'set-storage':			handleSetStorage(); break;
-			case 'bell':				handleBell(); break;
-			case 'open-options-page':	handleOpenOptionsPage(); break;
-			case 'notify-to-child':		handleNotifyToChild(); break;
-			case 'notify-to-parent':	handleNotifyToParent(); break;
-			case 'set-clipboard':		handleSetClipboard(); break;
-			case 'get-clipboard':		handleGetClipboard(); break;
-			case 'push-payload':		handlePushPayload(); break;
-			case 'request-wasavi-frame':
-				res({data:wasaviFrameData});
-				break;
+			case 'init-agent':			handler = handleInit; break;
+			case 'init-options':		handler = handleInitOptions; break;
+			case 'get-storage':			handler = handleGetStorage; break;
+			case 'set-storage':			handler = handleSetStorage; break;
+			case 'bell':				handler = handleBell; break;
+			case 'open-options-page':	handler = handleOpenOptionsPage; break;
+			case 'notify-to-child':		handler = handleNotifyToChild; break;
+			case 'notify-to-parent':	handler = handleNotifyToParent; break;
+			case 'set-clipboard':		handler = handleSetClipboard; break;
+			case 'get-clipboard':		handler = handleGetClipboard; break;
+			case 'push-payload':		handler = handlePushPayload; break;
+			case 'request-wasavi-frame':handler = handleRequestWasaviFrame; break;
+			case 'get-filesystem-entries':
+										handler = handleGetFilesystemEntries; break;
+			}
+
+			if (handler) {
+				lateResponse = handler(req, res, tabId);
 			}
 		}
 		finally {
-			res();
+			!lateResponse && res();
 		}
 	}
 

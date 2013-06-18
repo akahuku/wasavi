@@ -188,6 +188,7 @@ Line input mode commands
 * ^U: delete whole line
 * ^V: literal input
 * ^W: delete a word
+* `tab`: complete ex command name, set option name, file name argument of read/edit/write/file
 
 
 Vim features in wasavi

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 310 2013-06-16 05:30:11Z akahuku $
+ * @version $Id: wasavi.js 311 2013-06-18 16:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -75,6 +75,7 @@
 		get backlog () {return backlog},
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
+		get notifier () {return notifier},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -659,6 +660,17 @@ line-height:1; \
 width:100%; \
 ime-mode:inactive \
 } \
+#wasavi_footer_notifier { \
+visibility:hidden; \
+position:fixed; \
+left:8px; \
+padding:4px; \
+background-color:rgba(0,0,0,0.75); \
+color:#fff; \
+border-radius:3px; \
+font-size:8pt; \
+text-shadow:1px 1px #000; \
+} \
 #wasavi_console_container { \
 visibility:hidden; \
 position:absolute; \
@@ -788,6 +800,10 @@ left:0; top:0; \
 	// footer alter contents: line input
 	var footerInput = $('wasavi_footer_input');
 
+	// footer notifier
+	var footerNotifier = $('wasavi_footer_notifier');
+	footerNotifier.textContent = 'hello, world';
+
 	// console window
 	var conwincnt = $('wasavi_console_container');
 	var conwin = $('wasavi_console');
@@ -823,6 +839,7 @@ left:0; top:0; \
 
 	targetElement = x;
 	fileName = '';
+	cwd = '/';
 	preferredNewline = '\n';
 	terminated = false;
 	writeOnTermination = true;
@@ -855,6 +872,7 @@ left:0; top:0; \
 	exCommandExecutor = new ExCommandExecutor(true);
 	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
 	searchUtils = new Wasavi.SearchUtils(appProxy);
+	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 	refreshIdealWidthPixels();
@@ -913,6 +931,7 @@ function uninstall (save, implicit) {
 	pairBracketsIndicator = undefined;
 	backlog = backlog.dispose();
 	searchUtils = searchUtils.dispose();
+	notifier = notifier.dispose();
 	lastHorzFindCommand = undefined;
 	lastRegexFindCommand = undefined;
 	lastSubstituteInfo = undefined;
@@ -984,13 +1003,14 @@ function setGeometory (target) {
 	var conScaler = $('wasavi_console_scaler');
 	var fmodTable = $('wasavi_footer_modeline_table');
 	var faltTable = $('wasavi_footer_alter_table');
+	var fNotifier = $('wasavi_footer_notifier');
 
 	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !fmodTable || !faltTable) {
+	||  !fmodTable || !faltTable || !fNotifier) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
-				container, editor, footer, con, conScaler, fmodTable, faltTable
+				container, editor, footer, con, conScaler, fmodTable, faltTable, fNotifier
 			].join(', ')
 		);
 	}
@@ -1036,6 +1056,10 @@ function setGeometory (target) {
 
 	style(faltTable, {
 		width:(rect.width - 4) + 'px'
+	});
+
+	style(fNotifier, {
+			bottom:(footer.offsetHeight + 4) + 'px'
 	});
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight));
@@ -4102,7 +4126,7 @@ var completer = new Wasavi.Completer(appProxy,
 		// ex command completion
 		[
 			/^(\s*)([^"\s]*)(.*)$/, 2,
-			function (notifyCandidates) {
+			function (prefix, notifyCandidates) {
 				notifyCandidates(
 					Wasavi.ExCommand.commands
 						.map(function (c) {return c.name}).sort()
@@ -4113,7 +4137,7 @@ var completer = new Wasavi.Completer(appProxy,
 		// option completion
 		[
 			/^(\s*)(set?\s+)(.*)$/, 3,
-			function (notifyCandidates) {
+			function (prefix, notifyCandidates) {
 				notifyCandidates(
 					Object.keys(config.vars).sort()
 				);
@@ -4122,7 +4146,7 @@ var completer = new Wasavi.Completer(appProxy,
 				onFoundContext:function (s, offset) {
 					var COMPLETION_INDEX = 2;
 
-					var regex = /(\s*)(no)?((?:\u0016.|[^=?\s])+)(\?|=(?:\u0016.|\S)*)?(\s*)/g, re;
+					var regex = /(\s*)(no)?([^=?\s]+)(\?|=(?:\u2416.|\S)*)?(\s*)/g, re;
 					var pieceOffset = 0;
 					var result = {
 						cursorOffset:0,
@@ -4170,15 +4194,70 @@ var completer = new Wasavi.Completer(appProxy,
 			}
 		],
 
-		/*
 		// file path completion
 		[
-			/^(\s*)(ed?i?t?|re?a?d?|wr?i?t?e?|fi?l?e?)(\s+)(.*)$/, 4,
-			function (notifyCandidates) {
-				notifyCandidates([]);
+			[
+				/^(\s*ed?i?t?!?\s+(?:\+\+(?:\u2416.|\S)*\s+)?)((?:\u2416.|\S)*)$/,
+				/^(\s*(?:re?a?d?|wr?i?t?e?!?|fi?l?e?)\s+)((?:\u2416.|\S)*)$/,
+			],
+			2,
+			function (prefix, notifyCandidates) {
+				if (!extensionChannel) {
+					notifyCandidates([]);
+					return;
+				}
+
+				extensionChannel.postMessage(
+					{
+						type:'get-filesystem-entries',
+						path:prefix.replace(/\/[^\/]*$/, '')
+					},
+					function (res) {
+						var result;
+
+						if (res && res.data) {
+							result = res.data
+								.map(function (file) {
+									return file.path
+										.replace(/\s/g, '\u2416$&') +
+										(file.is_dir ? '/' : '');
+								})
+								.sort();
+						}
+						else {
+							result = [];
+						}
+
+						notifyCandidates(result);
+					}
+				);
+			},
+			{
+				isVolatile:true,
+				onSetPrefix:function (prefix) {
+					// resolve escape sequence
+					prefix = prefix.replace(/\u2416(.)/g, '$1');
+
+					// resolve relative path
+					if (!/^\//.test(prefix)) {
+						prefix = cwd + '/' + prefix;
+					}
+
+					// resolve redundancy delimiter
+					prefix = prefix.replace(/\/\//g, '/');
+
+					// resolve '.'
+					prefix = prefix.replace(/\.\//g, '/');
+
+					// resolve '..'
+					while (/[^\/]+\/\.\.\//.test(prefix)) {
+						prefix = prefix.replace(/[^\/]+\/\.\.\//, '/');
+					}
+
+					return prefix;
+				}
 			}
 		]
-		 */
 	]
 );
 var config = new Wasavi.Configurator(appProxy,
@@ -4362,6 +4441,7 @@ var lineBreaker;
 var targetElement;
 var buffer;
 var fileName;
+var cwd;
 var preferredNewline;
 var terminated;
 var writeOnTermination;
@@ -4387,6 +4467,7 @@ var exCommandExecutor;
 var searchUtils;
 var recordedStrokes;
 var literalInput;
+var notifier;
 
 var isEditCompleted;
 var isVerticalMotion;
@@ -6153,8 +6234,17 @@ var lineInputEditMap = {
 		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
 			if (!compl) return;
 
-			o.target.value = compl.value;
-			o.target.selectionStart = o.target.selectionEnd = compl.pos;
+			if (typeof compl == 'string') {
+				notifier.show(cmpl);
+			}
+			else {
+				o.target.value = compl.value;
+				o.target.selectionStart = o.target.selectionEnd = compl.pos;
+				notifier.show(
+					_('matched #{0} of {1}', compl.completed.index + 1, compl.filteredLength),
+					1000 * 3
+				);
+			}
 		});
 	},
 	'\u007f'/*delete*/: function (c, o) {

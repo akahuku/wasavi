@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 310 2013-06-16 05:30:11Z akahuku $
+ * @version $Id: classes.js 311 2013-06-18 16:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3450,11 +3450,17 @@ Wasavi.Completer = function (appProxy, alist) {
 			if ('onFoundContext' in opts) {
 				this.onFoundContext = opts.onFoundContext;
 			}
+			if ('onSetPrefix' in opts) {
+				this.onSetPrefix = opts.onSetPrefix;
+			}
 			if ('onComplete' in opts) {
 				this.onComplete = opts.onComplete;
 			}
 			if ('ttlSecs' in opts) {
 				this.ttlMsecs = (opts.ttlSecs || 0) * 1000;
+			}
+			if ('isVolatile' in opts) {
+				this.isVolatile = !!opts.isVolatile;
 			}
 		}
 	}
@@ -3467,16 +3473,15 @@ Wasavi.Completer = function (appProxy, alist) {
 		//
 		reset: function () {
 			this.prefix = false;
-		},
-		start: function (prefix) {
-			this.prefix = prefix;
-			this.currentIndex = -1;
-			this.candidatesFiltered = null;
+			if (this.isVolatile) {
+				this.candidates = null;
+			}
 		},
 		prev: function () {
 			return this.next(true);
 		},
 		next: function (invert) {
+			var index;
 			var result;
 
 			if (!this.candidates) {
@@ -3500,6 +3505,7 @@ Wasavi.Completer = function (appProxy, alist) {
 				) % this.candidatesFiltered.length;
 			}
 
+			index = this.currentIndex;
 			result = this.candidatesFiltered[this.currentIndex];
 
 			this.currentIndex = (
@@ -3509,7 +3515,10 @@ Wasavi.Completer = function (appProxy, alist) {
 
 			this.lastInvert = invert;
 
-			return result;
+			return {
+				index:index,
+				piece:result
+			};
 		},
 
 		//
@@ -3525,7 +3534,15 @@ Wasavi.Completer = function (appProxy, alist) {
 		},
 		setPrefix: function (prefix, force) {
 			if (this.prefix === false || force) {
-				this.start(prefix);
+				if (this.onSetPrefix) {
+					var tmp = this.onSetPrefix(prefix);
+					if (typeof tmp == 'string') {
+						prefix = tmp;
+					}
+				}
+				this.prefix = prefix;
+				this.currentIndex = -1;
+				this.candidatesFiltered = null;
 			}
 		},
 		updateFilteredCandidates: function () {
@@ -3541,7 +3558,7 @@ Wasavi.Completer = function (appProxy, alist) {
 				callback();
 			}
 			if (typeof this.onRequestCandidates == 'function') {
-				this.onRequestCandidates(initCandidates.bind(this));
+				this.onRequestCandidates(this.prefix, initCandidates.bind(this));
 			}
 			else {
 				initCandidates.call(this, []);
@@ -3564,37 +3581,48 @@ Wasavi.Completer = function (appProxy, alist) {
 		getResult: function (invert) {
 			var completedPiece = this.item.next(invert);
 			if (this.item.onComplete) {
-				var tmp = this.item.onComplete(completedPiece, this.subPieces[this.subPieceIndex]);
+				var tmp = this.item.onComplete(
+					completedPiece.piece,
+					this.subPieces[this.subPieceIndex]
+				);
 				if (typeof tmp == 'string') {
-					completedPiece = tmp;
 					this.item.currentIndex = -1;
 					this.item.setPrefix(tmp, true);
-					this.item.next(invert);
+					completedPiece = this.item.next(invert);
 				}
 			}
 
-			if (completedPiece === undefined) {
+			if (!completedPiece) {
 				return false;
 			}
 
 			var subPieces = this.subPieces.slice(1);
-			var pos = this.pos - this.offset + completedPiece.length;
+			var pos = this.pos - this.offset + completedPiece.piece.length;
 
-			subPieces[this.subPieceIndex - 1] = completedPiece;
-			this.offset = completedPiece.length;
+			subPieces[this.subPieceIndex - 1] = completedPiece.piece;
+			this.offset = completedPiece.piece.length;
 
 			var pieces = this.pieces.slice(0);
 			pieces[this.pieceIndex] = subPieces.join('');
 
 			return {
 				pos:pos,
-				value:pieces.join('')
+				value:pieces.join(''),
+				length:this.item.candidates.length,
+				filteredLength:this.item.candidatesFiltered.length,
+				completed:completedPiece
 			}
 		}
 	};
 
+	var COMPLETION_NOTIFY_TTL_SECS = 60;
+	var COMPLETION_NOTIFY_DELAY_SECS = 0.1;
+	var TIMEOUT_SECS = 30;
+
 	var list;
 	var running = false;
+	var notifierTimer;
+	var timeoutTimer;
 
 	// privates
 	function init (alist) {
@@ -3606,7 +3634,7 @@ Wasavi.Completer = function (appProxy, alist) {
 	function getExCommandParseResult (value) {
 		var commands;
 		var parseResult = appProxy.low.executeExCommand(value, true, true, true);
-		if (typeof parseResult == 'string') return commands;
+		if (typeof parseResult == 'string') return parseResult;
 
 		if (/^(?:global|v)$/.test(parseResult.commands.lastItem[0].name)
 		&&  parseResult.commands.lastItem[1].argv.lastItem != undefined) {
@@ -3615,7 +3643,7 @@ Wasavi.Completer = function (appProxy, alist) {
 				parseResult.commands.lastItem[1].argv.lastItem,
 				false, true, true
 			);
-			if (typeof parseResult2 == 'string') return commands;
+			if (typeof parseResult2 == 'string') return parseResult2;
 
 			commands = parseResult.commands;
 			commands.lastItem[1].args =
@@ -3632,9 +3660,9 @@ Wasavi.Completer = function (appProxy, alist) {
 		return commands;
 	}
 	function findCompleteContext (value, pos) {
-		var result = null, pieces;
+		var result = null, errorMessage = null, pieces;
 		var commands = getExCommandParseResult(value);
-		if (!commands) return result;
+		if (!commands) return commands;
 
 		list.some(function (item) {
 			var offset = 0;
@@ -3645,7 +3673,10 @@ Wasavi.Completer = function (appProxy, alist) {
 				pieces.push(args);
 
 				var range = Wasavi.ExCommand.prototype.parseRange(appProxy, args, undefined, true);
-				if (typeof range == 'string') return;
+				if (typeof range == 'string') {
+					errorMessage = range;
+					return;
+				}
 
 				var argsForMatch = multiply(' ', args.length - range.rest.length) + range.rest;
 
@@ -3680,10 +3711,36 @@ Wasavi.Completer = function (appProxy, alist) {
 				});
 			});
 
-			return !!result;
+			return !!result || errorMessage != null;
 		});
 
-		return result;
+		return errorMessage || result;
+	}
+	function startNotifierTimer (callback) {
+		stopNotifierTimer();
+
+		notifierTimer = setTimeout(function () {
+			notifierTimer = null;
+			appProxy.notifier.show(_('completing...'), 1000 * COMPLETION_NOTIFY_TTL_SECS);
+		}, 1000 * COMPLETION_NOTIFY_DELAY_SECS);
+
+		timeoutTimer = setTimeout(function () {
+			timeoutTimer = null;
+			stopNotifierTimer();
+			running = false;
+			callback(_('completion timed out'));
+			callback.__timed_out__ = true;
+		}, 1000 * TIMEOUT_SECS);
+	}
+	function stopNotifierTimer () {
+		if (notifierTimer) {
+			clearTimeout(notifierTimer);
+			notifierTimer = null;
+		}
+		if (timeoutTimer) {
+			clearTimeout(timeoutTimer);
+			timeoutTimer = null;
+		}
 	}
 
 	// publics
@@ -3698,13 +3755,17 @@ Wasavi.Completer = function (appProxy, alist) {
 	}
 	function run (value, pos, invert, callback) {
 		if (running) {
-			callback(false);
+			callback();
 			return;
 		}
 
 		var ctx = findCompleteContext(value, pos);
-		if (!ctx) {
-			callback(false);
+		if (typeof ctx == 'string') {
+			callback(ctx);
+			return;
+		}
+		else if (!ctx) {
+			callback();
 			return;
 		}
 
@@ -3714,9 +3775,11 @@ Wasavi.Completer = function (appProxy, alist) {
 		}
 
 		running = true;
+		startNotifierTimer(callback);
 		ctx.item.requestCandidates(function () {
+			stopNotifierTimer();
 			running = false;
-			callback(ctx.getResult(invert));
+			!callback.__timed_out__ && callback(ctx.getResult(invert));
 		});
 	}
 	function dispose () {

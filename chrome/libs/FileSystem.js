@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: FileSystem.js 311 2013-06-18 16:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -29,33 +29,37 @@
 	var u;
 
 	function FileSystemBase () {
-		var backend = '*null*';
+		var BACKEND = '*null*';
 		this.ls = this.write = this.read = function () {};
 		this.match = function () {return false;};
 		this.__defineGetter__('isAuthorized', function () {return true;});
-		this.__defineGetter__('backend', function () {return backend;});
+		this.__defineGetter__('backend', function () {return BACKEND;});
 		this.__defineGetter__('state', function () {return 'authorized';});
 	}
 
 	function FileSystemDropbox (consumerKey, consumerSecret, extension) {
-		var WRITE_DELAY_SECS = 10;
-		var backend = 'dropbox';
 
-		var oauthCallbackUrl = 'http://wasavi.appsweets.net/authorized.html?fs=' + backend;
-		var oauthOpts = {
+		/*
+		 * consts
+		 */
+
+		var WRITE_DELAY_SECS = 10;
+		var BACKEND = 'dropbox';
+		var LS_CACHE_TTL_MSECS = 1000 * 60 * 15;
+		var OAUTH_CALLBACK_URL = 'http://wasavi.appsweets.net/authorized.html?fs=' + BACKEND;
+		var OAUTH_OPTS = {
 			consumerKey:      consumerKey,
 			consumerSecret:   consumerSecret,
 			requestTokenUrl:  'https://api.dropbox.com/1/oauth/request_token',
 			authorizationUrl: 'https://www.dropbox.com/1/oauth/authorize',
 			accessTokenUrl:   'https://api.dropbox.com/1/oauth/access_token'
 		};
-		var oauth = OAuth(oauthOpts);
-		if (!oauth) {
-			throw new Error('cannot instanciate jsOauth.');
-		}
-		oauth.requestTransport = function () {
-			return extension.createTransport();
-		};
+
+		/*
+		 * vars
+		 */
+
+		var oauth = OAuth(OAUTH_OPTS);
 
 		var state = 'no-request-token';
 		var lastError;
@@ -65,6 +69,12 @@
 
 		var writeTimer;
 		var writeBuffer = {};
+
+		var lsCache = {};
+
+		/*
+		 * privates
+		 */
 
 		function isAuthorized () {
 			return state == 'authorized';
@@ -114,7 +124,7 @@
 				lastError = data + '';
 			}
 
-			lastError = backend + ': ' + lastError;
+			lastError = BACKEND + ': ' + lastError;
 			extension.isDev && console.error('wasavi background: file system error: ' + lastError);
 
 			var lastTabId;
@@ -142,7 +152,7 @@
 				op = operationQueue.shift();
 				lastTabId = op.tabId;
 				switch (op.method) {
-				case 'ls':    ls(op.path, op.tabId); break;
+				case 'ls':    ls(op.path, op.tabId, op.callback); break;
 				case 'write': write(op.path, op.content, op.tabId); break;
 				case 'read':  read(op.path, op.tabId); break;
 				}
@@ -179,6 +189,7 @@
 		function objectToQuery (q) {
 			var result = [];
 			for (var i in q) {
+				if (q[i] == undefined) continue;
 				result.push(
 					OAuth.urlEncode(i) +
 					'=' +
@@ -193,6 +204,48 @@
 			return query == '' ? base : (base + '?' + query);
 		}
 
+		function getInternalPath (path) {
+			path = path.replace(/^dropbox:\//, '');
+			path = path.replace(/^\//, '');
+			return path;
+		}
+
+		function getExternalPath (path) {
+			if (path.charAt(0) != '/') {
+				path = '/' + path;
+			}
+			return BACKEND + ':/' + path;
+		}
+
+		function getCanonicalPath (path) {
+			return path.split('/').map(OAuth.urlEncode).join('/');
+		}
+
+		function match (url) {
+			return /^dropbox:/.test(url);
+		}
+
+		function accessTokenKeyName () {
+			return 'filesystem.' + BACKEND + '.tokens';
+		}
+
+		function restoreAcessTokenPersistents () {
+			var obj = extension.storage.getItem(accessTokenKeyName());
+			if (obj.key && obj.secret && obj.uid && obj.locale) {
+				oauth.setAccessToken(obj.key, obj.secret);
+				uid = obj.uid;
+				locale = obj.locale;
+				state = 'pre-authorized';
+			}
+		}
+
+		function saveAccessTokenPersistents (key, secret, uid, locale) {
+			extension.storage.setItem(
+				accessTokenKeyName(),
+				{key:key, secret:secret, uid:uid, locale:locale});
+		}
+
+		/* {{{1 authorize */
 		function authorize (tabId) {
 			var thisFunc = authorize;
 			switch (state) {
@@ -206,7 +259,7 @@
 				response({state:'authorizing', phase:'1/3'});
 				oauth.setAccessToken('', '');
 				oauth.post(
-					oauthOpts.requestTokenUrl, null,
+					OAUTH_OPTS.requestTokenUrl, null,
 					function (data) {
 						state = 'confirming-user-authorization';
 
@@ -214,13 +267,13 @@
 							data, data.responseHeaders['Content-Type'] || undefined);
 						oauth.setAccessToken([token.oauth_token, token.oauth_token_secret]);
 
-						var q = queryToObject(oauthOpts.authorizationUrl);
+						var q = queryToObject(OAUTH_OPTS.authorizationUrl);
 						q.oauth_token = token.oauth_token;
-						q.oauth_callback = oauthCallbackUrl;
-						oauth.setCallbackUrl(oauthCallbackUrl);
+						q.oauth_callback = OAUTH_CALLBACK_URL;
+						oauth.setCallbackUrl(OAUTH_CALLBACK_URL);
 
 						extension.openTabWithUrl(
-							setQuery(oauthOpts.authorizationUrl, q),
+							setQuery(OAUTH_OPTS.authorizationUrl, q),
 							function (id, url) {
 								extension.tabWatcher.add(id, url, function (newUrl) {
 									//if (!newUrl) return;
@@ -228,9 +281,9 @@
 
 									extension.closeTab(id);
 									oauth.setCallbackUrl('');
-									if (u.baseUrl(newUrl) == u.baseUrl(oauthCallbackUrl)) {
+									if (u.baseUrl(newUrl) == u.baseUrl(OAUTH_CALLBACK_URL)) {
 										var q = queryToObject(newUrl);
-										if (q.fs != backend) return;
+										if (q.fs != BACKEND) return;
 										if (q.oauth_token == oauth.getAccessTokenKey()) {
 											state = 'no-access-token';
 											uid = q.uid;
@@ -261,7 +314,7 @@
 				state = 'fetching-access-token';
 				response({state:'authorizing', phase:'2/3'});
 				oauth.post(
-					oauthOpts.accessTokenUrl, null,
+					OAUTH_OPTS.accessTokenUrl, null,
 					function (data) {
 						state = 'pre-authorized';
 						var token = oauth.parseTokenRequest(
@@ -306,33 +359,78 @@
 				break;
 			}
 		}
+		/* }}} */
 
-		function getInternalPath (path) {
-			path = path.replace(/^dropbox:\//, '');
-			path = path.replace(/^\//, '');
-			return path;
-		}
+		/*
+		 * publics
+		 */
 
-		function getExternalPath (path) {
-			if (path.charAt(0) != '/') {
-				path = '/' + path;
-			}
-			return backend + ':/' + path;
-		}
-
-		function getCanonicalPath (path) {
-			return path.split('/').map(OAuth.urlEncode).join('/');
-		}
-
-		function match (url) {
-			return /^dropbox:/.test(url);
-		}
-
-		function ls (path, tabId) {
+		function ls (path, tabId, callback) {
+			/*
+			 sample_response: {
+				 "text": "...",
+				 "xml": "",
+				 "requestHeaders": {},
+				 "responseHeaders": {
+					 "version": "HTTP/1.1",
+					 "status": "200",
+					 "server": "nginx",
+					 "date": "Mon, 17 Jun 2013 05:27:41 GMT",
+					 "content-type": "text/javascript",
+					 "x-server-response-time": "42",
+					 "x-dropbox-request-id": "3af0cafacc1be9ff",
+					 "pragma": "no-cache",
+					 "cache-control": "no-cache",
+					 "x-dropbox-http-protocol": "None",
+					 "x-frame-options": "SAMEORIGIN",
+					 "x-requestid": "03e2703e4fae7508603d50d58fb1056a",
+					 "content-encoding": "gzip"
+				 },
+				 "status": 200
+			 }
+			 */
 			if (isAuthorized()) {
+				path = getCanonicalPath(getInternalPath(path));
+
+				var q = {locale:locale, list:'true'};
+				var key = path || '/';
+
+				if (key in lsCache) {
+					q.hash = lsCache[key].data.hash;
+				}
+
+				oauth.get(
+					setQuery('https://api.dropbox.com/1/metadata/dropbox/' + path, q),
+					function (data) {
+						if (data.status == 304) {
+							data = lsCache[key].data;
+							lsCache[key].timestamp = Date.now();
+						}
+						else {
+							data = u.parseJson(data.text);
+							lsCache[key] = {
+								data:data,
+								timestamp:Date.now()
+							};
+						}
+
+						Object.keys(lsCache)
+							.filter(function (p) {
+								return Date.now() - lsCache[p].timestamp > LS_CACHE_TTL_MSECS;
+							})
+							.forEach(function (p) {
+								delete lsCache[p];
+							});
+
+						callback(data);
+					},
+					function (data) {
+						callback({});
+					}
+				);
 			}
 			else {
-				operationQueue.push({method:'ls', path:path, tabId:tabId});
+				operationQueue.push({method:'ls', path:path, tabId:tabId, callback:callback});
 				authorize(tabId);
 			}
 		}
@@ -454,33 +552,24 @@
 			}
 		}
 
-		function accessTokenKeyName () {
-			return 'filesystem.' + backend + '.tokens';
-		}
-
-		function restoreAcessTokenPersistents () {
-			var obj = u.parseJson(extension.storage.getItem(accessTokenKeyName()));
-			if (obj.key && obj.secret && obj.uid && obj.locale) {
-				oauth.setAccessToken(obj.key, obj.secret);
-				uid = obj.uid;
-				locale = obj.locale;
-				state = 'pre-authorized';
-			}
-		}
-
-		function saveAccessTokenPersistents (key, secret, uid, locale) {
-			extension.storage.setItem(
-				accessTokenKeyName(),
-				JSON.stringify({key:key, secret:secret, uid:uid, locale:locale}));
-		}
+		/*
+		 * start
+		 */
 
 		this.ls = ls;
 		this.write = writeLater;
 		this.read = read;
 		this.match = match;
 		this.__defineGetter__('isAuthorized', isAuthorized);
-		this.__defineGetter__('backend', function () {return backend;});
+		this.__defineGetter__('backend', function () {return BACKEND;});
 		this.__defineGetter__('state', function () {return state;});
+
+		if (!oauth) {
+			throw new Error('cannot instanciate jsOauth.');
+		}
+		oauth.requestTransport = function () {
+			return extension.createTransport();
+		};
 
 		restoreAcessTokenPersistents();
 	}

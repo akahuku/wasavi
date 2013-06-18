@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: classes_ui.js 311 2013-06-18 16:10:52Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -868,6 +868,39 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 			rows:getRows,
 			cols:getCols,
 			visible:getVisible
+		}
+	);
+};
+
+Wasavi.Notifier = function (app, container) {
+	var timer;
+	var hideIntervalMsecs = 2000;
+
+	function show (message, aIntervalMsecs) {
+		timer && clearTimeout(timer);
+		if (typeof message == 'function') {
+			message(container);
+		}
+		else {
+			container.textContent = message;
+		}
+		container.style.visibility = 'visible';
+		timer = setTimeout(hide, aIntervalMsecs || hideIntervalMsecs);
+	}
+	function hide () {
+		container.style.visibility = 'hidden';
+		timer = null;
+	}
+	function dispose () {
+		app = container = null;
+	}
+
+	publish(this, show, hide, dispose,
+		{
+			hideIntervalMsecs:[
+				function () {return hideIntervalMsecs},
+				function (v) {hideIntervalMsecs = v}
+			]
 		}
 	);
 };
