@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: classes_subst.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -290,26 +290,26 @@ Wasavi.SubstituteWorker.prototype = {
 				break;
 			case 2:
 				if (result.length) {
-					var tmp = result[result.length - 1];
+					var tmp = result.lastItem;
 					tmp = tmp.charAt(0).toUpperCase() + tmp.substring(1);
-					result[result.length - 1] = tmp;
+					result.lastItem = tmp;
 				}
 				break;
 			case 3:
 				if (result.length) {
-					var tmp = result[result.length - 1];
+					var tmp = result.lastItem;
 					tmp = tmp.charAt(0).toLowerCase() + tmp.substring(1);
-					result[result.length - 1] = tmp;
+					result.lastItem = tmp;
 				}
 				break;
 			case 4:
 				if (result.length) {
-					result[result.length - 1] = result[result.length - 1].toUpperCase();
+					result.lastItem = result.lastItem.toUpperCase();
 				}
 				break;
 			case 5:
 				if (result.length) {
-					result[result.length - 1] = result[result.length - 1].toLowerCase();
+					result.lastItem = result.lastItem.toLowerCase();
 				}
 				break;
 			}
@@ -417,8 +417,8 @@ Wasavi.SubstituteWorker.prototype = {
 						stack.push({x:0, v:ch});
 						newOperand = false;
 					}
-					else if (stack.length && stack[stack.length - 1].x == 0) {
-						stack[stack.length - 1].v += ch;
+					else if (stack.length && stack.lastItem.x == 0) {
+						stack.lastItem.v += ch;
 					}
 				}
 				if (callDepth && interruptMode == 1) {

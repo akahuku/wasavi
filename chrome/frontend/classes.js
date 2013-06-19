@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 311 2013-06-18 16:10:52Z akahuku $
+ * @version $Id: classes.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -704,7 +704,7 @@ Wasavi.RegexFinderInfo = function () {
 		if (withOffset) {
 			var fragments = p.split(head);
 			if (fragments.length >= 2 && fragments[fragments.length - 2].substr(-1) != '\\') {
-				var re = /\s*([-+]?\d+)\s*$/.exec(fragments[fragments.length - 1]);
+				var re = /\s*([-+]?\d+)\s*$/.exec(fragments.lastItem);
 				if (re) {
 					verticalOffset = parseInt(re[1], 10);
 				}
@@ -1237,7 +1237,7 @@ Wasavi.KeyManager = function () {
 	}
 	function handleInputOpera (e) {
 		if (keydownStack.length && !e.__delayedTrace) {
-			var last = keydownStack[keydownStack.length - 1];
+			var last = keydownStack.lastItem;
 			if (!last[0].repeat) {
 				last[1].push(e);
 				last[2] = e.target.value;
@@ -2193,8 +2193,8 @@ Wasavi.Editor.prototype = new function () {
 	}
 	function popLastArg (args, type) {
 		type || (type = 'function');
-		if (args.length && typeof args[args.length -1] == type) {
-			var func = args[args.length - 1];
+		if (args.length && typeof args.lastItem == type) {
+			var func = args.lastItem;
 			args.pop();
 			return func;
 		}
@@ -2751,7 +2751,7 @@ Wasavi.Editor.prototype = new function () {
 				var node = row.firstChild;
 				if (node.nodeType != 3) return;
 
-				var q = indent - currentIndents[currentIndents.length - 1];
+				var q = indent - currentIndents.lastItem;
 				if (q <= 0) return;
 
 				if (indentBuffer.length < q) {
@@ -3632,57 +3632,71 @@ Wasavi.Completer = function (appProxy, alist) {
 		});
 	}
 	function getExCommandParseResult (value) {
-		var commands;
-		var parseResult = appProxy.low.executeExCommand(value, true, true, true);
-		if (typeof parseResult == 'string') return parseResult;
+		var result = [];
 
-		if (/^(?:global|v)$/.test(parseResult.commands.lastItem[0].name)
-		&&  parseResult.commands.lastItem[1].argv.lastItem != undefined) {
+		while (value.length) {
+			if (/^\s"/.test(value)) {
+				result.push({range:'', rest:value});
+				break;
+			}
 
-			var parseResult2 = appProxy.low.executeExCommand(
-				parseResult.commands.lastItem[1].argv.lastItem,
-				false, true, true
-			);
-			if (typeof parseResult2 == 'string') return parseResult2;
+			/*
+			 * range :=
+			 *     address? (delimiter address?)*
+			 *
+			 * address :=
+			 *     main-address offset?
+			 *
+			 * main-address :=
+			 *     .
+			 *     $
+			 *     \d+
+			 *     '[a-z`']
+			 *     / ... /
+			 *     ? ... ?
+			 *     [+-]\d*
+			 *
+			 * offset :=
+			 *     [+-]\d*
+			 *
+			 * delimiter :=
+			 *     ,
+			 *     ;
+			 */
+			var range = /^(?:\s*(?:\.|\$|\d+|'[a-z`']|\/(?:\\\/|[^\/])*\/|\?(?:\\\?|[^\?])*\?|[+\-]\d*)(?:[+\-]\d*)?)?(?:(?:\s*[,;])(?:\s*(?:\.|\$|\d+|'[a-z`']|\/(?:\\\/|[^\/])*\/|\?(?:\\\?|[^\?])*\?|[+\-]\d*)(?:[+\-]\d*)?)?)*\s*/.exec(value);
+			value = value.substring(range[0].length);
 
-			commands = parseResult.commands;
-			commands.lastItem[1].args =
-				commands.lastItem[1].args.substring(
-					0,
-					commands.lastItem[1].args.length -
-					commands.lastItem[1].argv.lastItem.length
-				);
-			Array.prototype.push.apply(commands, parseResult2.commands);
+			var rest = /^(?:\u2416\||[^\|])*/.exec(value);
+			value = value.substring(rest[0].length);
+
+			result.push({range:range[0], rest:rest[0]});
+
+			if (value.charAt(0) == '|') {
+				value = value.substring(1);
+			}
 		}
-		else {
-			commands = parseResult.commands;
-		}
-		return commands;
+
+		return result;
 	}
 	function findCompleteContext (value, pos) {
-		var result = null, errorMessage = null, pieces;
+		var result = null, errorMessage = null;
 		var commands = getExCommandParseResult(value);
-		if (!commands) return commands;
 
 		list.some(function (item) {
 			var offset = 0;
-			pieces = [];
+			var pieces = [];
 
 			commands.forEach(function (command, i) {
-				var args = command[1].args;
+				var args = command.range + command.rest;
 				pieces.push(args);
 
-				var range = Wasavi.ExCommand.prototype.parseRange(appProxy, args, undefined, true);
-				if (typeof range == 'string') {
-					errorMessage = range;
-					return;
-				}
-
-				var argsForMatch = multiply(' ', args.length - range.rest.length) + range.rest;
+				var argsForMatch = multiply(' ', command.range.length) + command.rest;
 
 				item.patterns.forEach(function (pattern, patternIndex) {
 					var re = pattern.exec(argsForMatch);
 					if (!re) return;
+
+					re[1] = command.range;
 
 					var subOffset = offset;
 					for (var i = 1; i < re.length; subOffset += re[i++].length) {

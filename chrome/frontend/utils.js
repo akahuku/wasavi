@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: utils.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -35,7 +35,12 @@
  */
 
 Object.defineProperty(Array.prototype, 'lastItem', {
-	get:function () {return this[this.length - 1]}
+	get:function () {return this[this.length - 1]},
+	set:function (v) {
+		if (this.length) {
+			this[this.length - 1] = v;
+		}
+	}
 });
 
 /*

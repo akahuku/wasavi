@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: unicode_utils.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -435,14 +435,14 @@ var unicodeUtils = (function () {
 			props.get(i - 1).breakAction = BREAK_ACTION.EXPLICIT;
 
 			// purge invalid item
-			while (!('breakAction' in props.items[props.items.length - 1])) {
+			while (!('breakAction' in props.items.lastItem)) {
 				props.items.pop();
 			}
 
 			// return result
 			return props.items;
 			/*
-			var last = props.items[props.items.length - 1];
+			var last = props.items.lastItem;
 			if (last.index + last.length >= s.length) {
 				return props.items;
 			}

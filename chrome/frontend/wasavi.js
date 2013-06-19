@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 311 2013-06-18 16:10:52Z akahuku $
+ * @version $Id: wasavi.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1239,7 +1239,7 @@ function requestSimpleCommandUpdate () {
 		isSimpleCommandUpdateRequested = true;
 	}
 }
-function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
+function executeExCommand (source, isRoot, parseOnly) {
 	// @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
 
 	var resultMessage;
@@ -1365,8 +1365,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 				appProxy,
 				r, commandNameSupplement,
 				argv, args,
-				undefined,
-				ignoreSyntaxError
+				undefined
 			);
 			if (typeof argObj == 'string') {
 				resultMessage = argObj || _('{0}: unknown syntax error.', commandObj.name);
@@ -1374,24 +1373,6 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 			}
 
 			executor.add(commandObj, argObj);
-			return true;
-		}
-		else if (ignoreSyntaxError) {
-			r = range.rows.last(buffer, 2, true);
-			if (typeof r == 'string') {
-				resultMessage = r;
-				return false;
-			}
-
-			argObj = Wasavi.ExCommand.defaultCommand.buildArgs(
-				appProxy,
-				r, commandNameSupplement,
-				argv, args,
-				's',
-				ignoreSyntaxError
-			);
-
-			executor.add(Wasavi.ExCommand.defaultCommand, argObj);
 			return true;
 		}
 		else {
@@ -1436,7 +1417,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 			skipto(/\n/g);
 			skipby(1);
 			if (argv && argv.length
-			&&  argv[argv.length - 1].replace(/[ \t]+$/, '') == literalExitKey) {
+			&&  argv.lastItem.replace(/[ \t]+$/, '') == literalExitKey) {
 				argv.pop();
 				if (!pushCommand()) {
 					break;
@@ -1690,7 +1671,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 			lastTerminator = skipby(1);
 
 			if (/^\s*$/.test(commandNameSupplement)) {
-				if (isInteractive && !ignoreSyntaxError) {
+				if (isInteractive) {
 					resultMessage = _('Cannot use the multi-lined script interactively.');
 					break;
 				}
@@ -1727,7 +1708,7 @@ function executeExCommand (source, isRoot, parseOnly, ignoreSyntaxError) {
 		if (!pushCommand()) {
 			break;
 		}
-		if (!commandObj && commandName != '' && !ignoreSyntaxError) {
+		if (!commandObj && commandName != '') {
 			resultMessage = _('{0}: unknown command.', commandName);
 			break;
 		}
@@ -3962,14 +3943,15 @@ function handleKeydown2 (e) {
 	|| completer.running
 	|| isBulkInputting && !e.isCompositioned) {
 		keyManager.push(e);
-		/*fireNotifyKeydownEvent(
+		fireNotifyKeydownEvent(
 			e.code, e.fullIdentifier,
 			'busy now('
 				+ (scroller.running ? 'scroller' : '')
 				+ (exCommandExecutor.running ? 'exCommandExecutor' : '')
+				+ (completer.running ? 'completer' : '')
 				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
 				+ ')'
-		);*/
+		);
 		return;
 	}
 	isInteractive = true;
@@ -4197,10 +4179,10 @@ var completer = new Wasavi.Completer(appProxy,
 		// file path completion
 		[
 			[
-				/^(\s*ed?i?t?!?\s+(?:\+\+(?:\u2416.|\S)*\s+)?)((?:\u2416.|\S)*)$/,
-				/^(\s*(?:re?a?d?|wr?i?t?e?!?|fi?l?e?)\s+)((?:\u2416.|\S)*)$/,
+				/^(\s*)(ed?i?t?!?\s+(?:\+\+(?:\u2416.|\S)*\s+)?)((?:\u2416.|\S)*)$/,
+				/^(\s*)((?:re?a?d?|wr?i?t?e?!?|fi?l?e?)\s+)((?:\u2416.|\S)*)$/,
 			],
-			2,
+			3,
 			function (prefix, notifyCandidates) {
 				if (!extensionChannel) {
 					notifyCandidates([]);
@@ -4210,7 +4192,9 @@ var completer = new Wasavi.Completer(appProxy,
 				extensionChannel.postMessage(
 					{
 						type:'get-filesystem-entries',
-						path:prefix.replace(/\/[^\/]*$/, '')
+						path:prefix
+							.replace(/\u2416(.)/g, '$1')
+							.replace(/\/[^\/]*$/, '')
 					},
 					function (res) {
 						var result;
@@ -4244,7 +4228,7 @@ var completer = new Wasavi.Completer(appProxy,
 					}
 
 					// resolve redundancy delimiter
-					prefix = prefix.replace(/\/\//g, '/');
+					prefix = prefix.replace(/\/{2,}/g, '/');
 
 					// resolve '.'
 					prefix = prefix.replace(/\.\//g, '/');
@@ -4253,6 +4237,9 @@ var completer = new Wasavi.Completer(appProxy,
 					while (/[^\/]+\/\.\.\//.test(prefix)) {
 						prefix = prefix.replace(/[^\/]+\/\.\.\//, '/');
 					}
+
+					// re-escape
+					prefix = prefix.replace(/\s/g, '\u2416$&');
 
 					return prefix;
 				}
@@ -6235,7 +6222,7 @@ var lineInputEditMap = {
 			if (!compl) return;
 
 			if (typeof compl == 'string') {
-				notifier.show(cmpl);
+				notifier.show(compl);
 			}
 			else {
 				o.target.value = compl.value;

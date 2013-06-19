@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 305 2013-06-10 17:33:18Z akahuku $
+ * @version $Id: agent.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1008,7 +1008,7 @@ extension.setMessageListener(function (req) {
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
 			stateClearTimer = null;
-			log('notify-keydown: timer cleared', '', '');
+			//log('notify-keydown: timer cleared', '', '');
 		}
 		log(req.eventType, req.keyCode, req.key);
 		break;
@@ -1031,9 +1031,9 @@ extension.setMessageListener(function (req) {
 
 			stateClearTimer = null;
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
-			log('notify-state: timer executed.', '', '');
+			log('notify-state', '', '');
 		}, 100);
-		log('notify-state: timer registered.', '', '');
+		//log('notify-state: timer registered.', '', '');
 		break;
 
 	case 'wasavi-command-completed':
@@ -1045,7 +1045,7 @@ extension.setMessageListener(function (req) {
 			wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
 			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
 
-			log('command-completed: timer executed.', '', '');
+			log('command-completed', '', '');
 			keyStrokeLog.unshift('*** sequence point ***');
 			document.querySelector('h1').style.color = '';
 			document.getElementById('test-log').value =
@@ -1063,7 +1063,7 @@ extension.setMessageListener(function (req) {
 			stateClearTimer = null;
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
 		}, 100);
-		log('command-completed: timer registered.', '', '');
+		//log('command-completed: timer registered.', '', '');
 		break;
 	}
 });

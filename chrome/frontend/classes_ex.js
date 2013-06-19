@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: classes_ex.js 313 2013-06-19 06:47:58Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -57,7 +57,7 @@ Wasavi.ExCommand.prototype = {
 			this.handler
 		);
 	},
-	parseArgs: function (app, range, line, syntax, ignoreSyntaxError) {
+	parseArgs: function (app, range, line, syntax) {
 		function argv_exp0 (s) {
 			result.argv.push(s);
 		}
@@ -283,7 +283,7 @@ flag23_loop:
 			}
 		}
 
-		if (needCheckRest && !ignoreSyntaxError) {
+		if (needCheckRest) {
 			line = line.replace(/^\s+/, '');
 			if (line != '' || /[lr]/.test(syntax.substring(i))) {
 				return _('Invalid argument.');
@@ -420,15 +420,15 @@ flag23_loop:
 						var offset = re[1] == '' ?
 							(re[0].charAt(0) == '+' ? 1 : -1) :
 							parseInt(re[0], 10);
-						rows[rows.length - 1] += offset;
+						rows.lastItem += offset;
 						if (regexSpecified) {
 							app.lastRegexFindCommand.verticalOffset = offset;
 						}
 						s = s.substring(re[0].length);
 					}
 
-					if (rows[rows.length - 1] < 0) {
-						rows[rows.length - 1] = allowZeroAddress ? -1 : 0;
+					if (rows.lastItem < 0) {
+						rows.lastItem = allowZeroAddress ? -1 : 0;
 					}
 
 					s = s.replace(/^[ \t]+/, '');
@@ -445,11 +445,11 @@ flag23_loop:
 					if (rows.length == 0) {
 						rows.push(t.selectionStartRow);
 					}
-					if (rows[rows.length - 1] > t.rowLength) {
+					if (rows.lastItem > t.rowLength) {
 						error = _('Out of range.');
 						break;
 					}
-					t.setSelectionRange(new Wasavi.Position(rows[rows.length - 1], 0));
+					t.setSelectionRange(new Wasavi.Position(rows.lastItem, 0));
 					s = s.substring(1);
 					!found && rows.push(t.selectionStartRow);
 				}
@@ -464,7 +464,7 @@ flag23_loop:
 			count = Math.min(count, 2);
 			if (count == 1) {
 				if (this.length >= 1) {
-					result = [this[this.length - 1]];
+					result = [this.lastItem];
 				}
 				else {
 					result = [t.selectionStartRow];
@@ -500,8 +500,8 @@ flag23_loop:
 			rest: s
 		};
 	},
-	buildArgs: function (app, range, commandNameOption, argv, args, syntax, ignoreSyntaxError) {
-		var result = this.parseArgs(app, range, commandNameOption, syntax, ignoreSyntaxError);
+	buildArgs: function (app, range, commandNameOption, argv, args, syntax) {
+		var result = this.parseArgs(app, range, commandNameOption, syntax);
 		if (typeof result == 'string') {
 			return this.name + ': ' + result;
 		}
