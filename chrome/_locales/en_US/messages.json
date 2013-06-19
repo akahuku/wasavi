@@ -160,6 +160,14 @@
 		"message": "Invalid codepoint.",
 		"description": "Invalid codepoint."
 	},
+	"completing": {
+		"message": "completing...",
+		"description": "completing..."
+	},
+	"completion_timed_out": {
+		"message": "completion timed out",
+		"description": "completion timed out"
+	},
 	"bad_address": {
 		"message": "Bad address.",
 		"description": "Bad address."
@@ -619,6 +627,10 @@
 	"@0_literal_input": {
 		"message": "{0}: literal input",
 		"description": "{0}: literal input"
+	},
+	"matched_@0_of_@1": {
+		"message": "matched #{0} of {1}",
+		"description": "matched #{0} of {1}"
 	},
 	"tail_of_history": {
 		"message": "Tail of history.",

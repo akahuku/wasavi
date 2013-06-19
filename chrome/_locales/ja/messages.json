@@ -160,6 +160,14 @@
 		"message": "不正なコードポイントです。",
 		"description": "Invalid codepoint."
 	},
+	"completing": {
+		"message": "補完しています...",
+		"description": "completing..."
+	},
+	"completion_timed_out": {
+		"message": "補完がタイムアウトしました",
+		"description": "completion timed out"
+	},
 	"bad_address": {
 		"message": "不正なアドレス。",
 		"description": "Bad address."
@@ -619,6 +627,10 @@
 	"@0_literal_input": {
 		"message": "{0}: 文字の入力",
 		"description": "{0}: literal input"
+	},
+	"matched_@0_of_@1": {
+		"message": "{1} 個中の #{0} で補完",
+		"description": "matched #{0} of {1}"
 	},
 	"tail_of_history": {
 		"message": "履歴の末尾です。",
