@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: classes.js 316 2013-06-19 20:16:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3582,7 +3582,7 @@ Wasavi.Completer = function (appProxy, alist) {
 			var completedPiece = this.item.next(invert);
 			if (this.item.onComplete) {
 				var tmp = this.item.onComplete(
-					completedPiece.piece,
+					completedPiece ? completedPiece.piece : '',
 					this.subPieces[this.subPieceIndex]
 				);
 				if (typeof tmp == 'string') {

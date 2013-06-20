@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: StorageWrapper.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: StorageWrapper.js 316 2013-06-19 20:16:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -92,7 +92,7 @@
 				delete this.ss.storage[key];
 			}
 			else {
-				this.ss.storage[key] = StorageWrapper.prototype.toIntevalue(value);
+				this.ss.storage[key] = StorageWrapper.prototype.toInternal(value);
 			}
 		},
 		clear: function () {

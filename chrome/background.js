@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 311 2013-06-18 16:10:52Z akahuku $
+ * @version $Id: background.js 317 2013-06-20 00:00:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -741,7 +741,7 @@ if (window.jetpack && typeof require == 'function') {
 				enableEmail: false,
 				enablePassword: false,
 				enableNumber: false,
-				enableContentEditable:false
+				enableContentEditable:true
 			}],
 			['exrc', '" exrc for wasavi'],
 			['shortcut', Hotkey.DEFAULT_HOTKEYS_DESC],
@@ -884,6 +884,12 @@ if (window.jetpack && typeof require == 'function') {
 		return result;
 	}
 
+	function clearFileSystemCredentials () {
+		Object.keys(fstab).forEach(function (fs) {
+			fs.instance && fs.instance.clearCredential();
+		});
+	}
+
 	/** {{{2 initialize main part of wasavi */
 
 	function initWasaviFrame () {
@@ -979,6 +985,7 @@ if (window.jetpack && typeof require == 'function') {
 		extension.storage.clear();
 		initStorage();
 		initMessageCatalog();
+		clearFileSystemCredentials();
 		initFileSystem();
 		broadcastStorageUpdate('targets exrc shortcut shortcutCode quickActivate'.split(' '));
 	}

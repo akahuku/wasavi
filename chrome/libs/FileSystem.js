@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 311 2013-06-18 16:10:52Z akahuku $
+ * @version $Id: FileSystem.js 317 2013-06-20 00:00:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -231,7 +231,7 @@
 
 		function restoreAcessTokenPersistents () {
 			var obj = extension.storage.getItem(accessTokenKeyName());
-			if (obj.key && obj.secret && obj.uid && obj.locale) {
+			if (obj && obj.key && obj.secret && obj.uid && obj.locale) {
 				oauth.setAccessToken(obj.key, obj.secret);
 				uid = obj.uid;
 				locale = obj.locale;
@@ -243,6 +243,10 @@
 			extension.storage.setItem(
 				accessTokenKeyName(),
 				{key:key, secret:secret, uid:uid, locale:locale});
+		}
+
+		function clearCredential () {
+			extension.storage.setItem(accessTokenKeyName(), undefined);
 		}
 
 		/* {{{1 authorize */
@@ -560,6 +564,7 @@
 		this.write = writeLater;
 		this.read = read;
 		this.match = match;
+		this.clearCredential = clearCredential;
 		this.__defineGetter__('isAuthorized', isAuthorized);
 		this.__defineGetter__('backend', function () {return BACKEND;});
 		this.__defineGetter__('state', function () {return state;});
