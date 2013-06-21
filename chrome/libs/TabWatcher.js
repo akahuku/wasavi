@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: TabWatcher.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: TabWatcher.js 318 2013-06-21 19:43:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -43,7 +43,7 @@
 			if (tab.url == '' || target.state && !isStartUrl) {
 				emit(target.callback, tab.url);
 				delete targets[tabId];
-				if (countOf(targets) == 0) {
+				if (u.countOf(targets) == 0) {
 					chrome.tabs.onUpdated.removeListener(handleTabUpdate);
 					chrome.tabs.onRemoved.removeListener(handleTabRemove);
 				}
@@ -57,7 +57,7 @@
 			if (!targets[tabId]) return;
 			emit(targets[tabId].callback, '');
 			delete targets[tabId];
-			if (countOf(targets) == 0) {
+			if (u.countOf(targets) == 0) {
 				chrome.tabs.onUpdated.removeListener(handleTabUpdate);
 				chrome.tabs.onRemoved.removeListener(handleTabRemove);
 			}
@@ -65,7 +65,7 @@
 
 		this.add = function (id, url, callback) {
 			chrome.tabs.get(id, function (tab) {
-				if (countOf(targets) == 0) {
+				if (u.countOf(targets) == 0) {
 					chrome.tabs.onUpdated.addListener(handleTabUpdate);
 					chrome.tabs.onRemoved.addListener(handleTabRemove);
 				}
@@ -129,16 +129,13 @@
 	}
 
 	function FirefoxJetpackTabWatcher (emit) {
-		var timers = require('sdk/timers');
-		var setInterval = timers.setInterval;
-		var clearInterval = timers.clearInterval;
 		var targets = [];
 		var timer;
 
 		function startTimer () {
 			if (timer) return;
 
-			timer = setInterval(function () {
+			timer = u.setInterval(function () {
 				var newTargets = [];
 
 				targets.forEach(function (target) {
@@ -164,7 +161,7 @@
 				});
 
 				if (newTargets.length == 0) {
-					clearInterval(timer);
+					u.clearInterval(timer);
 					timer = null;
 				}
 				else {

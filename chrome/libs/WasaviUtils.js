@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 306 2013-06-11 01:09:53Z akahuku $
+ * @version $Id: WasaviUtils.js 318 2013-06-21 19:43:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -22,38 +22,59 @@
  * limitations under the License.
  */
 
-'use strict';
+(function (global) {
+	'use strict';
 
-exports.WasaviUtils = {
-	baseUrl: function (s) {
-		return s.replace(/\?.*/, '');
-	},
+	var timers;
 
-	parseJson: function (s, def) {
-		if (typeof s != 'string') {
-			return def || {};
-		}
-
-		var result;
-		try {
-			result = JSON.parse(s);
-		}
-		catch (e) {
-			result = def || {};
-		}
-
-		return result;
-	},
-
-	countOf: function (o) {
-		var result = 0;
-		for (var i in o) result++;
-		return result;
-	},
-
-	objectType: function (o) {
-		return /^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(o))[1];
+	if (typeof require == 'function') {
+		timers = require('sdk/timers');
 	}
-};
+	else {
+		timers = {
+			setInterval: global.setInterval,
+			setTimeout: global.setTimeout,
+			clearInterval: global.clearInterval,
+			clearTimeout: global.clearTimeout
+		};
+	}
+
+	exports.WasaviUtils = {
+		baseUrl: function (s) {
+			return s.replace(/\?.*/, '');
+		},
+
+		parseJson: function (s, def) {
+			if (typeof s != 'string') {
+				return def || {};
+			}
+
+			var result;
+			try {
+				result = JSON.parse(s);
+			}
+			catch (e) {
+				result = def || {};
+			}
+
+			return result;
+		},
+
+		countOf: function (o) {
+			var result = 0;
+			for (var i in o) result++;
+			return result;
+		},
+
+		objectType: function (o) {
+			return /^\[object\s+(.+)\]$/.exec(Object.prototype.toString.call(o))[1];
+		},
+
+		setInterval: timers.setInterval,
+		setTimeout: timers.setTimeout,
+		clearInterval: timers.clearInterval,
+		clearTimeout: timers.clearTimeout
+	};
+})(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
