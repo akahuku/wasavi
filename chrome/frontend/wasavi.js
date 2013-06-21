@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: wasavi.js 319 2013-06-21 22:53:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4109,10 +4109,15 @@ var completer = new Wasavi.Completer(appProxy,
 		[
 			/^(\s*)([^"\s]*)(.*)$/, 2,
 			function (prefix, notifyCandidates) {
-				notifyCandidates(
-					Wasavi.ExCommand.commands
-						.map(function (c) {return c.name}).sort()
-				);
+				notifyCandidates(Wasavi.ExCommand.commands.map(function (c) {return c.name}).sort());
+			}
+		],
+
+		// theme option
+		[
+			/^(\s*)(set?.*\s+theme=)((?:\u2416.|\S)*)(.*)$/, 3,
+			function (prefix, notifyCandidates) {
+				notifyCandidates(theme.colorSets.sort());
 			}
 		],
 
@@ -4120,9 +4125,7 @@ var completer = new Wasavi.Completer(appProxy,
 		[
 			/^(\s*)(set?\s+)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
-				notifyCandidates(
-					Object.keys(config.vars).sort()
-				);
+				notifyCandidates(Object.keys(config.vars).sort());
 			},
 			{
 				onFoundContext:function (s, offset) {

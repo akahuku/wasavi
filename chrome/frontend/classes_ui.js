@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 311 2013-06-18 16:10:52Z akahuku $
+ * @version $Id: classes_ui.js 319 2013-06-21 22:53:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -220,7 +220,8 @@ Wasavi.Theme = function (app) {
 		{
 			container:[function () {}, function (v) {container = v}],
 			fontStyle:[function () {}, function (v) {fontStyle = v}],
-			lineHeight:[function () {}, function (v) {lineHeight = v}]
+			lineHeight:[function () {}, function (v) {lineHeight = v}],
+			colorSets:function () {return Object.keys(colorSets)}
 		}
 	);
 };
