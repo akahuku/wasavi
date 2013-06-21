@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: classes_ex.js 320 2013-06-21 23:54:21Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -853,6 +853,7 @@ Wasavi.ExCommand.edit = function (app, t, a, content, meta) {
 		app.fileName = '';
 		app.preferredNewline = '\n';
 	}
+	t.setSelectionRange(0, 0);
 	t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
 	app.isTextDirty = false;
 	app.editLogger.close().clear().open('excommand+edit');

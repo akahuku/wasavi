@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 318 2013-06-21 19:43:25Z akahuku $
+ * @version $Id: FileSystem.js 320 2013-06-21 23:54:21Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -446,7 +446,7 @@
 			);
 		}
 
-		function writeTimer () {
+		function handleWriteTimer () {
 			writeTimer = null;
 
 			for (var i in writeBuffer) {
@@ -497,7 +497,7 @@
 
 		function write (task) {
 			if (!writeTimer) {
-				writeTimer = u.setTimeout.call(global, writeTimer, 1000 * WRITE_DELAY_SECS);
+				writeTimer = u.setTimeout.call(global, handleWriteTimer, 1000 * WRITE_DELAY_SECS);
 			}
 			writeBuffer[task.path] = task;
 			self.response(task, {state:'buffered'});
