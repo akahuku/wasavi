@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 319 2013-06-21 22:53:19Z akahuku $
+ * @version $Id: wasavi.js 321 2013-06-22 06:50:28Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -367,10 +367,6 @@ function setLocalStorage (keyName, value) {
 	else if (window.localStorage) {
 		localStorage.setItem(keyName, value);
 	}
-}
-function isEditing (mode) {
-	mode || (mode = inputMode);
-	return mode == 'edit' || mode == 'edit-overwrite';
 }
 function install (x) {
 	var count = 0;
@@ -2624,6 +2620,13 @@ function operationDefault (c, o) {
 	}
 	return false;
 }
+function isEditing (mode) {
+	mode || (mode = inputMode);
+	return mode == 'edit' || mode == 'edit-overwrite';
+}
+function isAlias (c) {
+	return prefixInput.motion == '' && c == prefixInput.operation;
+}
 
 /*
  * low-level functions for cursor motion {{{1
@@ -4581,7 +4584,7 @@ var commandMap = {
 	d: {
 		'command': operationDefault,
 		'@op': function (c) {
-			if (c == prefixInput.operation) {
+			if (isAlias()) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -4591,7 +4594,7 @@ var commandMap = {
 			buffer.regalizeSelectionRelation();
 			var origin = buffer.selectionStart;
 			var adjusted = adjustDeleteOperationPos(
-				c == prefixInput.operation || isVerticalMotion,
+				isAlias() || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			var isLineOrient = adjusted.isLineOrient;
 			var actualCount = adjusted.actualCount;
@@ -4628,14 +4631,14 @@ var commandMap = {
 			var se = buffer.selectionEnd;
 			var origin = ss.lt(se) ? ss : se;
 
-			if (c == prefixInput.operation) {
+			if (isAlias()) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
 				return false;
 			}
 
-			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+			var isLineOrient = isAlias() || isVerticalMotion;
 			var actualCount = Math.abs(buffer.selectionEndRow - buffer.selectionStartRow) + 1;
 
 			buffer.isLineOrientSelection = isLineOrient;
@@ -4649,7 +4652,7 @@ var commandMap = {
 	'<': {
 		'command': operationDefault,
 		'@op': function (c, o) {
-			if (c == prefixInput.operation) {
+			if (isAlias()) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -4657,7 +4660,7 @@ var commandMap = {
 			}
 
 			buffer.regalizeSelectionRelation();
-			var isLineOrient = c == prefixInput.operation || isVerticalMotion;
+			var isLineOrient = isAlias() || isVerticalMotion;
 			var actualCount = buffer.selectionEndRow - buffer.selectionStartRow + 1;
 
 			// special shift behavior followed vim.
