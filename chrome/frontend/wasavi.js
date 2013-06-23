@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 321 2013-06-22 06:50:28Z akahuku $
+ * @version $Id: wasavi.js 322 2013-06-23 00:18:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2624,8 +2624,8 @@ function isEditing (mode) {
 	mode || (mode = inputMode);
 	return mode == 'edit' || mode == 'edit-overwrite';
 }
-function isAlias (c) {
-	return prefixInput.motion == '' && c == prefixInput.operation;
+function isAlias (c, op) {
+	return prefixInput.motion == '' && c == (op || prefixInput.operation);
 }
 
 /*
@@ -4524,7 +4524,7 @@ var commandMap = {
 	c: {
 		'command': operationDefault,
 		'@op': function (c) {
-			if (c == prefixInput.operation) {
+			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -4534,7 +4534,7 @@ var commandMap = {
 			buffer.regalizeSelectionRelation();
 			var origin = buffer.selectionStart;
 			var adjusted = adjustDeleteOperationPos(
-				c == prefixInput.operation || isVerticalMotion,
+				isAlias(c) || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			var isLineOrient = adjusted.isLineOrient;
 			var actualCount = adjusted.actualCount;
@@ -4584,7 +4584,7 @@ var commandMap = {
 	d: {
 		'command': operationDefault,
 		'@op': function (c) {
-			if (isAlias()) {
+			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -4594,7 +4594,7 @@ var commandMap = {
 			buffer.regalizeSelectionRelation();
 			var origin = buffer.selectionStart;
 			var adjusted = adjustDeleteOperationPos(
-				isAlias() || isVerticalMotion,
+				isAlias(c) || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			var isLineOrient = adjusted.isLineOrient;
 			var actualCount = adjusted.actualCount;
@@ -4631,14 +4631,14 @@ var commandMap = {
 			var se = buffer.selectionEnd;
 			var origin = ss.lt(se) ? ss : se;
 
-			if (isAlias()) {
+			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
 				return false;
 			}
 
-			var isLineOrient = isAlias() || isVerticalMotion;
+			var isLineOrient = isAlias(c) || isVerticalMotion;
 			var actualCount = Math.abs(buffer.selectionEndRow - buffer.selectionStartRow) + 1;
 
 			buffer.isLineOrientSelection = isLineOrient;
@@ -4652,7 +4652,7 @@ var commandMap = {
 	'<': {
 		'command': operationDefault,
 		'@op': function (c, o) {
-			if (isAlias()) {
+			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -4660,7 +4660,7 @@ var commandMap = {
 			}
 
 			buffer.regalizeSelectionRelation();
-			var isLineOrient = isAlias() || isVerticalMotion;
+			var isLineOrient = isAlias(c) || isVerticalMotion;
 			var actualCount = buffer.selectionEndRow - buffer.selectionStartRow + 1;
 
 			// special shift behavior followed vim.
@@ -5199,7 +5199,7 @@ var commandMap = {
 	},
 	gq: {
 		'@op': function (c, o) {
-			if (c == prefixInput.operation.substring(1)) {
+			if (isAlias(c, prefixInput.operation.substring(1))) {
 				this._.apply(this, arguments);
 			}
 			if (requestedState.notice) {
@@ -5208,7 +5208,7 @@ var commandMap = {
 
 			buffer.regalizeSelectionRelation();
 			var adjusted = adjustDeleteOperationPos(
-				c == prefixInput.operation.substring(1) || isVerticalMotion,
+				isAlias(c, prefixInput.operation.substring(1)) || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			var isLineOrient = adjusted.isLineOrient;
 			var actualCount = adjusted.actualCount;
@@ -5674,9 +5674,8 @@ var commandMap = {
 	q: {
 		'command': function (c, o) {
 			if (!prefixInput.isEmptyOperation) {
-				// ad hoc solition for gqq
+				// ad hoc solution for gqq
 				if (prefixInput.operation == 'gq') {
-					prefixInput.motion = c;
 					return true;
 				}
 				inputEscape(o.e.fullIdentifier);
@@ -5847,7 +5846,7 @@ var commandMap = {
 			return false;
 		},
 		'wait-a-letter': function (c) {
-			if (c == prefixInput.operation) {
+			if (isAlias(c)) {
 				var result = executeExCommand('x');
 				typeof result == 'string' && requestShowMessage(result, true);
 				return true;

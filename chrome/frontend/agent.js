@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: agent.js 322 2013-06-23 00:18:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -744,7 +744,7 @@ function matchWithShortcut (e) {
  */
 
 function handleAgentInitialized (req) {
-	isTestFrame = window.location.href == 'http://wasavi.appsweets.net/test_frame.html';
+	isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
 
 	if (window.location.href == extension.urlInfo.optionsUrl) {
 		handleOptionsPageLoaded(req);

@@ -435,6 +435,9 @@ public class WasaviTest {
 		protected void starting (Description d) {
 			System.out.println("Testcase: " + d.getMethodName());
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
+			Wasavi.js(
+					"document.getElementsByTagName('h1')[0].textContent = " +
+					"'now testing: " + d.getMethodName() + "';");
 		}
 		protected void failed (Throwable e, Description d) {
 			System.out.println(d.getMethodName() + " FAILED\n" + logText);
