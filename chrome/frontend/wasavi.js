@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 322 2013-06-23 00:18:34Z akahuku $
+ * @version $Id: wasavi.js 329 2013-06-23 22:55:13Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4132,10 +4132,11 @@ var completer = new Wasavi.Completer(appProxy,
 			},
 			{
 				onFoundContext:function (s, offset) {
-					var COMPLETION_INDEX = 2;
+					var COMPLETION_INDEX = 1;
 
-					var regex = /(\s*)(no)?([^=?\s]+)(\?|=(?:\u2416.|\S)*)?(\s*)/g, re;
+					var regex = /(no)?([^=?\s]*)(\?|=(?:\u2416.|\S)*)?(\s*)/g, re;
 					var pieceOffset = 0;
+					var found = false;
 					var result = {
 						cursorOffset:0,
 						subPieceIndex:0,
@@ -4157,13 +4158,16 @@ var completer = new Wasavi.Completer(appProxy,
 							}
 						}
 
-						if (pieceOffset + from <= offset && offset <= pieceOffset + to) {
+						if (!found &&  pieceOffset + from <= offset && offset <= pieceOffset + to) {
+							found = true;
 							result.cursorOffset = offset - pieceOffset + from;
 							result.subPieceIndex = result.subPieces.length + COMPLETION_INDEX;
 						}
 
 						Array.prototype.push.apply(result.subPieces, re);
 						pieceOffset += whole.length;
+
+						if (whole == '') break;
 					}
 
 					return result;
@@ -4171,9 +4175,11 @@ var completer = new Wasavi.Completer(appProxy,
 				onComplete:function (newValue, oldValue) {
 					var abbrevs = Object.keys(config.abbrevs).sort();
 
-					for (var i = 0, goal = abbrevs.length; i < goal; i++) {
-						if (abbrevs[i].indexOf(oldValue) == 0) {
-							return config.abbrevs[abbrevs[i]];
+					if (oldValue != '') {
+						for (var i = 0, goal = abbrevs.length; i < goal; i++) {
+							if (abbrevs[i].indexOf(oldValue) == 0) {
+								return config.abbrevs[abbrevs[i]];
+							}
 						}
 					}
 
