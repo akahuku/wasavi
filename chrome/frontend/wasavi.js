@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 336 2013-07-06 03:01:40Z akahuku $
+ * @version $Id: wasavi.js 337 2013-07-06 16:07:14Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -42,6 +42,8 @@
 		get quickActivation () {return quickActivation},
 		get devMode () {return devMode},
 		get fstab () {return fstab},
+		get fileSystemIndex () {return fileSystemIndex},
+		set fileSystemIndex (v) {return fileSystemIndex = v},
 		get abbrevs () {return abbrevs},
 		get keyManager () {return keyManager},
 		get mapManager () {return mapManager},
@@ -119,6 +121,7 @@
 			fireNotifyKeydownEvent:fireNotifyKeydownEvent,
 			fireCommandCompleteEvent:fireCommandCompleteEvent,
 			setSubstituteWorker:setSubstituteWorker,
+			extractDriveName:extractDriveName,
 			regalizeFilePath:regalizeFilePath
 		}),
 
@@ -836,7 +839,12 @@ left:0; top:0; \
 
 	targetElement = x;
 	fileName = '';
-	cwd = '/';
+	fstab.forEach(function (fs, i) {
+		if (fs.isDefault && fileSystemIndex === undefined) {
+			fileSystemIndex = i;
+		}
+		fs.cwd = '/';
+	});
 	preferredNewline = '\n';
 	terminated = false;
 	writeOnTermination = true;
@@ -2463,6 +2471,12 @@ function setSubstituteWorker (obj) {
 	}
 	substituteWorker = obj;
 }
+function extractDriveName (path, callback) {
+	return path.replace(/^([^\/:]+):/, function ($0, $1) {
+		callback($0, $1);
+		return '';
+	});
+}
 function regalizeFilePath (path) {
 	if (path == '') {
 		return path;
@@ -2470,26 +2484,28 @@ function regalizeFilePath (path) {
 
 	// strip drive name
 	var drive = '';
-	path = path.replace(/^([^\/:]+):/, function ($0) {
-		drive = $0;
-		return '';
-	});
+	path = extractDriveName(path, function (d) {drive = d});
 
 	// resolve relative path
 	if (!/^\//.test(path)) {
-		path = cwd + '/' + path;
+		path = fstab[fileSystemIndex].cwd + '/' + path + '/';
 	}
 
-	// resolve redundancy delimiter
+	// resolve redundancy delimiter #1
 	path = path.replace(/\/{2,}/g, '/');
 
 	// resolve '.'
-	path = path.replace(/\.\//g, '/');
+	while (/\/\.\//.test(path)) {
+		path = path.replace(/\/\.\//, '/');
+	}
 
 	// resolve '..'
 	while (/[^\/]+\/\.\.\//.test(path)) {
 		path = path.replace(/[^\/]+\/\.\.\//, '/');
 	}
+
+	// resolve redundancy delimiter #2
+	path = path.replace(/\/{2,}/g, '/');
 
 	// restore drive name
 	path = drive + path;
@@ -4251,11 +4267,7 @@ var completer = new Wasavi.Completer(appProxy,
 
 						if (res && res.data) {
 							var drive = '';
-							prefix.replace(/^([^\/:]+):/, function ($0) {
-								drive = $0;
-								return '';
-							});
-
+							extractDriveName(prefix, function (d) {drive = d});
 							result = res.data
 								.map(function (file) {
 									if (getObjectType(file.path) == 'Array') {
@@ -4478,7 +4490,7 @@ var lineBreaker;
 var targetElement;
 var buffer;
 var fileName;
-var cwd;
+var fileSystemIndex;
 var preferredNewline;
 var terminated;
 var writeOnTermination;

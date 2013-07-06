@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 335 2013-07-04 08:43:45Z akahuku $
+ * @version $Id: classes_ex.js 337 2013-07-06 16:07:14Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -948,6 +948,52 @@ Wasavi.ExCommand.printRow = function (app, t, from, to, flags) {
 		}
 	}
 };
+Wasavi.ExCommand.pwd = function (app, t, a) {
+	if (!app.extensionChannel) {
+		return _('Extension system required.');
+	}
+	app.low.requestShowMessage(
+		app.fstab[app.fileSystemIndex].name +
+		':' +
+		app.fstab[app.fileSystemIndex].cwd);
+	return undefined;
+};
+Wasavi.ExCommand.chdir = function (app, t, a) {
+	if (a.argv.length == 0) {
+		return Wasavi.ExCommand.pwd.apply(this, arguments);
+	}
+
+	var drive = '';
+	var path = a.argv[0];
+	var index = -1;
+
+	path = path.replace(/\\(.)/g, '$1');
+	path = app.low.extractDriveName(path, function ($0, d) {drive = d});
+
+	if (drive == '') {
+		index = app.fileSystemIndex;
+	}
+	else {
+		app.fstab.some(function (fs, i) {
+			if (fs.name == drive) {
+				index = i;
+				return true;
+			}
+			return false;
+		});
+	}
+
+	if (index < 0) {
+		return _('Unknown drive name.');
+	}
+
+	app.fileSystemIndex = index;
+	if (path != '') {
+		app.fstab[index].cwd = app.low.regalizeFilePath(path);
+	}
+
+	return undefined;
+};
 Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
@@ -1003,6 +1049,12 @@ Wasavi.ExCommand.commands = [
 			break;
 		}
 		return undefined;
+	}),
+	new Wasavi.ExCommand('cd', 'cd', 'f', 0, function (app, t, a) {
+		return Wasavi.ExCommand.chdir.apply(this, arguments);
+	}),
+	new Wasavi.ExCommand('chdir', 'chd', 'f', 0, function (app, t, a) {
+		return Wasavi.ExCommand.chdir.apply(this, arguments);
 	}),
 	new Wasavi.ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		return Wasavi.ExCommand.copy(app, t, a);
@@ -1092,6 +1144,50 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 		app.low.requestShowMessage(app.low.getFileInfo(t));
+		return undefined;
+	}),
+	new Wasavi.ExCommand('filesystem', 'files', 'W', 0, function (app, t, a) {
+		var list = [];
+		var command = (a.argv[0] || '').replace(/\u0016(.)/g, '$1');
+		if (/^(?:de?f?a?u?l?t?)$/.test(command)) {
+			if (a.argv.length <= 1) {
+				app.low.requestShowMessage(
+					_('default file system: {0}', app.fstab[app.fileSystemIndex].name));
+			}
+			else {
+				var target = a.argv[1];
+				app.fstab.forEach(function (fs, i) {
+					if (fs.name == target) {
+						app.fileSystemIndex = i;
+					}
+				});
+			}
+		}
+		else if (/^(?:re?s?e?t?)$/.test(command)) {
+			// TBD
+		}
+		else if (/^(?:st?a?t?u?s?)$/.test(command)) {
+			if (app.fstab.length) {
+				list.push(_('*** available file systems ***'));
+				app.fstab.forEach(function (fs, i) {
+					list.push((app.fileSystemIndex == i ? '*' : ' ') + ' ' + fs.name);
+					list.push('  ' + fs.cwd);
+				})
+				app.backlog.push(list);
+			}
+			else {
+				return _('no available file systems.');
+			}
+		}
+		else {
+			if (command == '') {
+				return _('Command not specified.');
+			}
+			else {
+				return _('Unknown command.');
+			}
+			break;
+		}
 		return undefined;
 	}),
 	new Wasavi.ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
@@ -1227,6 +1323,9 @@ Wasavi.ExCommand.commands = [
 		}
 		app.extensionChannel.postMessage({type:'open-options-page'});
 		return undefined;
+	}),
+	new Wasavi.ExCommand('pwd', 'pw', '', 0, function (app, t, a) {
+		return Wasavi.ExCommand.pwd.apply(this, arguments);
 	}),
 	new Wasavi.ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (app, t, a) {
 		a.flags.print = true;
@@ -1364,20 +1463,6 @@ Wasavi.ExCommand.commands = [
 			'item length: ' + app.editLogger.logLength,
 			'current pos: ' + app.editLogger.currentPosition
 		].join('\n'));
-		return undefined;
-	}),
-	new Wasavi.ExCommand('storage', 'st', '', 0, function (app, t, a) {
-		var list = [];
-		if (app.fstab.length) {
-			list.push('*** available storages ***');
-			app.fstab.forEach(function (fs) {
-				list.push((fs.isDefault ? '*' : ' ') + fs.name);
-			})
-		}
-		else {
-			list.push('*** no available storages. ***');
-		}
-		app.backlog.push(list);
 		return undefined;
 	}),
 	new Wasavi.ExCommand('registers', 'reg', '', 0, function (app, t, a) {

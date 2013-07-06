@@ -13,11 +13,25 @@ import org.openqa.selenium.WebElement;
 
 public class FileSystemTest extends WasaviTest {
 	@Test
+	public void fileSystemCommand_default () {
+		Wasavi.send(":files default");
+		System.out.println(Wasavi.getLastMessage());
+	}
+
+	@Test
 	public void completeRootPathDropbox () {
+		Wasavi.send(":files default dropbox\n");
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":r \t");
+		assertNotEquals("#1-1", "r ", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeSubPathDropbox () {
+		Wasavi.send(":files default dropbox\n");
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":r /test\t");
+		assertNotEquals("#1-1", "r /test", Wasavi.getLineInput());
 	}
 
 	@Test
