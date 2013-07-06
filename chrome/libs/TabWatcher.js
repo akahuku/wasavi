@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: TabWatcher.js 318 2013-06-21 19:43:25Z akahuku $
+ * @version $Id: TabWatcher.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -39,17 +39,14 @@
 		function handleTabUpdate (tabId, changeInfo, tab) {
 			if (!targets[tabId] || !changeInfo.url) return;
 			var target = targets[tabId];
-			var isStartUrl = u.baseUrl(tab.url) == u.baseUrl(target.startUrl);
-			if (tab.url == '' || target.state && !isStartUrl) {
+			var isGoalUrl = u.baseUrl(tab.url) == u.baseUrl(target.goalUrl);
+			if (tab.url == '' || isGoalUrl) {
 				emit(target.callback, tab.url);
 				delete targets[tabId];
 				if (u.countOf(targets) == 0) {
 					chrome.tabs.onUpdated.removeListener(handleTabUpdate);
 					chrome.tabs.onRemoved.removeListener(handleTabRemove);
 				}
-			}
-			else if (!target.state && isStartUrl) {
-				target.state = true;
 			}
 		}
 
@@ -69,7 +66,7 @@
 					chrome.tabs.onUpdated.addListener(handleTabUpdate);
 					chrome.tabs.onRemoved.addListener(handleTabRemove);
 				}
-				targets[id] = {tab:id, startUrl:tab.url, callback:callback};
+				targets[id] = {tab:id, startUrl:tab.url, goalUrl:url, callback:callback};
 			});
 		};
 	}
@@ -92,15 +89,12 @@
 						currentUrl = '';
 					}
 
-					var isStartUrl = u.baseUrl(currentUrl) == u.baseUrl(target.startUrl);
-					if (currentUrl == '' || target.state && !isStartUrl) {
+					var isGoalUrl = u.baseUrl(currentUrl) == u.baseUrl(target.goalUrl);
+					if (currentUrl == '' || isGoalUrl) {
 						emit(target.callback, currentUrl);
 						target.callback = null;
 					}
 					else {
-						if (!target.state && isStartUrl) {
-							target.state = true;
-						}
 						newTargets.push(target);
 					}
 				});
@@ -119,7 +113,7 @@
 			opera.extension.tabs.getAll().some(function (tab) {
 				if (id instanceof MessagePort && tab.port == id
 				||  typeof id == 'number' && tab.id == id) {
-					targets.push({tab:tab, startUrl:url, callback:callback});
+					targets.push({tab:tab, startUrl:tab.url, goalUrl:url, callback:callback});
 					startTimer();
 					return true;
 				}
@@ -147,15 +141,12 @@
 						currentUrl = '';
 					}
 
-					var isStartUrl = u.baseUrl(currentUrl) == u.baseUrl(target.startUrl);
-					if (currentUrl == '' || target.state && !isStartUrl) {
+					var isGoalUrl = u.baseUrl(currentUrl) == u.baseUrl(target.goalUrl);
+					if (currentUrl == '' || isGoalUrl) {
 						emit(target.callback, currentUrl);
 						target.callback = null;
 					}
 					else {
-						if (!target.state && isStartUrl) {
-							target.state = true;
-						}
 						newTargets.push(target);
 					}
 				});
@@ -172,7 +163,7 @@
 
 		this.add = function (id, url, callback) {
 			// in this context, id is Tab object instance.
-			targets.push({tab:id, startUrl:url, callback:callback});
+			targets.push({tab:id, startUrl:id.url, goalUrl:url, callback:callback});
 			startTimer();
 			return true;
 		};

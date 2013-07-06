@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 329 2013-06-23 22:55:13Z akahuku $
+ * @version $Id: wasavi.js 336 2013-07-06 03:01:40Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -118,7 +118,8 @@
 			fireEvent:fireEvent,
 			fireNotifyKeydownEvent:fireNotifyKeydownEvent,
 			fireCommandCompleteEvent:fireCommandCompleteEvent,
-			setSubstituteWorker:setSubstituteWorker
+			setSubstituteWorker:setSubstituteWorker,
+			regalizeFilePath:regalizeFilePath
 		}),
 
 		/*
@@ -872,7 +873,7 @@ left:0; top:0; \
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 	refreshIdealWidthPixels();
-	showMessage(getFileIoResultInfo(x.value.length, true));
+	showMessage(getFileIoResultInfo('', x.value.length, true));
 
 	x.value = undefined;
 
@@ -1846,7 +1847,10 @@ function processInput (code, e, ignoreAbbreviation) {
 	}
 	function execLineInputEditMap (t, key, subkey, code) {
 		if (lineInputEditMap[key]) {
-			execMap(t, e, lineInputEditMap, key, subkey, code);
+			testMode && fireEvent('command-start');
+			if (execMap(t, e, lineInputEditMap, key, subkey, code)) {
+				needEmitEvent = true;
+			}
 			return true;
 		}
 		return false;
@@ -2358,12 +2362,12 @@ function getCaretPositionString () {
 function getNewlineType (newline) {
 	return {'\r\n':'dos', '\r':'mac', '\n':'unix'}[newline] || '?';
 }
-function getFileIoResultInfo (charLength, isNew) {
+function getFileIoResultInfo (aFileName, charLength, isNew) {
 	var result = [];
 	var attribs = [];
 
 	// file name
-	result.push('"' + getFileNameString() + '"');
+	result.push('"' + (aFileName || getFileNameString()) + '"');
 
 	// partial attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
@@ -2448,7 +2452,8 @@ function fireCommandCompleteEvent (eventName) {
 			rowLength:  buffer.elm.childNodes.length,
 			registers:  registers.dumpData(),
 			marks:      marks.dumpData(),
-			lines:      config.vars.lines
+			lines:      config.vars.lines,
+			lineInput:  state == 'line-input' ? $(LINE_INPUT_ID).value : ''
 		}
 	});
 }
@@ -2457,6 +2462,39 @@ function setSubstituteWorker (obj) {
 		throw new Error('invalid object assigning as SubstituteWorker');
 	}
 	substituteWorker = obj;
+}
+function regalizeFilePath (path) {
+	if (path == '') {
+		return path;
+	}
+
+	// strip drive name
+	var drive = '';
+	path = path.replace(/^([^\/:]+):/, function ($0) {
+		drive = $0;
+		return '';
+	});
+
+	// resolve relative path
+	if (!/^\//.test(path)) {
+		path = cwd + '/' + path;
+	}
+
+	// resolve redundancy delimiter
+	path = path.replace(/\/{2,}/g, '/');
+
+	// resolve '.'
+	path = path.replace(/\.\//g, '/');
+
+	// resolve '..'
+	while (/[^\/]+\/\.\.\//.test(path)) {
+		path = path.replace(/[^\/]+\/\.\.\//, '/');
+	}
+
+	// restore drive name
+	path = drive + path;
+
+	return path;
 }
 
 /*
@@ -4016,8 +4054,8 @@ function handleExtensionChannelMessage (req) {
 		break;
 	case 'authorize-response':
 		if (req.error) {
-			requestShowMessage(req.error, true, false);
 			exCommandExecutor.stop();
+			showMessage(req.error, true, false);
 			break;
 		}
 		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
@@ -4041,21 +4079,21 @@ function handleExtensionChannelMessage (req) {
 		}
 		switch (req.state) {
 		case 'buffered':
-			showMessage(_('Buffered: {0}', fileName));
+			showMessage(_('Buffered: {0}', req.path));
 			break;
 		case 'writing':
 			showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
 			break;
 		case 'complete':
-			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.charLength)));
+			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.charLength)));
 			break;
 		}
 		//exCommandExecutor.runAsyncNext();
 		break;
 	case 'fileio-read-response':
 		if (req.error) {
-			showMessage(req.error, true, false);
 			exCommandExecutor.stop();
+			showMessage(req.error, true, false);
 			break;
 		}
 		switch (req.state) {
@@ -4110,7 +4148,7 @@ var completer = new Wasavi.Completer(appProxy,
 	[
 		// ex command completion
 		[
-			/^(\s*)([^"\s]*)(.*)$/, 2,
+			/^(\s*)((?:gl?o?b?a?l?|v)\s*[^a-zA-Z"\\\s](?:\\.|.)*?[^a-zA-Z"\\\s])?([^"\s]*)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
 				notifyCandidates(Wasavi.ExCommand.commands.map(function (c) {return c.name}).sort());
 			}
@@ -4205,18 +4243,32 @@ var completer = new Wasavi.Completer(appProxy,
 					{
 						type:'get-filesystem-entries',
 						path:prefix
-							.replace(/\u2416(.)/g, '$1')
-							.replace(/\/[^\/]*$/, '')
+							//.replace(/\u2416(.)/g, '$1')
+							.replace(/\/[^\/]*$/, '/')
 					},
 					function (res) {
 						var result;
 
 						if (res && res.data) {
+							var drive = '';
+							prefix.replace(/^([^\/:]+):/, function ($0) {
+								drive = $0;
+								return '';
+							});
+
 							result = res.data
 								.map(function (file) {
-									return file.path
-										.replace(/\s/g, '\u2416$&') +
-										(file.is_dir ? '/' : '');
+									if (getObjectType(file.path) == 'Array') {
+										file.path = '/' +
+											file.path
+												.map(function (f) {
+													return f.replace(/\//g, '\u2416$&');
+												})
+												.join('/');
+									}
+									return drive +
+										   file.path.replace(/\s/g, '\u2416$&') +
+										   (file.is_dir ? '/' : '');
 								})
 								.sort();
 						}
@@ -4234,21 +4286,7 @@ var completer = new Wasavi.Completer(appProxy,
 					// resolve escape sequence
 					prefix = prefix.replace(/\u2416(.)/g, '$1');
 
-					// resolve relative path
-					if (!/^\//.test(prefix)) {
-						prefix = cwd + '/' + prefix;
-					}
-
-					// resolve redundancy delimiter
-					prefix = prefix.replace(/\/{2,}/g, '/');
-
-					// resolve '.'
-					prefix = prefix.replace(/\.\//g, '/');
-
-					// resolve '..'
-					while (/[^\/]+\/\.\.\//.test(prefix)) {
-						prefix = prefix.replace(/[^\/]+\/\.\.\//, '/');
-					}
+					prefix = regalizeFilePath(prefix);
 
 					// re-escape
 					prefix = prefix.replace(/\s/g, '\u2416$&');
@@ -6197,19 +6235,23 @@ var lineInputEditMap = {
 	'\u0001'/*^A*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = 0;
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0002'/*^B*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = Math.max(0, o.target.selectionStart - 1);
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0005'/*^E*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = o.target.value.length;
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0006'/*^F*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd =
 			Math.min(o.target.value.length, o.target.selectionEnd + 1);
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0008'/*^H, backspace*/: function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
@@ -6225,14 +6267,16 @@ var lineInputEditMap = {
 		}
 		lineInputHistories.isInitial = true;
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0009'/*^I, tab*/: function (c, o) {
 		lineInputHistories.isInitial = true;
 		isCompleteResetCanceled = true;
 		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
-			if (!compl) return;
-
-			if (typeof compl == 'string') {
+			if (!compl) {
+				notifier.show('No completions');
+			}
+			else if (typeof compl == 'string') {
 				notifier.show(compl);
 			}
 			else {
@@ -6243,6 +6287,7 @@ var lineInputEditMap = {
 					1000 * 3
 				);
 			}
+			fireCommandCompleteEvent();
 		});
 	},
 	'\u007f'/*delete*/: function (c, o) {
@@ -6258,6 +6303,7 @@ var lineInputEditMap = {
 			o.target.selectionEnd = o.target.selectionStart;
 		}
 		lineInputHistories.isInitial = true;
+		return true;
 	},
 	'\u000e'/*^N*/: function (c, o) {
 		if (lineInputHistories.isInitial) {
@@ -6278,6 +6324,7 @@ var lineInputEditMap = {
 				keyManager.init(o.target);
 			}
 		}
+		return true;
 	},
 	'\u0010'/*^P*/: function (c, o) {
 		if (lineInputHistories.isInitial) {
@@ -6293,12 +6340,14 @@ var lineInputEditMap = {
 			o.target.selectionEnd = line.length;
 			keyManager.init(o.target);
 		}
+		return true;
 	},
 	'\u0015'/*^U*/: function (c, o) {
 		o.target.value = '';
 		o.target.selectionStart = o.target.selectionEnd = 0;
 		lineInputHistories.isInitial = true;
 		keyManager.init(o.target);
+		return true;
 	},
 	'\u0016'/*^V*/: {
 		'line-input': function (c, o) {
@@ -6354,6 +6403,7 @@ var lineInputEditMap = {
 			literalInput = null;
 			isLastKeyCodeLocked = false;
 			lineInputHistories.isInitial = true;
+			return true;
 		}
 	},
 	'\u0017'/*^W*/: function (c, o) {
@@ -6373,24 +6423,25 @@ var lineInputEditMap = {
 		}
 		lineInputHistories.isInitial = true;
 		keyManager.init(o.target);
+		return true;
 	},
 	'<left>': function () {
-		this['\u0002'].apply(this, arguments);
+		return this['\u0002'].apply(this, arguments);
 	},
 	'<right>': function (c) {
-		this['\u0006'].apply(this, arguments);
+		return this['\u0006'].apply(this, arguments);
 	},
 	'<up>': function () {
-		this['\u0010'].apply(this, arguments);
+		return this['\u0010'].apply(this, arguments);
 	},
 	'<down>': function () {
-		this['\u000e'].apply(this, arguments);
+		return this['\u000e'].apply(this, arguments);
 	},
 	'<home>': function () {
-		this['\u0001'].apply(this, arguments);
+		return this['\u0001'].apply(this, arguments);
 	},
 	'<end>': function () {
-		this['\u0005'].apply(this, arguments);
+		return this['\u0005'].apply(this, arguments);
 	}
 };
 

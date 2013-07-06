@@ -19,9 +19,13 @@ import org.junit.runners.Suite.SuiteClasses;
 	,OpShiftTest.class
 	,RangeSymbolsTest.class
 	,LearningTheViEditor6th.class
+	,LineInputEditingTest.class
+	,FileSystemTest.class
 })
 public class AllTests {
 	public static void main (String[] args) {
 		JUnitCore.main(AllTests.class.getName());
 	}
 }
+
+/* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

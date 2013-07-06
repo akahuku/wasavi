@@ -11,7 +11,8 @@
   },
   "permissions": [
     "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
-    "https://*.dropbox.com/*"
+    "https://*.dropbox.com/*",
+    "https://*.googleusercontent.com/*"
   ],
   "background": {
     "page": "background.html"

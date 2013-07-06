@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 317 2013-06-20 00:00:43Z akahuku $
+ * @version $Id: background.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -750,7 +750,8 @@ if (window.jetpack && typeof require == 'function') {
 			}],
 			['fontFamily', defaultFont],
 			['fstab', {
-				dropbox: {isDefault:true, enabled:true}
+				dropbox: {isDefault:true, enabled:true},
+				gdrive: {enabled:true}
 			}],
 			['quickActivation', false]
 		]
@@ -825,7 +826,7 @@ if (window.jetpack && typeof require == 'function') {
 			data = u.parseJson(data);
 			fstab = extension.storage.getItem('fstab');
 			for (var i in fstab) {
-				if (!data[i] || !data[i].key || !data[i].secret) continue;
+				if (!data[i] || !('key' in data[i]) || !('secret' in data[i])) continue;
 				fstab[i].isNull = false;
 				fstab[i].instance = FileSystem.create(i, data[i].key, data[i].secret, extension);
 				extension.isDev && console.info('wasavi background: file system driver initialized: ' + i);
@@ -853,16 +854,23 @@ if (window.jetpack && typeof require == 'function') {
 	}
 
 	function getFileSystem (path) {
-		var preferred;
 		var defaultFs;
 		var nullFs;
+		var drive = '';
+
+		path.replace(/^([^\/:]+):/, function ($0, $1) {
+			drive = $1;
+			return '';
+		});
+
+		if (drive != '' && drive in fstab) {
+			return fstab[drive].instance;
+		}
+
 		for (var i in fstab) {
 			var fs = fstab[i];
 			if (!fs.instance) {
 				continue;
-			}
-			if (fs.instance.match(path)) {
-				preferred = fs.instance;
 			}
 			if (fs.isDefault) {
 				defaultFs = fs.instance;
@@ -871,7 +879,7 @@ if (window.jetpack && typeof require == 'function') {
 				nullFs = fs.instance;
 			}
 		}
-		return preferred || defaultFs || nullFs;
+		return drive != '' ? nullFs : (defaultFs || nullFs);
 	}
 
 	function getFileSystemInfo () {
@@ -886,7 +894,7 @@ if (window.jetpack && typeof require == 'function') {
 
 	function clearFileSystemCredentials () {
 		Object.keys(fstab).forEach(function (fs) {
-			fs.instance && fs.instance.clearCredential();
+			fs.instance && fs.instance.clearCredentials();
 		});
 	}
 
@@ -1118,6 +1126,7 @@ if (window.jetpack && typeof require == 'function') {
 	function handleGetFilesystemEntries (req, res) {
 		getFileSystem(req.path)
 			.ls(req.path, req.tabId, function (data) {
+				console.log('wasavi background#handleGetFilesystemEntries: ' + JSON.stringify(data));
 				res({data:data.contents});
 			});
 		return true;

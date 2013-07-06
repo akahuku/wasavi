@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 318 2013-06-21 19:43:25Z akahuku $
+ * @version $Id: WasaviUtils.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -26,16 +26,22 @@
 	'use strict';
 
 	var timers;
+	var base64;
 
 	if (typeof require == 'function') {
 		timers = require('sdk/timers');
+		base64 = require('sdk/base64');
 	}
 	else {
 		timers = {
-			setInterval: global.setInterval,
-			setTimeout: global.setTimeout,
-			clearInterval: global.clearInterval,
-			clearTimeout: global.clearTimeout
+			setInterval: function () {return global.setInterval.apply(global, arguments)},
+			setTimeout: function () {return global.setTimeout.apply(global, arguments)},
+			clearInterval: function () {return global.clearInterval.apply(global, arguments)},
+			clearTimeout: function () {return global.clearTimeout.apply(global, arguments)}
+		};
+		base64 = {
+			decode: function () {return global.atob.apply(global, arguments)},
+			encode: function () {return global.btoa.apply(global, arguments)}
 		};
 	}
 
@@ -73,7 +79,10 @@
 		setInterval: timers.setInterval,
 		setTimeout: timers.setTimeout,
 		clearInterval: timers.clearInterval,
-		clearTimeout: timers.clearTimeout
+		clearTimeout: timers.clearTimeout,
+
+		atob: base64.decode,
+		btoa: base64.encode
 	};
 })(this);
 

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: utils.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -330,45 +330,45 @@ function getObjectType (a) {
     return Object.prototype.toString.call(a).replace(/^\[object\s+|\]$/g, '');
 }
 function publish () {
-    if (arguments.length < 1) return;
-    var target = arguments[0];
-    for (var i = 1; i < arguments.length; i++) {
-        switch (getObjectType(arguments[i])) {
-        case 'Function':
-            Object.defineProperty(target, arguments[i].name, {
-                value:arguments[i],
-                configurable:false,
-                enumerable:false,
-                writable:false
-            });
-            break;
+	if (arguments.length < 1) return;
+	var target = arguments[0];
+	for (var i = 1; i < arguments.length; i++) {
+		switch (getObjectType(arguments[i])) {
+		case 'Function':
+			Object.defineProperty(target, arguments[i].name, {
+				value:arguments[i],
+				configurable:false,
+				enumerable:false,
+				writable:false
+			});
+			break;
 
-        case 'Object':
-            for (var j in arguments[i]) {
-                switch (getObjectType(arguments[i][j])) {
-                case 'Function':
-                    Object.defineProperty(target, j, {
-                        get:arguments[i][j],
-                        configurable:false,
-                        enumerable:false
-                    });
-                    break;
-                case 'Array':
-                    Object.defineProperty(target, j, {
-                        get:arguments[i][j][0],
-                        set:arguments[i][j][1],
-                        configurable:false,
-                        enumerable:false
-                    });
-                    break;
-                case 'Object':
-                    Object.defineProperty(target, j, arguments[i][j]);
-                    break;
-                }
-            }
-            break;
-        }
-    }
+		case 'Object':
+			for (var j in arguments[i]) {
+				switch (getObjectType(arguments[i][j])) {
+					case 'Function':
+					Object.defineProperty(target, j, {
+						get:arguments[i][j],
+						configurable:false,
+						enumerable:false
+					});
+					break;
+					case 'Array':
+					Object.defineProperty(target, j, {
+						get:arguments[i][j][0],
+						set:arguments[i][j][1],
+						configurable:false,
+						enumerable:false
+					});
+					break;
+					case 'Object':
+					Object.defineProperty(target, j, arguments[i][j]);
+					break;
+				}
+			}
+			break;
+		}
+	}
 }
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

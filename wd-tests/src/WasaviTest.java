@@ -161,8 +161,9 @@ class WasaviWrapper {
 
 		for (String s: modes) {
 			if ("command".equals(s) ||
-					"edit".equals(s) ||
-					"edit-overwrite".equals(s)) {
+				"edit".equals(s) ||
+				"edit-overwrite".equals(s) ||
+				"line-input".equals(s)) {
 
 				inputModeOfWacthTarget.add(s);
 			}
@@ -255,6 +256,10 @@ class WasaviWrapper {
 
 	public int getTopCol () {
 		return getInt("topCol", 0);
+	}
+
+	public String getLineInput () {
+		return getString("lineInput", "***Exception in getLineInput***");
 	}
 
 	public String getRegister (String name) {

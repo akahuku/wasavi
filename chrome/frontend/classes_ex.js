@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 320 2013-06-21 23:54:21Z akahuku $
+ * @version $Id: classes_ex.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -773,9 +773,9 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	}
 
 	path || (path = app.fileName);
-	if (path != '' && !WasaviExtensionWrapper.IS_TOP_FRAME) {
+	/*if (path != '' && !WasaviExtensionWrapper.IS_TOP_FRAME) {
 		return _('Only stand alone form can write.');
-	}
+	}*/
 	if (isAppend) {
 		return _('Appending is not implemented.');
 	}
@@ -812,7 +812,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	}
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',
-		path:path,
+		path:app.low.regalizeFilePath(path),
 		value:content
 	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == app.targetElement) {
@@ -878,7 +878,7 @@ Wasavi.ExCommand.edit = function (app, t, a, content, meta) {
 	initCommands.commands.push([terminator, terminator.buildArgs(app, [], '')]);
 	Array.prototype.unshift.apply(app.exCommandExecutor.commands, initCommands.commands);
 
-	app.low.requestShowMessage(app.low.getFileIoResultInfo(t, charCount, meta.status == 404));
+	app.low.requestShowMessage(app.low.getFileIoResultInfo(meta.path, charCount, meta.status == 404));
 	return undefined;
 };
 Wasavi.ExCommand.executeRegister = function (app, t, a) {
@@ -1049,7 +1049,7 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 
-		app.low.fireEvent('read', {path:path || app.fileName});
+		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path) || app.fileName});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
@@ -1253,7 +1253,7 @@ Wasavi.ExCommand.commands = [
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.fireEvent('read', {path:a.argv[0]});
+		app.low.fireEvent('read', {path:app.low.regalizeFilePath(a.argv[0])});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {

@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 320 2013-06-21 23:54:21Z akahuku $
+ * @version $Id: FileSystem.js 335 2013-07-04 08:43:45Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -25,11 +25,22 @@
 (function (global) {
 	'use strict';
 
+	/*
+	 * consts
+	 */
+
+	var AUTH_CALLBACK_URL_BASE = 'http://wasavi.appsweets.net/authorized.html?fs=';
+	var WRITE_DELAY_SECS = 10;
+
+	/*
+	 * vars
+	 */
+
 	var OAuth;
 	var u;
 
 	/*
-	 * oauth utilities
+	 * utilities
 	 */
 
 	function queryToObject (url) {
@@ -69,13 +80,24 @@
 	}
 
 	function getFullUrl (url, q) {
-		var base = u.baseUrl(url);
 		var query = objectToQuery(q);
-		return query == '' ? base : (base + '?' + query);
+		var result = query == '' ? url : (url + (url.indexOf('?') >= 0 ? '&' : '?') + query);
+		return result;
 	}
 
 	function getCanonicalPath (path) {
 		return path.split('/').map(OAuth.urlEncode).join('/');
+	}
+
+	function splitPath (path) {
+		var re, regex = /(?:\u2416.|[^\/])*(?:\/|$)/g, result = [], foundLast = false;
+		while (!foundLast && (re = regex.exec(path))) {
+			foundLast = re[0].substr(-1) != '/';
+			var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
+			tmp = tmp.replace(/\u2416(.)/g, '$1');
+			tmp != '' && result.push(tmp);
+		}
+		return result;
 	}
 
 	/*
@@ -86,7 +108,7 @@
 		var queue = [];
 		var timer;
 
-		function processQueue () {
+		function process () {
 			timer = null;
 
 			if (queue.length == 0) return;
@@ -94,13 +116,14 @@
 			var top = queue.shift();
 			switch (top.task) {
 			case 'authorize':
-				if (fs.isAuthorized && top.state == 'authorized') {
-					runQueue();
+				if (!fs.needAuthentication) {
+					run();
+					break;
 				}
-				else {
+				if (top.state != 'error') {
 					queue.unshift(top);
-					authorize(top);
 				}
+				authorize(top);
 				break;
 			case 'ls':
 				ls(top);
@@ -114,13 +137,13 @@
 			}
 		}
 
-		function runQueue (data) {
-
-			if (!fs.isAuthorized) {
+		function push (data) {
+			if (fs.needAuthentication) {
 				if (queue.length == 0 || queue[0].task != 'authorize') {
 					queue.unshift({
 						task:'authorize',
 						state:'initial-state',
+						isAuthorized:false,
 						tabId:data && data.tabId
 					});
 				}
@@ -134,9 +157,13 @@
 			if (data) {
 				queue.push(data);
 			}
+		}
+
+		function run (data) {
+			push(data);
 
 			if (!timer) {
-				timer = u.setTimeout.call(global, processQueue, 100);
+				timer = u.setTimeout(process, 100);
 			}
 		}
 
@@ -144,8 +171,160 @@
 			return queue[0];
 		}
 
-		this.run = runQueue;
+		function initCredentials (keys, callback) {
+			var obj = fs.loadCredentials();
+
+			if (!obj) return;
+			if (keys.some(function (key) {return !(key in obj)})) return;
+
+			push();
+			queue[0].state = 'pre-authorized';
+
+			try {
+				callback(obj);
+			}
+			catch (e) {
+			}
+		}
+
+		fs.ls = function (path, tabId, callback) {
+			run({
+				task:'ls',
+				tabId:tabId,
+				path:path,
+				callback:callback
+			});
+		};
+		fs.write = function (path, content, tabId) {
+			run({
+				task:'write',
+				tabId:tabId,
+				path:path,
+				content:content
+			});
+		};
+		fs.read = function (path, tabId) {
+			run({
+				task:'read',
+				tabId:tabId,
+				path:path
+			});
+		};
+
+		this.initCredentials = initCredentials;
+		this.push = push;
+		this.run = run;
 		this.__defineGetter__('topTask', getTopTask);
+	}
+
+	/*
+	 * file writing binder class
+	 */
+
+	function WriteBinder (fs, writeCore, delaySecs) {
+		var writeTimer;
+		var writeBuffer = {};
+
+		function handleWriteTimer () {
+			writeTimer = null;
+
+			try {
+				for (var i in writeBuffer) {
+					writeCore(writeBuffer[i]);
+				}
+			}
+			finally {
+				writeBuffer = {};
+				fs.taskQueue.run();
+			}
+		}
+
+		function write (task) {
+			if (!writeTimer) {
+				writeTimer = u.setTimeout(handleWriteTimer, 1000 * delaySecs);
+			}
+			writeBuffer[task.path] = task;
+			fs.response(task, {state:'buffered', path:task.path});
+		}
+
+		delaySecs || (delaySecs = WRITE_DELAY_SECS);
+		this.write = write;
+	}
+
+	/*
+	 * multipart/related handling class
+	 */
+
+	function MultiPart (metadata, content) {
+		var USE_BASE64 = false;
+		var result;
+		var boundary;
+
+		function getBody (s) {
+			if (USE_BASE64) {
+				s = encodeURIComponent(s);
+				s = unescape(s);
+				s = u.btoa(s);
+				s = s.replace(/.{78}/g, '$&\r\n');
+			}
+			return s;
+		}
+
+		function getMetadataPart (metadata) {
+			var m = {};
+			for (var i in metadata) {
+				if (metadata[i] != undefined) {
+					m[i] = metadata[i];
+				}
+			}
+
+			var s = [];
+			s.push('Content-Type: application/json;charset=UTF-8');
+			USE_BASE64 && s.push('Content-Transfer-Encoding: base64');
+			s.push('');
+			s.push(getBody(JSON.stringify(m, null, ' ')));
+			return s.join('\r\n');
+		}
+
+		function getContentPart (content) {
+			var s = [];
+			s.push('Content-Type: ' + (metadata.mimeType || 'text/plain') + ';charset=UTF-8');
+			USE_BASE64 && s.push('Content-Transfer-Encoding: base64');
+			s.push('');
+			s.push(getBody(content));
+			return s.join('\r\n');
+		}
+
+		function main () {
+			var metadataPart = getMetadataPart(metadata);
+			var contentPart = getContentPart(content);
+
+			metadata = content = null;
+
+			do {
+				boundary = [
+					Math.floor(Math.random() * 10000),
+					Math.floor(Math.random() * 10000),
+					Math.floor(Math.random() * 10000)
+				].join('_');
+			} while (metadataPart.indexOf(boundary) >= 0 || contentPart.indexOf(boundary) >= 0);
+
+			result = [
+				'--' + boundary,
+				metadataPart,
+				'',
+				'--' + boundary,
+				contentPart,
+				'',
+				'--' + boundary + '--',
+				''
+			].join('\r\n');
+		}
+
+		main();
+
+		this.__defineGetter__('result', function () {return result});
+		this.__defineGetter__('boundary', function () {return boundary});
 	}
 
 	/*
@@ -158,6 +337,7 @@
 
 	FileSystem.prototype = {
 		backend:'*null*',
+		needAuthentication:true,
 		isAuthorized:false,
 		write:function () {},
 		read:function () {},
@@ -166,44 +346,7 @@
 			data.type = 'fileio-' + task.task + '-response';
 			this.extension.sendRequest(task.tabId, data);
 		},
-		getInternalPath:function (path) {
-			var schema = this.backend + ':/';
-			if (path.indexOf(schema) == 0) {
-				path = path.substring(schema.length);
-			}
-			if (path.charAt(0) == '/') {
-				path = path.substring(1);
-			}
-			return path;
-		},
-		getExternalPath:function (path) {
-			if (path.charAt(0) != '/') {
-				path = '/' + path;
-			}
-			return this.backend + ':/' + path;
-		},
-		accessTokenKeyName:function () {
-			return 'filesystem.' + this.backend + '.tokens';
-		},
-		match:function (url) {
-			return url.indexOf(this.backend + ':') == 0;
-		},
-		clearCredential:function () {
-			this.extension.storage.setItem(accessTokenKeyName(), undefined);
-		}
-	};
-
-	/*
-	 * file system class for dropbox
-	 */
-
-	function FileSystemDropbox (consumerKey, consumerSecret, extension) {
-
-		/*
-		 * privates
-		 */
-
-		function responseError (task, data) {
+		responseError: function (task, data) {
 			var errorMessage = false;
 
 			if (typeof data == 'object') {
@@ -235,27 +378,49 @@
 				errorMessage = data + '';
 			}
 
-			errorMessage = self.backend + ': ' + errorMessage;
-			extension.isDev && console.error('wasavi background: file system error: ' + errorMessage);
-			self.response(task, {error:errorMessage});
-		}
-
-		function restoreAcessTokenPersistents () {
-			var obj = extension.storage.getItem(self.accessTokenKeyName());
-			if (obj && obj.key && obj.secret && obj.uid && obj.locale) {
-				oauth.setAccessToken(obj.key, obj.secret);
-				uid = obj.uid;
-				locale = obj.locale;
-				taskQueue.run();
-				taskQueue.topTask.state = 'pre-authorized';
+			errorMessage = this.backend + ': ' + errorMessage;
+			this.extension.isDev && console.error(
+				'wasavi background: file system error: ' + errorMessage);
+			this.response(task, {error:errorMessage});
+		},
+		getInternalPath:function (path) {
+			var schema = this.backend + ':';
+			if (path.indexOf(schema) == 0) {
+				path = path.substring(schema.length);
 			}
+			return path;
+		},
+		getExternalPath:function (path) {
+			if (path.charAt(0) != '/') {
+				path = '/' + path;
+			}
+			return this.backend + ':' + path;
+		},
+		get authCallbackUrl () {
+			return AUTH_CALLBACK_URL_BASE + this.backend;
+		},
+		match:function (url) {
+			return url.indexOf(this.backend + ':') == 0;
+		},
+		get credentialKeyName () {
+			return 'filesystem.' + this.backend + '.tokens';
+		},
+		saveCredentials:function (data) {
+			this.extension.storage.setItem(this.credentialKeyName, data);
+		},
+		loadCredentials:function () {
+			return this.extension.storage.getItem(this.credentialKeyName);
+		},
+		clearCredentials:function () {
+			this.extension.storage.setItem(this.credentialKeyName, undefined);
 		}
+	};
 
-		function saveAccessTokenPersistents (key, secret, uid, locale) {
-			extension.storage.setItem(
-				self.accessTokenKeyName(),
-				{key:key, secret:secret, uid:uid, locale:locale});
-		}
+	/*
+	 * file system class for dropbox
+	 */
+
+	function FileSystemDropbox (consumerKey, consumerSecret, extension) {
 
 		/*
 		 * tasks
@@ -263,7 +428,8 @@
 
 		function authorize (task) {
 
-			function handleDefaultError (message) {
+			function handleAuthError (message) {
+				self.needAuthentication = false;
 				self.isAuthorized = false;
 				task.state = 'error';
 				task.message = message;
@@ -271,12 +437,15 @@
 			}
 
 			if (task.task != 'authorize') {
-				return handleDefaultError('Not a authentication task: ' + task.task);
+				return handleAuthError('Not a authentication task: ' + task.task);
 			}
 
 			switch (task.state) {
 			case 'error':
-				responseError(task, {wasavi_filesystem_error:task.message});
+				self.responseError(task, {
+					wasavi_filesystem_error:task.message || 'Unknown error'
+				});
+				taskQueue.run();
 				break;
 
 			case 'initial-state':
@@ -287,7 +456,7 @@
 					OAUTH_OPTS.requestTokenUrl, null,
 					function (data) {
 						if (task.state != 'fetching-request-token') {
-							return handleDefaultError(
+							return handleAuthError(
 								'Invalid authentication state (expect:f-r-t): ' + task.state
 							);
 						}
@@ -300,24 +469,24 @@
 
 						var q = queryToObject(OAUTH_OPTS.authorizationUrl);
 						q.oauth_token = token.oauth_token;
-						q.oauth_callback = OAUTH_CALLBACK_URL;
-						oauth.setCallbackUrl(OAUTH_CALLBACK_URL);
+						q.oauth_callback = self.authCallbackUrl;
+						oauth.setCallbackUrl(self.authCallbackUrl);
 
 						extension.openTabWithUrl(
 							getFullUrl(OAUTH_OPTS.authorizationUrl, q),
 							function (id, url) {
 								if (task.state != 'confirming-user-authorization') {
-									return handleDefaultError(
+									return handleAuthError(
 										'Invalid authentication state (expect:c-u-a): ' + task.state
 									);
 								}
 
 								task.state = 'waiting-tab-switch';
 								extension.tabWatcher.add(
-									id, url,
+									id, self.authCallbackUrl,
 									function (newUrl) {
 										if (task.state != 'waiting-tab-switch') {
-											return handleDefaultError(
+											return handleAuthError(
 												'Invalid authentication state (expect:w-t-s): ' + task.state
 											);
 										}
@@ -325,16 +494,10 @@
 										extension.closeTab(id);
 										oauth.setCallbackUrl('');
 
-										if (u.baseUrl(newUrl) != u.baseUrl(OAUTH_CALLBACK_URL)) {
-											return handleDefaultError(
-												'Authentication declined: ' + u.baseUrl(newUrl)
-											);
-										}
-
 										var q = queryToObject(newUrl);
 										if (q.fs != self.backend
 										||  q.oauth_token != oauth.getAccessTokenKey()) {
-											return handleDefaultError(
+											return handleAuthError(
 												'Access token missmatch: ' + q.fs
 											);
 										}
@@ -347,7 +510,7 @@
 							}
 						);
 					},
-					handleDefaultError
+					handleAuthError
 				);
 				break;
 
@@ -358,7 +521,7 @@
 					OAUTH_OPTS.accessTokenUrl, null,
 					function (data) {
 						if (task.state != 'fetching-access-token') {
-							return handleDefaultError(
+							return handleAuthError(
 								'Invalid authentication state (expect:f-a-t): ' + task.state
 							);
 						}
@@ -370,7 +533,7 @@
 						oauth.setVerifier('');
 						taskQueue.run();
 					},
-					handleDefaultError
+					handleAuthError
 				);
 				break;
 
@@ -381,24 +544,27 @@
 					'https://api.dropbox.com/1/account/info',
 					function (data) {
 						if (task.state != 'fetching-account-info') {
-							return handleDefaultError(
+							return handleAuthError(
 								'Invalid authentication state (expect:f-a-i): ' + task.state
 							);
 						}
 
 						if (data.uid != uid) {
-							return handleDefaultError('User unmatch.');
+							return handleAuthError('User unmatch.');
 						}
 
 						task.state = 'authorized';
-						saveAccessTokenPersistents(
-							oauth.getAccessTokenKey(),
-							oauth.getAccessTokenSecret(),
-							data.uid, data.country);
+						self.saveCredentials({
+							key:oauth.getAccessTokenKey(),
+							secret:oauth.getAccessTokenSecret(),
+							uid:data.uid,
+							locale:data.country
+						});
+						self.needAuthentication = false;
 						self.isAuthorized = true;
 						taskQueue.run();
 					},
-					handleDefaultError
+					handleAuthError
 				);
 				break;
 			}
@@ -406,7 +572,6 @@
 
 		function ls (task) {
 			var path = getCanonicalPath(self.getInternalPath(task.path));
-			var callback = task.callback;
 
 			var q = {locale:locale, list:'true'};
 			var key = path || '/';
@@ -441,22 +606,88 @@
 					task.callback(data);
 				},
 				function (data) {
-					task.callback({});
+					if (data.status == 401 || data.status == 403) {
+						self.needAuthentication = true;
+						self.isAuthorized = false;
+						taskQueue.run(task);
+					}
+					else {
+						task.callback({});
+					}
+				}
+			);
+
+			taskQueue.run();
+		}
+
+		function read (task) {
+			self.response(task, {
+				state:'reading',
+				progress:0
+			});
+
+			oauth.onModifyTransport = function (xhr) {
+				xhr.onprogress = xhr.onload = function (e) {
+					if (!e.lengthComputable) return;
+					self.response(task, {
+						state:'reading',
+						progress:e.loaded / e.total
+					});
+				};
+			};
+			oauth.get(
+				'https://api-content.dropbox.com/1/files/dropbox/'
+					+ getCanonicalPath(self.getInternalPath(task.path)),
+				function (data) {
+					try {
+						var meta = u.parseJson(data.responseHeaders['x-dropbox-metadata']);
+						if (meta.is_dir) {
+							return self.responseError(task, 'Cannot edit a directory.');
+						}
+						if (!/^text\//.test(meta.mime_type)) {
+							return self.responseError(task, 'Unknown MIME type: ' + meta.mime_type);
+						}
+						self.response(task, {
+							state:'complete',
+							content:data.text,
+							meta:{
+								status:data.status,
+								path:self.getExternalPath(meta.path),
+								charLength:data.text.length
+							}
+						});
+					}
+					finally {
+						taskQueue.run();
+					}
+				},
+				function (data) {
+					if (data.status == 401 || data.status == 403) {
+						self.needAuthentication = true;
+						self.isAuthorized = false;
+						taskQueue.run(task);
+					}
+					else if (data.status == 404) {
+						self.response(task, {
+							state:'complete',
+							content:'',
+							meta:{
+								status:data.status,
+								path:self.getExternalPath(task.path),
+								charLength:0
+							}
+						});
+						taskQueue.run();
+					}
+					else {
+						self.responseError(task, data);
+						taskQueue.run();
+					}
 				}
 			);
 		}
 
-		function handleWriteTimer () {
-			writeTimer = null;
-
-			for (var i in writeBuffer) {
-				writeCore(writeBuffer[i]);
-			}
-
-			writeBuffer = {};
-		}
-
-		function writeCore (task) {
+		function write (task) {
 			self.response(task, {
 				state:'writing',
 				progress:0
@@ -490,91 +721,22 @@
 					});
 				},
 				failure:function (data) {
-					responseError(task, data);
-				}
-			});
-		}
-
-		function write (task) {
-			if (!writeTimer) {
-				writeTimer = u.setTimeout.call(global, handleWriteTimer, 1000 * WRITE_DELAY_SECS);
-			}
-			writeBuffer[task.path] = task;
-			self.response(task, {state:'buffered'});
-		}
-
-		function read (task) {
-			self.response(task, {
-				state:'reading',
-				progress:0
-			});
-
-			oauth.onModifyTransport = function (xhr) {
-				xhr.onprogress = xhr.onload = function (e) {
-					if (!e.lengthComputable) return;
-					self.response(task, {
-						state:'reading',
-						progress:e.loaded / e.total
-					});
-				};
-			};
-			oauth.get(
-				'https://api-content.dropbox.com/1/files/dropbox/'
-					+ getCanonicalPath(self.getInternalPath(task.path)),
-				function (data) {
-					var meta = u.parseJson(data.responseHeaders['x-dropbox-metadata']);
-					if (!/^text\//.test(meta.mime_type)) {
-						responseError(task, 'Unknown MIME type: ' + meta.mime_type);
-						return;
-					}
-					if (meta.is_dir) {
-						responseError(task, 'Cannot edit a directory.');
-						return;
-					}
-					self.response(task, {
-						state:'complete',
-						content:data.text,
-						meta:{
-							status:data.status,
-							path:self.getExternalPath(meta.path),
-							charLength:data.text.length
-						}
-					});
-				},
-				function (data) {
-					if (data.status == 404) {
-						self.response(task, {
-							state:'complete',
-							content:'',
-							meta:{
-								status:data.status,
-								path:self.getExternalPath(task.path),
-								charLength:0
-							}
-						});
+					if (data.status == 401 || data.status == 403) {
+						self.needAuthentication = true;
+						self.isAuthorized = false;
+						taskQueue.run(task);
 					}
 					else {
-						responseError(task, data);
+						self.responseError(task, data);
 					}
 				}
-			);
+			});
 		}
-
-		/*
-		 * init #1
-		 */
-
-		var self = this;
-		var taskQueue = new TaskQueue(this, authorize, ls, read, write);
-
-		FileSystem.apply(this, arguments);
-		this.backend = 'dropbox';
 
 		/*
 		 * consts
 		 */
 
-		var OAUTH_CALLBACK_URL = 'http://wasavi.appsweets.net/authorized.html?fs=' + self.backend;
 		var OAUTH_OPTS = {
 			consumerKey:      consumerKey,
 			consumerSecret:   consumerSecret,
@@ -582,8 +744,19 @@
 			authorizationUrl: 'https://www.dropbox.com/1/oauth/authorize',
 			accessTokenUrl:   'https://api.dropbox.com/1/oauth/access_token'
 		};
-		var WRITE_DELAY_SECS = 10;
 		var LS_CACHE_TTL_MSECS = 1000 * 60 * 15;
+
+		/*
+		 * init #1
+		 */
+
+		var self = this;
+		var writeBinder = new WriteBinder(this, write);
+		var taskQueue = new TaskQueue(this, authorize, ls, read, writeBinder.write);
+
+		FileSystem.apply(this, arguments);
+		this.backend = 'dropbox';
+		this.taskQueue = taskQueue;
 
 		/*
 		 * vars
@@ -600,42 +773,611 @@
 		var uid;
 		var locale;
 		var lsCache = {};
-		var writeTimer;
-		var writeBuffer = {};
+
+		taskQueue.initCredentials(
+			['key', 'secret', 'uid', 'locale'],
+			function (obj) {
+				oauth.setAccessToken(obj.key, obj.secret);
+				uid = obj.uid;
+				locale = obj.locale;
+			}
+		);
+	}
+
+	FileSystemDropbox.prototype = Object.create(FileSystem.prototype);
+	FileSystemDropbox.prototype.constructor = FileSystemDropbox;
+
+	/*
+	 * file system class for google drive
+	 */
+
+	function FileSystemGDrive (key, secret, extension) {
+
+		/*
+		 * privates
+		 */
+
+		function request (url, opts, success, failure) {
+			opts || (opts = {});
+			var q = opts.query || {};
+
+			var xhr = new XMLHttpRequest;
+			xhr.open(opts.method || 'GET', getFullUrl(url, q));
+			xhr.onreadystatechange = function () {
+				if (xhr.readyState != 4) return;
+				try {
+					if (xhr.status >= 200 && xhr.status < 300
+					|| xhr.status == 304
+					|| xhr.status === 0) {
+						success && success(u.parseJson(xhr.responseText), xhr);
+					}
+					else {
+						xhr.onerror && xhr.onerror();
+					}
+				}
+				catch (e) {
+					extension.isDev && console.error(e.toString());
+				}
+				finally {
+					xhr = success = failure = null;
+				}
+			};
+			xhr.onerror = function () {
+				if (extension.isDev) {
+					var st, re
+					try {st = xhr.status} catch (e) {st = 'Unknown status'}
+					try {re = xhr.responseText} catch (e) {re = 'Unknown response'}
+					console.log('request error: ' + st + ': ' + re);
+				}
+				try {
+					failure && failure(xhr);
+				}
+				catch (ex) {
+					extension.isDev && console.error(ex.toString());
+				}
+				finally {
+					xhr = success = failure = null;
+				}
+			};
+			if (opts.beforesend) {
+				try {opts.beforesend(xhr)} catch (e) {
+					extension.isDev && console.error(e.toString());
+				}
+			}
+			try {
+				if (!opts.ignoreAccessToken && tokenType != '' && accessToken != '') {
+					xhr.setRequestHeader('Authorization', tokenType + ' ' + accessToken);
+				}
+				xhr.setRequestHeader('X-JavaScript-User-Agent', 'wasavi/' + extension.version);
+				xhr.send(opts.content || null);
+			}
+			catch (e) {
+				self.extension.isDev && console.error(e.toString());
+				xhr && xhr.onerror();
+			}
+		}
+
+		function buildPathOrderedMetadata (fragments, items) {
+			var result;
+			var nameHash = {};
+
+			items.forEach(function (item) {
+				if (item.title in nameHash) {
+					nameHash[item.title].push(item);
+				}
+				else {
+					nameHash[item.title] = [item];
+				}
+			});
+
+			if (fragments.length >= 1
+			&&  fragments[fragments.length - 1] in nameHash
+			&&  nameHash[fragments[fragments.length - 1]].some(function (item) {
+				result = [item];
+
+				var parentId = item.parents[0].id;
+				var foundRoot = item.parents[0].isRoot;
+				var cont = true;
+
+				for (var i = fragments.length - 2; cont && i >= 0; i--) {
+					cont = fragments[i] in nameHash
+					&& nameHash[fragments[i]].some(function (item2) {
+						if (item2.id != parentId) return false;
+						result.unshift(item2);
+						parentId = item2.parents[0].id;
+						foundRoot = item2.parents[0].isRoot;
+						return true;
+					});
+				}
+
+				return foundRoot;
+			})) {
+				return result;
+			}
+
+			return null;
+		}
+
+		function getMetadataFromPath (path, success, failure) {
+			var params = {};
+			var fragments = splitPath(path);
+			if (fragments.length == 0) {
+				request('https://www.googleapis.com/drive/v2/files/root', null,
+					function (data, xhr) {
+						success(fragments, [data], xhr);
+					},
+					failure
+				);
+			}
+			else {
+				params.q = '(' +
+					fragments
+						.map(function (f) {return 'title=\'' + f.replace(/\'/g, '\'') + '\''})
+						.join(' OR ') +
+					') AND trashed=false';
+
+				request('https://www.googleapis.com/drive/v2/files', {query:params},
+					function (data, xhr) {
+						var result = buildPathOrderedMetadata(
+							fragments, data.items
+						);
+
+						if (!result) {
+							result = buildPathOrderedMetadata(
+								Array.prototype.slice.call(fragments, 0, fragments.length - 1),
+								data.items
+							);
+						}
+
+						success(fragments, result || null, xhr);
+					},
+					failure
+				);
+			}
+		}
+
+		function getChildren (folderId, success, failure) {
+			var params = {
+				q:'\'' + folderId + '\' in parents AND trashed=false'
+			};
+			request('https://www.googleapis.com/drive/v2/files/', {query:params},
+				function (data, xhr) {
+					success(data.items, xhr);
+				},
+				failure
+			);
+		}
+
+		function handleError (task, xhr) {
+			if (xhr && (xhr.status == 401 || xhr.status == 403)) {
+				self.needAuthentication = true;
+				self.isAuthorized = false;
+				accessToken = tokenType = '';
+				taskQueue.run(task);
+				return true;
+			}
+			return false;
+		}
+
+		/*
+		 * tasks
+		 */
+
+		function authorize (task) {
+
+			function handleAuthError (message) {
+				accessToken = tokenType = '';
+				self.needAuthentication = false;
+				self.isAuthorized = false;
+				task.state = 'error';
+				task.message = message;
+				taskQueue.run();
+			}
+
+			if (task.task != 'authorize') {
+				return handleAuthError('Not a authentication task: ' + task.task);
+			}
+
+			switch (task.state) {
+			case 'error':
+				self.responseError(task, {
+					wasavi_filesystem_error:task.message
+				});
+				taskQueue.run();
+				break;
+
+			case 'initial-state':
+				task.state = 'fetching-access-token';
+				self.response(task, {state:'authorizing', phase:'1/3'});
+
+				extension.openTabWithUrl(
+					getFullUrl('https://accounts.google.com/o/oauth2/auth', {
+						response_type:'token',
+						scope:SCOPES.join(' '),
+						client_id:key,
+						redirect_uri:self.authCallbackUrl,
+						approval_prompt:'force'
+					}),
+					function (id, url) {
+						if (task.state != 'fetching-access-token') {
+							return handleAuthError(
+								'Invalid authentication state (expect:f-a-t): ' + task.state
+							);
+						}
+
+						task.state = 'waiting-tab-switch';
+						extension.tabWatcher.add(
+							id, self.authCallbackUrl,
+							function (newUrl) {
+								if (task.state != 'waiting-tab-switch') {
+									return handleAuthError(
+										'Invalid authentication state (expect:w-t-s): ' + task.state
+									);
+								}
+
+								extension.closeTab(id);
+
+								var q = queryToObject(newUrl.replace('#', '&'));
+								if ('error' in q) {
+									return handleAuthError(
+										'Authentication declined #2: ' + q.error
+									);
+								}
+
+								task.state = 'got-access-token';
+								task.accessToken = q.access_token;
+								task.tokenType = q.token_type;
+								taskQueue.run();
+							}
+						);
+					}
+				);
+				break;
+
+			case 'got-access-token':
+				task.state = 'validating-access-token';
+				self.response(task, {state:'authorizing', phase:'2/3'});
+
+				request(
+					'https://www.googleapis.com/oauth2/v1/tokeninfo',
+					{query:{access_token:task.accessToken}},
+					function (data, xhr) {
+						if (xhr.status != 200) {
+							return handleAuthError(
+								'Invalid status code #' + xhr.status
+							);
+						}
+						if (task.state != 'validating-access-token') {
+							return handleAuthError(
+								'Invalid authentication state (expect:v-a-t): ' + task.state
+							);
+						}
+						if (data.audience !== key) {
+							return handleAuthError('Invalid authentication audience');
+						}
+
+						task.state = 'pre-authorized';
+						taskQueue.run();
+					},
+					function (xhr) {
+						handleAuthError();
+					}
+				);
+				break;
+
+			case 'pre-authorized':
+				task.state = 'fetching-account-info';
+				self.response(task, {state:'authorizing', phase:'3/3'});
+
+				request(
+					'https://www.googleapis.com/oauth2/v1/userinfo',
+					{query:{access_token:task.accessToken}},
+					function (data, xhr) {
+						if (xhr.status != 200) {
+							return handleAuthError(
+								'Invalid status code #' + xhr.status
+							);
+						}
+						if (task.state != 'fetching-account-info') {
+							return handleAuthError(
+								'Invalid authentication state (expect:f-a-i): ' + task.state
+							);
+						}
+
+						task.state = 'authorized';
+						tokenType = task.tokenType;
+						accessToken = task.accessToken;
+						uid = data.id;
+						locale = data.locale;
+						self.saveCredentials({
+							accessToken:task.accessToken,
+							tokenType:task.tokenType
+						});
+						self.needAuthentication = false;
+						self.isAuthorized = true;
+						taskQueue.run();
+					},
+					function (xhr) {
+						handleAuthError();
+					}
+				);
+				break;
+			}
+		}
+
+		function ls (task) {
+			getMetadataFromPath(self.getInternalPath(task.path),
+				function (fragments, data, xhr) {
+					if (!data || data.length == 0) {
+						task.callback({});
+						return;
+					}
+					var prefix = Array.prototype.slice.call(fragments);
+					getChildren(data[data.length - 1].id,
+						function (items) {
+							var contents = items.map(function (item) {
+								return {
+									path:prefix.concat(item.title),
+									is_dir:item.mimeType == 'application/vnd.google-apps.folder'
+								};
+							});
+							task.callback({contents:contents});
+						},
+						function (xhr) {
+							handleError(task, xhr) || task.callback({});
+						}
+					);
+				},
+				function (xhr) {
+					handleError(task, xhr) || task.callback({});
+				}
+			);
+
+			taskQueue.run();
+		}
+
+		function read (task) {
+			var path = self.getInternalPath(task.path);
+
+			self.response(task, {
+				state:'reading',
+				progress:0
+			});
+
+			getMetadataFromPath(path,
+				function (fragments, data, xhr) {
+					// valid path and new file
+					if (!data && fragments.length == 1 /* new file on the root directory */
+					||  data && data.length < fragments.length /* new file on a sub directoru */
+					) {
+						self.response(task, {
+							state:'complete',
+							content:'',
+							meta:{
+								status:404,
+								path:self.getExternalPath(path),
+								charLength:0
+							}
+						});
+						taskQueue.run();
+						return;
+					}
+
+					// invalid (non-existent) path
+					if (!data) {
+						self.responseError(task, 'Invalid path');
+						taskQueue.run();
+						return;
+					}
+
+					// valid path and existent file
+					var meta = data[data.length - 1];
+					if (meta.mimeType == 'application/vnd.google-apps.folder') {
+						self.responseError(task, 'Cannot edit a directory.');
+						taskQueue.run();
+						return;
+					}
+					if (!/^text\//.test(meta.mimeType)) {
+						self.responseError(task, 'Unknown MIME type: ' + meta.mimeType);
+						taskQueue.run();
+						return;
+					}
+					if (!('downloadUrl' in meta)) {
+						self.responseError(task, 'Unable to download.');
+						taskQueue.run();
+						return;
+					}
+
+					// load...
+					request(
+						meta.downloadUrl,
+						{
+							beforesend:function (xhr) {
+								xhr.onprogress = function (e) {
+									if (!e.lengthComputable) return;
+									self.response(task, {
+										state:'reading',
+										progress:e.loaded / e.total
+									});
+								};
+							}
+						},
+						function (data, xhr) {
+							self.response(task, {
+								state:'complete',
+								content:xhr.responseText,
+								meta:{
+									status:xhr.status,
+									path:self.getExternalPath(path),
+									charLength:xhr.responseText.length
+								}
+							});
+							taskQueue.run();
+						},
+						function (xhr) {
+							if (handleError(task, xhr)) return;
+
+							self.response(task, {
+								state:'complete',
+								content:'',
+								meta:{
+									status:xhr && xhr.status || 404,
+									path:self.getExternalPath(path),
+									charLength:0
+								}
+							});
+
+							taskQueue.run();
+						}
+					);
+				},
+				function (xhr) {
+					if (handleError(task, xhr)) return;
+					self.responseError(task, 'Network Error');
+					taskQueue.run();
+				}
+			);
+		}
+
+		function write (task) {
+			var path = self.getInternalPath(task.path);
+
+			self.response(task, {
+				state:'writing',
+				progress:0
+			});
+
+			getMetadataFromPath(path,
+				function (fragments, data, xhr) {
+					var fileId;
+					var parentId;
+					var mimeType = 'text/plain;charset=UTF-8';
+
+					// new file on the root directory
+					if (!data && fragments.length == 1) {
+						parentId = 'root';
+					}
+					// new file on a sub directoru
+					else if (data && data.length < fragments.length) {
+						parentId = data[data.length - 1].id;
+					}
+					// invalid (non-existent) path
+					else if (!data) {
+						self.responseError(task, 'Invalid path');
+						taskQueue.run();
+						return;
+					}
+					// valid and exsitent file
+					else {
+						fileId = data[data.length - 1].id;
+						mimeType = data[data.length - 1].mimeType;
+					}
+
+					var mp = new MultiPart(
+						{
+							parents:[
+								{
+									kind:'drive#file',
+									id:parentId
+								}
+							],
+							title:/\/([^\/]+)$/.exec(path)[1],
+							mimeType:mimeType
+						},
+						task.content
+					);
+
+					// save...
+					request(
+						'https://www.googleapis.com/upload/drive/v2/files',
+						{
+							method:'POST',
+							query:{
+								uploadType:'multipart',
+								fileId:fileId
+							},
+							content:mp.result,
+							beforesend:function (xhr) {
+								xhr.setRequestHeader(
+									'Content-Type', 'multipart/related;boundary="' + mp.boundary + '"');
+								xhr.setRequestHeader(
+									'Content-Length', mp.result.length);
+								xhr.upload.onprogress = xhr.upload.onload = function (e) {
+									if (!e.lengthComputable) return;
+									self.response(task, {
+										state:'writing',
+										progress:e.loaded / e.total
+									});
+								};
+							}
+						},
+						function (data, xhr) {
+							self.response(task, {
+								state:'complete',
+								meta:{
+									path:self.getExternalPath(path),
+									charLength:task.content.length
+								}
+							});
+						},
+						function (xhr) {
+							if (handleError(task, xhr)) return;
+							self.responseError(task, 'Failed to save (' + xhr.status + ')');
+						}
+					);
+				},
+				function (xhr) {
+					if (handleError(task, xhr)) return;
+					self.responseError(task, 'Network Error');
+				}
+			);
+		}
+
+		/*
+		 * consts
+		 */
+
+		var SCOPES = [
+			'https://www.googleapis.com/auth/drive',
+			'https://www.googleapis.com/auth/userinfo.profile'
+		];
+
+		/*
+		 * init #1
+		 */
+
+		var self = this;
+		var writeBinder = new WriteBinder(this, write);
+		var taskQueue = new TaskQueue(this, authorize, ls, read, writeBinder.write);
+
+		FileSystem.apply(this, arguments);
+		this.backend = 'gdrive';
+		this.taskQueue = taskQueue;
+
+		/*
+		 * vars
+		 */
+
+		var accessToken = '';
+		var tokenType = '';
+		var uid;
+		var locale;
 
 		/*
 		 * init #2
 		 */
 
-		this.ls = function (path, tabId, callback) {
-			taskQueue.run({
-				task:'ls',
-				tabId:tabId,
-				path:path,
-				callback:callback
-			});
-		};
-		this.write = function (path, content, tabId) {
-			taskQueue.run({
-				task:'write',
-				tabId:tabId,
-				path:path,
-				content:content
-			});
-		};
-		this.read = function (path, tabId) {
-			taskQueue.run({
-				task:'read',
-				tabId:tabId,
-				path:path
-			});
-		};
-
-		restoreAcessTokenPersistents();
+		taskQueue.initCredentials(
+			['accessToken', 'tokenType'],
+			function (obj) {
+				taskQueue.topTask.accessToken = obj.accessToken;
+				taskQueue.topTask.tokenType = obj.tokenType;
+			}
+		);
 	}
 
-	FileSystemDropbox.prototype = Object.create(FileSystem.prototype);
-	FileSystemDropbox.prototype.constructor = FileSystemDropbox;
+	FileSystemGDrive.prototype = Object.create(FileSystem.prototype);
+	FileSystemGDrive.prototype.constructor = FileSystemGDrive;
 
 	/*
 	 *
@@ -645,6 +1387,8 @@
 		switch (name) {
 		case 'dropbox':
 			return new FileSystemDropbox(key, secret, extension);
+		case 'gdrive':
+			return new FileSystemGDrive(key, secret, extension);
 		default:
 			return new FileSystem;
 		}

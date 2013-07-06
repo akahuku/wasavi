@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 316 2013-06-19 20:16:38Z akahuku $
+ * @version $Id: classes.js 336 2013-07-06 03:01:40Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3607,7 +3607,7 @@ Wasavi.Completer = function (appProxy, alist) {
 
 			return {
 				pos:pos,
-				value:pieces.join(''),
+				value:pieces.join('|'),
 				length:this.item.candidates.length,
 				filteredLength:this.item.candidatesFiltered.length,
 				completed:completedPiece
@@ -3634,7 +3634,7 @@ Wasavi.Completer = function (appProxy, alist) {
 	function getExCommandParseResult (value) {
 		var result = [];
 
-		while (value.length) {
+		do {
 			if (/^\s"/.test(value)) {
 				result.push({range:'', rest:value});
 				break;
@@ -3666,15 +3666,17 @@ Wasavi.Completer = function (appProxy, alist) {
 			var range = /^(?:\s*(?:\.|\$|\d+|'[a-z`']|\/(?:\\\/|[^\/])*\/|\?(?:\\\?|[^\?])*\?|[+\-]\d*)(?:[+\-]\d*)?)?(?:(?:\s*[,;])(?:\s*(?:\.|\$|\d+|'[a-z`']|\/(?:\\\/|[^\/])*\/|\?(?:\\\?|[^\?])*\?|[+\-]\d*)(?:[+\-]\d*)?)?)*\s*/.exec(value);
 			value = value.substring(range[0].length);
 
+			/*
+			 * rest
+			 */
 			var rest = /^(?:\u2416\||[^\|])*/.exec(value);
 			value = value.substring(rest[0].length);
-
 			result.push({range:range[0], rest:rest[0]});
-
 			if (value.charAt(0) == '|') {
 				value = value.substring(1);
+				value == '' && result.push({range:'', rest:''});
 			}
-		}
+		} while (value.length);
 
 		return result;
 	}
@@ -3700,6 +3702,7 @@ Wasavi.Completer = function (appProxy, alist) {
 
 					var subOffset = offset;
 					for (var i = 1; i < re.length; subOffset += re[i++].length) {
+						if (re[i] == undefined) re[i] = '';
 						if (i != item.index || result) continue;
 						if (!(subOffset <= pos && pos <= subOffset + re[i].length)) continue;
 
@@ -3721,7 +3724,7 @@ Wasavi.Completer = function (appProxy, alist) {
 							);
 						}
 					}
-					offset += args.length;
+					offset += args.length + 1;
 				});
 			});
 

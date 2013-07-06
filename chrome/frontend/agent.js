@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 322 2013-06-23 00:18:34Z akahuku $
+ * @version $Id: agent.js 336 2013-07-06 03:01:40Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1044,6 +1044,7 @@ extension.setMessageListener(function (req) {
 		stateClearTimer = setTimeout(function () {
 			wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
 			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
+			wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
 
 			log('command-completed', '', '');
 			keyStrokeLog.unshift('*** sequence point ***');
