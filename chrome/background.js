@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 335 2013-07-04 08:43:45Z akahuku $
+ * @version $Id: background.js 338 2013-07-08 13:04:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -892,9 +892,18 @@ if (window.jetpack && typeof require == 'function') {
 		return result;
 	}
 
-	function clearFileSystemCredentials () {
-		Object.keys(fstab).forEach(function (fs) {
-			fs.instance && fs.instance.clearCredentials();
+	function clearFileSystemCredentials (target) {
+		Object.keys(fstab).forEach(function (name) {
+			var fs = fstab[name];
+			if (!fs || !fs.instance || typeof fs.instance.clearCredentials != 'function') return;
+			if (typeof target == 'string') {
+				if (target == name) {
+					fs.instance.clearCredentials();
+				}
+			}
+			else {
+				fs.instance.clearCredentials();
+			}
 		});
 	}
 
@@ -1123,13 +1132,21 @@ if (window.jetpack && typeof require == 'function') {
 		res({data:wasaviFrameData});
 	}
 
-	function handleGetFilesystemEntries (req, res) {
-		getFileSystem(req.path)
-			.ls(req.path, req.tabId, function (data) {
-				console.log('wasavi background#handleGetFilesystemEntries: ' + JSON.stringify(data));
-				res({data:data.contents});
-			});
-		return true;
+	function handleFsCtl (req, res) {
+		var result = false;
+		switch (req.subtype) {
+		case 'reset':
+			clearFileSystemCredentials(req.name);
+			break;
+		case 'get-entries':
+			getFileSystem(req.path)
+				.ls(req.path, req.tabId, function (data) {
+					res({data:data.contents});
+				});
+			result = true;
+			break;
+		}
+		return result;
 	}
 
 	/** {{{2 request handler entry */
@@ -1164,8 +1181,7 @@ if (window.jetpack && typeof require == 'function') {
 			case 'get-clipboard':		handler = handleGetClipboard; break;
 			case 'push-payload':		handler = handlePushPayload; break;
 			case 'request-wasavi-frame':handler = handleRequestWasaviFrame; break;
-			case 'get-filesystem-entries':
-										handler = handleGetFilesystemEntries; break;
+			case 'fsctl':				handler = handleFsCtl; break;
 			}
 
 			if (handler) {

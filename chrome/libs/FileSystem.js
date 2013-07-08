@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 335 2013-07-04 08:43:45Z akahuku $
+ * @version $Id: FileSystem.js 338 2013-07-08 13:04:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -581,7 +581,7 @@
 			}
 
 			oauth.get(
-				getFullUrl('https://api.dropbox.com/1/metadata/dropbox/' + path, q),
+				getFullUrl('https://api.dropbox.com/1/metadata/dropbox' + path, q),
 				function (data) {
 					if (data.status == 304) {
 						data = lsCache[key].data;
@@ -636,7 +636,7 @@
 				};
 			};
 			oauth.get(
-				'https://api-content.dropbox.com/1/files/dropbox/'
+				'https://api-content.dropbox.com/1/files/dropbox'
 					+ getCanonicalPath(self.getInternalPath(task.path)),
 				function (data) {
 					try {
@@ -705,7 +705,7 @@
 			};
 			oauth.request({
 				method:'PUT',
-				url:'https://api-content.dropbox.com/1/files_put/dropbox/'
+				url:'https://api-content.dropbox.com/1/files_put/dropbox'
 					+ getCanonicalPath(self.getInternalPath(task.path))
 					+ '?locale=' + locale,
 				data:task.content,						// TODO: make binary data

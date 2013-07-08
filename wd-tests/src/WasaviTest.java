@@ -469,6 +469,8 @@ public class WasaviTest {
 			options.addArguments("--start-maximized");
 			options.addArguments("--load-extension="
 					+ System.getProperty("wasavi.tests.chrome.extension_path"));
+			options.addArguments("--user-data-dir="
+					+ System.getProperty("wasavi.tests.chrome.profile_path"));
 			options.addArguments("--lang=en");
 			driver = new ChromeDriver(service, options);
 		}

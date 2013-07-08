@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 337 2013-07-06 16:07:14Z akahuku $
+ * @version $Id: wasavi.js 338 2013-07-08 13:04:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2477,7 +2477,7 @@ function extractDriveName (path, callback) {
 		return '';
 	});
 }
-function regalizeFilePath (path) {
+function regalizeFilePath (path, completeDriveName) {
 	if (path == '') {
 		return path;
 	}
@@ -2485,6 +2485,9 @@ function regalizeFilePath (path) {
 	// strip drive name
 	var drive = '';
 	path = extractDriveName(path, function (d) {drive = d});
+	if (drive == '' && completeDriveName) {
+		drive = fstab[fileSystemIndex].name + ':';
+	}
 
 	// resolve relative path
 	if (!/^\//.test(path)) {
@@ -4257,7 +4260,8 @@ var completer = new Wasavi.Completer(appProxy,
 
 				extensionChannel.postMessage(
 					{
-						type:'get-filesystem-entries',
+						type:'fsctl',
+						subtype:'get-entries',
 						path:prefix
 							//.replace(/\u2416(.)/g, '$1')
 							.replace(/\/[^\/]*$/, '/')

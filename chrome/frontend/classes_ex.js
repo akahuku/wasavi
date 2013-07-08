@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 337 2013-07-06 16:07:14Z akahuku $
+ * @version $Id: classes_ex.js 338 2013-07-08 13:04:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -812,7 +812,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	}
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',
-		path:app.low.regalizeFilePath(path),
+		path:app.low.regalizeFilePath(path, true),
 		value:content
 	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == app.targetElement) {
@@ -989,7 +989,7 @@ Wasavi.ExCommand.chdir = function (app, t, a) {
 
 	app.fileSystemIndex = index;
 	if (path != '') {
-		app.fstab[index].cwd = app.low.regalizeFilePath(path);
+		app.fstab[index].cwd = app.low.regalizeFilePath(path, false);
 	}
 
 	return undefined;
@@ -1101,7 +1101,7 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 
-		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path) || app.fileName});
+		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path, true) || app.fileName});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
@@ -1156,22 +1156,35 @@ Wasavi.ExCommand.commands = [
 			}
 			else {
 				var target = a.argv[1];
-				app.fstab.forEach(function (fs, i) {
+				app.fstab.some(function (fs, i) {
 					if (fs.name == target) {
 						app.fileSystemIndex = i;
+						return true;
 					}
+					return false;
 				});
 			}
 		}
 		else if (/^(?:re?s?e?t?)$/.test(command)) {
-			// TBD
+			app.extensionChannel.postMessage({
+				type:'fsctl',
+				subtype:'reset',
+				name:a.argv.length <= 1 ? null : a.argv[1]
+			});
 		}
 		else if (/^(?:st?a?t?u?s?)$/.test(command)) {
 			if (app.fstab.length) {
 				list.push(_('*** available file systems ***'));
+				var maxWidth = 0;
+				app.fstab.forEach(function (fs) {
+					maxWidth = Math.max(maxWidth, fs.name.length);
+				});
 				app.fstab.forEach(function (fs, i) {
-					list.push((app.fileSystemIndex == i ? '*' : ' ') + ' ' + fs.name);
-					list.push('  ' + fs.cwd);
+					list.push(
+						(app.fileSystemIndex == i ? '*' : ' ') +
+						' ' + fs.name + multiply(' ', maxWidth - fs.name.length) +
+						' ' + fs.cwd
+					);
 				})
 				app.backlog.push(list);
 			}
@@ -1186,7 +1199,6 @@ Wasavi.ExCommand.commands = [
 			else {
 				return _('Unknown command.');
 			}
-			break;
 		}
 		return undefined;
 	}),
@@ -1352,7 +1364,7 @@ Wasavi.ExCommand.commands = [
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.fireEvent('read', {path:app.low.regalizeFilePath(a.argv[0])});
+		app.low.fireEvent('read', {path:app.low.regalizeFilePath(a.argv[0], true)});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {
