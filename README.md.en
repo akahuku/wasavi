@@ -27,7 +27,7 @@ Salient Features
 
   ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
 
-* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox account.
+* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive account.
 
   ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
 
@@ -74,7 +74,7 @@ On [wasavi online app](http://wasavi.appsweets.net/), enter `:ignorekeys add ^ht
 
 ## How to use wasavi as an independent text editor
 
-Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox files. You will have to authorize wasavi via OAuth to access Dropbox.
+Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
 
 ## I Have noticed a bug
 
@@ -107,6 +107,15 @@ Tips and Tricks
 * f/F/t/T extension for Japanese: these commands recognizes reading (ro-ma ji
   expression) of hiragana, katakana, and kanji. For example, `fk` will place
   a cursor on '漢'.
+* use a online storage as file system:
+	+ `:filesystem status` shows all file systems currently available.
+	+ `:filesystem default` shows default file system. You can set default file system
+	  via `:filesystem default dropbox` or `:filesystem default gdrive`.
+	+ `:filesystem reset` discards the access token for online storage.
+	+ You can place the file system name at the head of a file name explicitly:
+	  for instance, `:read dropbox:/hello.txt`.
+
+
 
 Commands implemented
 ====================
@@ -157,7 +166,7 @@ x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R a A i I o O & s S ZZ
 ex commands
 -----------
 
-abbreviate copy delete edit file global join k map mark marks move options print put quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
+abbreviate cd chdir copy delete edit file filesystem global join k map mark marks move options print put pwd quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
 
 ex commands to specify address are fully supported. 
 
