@@ -1,8 +1,6 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
-// @exclude http://wasavi.appsweets.net/script_frame.html
-// @exclude https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html
 // ==/UserScript==
 //
 /**
@@ -11,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 305 2013-06-10 17:33:18Z akahuku $
+ * @version $Id: extension_wrapper.js 341 2013-07-14 18:53:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -354,7 +352,10 @@
 		this.urlInfo = new UrlInfo(
 			'resource://' + extensionHostname + '/wasavi/data/options.html',
 			'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
-			true, false
+			// It seems Firefox 22 can not use the content within extension,
+			// even if it was data scheme...?
+			// Against our will, we return canUseInternal to false.
+			false, false
 		);
 
 		self.on('message', function (data) {

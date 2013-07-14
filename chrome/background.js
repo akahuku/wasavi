@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 338 2013-07-08 13:04:46Z akahuku $
+ * @version $Id: background.js 341 2013-07-14 18:53:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -517,7 +517,9 @@ if (window.jetpack && typeof require == 'function') {
 		// wasavi
 		PageMod({
 		    include:new PseudoRegexRule('wasavi-core', function (url) {
-				if (url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
+				if (url == 'http://wasavi.appsweets.net/'
+				||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/'
+				||  url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
 					return true;
 				}
 				return false;

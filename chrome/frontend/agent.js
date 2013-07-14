@@ -1,8 +1,6 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
-// @exclude http://wasavi.appsweets.net/script_frame.html
-// @exclude https://ss1.xrea.com/wasavi.appsweets.net/script_frame.html
 // ==/UserScript==
 //
 /**
@@ -11,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 336 2013-07-06 03:01:40Z akahuku $
+ * @version $Id: agent.js 341 2013-07-14 18:53:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -150,8 +148,11 @@ function runCore (element, frameSource) {
 	 */
 
 	function getFontStyle (s, fontFamilyOverride) {
-		return [s.fontStyle, s.fontVariant, s.fontWeight, s.fontSize,
-			'/' + s.lineHeight, (fontFamilyOverride || s.fontFamily)].join(' ');
+		return [
+			s.fontStyle, s.fontVariant, s.fontWeight,
+			s.fontSize + '/' + s.lineHeight,
+			(fontFamilyOverride || s.fontFamily)
+		].join(' ');
 	}
 
 	function getNodePath (element) {
@@ -217,7 +218,7 @@ function runCore (element, frameSource) {
 	wasaviFrameTimeoutTimer = setTimeout(function () {
 		wasaviFrame.parentNode.removeChild(wasaviFrame);
 		wasaviFrameTimeoutTimer = null;
-	}, 1000 * 5 * 3600);
+	}, 1000 * 5);
 }
 
 function cleanup (value, isImplicit) {
