@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 338 2013-07-08 13:04:46Z akahuku $
+ * @version $Id: FileSystem.js 342 2013-07-18 02:02:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -288,7 +288,7 @@
 
 		function getContentPart (content) {
 			var s = [];
-			s.push('Content-Type: ' + (metadata.mimeType || 'text/plain') + ';charset=UTF-8');
+			s.push('Content-Type: ' + (metadata.mimeType || 'text/plain;charset=UTF-8'));
 			USE_BASE64 && s.push('Content-Transfer-Encoding: base64');
 			s.push('');
 			s.push(getBody(content));
@@ -801,7 +801,7 @@
 			opts || (opts = {});
 			var q = opts.query || {};
 
-			var xhr = new XMLHttpRequest;
+			var xhr = u.createXHR();
 			xhr.open(opts.method || 'GET', getFullUrl(url, q));
 			xhr.onreadystatechange = function () {
 				if (xhr.readyState != 4) return;
@@ -1257,7 +1257,7 @@
 					if (!data && fragments.length == 1) {
 						parentId = 'root';
 					}
-					// new file on a sub directoru
+					// new file on a sub directory
 					else if (data && data.length < fragments.length) {
 						parentId = data[data.length - 1].id;
 					}
@@ -1270,6 +1270,7 @@
 					// valid and exsitent file
 					else {
 						fileId = data[data.length - 1].id;
+						parentId = data.length >= 2 ? data[data.length - 2].id : 'root';
 						mimeType = data[data.length - 1].mimeType;
 					}
 
@@ -1299,9 +1300,10 @@
 							content:mp.result,
 							beforesend:function (xhr) {
 								xhr.setRequestHeader(
-									'Content-Type', 'multipart/related;boundary="' + mp.boundary + '"');
-								xhr.setRequestHeader(
-									'Content-Length', mp.result.length);
+									'Content-Type',
+									'multipart/related;boundary="' + mp.boundary + '"');
+								/*xhr.setRequestHeader(
+									'Content-Length', mp.result.length);*/
 								xhr.upload.onprogress = xhr.upload.onload = function (e) {
 									if (!e.lengthComputable) return;
 									self.response(task, {

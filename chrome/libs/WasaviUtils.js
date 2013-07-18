@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 335 2013-07-04 08:43:45Z akahuku $
+ * @version $Id: WasaviUtils.js 342 2013-07-18 02:02:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -82,7 +82,25 @@
 		clearTimeout: timers.clearTimeout,
 
 		atob: base64.decode,
-		btoa: base64.encode
+		btoa: base64.encode,
+
+		createXHR: function () {
+			if (typeof window == 'object' && window.XMLHttpRequest) {
+				return new window.XMLHttpRequest;
+			}
+			if (typeof require == 'function') {
+				/*
+				 * XMLHttpRequest which SDK provides is very very limited.
+				 * There is no responseType/response properties. So we use native xhr.
+				 */
+				var chrome = require('chrome');
+				var Cc = chrome.Cc, Ci = chrome.Ci;
+				var xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1']
+					.createInstance(Ci.nsIXMLHttpRequest);
+				xhr.mozBackgroundRequest = true;
+				return xhr;
+			}
+		}
 	};
 })(this);
 

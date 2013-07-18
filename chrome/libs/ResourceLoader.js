@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: ResourceLoader.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: ResourceLoader.js 342 2013-07-18 02:02:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -22,8 +22,11 @@
  * limitations under the License.
  */
 
-(function () {
+(function (global) {
 	'use strict';
+
+	var u;
+	var self_;
 
 	function ResourceLoader (transportGetter, locationGetter, emitter) {
 		var data = {};
@@ -87,34 +90,24 @@
 	}
 
 	function create (window, emitter) {
-		if (window.XMLHttpRequest) {
+		if (window.XMLHttpRequest && window.location) {
 			return new ResourceLoader(
 				function () {
-					return new XMLHttpRequest;
+					return new window.XMLHttpRequest;
 				},
 				function (resourcePath) {
-					return location.href.replace(/\/[^\/]*$/, '/') + resourcePath;
+					return window.location.href.replace(/\/[^\/]*$/, '/') + resourcePath;
 				},
 				emitter
 			);
 		}
-		else if (window.jetpack) {
-			/*
-			 * XMLHttpRequest which SDK provides is very very limited.
-			 * There is no responseType/response properties. So we use native xhr.
-			 */
-			var chrome = require('chrome');
-			var Cc = chrome.Cc, Ci = chrome.Ci;
-			var self = require('sdk/self');
+		else if (window.jetpack && self_) {
 			return new ResourceLoader(
 				function () {
-					var xhr = Cc['@mozilla.org/xmlextras/xmlhttprequest;1']
-						.createInstance(Ci.nsIXMLHttpRequest);
-					xhr.mozBackgroundRequest = true;
-					return xhr;
+					return u.createXHR();
 				},
 				function (resourcePath) {
-					return self.data.url(resourcePath);
+					return self_.data.url(resourcePath);
 				},
 				emitter
 			);
@@ -124,7 +117,15 @@
 		}
 	}
 
+	if (global.WasaviUtils) {
+		u = global.WasaviUtils;
+	}
+	else if (typeof require == 'function') {
+		u = require('./WasaviUtils').WasaviUtils;
+		self_ = require('sdk/self');
+	}
+
 	exports.ResourceLoader = {create:create};
-})();
+})(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

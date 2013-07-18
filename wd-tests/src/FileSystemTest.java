@@ -14,20 +14,67 @@ import org.openqa.selenium.WebElement;
 
 public class FileSystemTest extends WasaviTest {
 
-	private void completeRootPath (String fs) {
-		Wasavi.send(":files default " + fs + "\n");
+	/*
+	 * for testing, each cloud storage must have following files:
+	 *
+	 *    /hello-world.txt
+	 *    /test
+	 *        read-test.txt  (content: "hello,\nworld")
+	 *        write-test.txt
+	 */
+
+	private void completeRootPath (String testLabel, String fs, String prefix, Boolean makeDefault) {
+		if (makeDefault) {
+			Wasavi.send(":files default " + fs + "\n");
+		}
+
 		Wasavi.setInputModeOfWatchTarget("line-input");
-		Wasavi.send(":r \t");
-		System.out.println(Wasavi.getLineInput());
-		assertTrue("#1-1", Pattern.matches("^r .+$", Wasavi.getLineInput()));
+
+		if (makeDefault) {
+			Wasavi.send(":r " + prefix + "\t");
+		}
+		else {
+			Wasavi.send(":r " + fs + ":" + prefix + "\t");
+		}
+
+		String line = Wasavi.getLineInput();
+		Wasavi.send("\u001b");
+
+		System.out.println(testLabel + ": " + line);
+
+		if (makeDefault) {
+			assertTrue(testLabel, Pattern.matches("^r " + prefix + ".+$", line));
+		}
+		else {
+			assertTrue(testLabel, Pattern.matches("^r " + fs + ":" + prefix + ".+$", line));
+		}
 	}
 
-	private void completeSubPath (String fs) {
-		Wasavi.send(":files default " + fs + "\n");
+	private void completeSubPath (String testLabel, String fs, Boolean makeDefault) {
+		if (makeDefault) {
+			Wasavi.send(":files default " + fs + "\n");
+		}
+
 		Wasavi.setInputModeOfWatchTarget("line-input");
-		Wasavi.send(":r /test\t");
-		System.out.println(Wasavi.getLineInput());
-		assertTrue("#1-1", Pattern.matches("^r /test.+$", Wasavi.getLineInput()));
+
+		if (makeDefault) {
+			Wasavi.send(":r /test\t");
+		}
+		else {
+			Wasavi.send(":r " + fs + ":" + "/test\t");
+		}
+
+		String line = Wasavi.getLineInput();
+		Wasavi.send("\u001b");
+
+		System.out.println(testLabel + ": " + line);
+
+		if (makeDefault) {
+			assertTrue(testLabel, Pattern.matches("^r /test.+$", line));
+		}
+		else {
+			assertTrue(testLabel, Pattern.matches("^r " + fs + ":/test.+$", line));
+		}
 	}
 
 	private void read (String fs) {
@@ -55,12 +102,25 @@ public class FileSystemTest extends WasaviTest {
 	
 	@Test
 	public void completeRootPathDropbox () {
-		completeRootPath("dropbox");
+		// drive name ommited, no-prefix
+		completeRootPath("#1-1", "dropbox", "", true);
+		// drive name ommited, relative path prefixed
+		completeRootPath("#1-2", "dropbox", "hello", true);
+		// drive name ommited, absolute path prefixed
+		completeRootPath("#1-3", "dropbox", "/hello", true);
+
+		// drive name specified, no-prefix
+		completeRootPath("#2-1", "dropbox", "", false);
+		// drive name specified, relative path prefixed
+		completeRootPath("#2-2", "dropbox", "hello", false);
+		// drive name specified, absolute path prefixed
+		completeRootPath("#2-3", "dropbox", "/hello", false);
 	}
 
 	@Test
 	public void completeSubPathDropbox () {
-		completeSubPath("dropbox");
+		completeSubPath("#1", "dropbox", true);
+		completeSubPath("#2", "dropbox", false);
 	}
 
 	@Test
@@ -77,12 +137,19 @@ public class FileSystemTest extends WasaviTest {
 
 	@Test
 	public void completeRootPathGDrive () {
-		completeRootPath("gdrive");
+		completeRootPath("#1-1", "gdrive", "", true);
+		completeRootPath("#1-2", "gdrive", "hello", true);
+		completeRootPath("#1-3", "gdrive", "/hello", true);
+
+		completeRootPath("#2-1", "gdrive", "", false);
+		completeRootPath("#2-2", "gdrive", "hello", false);
+		completeRootPath("#2-3", "gdrive", "/hello", false);
 	}
 
 	@Test
 	public void completeSubPathGDrive () {
-		completeSubPath("gdrive");
+		completeSubPath("#1", "gdrive", true);
+		completeSubPath("#2", "gdrive", false);
 	}
 
 	@Test

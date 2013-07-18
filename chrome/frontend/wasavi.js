@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 338 2013-07-08 13:04:46Z akahuku $
+ * @version $Id: wasavi.js 342 2013-07-18 02:02:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2477,6 +2477,26 @@ function extractDriveName (path, callback) {
 		return '';
 	});
 }
+function getFileSystemIndex (name) {
+	var result = -1;
+	name = name.replace(/:$/, '');
+	fstab.forEach(function (fs, i) {
+		if (fs.name == name) {
+			result = i;
+		}
+	});
+	return result;
+}
+function splitPath (path) {
+	var re, regex = /(?:\u2416.|[^\/])*(?:\/|$)/g, result = [], foundLast = false;
+	while (!foundLast && (re = regex.exec(path))) {
+		foundLast = re[0].substr(-1) != '/';
+		var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
+		tmp = tmp.replace(/\u2416(.)/g, '$1');
+		tmp != '' && result.push(tmp);
+	}
+	return result;
+}
 function regalizeFilePath (path, completeDriveName) {
 	if (path == '') {
 		return path;
@@ -2491,24 +2511,25 @@ function regalizeFilePath (path, completeDriveName) {
 
 	// resolve relative path
 	if (!/^\//.test(path)) {
-		path = fstab[fileSystemIndex].cwd + '/' + path + '/';
+		path = fstab[fileSystemIndex].cwd + '/' + path;
 	}
 
-	// resolve redundancy delimiter #1
-	path = path.replace(/\/{2,}/g, '/');
-
-	// resolve '.'
-	while (/\/\.\//.test(path)) {
-		path = path.replace(/\/\.\//, '/');
-	}
-
-	// resolve '..'
-	while (/[^\/]+\/\.\.\//.test(path)) {
-		path = path.replace(/[^\/]+\/\.\.\//, '/');
-	}
-
-	// resolve redundancy delimiter #2
-	path = path.replace(/\/{2,}/g, '/');
+	// resolve special directories (".", "..")
+	var fragments = [];
+	splitPath(path).forEach(function (f) {
+		if (f == '') return;
+		switch (f) {
+		case '.':
+			break;
+		case '..':
+			fragments.pop();
+			break;
+		default:
+			fragments.push(f);
+			break;
+		}
+	});
+	path = '/' + fragments.join('/');
 
 	// restore drive name
 	path = drive + path;
@@ -4258,57 +4279,78 @@ var completer = new Wasavi.Completer(appProxy,
 					return;
 				}
 
+				var drive = '', pathRegalized, pathInput;
+
+				pathRegalized = pathInput = extractDriveName(prefix, function (d) {drive = d});
+				pathRegalized = regalizeFilePath(drive + pathRegalized);
+				pathRegalized = pathRegalized.replace(/\/[^\/]*$/, '/');
+
+				if (pathRegalized == '') {
+					pathRegalized =
+						fstab[fileSystemIndex].name + ':' +
+						fstab[fileSystemIndex].cwd;
+				}
+
+				pathInput = pathInput.replace(/[^\/]+$/, '');
+
 				extensionChannel.postMessage(
 					{
 						type:'fsctl',
 						subtype:'get-entries',
-						path:prefix
-							//.replace(/\u2416(.)/g, '$1')
-							.replace(/\/[^\/]*$/, '/')
+						path:pathRegalized
 					},
 					function (res) {
-						var result;
+						if (!res || !res.data) {
+							notifyCandidates([]);
+							return;
+						}
 
-						if (res && res.data) {
-							var drive = '';
-							extractDriveName(prefix, function (d) {drive = d});
-							result = res.data
-								.map(function (file) {
-									if (getObjectType(file.path) == 'Array') {
-										file.path = '/' +
-											file.path
-												.map(function (f) {
-													return f.replace(/\//g, '\u2416$&');
-												})
-												.join('/');
+						var result = res.data
+							.map(function (file) {
+								var pathFixed = '';
+								var baseName = '';
+
+								if (getObjectType(file.path) == 'Array') {
+									pathFixed = file.path
+										.slice(0, file.path.length - 1)
+										.map(function (s) {return s.replace(/\//g, '\u2416/')})
+										.join('/') + '/';
+									baseName = file.path[file.path.length - 1];
+								}
+								else {
+									var re = /^(.*\/)([^\/]+)$/.exec(file.path);
+									if (!re) {
+										return '';
 									}
-									return drive +
-										   file.path.replace(/\s/g, '\u2416$&') +
-										   (file.is_dir ? '/' : '');
-								})
-								.sort();
-						}
-						else {
-							result = [];
-						}
+									pathFixed = re[1];
+									baseName = re[2];
+								}
+
+								if (pathInput.charAt(0) != '/') {
+									var fs = drive == '' ?
+										fileSystemIndex : getFileSystemIndex(drive);
+									if (fs < 0) {
+										return '';
+									}
+									if (pathFixed.indexOf(fstab[fs].cwd) == 0) {
+										pathFixed = pathInput;
+									}
+								}
+
+								return drive +
+									pathFixed.replace(/\s/g, '\u2416$&') +
+									baseName.replace(/\s/g, '\u2416$&') +
+									(file.is_dir ? '/' : '');
+							})
+							.filter(function (s) {return s.length > 0})
+							.sort();
 
 						notifyCandidates(result);
 					}
 				);
 			},
 			{
-				isVolatile:true,
-				onSetPrefix:function (prefix) {
-					// resolve escape sequence
-					prefix = prefix.replace(/\u2416(.)/g, '$1');
-
-					prefix = regalizeFilePath(prefix);
-
-					// re-escape
-					prefix = prefix.replace(/\s/g, '\u2416$&');
-
-					return prefix;
-				}
+				isVolatile:true
 			}
 		]
 	]

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 336 2013-07-06 03:01:40Z akahuku $
+ * @version $Id: classes.js 342 2013-07-18 02:02:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3552,10 +3552,21 @@ Wasavi.Completer = function (appProxy, alist) {
 		},
 		requestCandidates: function (callback) {
 			function initCandidates (candidates) {
+				var saved = {
+					candidates:this.candidates,
+					currentIndex:this.currentIndex,
+					lastLoad:this.lastLoad
+				};
+
 				this.candidates = candidates;
 				this.currentIndex = -1;
 				this.lastLoad = Date.now();
-				callback();
+
+				if (!callback()) {
+					this.candidates = saved.candidates;
+					this.currentIndex = saved.currentIndex;
+					this.lastLoad = saved.lastLoad;
+				}
 			}
 			if (typeof this.onRequestCandidates == 'function') {
 				this.onRequestCandidates(this.prefix, initCandidates.bind(this));
@@ -3796,7 +3807,13 @@ Wasavi.Completer = function (appProxy, alist) {
 		ctx.item.requestCandidates(function () {
 			stopNotifierTimer();
 			running = false;
-			!callback.__timed_out__ && callback(ctx.getResult(invert));
+			if (callback.__timed_out__) {
+				return false;
+			}
+			else {
+				callback(ctx.getResult(invert));
+				return true;
+			}
 		});
 	}
 	function dispose () {
