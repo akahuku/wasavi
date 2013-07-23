@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 341 2013-07-14 18:53:46Z akahuku $
+ * @version $Id: extension_wrapper.js 345 2013-07-23 04:14:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -352,10 +352,7 @@
 		this.urlInfo = new UrlInfo(
 			'resource://' + extensionHostname + '/wasavi/data/options.html',
 			'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
-			// It seems Firefox 22 can not use the content within extension,
-			// even if it was data scheme...?
-			// Against our will, we return canUseInternal to false.
-			false, false
+			true, false
 		);
 
 		self.on('message', function (data) {

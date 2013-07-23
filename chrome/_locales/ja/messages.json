@@ -156,6 +156,10 @@
 		"message": "16進:",
 		"description": "hex:"
 	},
+	"unicode_hex": {
+		"message": "unicode 16進:",
+		"description": "unicode hex:"
+	},
 	"invalid_codepoint": {
 		"message": "不正なコードポイントです。",
 		"description": "Invalid codepoint."
@@ -276,6 +280,14 @@
 		"message": "レジスタ {0} は空です。",
 		"description": "Register {0} is empty."
 	},
+	"extension_system_required": {
+		"message": "拡張機能が必要です。",
+		"description": "Extension system required."
+	},
+	"unknown_drive_name": {
+		"message": "未知のドライブ名です。",
+		"description": "Unknown drive name."
+	},
 	"_abbreviations_": {
 		"message": "*** 略語展開 ***",
 		"description": "*** abbreviations ***"
@@ -308,6 +320,26 @@
 		"message": "edit はスタンドアロンフォームでのみ有効です。",
 		"description": "Only stand alone form can edit."
 	},
+	"default_file_system_@0": {
+		"message": "既定のファイルシステム: {0}",
+		"description": "default file system: {0}"
+	},
+	"_available_file_systems_": {
+		"message": "*** 使用可能なファイルシステム ***",
+		"description": "*** available file systems ***"
+	},
+	"no_available_file_systems": {
+		"message": "使用可能なファイルシステムはありません。",
+		"description": "no available file systems."
+	},
+	"command_not_specified": {
+		"message": "コマンドが指定されていません。",
+		"description": "Command not specified."
+	},
+	"unknown_command": {
+		"message": "未知のコマンドです。",
+		"description": "Unknown command."
+	},
 	"no_mappings_for_@0_mode_are_defined": {
 		"message": "{0} モードにはマップは定義されていません。",
 		"description": "No mappings for {0} mode are defined."
@@ -327,10 +359,6 @@
 	"dont_know_how_to_open_options_page": {
 		"message": "オプションページを開けません。",
 		"description": "Don't know how to open options page."
-	},
-	"extension_system_required": {
-		"message": "拡張機能が必要です。",
-		"description": "Extension system required."
 	},
 	"no_redo_item": {
 		"message": "これ以上リドゥできません。",

@@ -156,6 +156,10 @@
 		"message": "hex:",
 		"description": "hex:"
 	},
+	"unicode_hex": {
+		"message": "unicode hex:",
+		"description": "unicode hex:"
+	},
 	"invalid_codepoint": {
 		"message": "Invalid codepoint.",
 		"description": "Invalid codepoint."
@@ -276,6 +280,14 @@
 		"message": "Register {0} is empty.",
 		"description": "Register {0} is empty."
 	},
+	"extension_system_required": {
+		"message": "Extension system required.",
+		"description": "Extension system required."
+	},
+	"unknown_drive_name": {
+		"message": "Unknown drive name.",
+		"description": "Unknown drive name."
+	},
 	"_abbreviations_": {
 		"message": "*** abbreviations ***",
 		"description": "*** abbreviations ***"
@@ -308,6 +320,26 @@
 		"message": "Only stand alone form can edit.",
 		"description": "Only stand alone form can edit."
 	},
+	"default_file_system_@0": {
+		"message": "default file system: {0}",
+		"description": "default file system: {0}"
+	},
+	"_available_file_systems_": {
+		"message": "*** available file systems ***",
+		"description": "*** available file systems ***"
+	},
+	"no_available_file_systems": {
+		"message": "no available file systems.",
+		"description": "no available file systems."
+	},
+	"command_not_specified": {
+		"message": "Command not specified.",
+		"description": "Command not specified."
+	},
+	"unknown_command": {
+		"message": "Unknown command.",
+		"description": "Unknown command."
+	},
 	"no_mappings_for_@0_mode_are_defined": {
 		"message": "No mappings for {0} mode are defined.",
 		"description": "No mappings for {0} mode are defined."
@@ -327,10 +359,6 @@
 	"dont_know_how_to_open_options_page": {
 		"message": "Don't know how to open options page.",
 		"description": "Don't know how to open options page."
-	},
-	"extension_system_required": {
-		"message": "Extension system required.",
-		"description": "Extension system required."
 	},
 	"no_redo_item": {
 		"message": "No redo item.",
