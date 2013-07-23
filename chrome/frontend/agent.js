@@ -1,6 +1,8 @@
 // ==UserScript==
 // @include http://*/*
 // @include https://*/*
+// @exclude http://wasavi.appsweets.net/
+// @exclude https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
 /**
@@ -9,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 341 2013-07-14 18:53:46Z akahuku $
+ * @version $Id: agent.js 343 2013-07-22 22:31:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -853,6 +855,7 @@ extension.setMessageListener(function (req) {
 
 	case 'request-run':
 		if (wasaviFrame || targetElement) break;
+		if (typeof document.hasFocus == 'function' && !document.hasFocus()) break;
 
 		var target = document.activeElement;
 		if (target.isContentEditable && enableList.enableContentEditable

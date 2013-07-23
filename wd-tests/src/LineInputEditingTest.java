@@ -5,6 +5,7 @@ import static WasaviTest.WasaviUtils.*;
 
 import org.junit.*;
 import static org.junit.Assert.*;
+import java.util.regex.*;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -160,6 +161,20 @@ public class LineInputEditingTest extends WasaviTest {
 		Wasavi.setInputModeOfWatchTarget("line-input");
 		Wasavi.send(":set sw\t");
 		assertEquals("#1-1", "set shiftwidth", Wasavi.getLineInput());
+	}
+
+	@Test
+	public void completeThemeFromEmpty () {
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":set theme=\t");
+		assertTrue("#1-1", Pattern.matches("^set theme=.+", Wasavi.getLineInput()));
+	}
+
+	@Test
+	public void completeThemeFromWithPrefix () {
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":set theme=c\t");
+		assertTrue("#1-1", Pattern.matches("^set theme=charcoal", Wasavi.getLineInput()));
 	}
 }
 

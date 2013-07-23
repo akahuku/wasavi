@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 341 2013-07-14 18:53:46Z akahuku $
+ * @version $Id: background.js 343 2013-07-22 22:31:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -429,6 +429,7 @@ if (window.jetpack && typeof require == 'function') {
 		var tabIds = {};
 		var lastRegisteredTab;
 		var onMessageHandler;
+		var refreshTimer;
 
 		function getNewTabId () {
 			var result = 0;
@@ -475,6 +476,23 @@ if (window.jetpack && typeof require == 'function') {
 			});
 		}
 
+		function startRefresher (force) {
+			if (!refreshTimer) {
+				refreshTimer = u.setInterval(function refreshWorkers () {
+					var newTabIds = {};
+					for (var i in tabIds) {
+						try {
+							tabIds[i].postMessage({});
+							newTabIds[i] = tabIds[i];
+						}
+						catch (e) {
+						}
+					}
+					tabIds = newTabIds;
+				}, 1000 * 60);
+			}
+		}
+
 		function PseudoRegexRule (name, test) {
 			this._name = name;
 			this.test = test;
@@ -498,7 +516,9 @@ if (window.jetpack && typeof require == 'function') {
 				if (url.substring(0, 5) != 'http:' && url.substring(0, 6) != 'https:') {
 					return false;
 				}
-				if (url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
+				if (url == 'http://wasavi.appsweets.net/'
+				||  url == 'https://ss1.xrea.com/wasavi.appsweets.net/'
+				||  url.substring(0, 256) == wasaviFrameData.substring(0, 256)) {
 					return false;
 				}
 				return true;
@@ -559,7 +579,6 @@ if (window.jetpack && typeof require == 'function') {
 				for (var i in tabIds) {
 					if (tabIds[i].tab == activeTab) {
 						try {tabIds[i].postMessage(arguments[0])} catch (e) {}
-						break;
 					}
 				}
 			}
@@ -685,6 +704,8 @@ if (window.jetpack && typeof require == 'function') {
 		this.cryptKeyPath = 'frontend/wasavi.js';
 		this.version = self.version;
 		this.isDev = this.version == TEST_VERSION;
+
+		startRefresher();
 	}
 
 
