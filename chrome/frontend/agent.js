@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 343 2013-07-22 22:31:43Z akahuku $
+ * @version $Id: agent.js 346 2013-07-24 05:35:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -872,7 +872,6 @@ extension.setMessageListener(function (req) {
 	 */
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
-		wasaviFrame.style.visibility = 'visible';
 		document.activeElement != wasaviFrame && focusToFrame(req);
 		var currentHeight = wasaviFrame.offsetHeight;
 		var newHeight = req.height || targetElement.offsetHeight;
@@ -887,6 +886,18 @@ extension.setMessageListener(function (req) {
 			document.getElementById('test-log').value = '';
 		}
 
+		try {
+			extension.postMessage({
+				type:'notify-to-child',
+				childTabId:req.childTabId,
+				payload:{type:'got-initialized'}
+			});
+		} catch (e) {}
+		break;
+
+	case 'wasavi-ready':
+		if (!wasaviFrame) break;
+		wasaviFrame.style.visibility = 'visible';
 		devMode && console.info('wasavi started');
 		var ev = document.createEvent('CustomEvent');
 		ev.initCustomEvent('WasaviStarted', false, false, 0);
@@ -935,9 +946,7 @@ extension.setMessageListener(function (req) {
 				document.body.focus();
 			}
 		}
-		catch (e) {
-			;
-		}
+		catch (e) {}
 		break;
 
 	case 'wasavi-blink-me':
@@ -981,7 +990,7 @@ extension.setMessageListener(function (req) {
 					content:targetElement.value
 				}
 			});
-		} catch (e) {;}
+		} catch (e) {}
 		break;
 
 	case 'wasavi-saved':
@@ -1000,7 +1009,7 @@ extension.setMessageListener(function (req) {
 					}
 				}
 			});
-		} catch (e) {;}
+		} catch (e) {}
 		break;
 
 	/*

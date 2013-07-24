@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 343 2013-07-22 22:31:43Z akahuku $
+ * @version $Id: background.js 346 2013-07-24 05:35:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -846,14 +846,19 @@ if (window.jetpack && typeof require == 'function') {
 		 * in production package, consumer_keys.json is encrypted.
 		 */
 		function initFileSystemCore (data) {
+			var log = [];
 			data = u.parseJson(data);
 			fstab = extension.storage.getItem('fstab');
 			for (var i in fstab) {
 				if (!data[i] || !('key' in data[i]) || !('secret' in data[i])) continue;
 				fstab[i].isNull = false;
 				fstab[i].instance = FileSystem.create(i, data[i].key, data[i].secret, extension);
-				extension.isDev && console.info('wasavi background: file system driver initialized: ' + i);
+				log.push(i);
 			}
+
+			extension.isDev && console.info(
+				'wasavi background: file system driver initialized: ' + log.join(', '));
+
 			fstab.nullFs = {
 				enabled:true,
 				isNull:true,
@@ -1132,7 +1137,9 @@ if (window.jetpack && typeof require == 'function') {
 			break;
 		}
 		if (needForward && 'parentTabId' in req && req.parentTabId != undefined) {
-			'tabId' in req && (req.payload.childTabId = req.tabId);
+			if ('tabId' in req) {
+				req.payload.childTabId = req.tabId;
+			}
 			extension.sendRequest(req.parentTabId, req.payload);
 		}
 	}

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 342 2013-07-18 02:02:38Z akahuku $
+ * @version $Id: wasavi.js 346 2013-07-24 05:35:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -886,6 +886,27 @@ left:0; top:0; \
 	x.value = undefined;
 
 	/*
+	 * set up channels
+	 */
+
+	extensionChannel && extensionChannel.setMessageListener(handleExtensionChannelMessage);
+
+	/*
+	 * notify initialized event to agent
+	 */
+
+	fireEvent('initialized', {height:cnt.offsetHeight});
+}
+function runExrc () {
+	console.log('runExrc');
+
+	/*
+	 * set up event handlers
+	 */
+
+	setupEventHandlers(true);
+
+	/*
 	 * execute exrc
 	 */
 
@@ -905,19 +926,10 @@ left:0; top:0; \
 	cursor.update({type:inputMode, focused:true, visible:true});
 
 	/*
-	 * set up channels
+	 * final event
 	 */
 
-	if (extensionChannel) {
-		fireEvent('initialized', {height:cnt.offsetHeight});
-		extensionChannel.setMessageListener(handleExtensionChannelMessage);
-	}
-
-	/*
-	 * set up event handlers
-	 */
-
-	setupEventHandlers(true);
+	fireEvent('ready');
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
@@ -4088,6 +4100,9 @@ function handleExtensionChannelMessage (req) {
 	if (!req) return;
 
 	switch (req.type) {
+	case 'got-initialized':
+		runExrc();
+		break;
 	case 'relocate':
 		targetElement.rect = req.rect;
 		setGeometory();
