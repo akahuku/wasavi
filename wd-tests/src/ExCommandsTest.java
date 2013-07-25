@@ -1624,7 +1624,7 @@ public class ExCommandsTest extends WasaviTest {
 	public void testWriteToFile () {
 		Wasavi.send(":writ foobar\n");
 		// tests for web-based storage is in another file...
-		assertEquals("#1-1", "write: Only stand alone form can write.", Wasavi.getLastMessage());
+		assertEquals("#1-1", "", Wasavi.getLastMessage());
 	}
 
 	@Test

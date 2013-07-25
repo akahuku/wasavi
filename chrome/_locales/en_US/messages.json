@@ -671,5 +671,85 @@
 	"top_of_history": {
 		"message": "Top of history.",
 		"description": "Top of history."
+	},
+	"file_not_found": {
+		"message": "File not found.",
+		"description": "File not found."
+	},
+	"not_a_authentication_task_@0": {
+		"message": "Not a authentication task: {0}",
+		"description": "Not a authentication task: {0}"
+	},
+	"unknown_file_system_error": {
+		"message": "Unknown file system error",
+		"description": "Unknown file system error"
+	},
+	"invalid_authentication_state_frt_@0": {
+		"message": "Invalid authentication state (frt): {0}",
+		"description": "Invalid authentication state (frt): {0}"
+	},
+	"invalid_authentication_state_cua_@0": {
+		"message": "Invalid authentication state (cua): {0}",
+		"description": "Invalid authentication state (cua): {0}"
+	},
+	"invalid_authentication_state_wts_@0": {
+		"message": "Invalid authentication state (wts): {0}",
+		"description": "Invalid authentication state (wts): {0}"
+	},
+	"access_token_missmatch_@0": {
+		"message": "Access token missmatch: {0}",
+		"description": "Access token missmatch: {0}"
+	},
+	"invalid_authentication_state_fat_@0": {
+		"message": "Invalid authentication state (fat): {0}",
+		"description": "Invalid authentication state (fat): {0}"
+	},
+	"invalid_authentication_state_fai_@0": {
+		"message": "Invalid authentication state (fai): {0}",
+		"description": "Invalid authentication state (fai): {0}"
+	},
+	"user_unmatch": {
+		"message": "User unmatch.",
+		"description": "User unmatch."
+	},
+	"cannot_edit_a_directory": {
+		"message": "Cannot edit a directory.",
+		"description": "Cannot edit a directory."
+	},
+	"unknown_mime_type_@0": {
+		"message": "Unknown MIME type: {0}",
+		"description": "Unknown MIME type: {0}"
+	},
+	"authentication_declined_@0": {
+		"message": "Authentication declined: {0}",
+		"description": "Authentication declined: {0}"
+	},
+	"invalid_status_code_@0": {
+		"message": "Invalid status code #{0}",
+		"description": "Invalid status code #{0}"
+	},
+	"invalid_authentication_state_vat_@0": {
+		"message": "Invalid authentication state (vat): {0}",
+		"description": "Invalid authentication state (vat): {0}"
+	},
+	"invalid_authentication_audience": {
+		"message": "Invalid authentication audience",
+		"description": "Invalid authentication audience"
+	},
+	"invalid_path": {
+		"message": "Invalid path",
+		"description": "Invalid path"
+	},
+	"unable_to_download": {
+		"message": "Unable to download.",
+		"description": "Unable to download."
+	},
+	"network_error": {
+		"message": "Network Error",
+		"description": "Network Error"
+	},
+	"failed_to_save_@0": {
+		"message": "Failed to save ({0})",
+		"description": "Failed to save ({0})"
 	}
 }

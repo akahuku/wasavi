@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 342 2013-07-18 02:02:38Z akahuku $
+ * @version $Id: FileSystem.js 347 2013-07-25 04:40:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,6 +38,7 @@
 
 	var OAuth;
 	var u;
+	var _;
 
 	/*
 	 * utilities
@@ -191,7 +192,7 @@
 			run({
 				task:'ls',
 				tabId:tabId,
-				path:path,
+				path:this.getInternalPath(path),
 				callback:callback
 			});
 		};
@@ -199,7 +200,7 @@
 			run({
 				task:'write',
 				tabId:tabId,
-				path:path,
+				path:this.getInternalPath(path),
 				content:content
 			});
 		};
@@ -207,7 +208,7 @@
 			run({
 				task:'read',
 				tabId:tabId,
-				path:path
+				path:this.getInternalPath(path)
 			});
 		};
 
@@ -349,38 +350,44 @@
 		responseError: function (task, data) {
 			var errorMessage = false;
 
-			if (typeof data == 'object') {
+			switch (u.objectType(data)) {
+			case 'Object':
 				if (errorMessage === false && 'text' in data) {
 					var jsonData = u.parseJson(data.text);
 
 					switch (u.objectType(jsonData.error)) {
 					case 'String':
-						errorMessage = jsonData.error;
+						errorMessage = [jsonData.error];
 						break;
 
 					case 'Object':
-						errorMessage = jsonData.error[Object.keys(jsonData.error)[0]];
+						errorMessage = [jsonData.error[Object.keys(jsonData.error)[0]]];
 						break;
 					}
 				}
 				if (errorMessage === false && 'status' in data) {
 					switch (data.status) {
 					case 404:
-						errorMessage = 'File not found.';
+						errorMessage = _('File not found.');
 						break;
 					}
 				}
 				if (errorMessage === false && 'wasavi_filesystem_error' in data) {
 					errorMessage = data.wasavi_filesystem_error;
 				}
-			}
-			else {
-				errorMessage = data + '';
+				break;
+
+			case 'Array':
+				errorMessage = data;
+				break;
+
+			default:
+				errorMessage = [data + ''];
+				break;
 			}
 
-			errorMessage = this.backend + ': ' + errorMessage;
 			this.extension.isDev && console.error(
-				'wasavi background: file system error: ' + errorMessage);
+				'wasavi background: file system error: ' + errorMessage.join(', '));
 			this.response(task, {error:errorMessage});
 		},
 		getInternalPath:function (path) {
@@ -437,13 +444,13 @@
 			}
 
 			if (task.task != 'authorize') {
-				return handleAuthError('Not a authentication task: ' + task.task);
+				return handleAuthError(_('Not a authentication task: {0}', task.task));
 			}
 
 			switch (task.state) {
 			case 'error':
 				self.responseError(task, {
-					wasavi_filesystem_error:task.message || 'Unknown error'
+					wasavi_filesystem_error:task.message || _('Unknown file system error')
 				});
 				taskQueue.run();
 				break;
@@ -457,7 +464,7 @@
 					function (data) {
 						if (task.state != 'fetching-request-token') {
 							return handleAuthError(
-								'Invalid authentication state (expect:f-r-t): ' + task.state
+								_('Invalid authentication state (frt): {0}', task.state)
 							);
 						}
 
@@ -477,7 +484,7 @@
 							function (id, url) {
 								if (task.state != 'confirming-user-authorization') {
 									return handleAuthError(
-										'Invalid authentication state (expect:c-u-a): ' + task.state
+										_('Invalid authentication state (cua): {0}', task.state)
 									);
 								}
 
@@ -487,7 +494,7 @@
 									function (newUrl) {
 										if (task.state != 'waiting-tab-switch') {
 											return handleAuthError(
-												'Invalid authentication state (expect:w-t-s): ' + task.state
+												_('Invalid authentication state (wts): {0}', task.state)
 											);
 										}
 
@@ -498,7 +505,7 @@
 										if (q.fs != self.backend
 										||  q.oauth_token != oauth.getAccessTokenKey()) {
 											return handleAuthError(
-												'Access token missmatch: ' + q.fs
+												_('Access token missmatch: {0}', q.fs)
 											);
 										}
 
@@ -522,7 +529,7 @@
 					function (data) {
 						if (task.state != 'fetching-access-token') {
 							return handleAuthError(
-								'Invalid authentication state (expect:f-a-t): ' + task.state
+								_('Invalid authentication state (fat): {0}', task.state)
 							);
 						}
 
@@ -545,12 +552,12 @@
 					function (data) {
 						if (task.state != 'fetching-account-info') {
 							return handleAuthError(
-								'Invalid authentication state (expect:f-a-i): ' + task.state
+								_('Invalid authentication state (fai): {0}', task.state)
 							);
 						}
 
 						if (data.uid != uid) {
-							return handleAuthError('User unmatch.');
+							return handleAuthError(_('User unmatch.'));
 						}
 
 						task.state = 'authorized';
@@ -571,7 +578,7 @@
 		}
 
 		function ls (task) {
-			var path = getCanonicalPath(self.getInternalPath(task.path));
+			var path = getCanonicalPath(task.path);
 
 			var q = {locale:locale, list:'true'};
 			var key = path || '/';
@@ -637,15 +644,19 @@
 			};
 			oauth.get(
 				'https://api-content.dropbox.com/1/files/dropbox'
-					+ getCanonicalPath(self.getInternalPath(task.path)),
+					+ getCanonicalPath(task.path),
 				function (data) {
 					try {
 						var meta = u.parseJson(data.responseHeaders['x-dropbox-metadata']);
 						if (meta.is_dir) {
-							return self.responseError(task, 'Cannot edit a directory.');
+							return self.responseError(
+								task, _('Cannot edit a directory.')
+							);
 						}
 						if (!/^text\//.test(meta.mime_type)) {
-							return self.responseError(task, 'Unknown MIME type: ' + meta.mime_type);
+							return self.responseError(
+								task, _('Unknown MIME type: {0}', meta.mime_type)
+							);
 						}
 						self.response(task, {
 							state:'complete',
@@ -706,7 +717,7 @@
 			oauth.request({
 				method:'PUT',
 				url:'https://api-content.dropbox.com/1/files_put/dropbox'
-					+ getCanonicalPath(self.getInternalPath(task.path))
+					+ getCanonicalPath(task.path)
 					+ '?locale=' + locale,
 				data:task.content,						// TODO: make binary data
 				headers:{'Content-Type':'text/plain'},	// TODO: specify encoding
@@ -975,7 +986,7 @@
 			}
 
 			if (task.task != 'authorize') {
-				return handleAuthError('Not a authentication task: ' + task.task);
+				return handleAuthError(_('Not a authentication task: {0}', task.task));
 			}
 
 			switch (task.state) {
@@ -1001,7 +1012,7 @@
 					function (id, url) {
 						if (task.state != 'fetching-access-token') {
 							return handleAuthError(
-								'Invalid authentication state (expect:f-a-t): ' + task.state
+								_('Invalid authentication state (fat): {0}', task.state)
 							);
 						}
 
@@ -1011,7 +1022,7 @@
 							function (newUrl) {
 								if (task.state != 'waiting-tab-switch') {
 									return handleAuthError(
-										'Invalid authentication state (expect:w-t-s): ' + task.state
+										_('Invalid authentication state (wts): {0}', task.state)
 									);
 								}
 
@@ -1020,7 +1031,7 @@
 								var q = queryToObject(newUrl.replace('#', '&'));
 								if ('error' in q) {
 									return handleAuthError(
-										'Authentication declined #2: ' + q.error
+										_('Authentication declined: {0}', q.error)
 									);
 								}
 
@@ -1044,16 +1055,16 @@
 					function (data, xhr) {
 						if (xhr.status != 200) {
 							return handleAuthError(
-								'Invalid status code #' + xhr.status
+								_('Invalid status code #{0}', xhr.status)
 							);
 						}
 						if (task.state != 'validating-access-token') {
 							return handleAuthError(
-								'Invalid authentication state (expect:v-a-t): ' + task.state
+								_('Invalid authentication state (vat): {0}', task.state)
 							);
 						}
 						if (data.audience !== key) {
-							return handleAuthError('Invalid authentication audience');
+							return handleAuthError(_('Invalid authentication audience'));
 						}
 
 						task.state = 'pre-authorized';
@@ -1075,12 +1086,12 @@
 					function (data, xhr) {
 						if (xhr.status != 200) {
 							return handleAuthError(
-								'Invalid status code #' + xhr.status
+								_('Invalid status code #{0}', xhr.status)
 							);
 						}
 						if (task.state != 'fetching-account-info') {
 							return handleAuthError(
-								'Invalid authentication state (expect:f-a-i): ' + task.state
+								_('Invalid authentication state (fai): {0}', task.state)
 							);
 						}
 
@@ -1106,7 +1117,7 @@
 		}
 
 		function ls (task) {
-			getMetadataFromPath(self.getInternalPath(task.path),
+			getMetadataFromPath(task.path,
 				function (fragments, data, xhr) {
 					if (!data || data.length == 0) {
 						task.callback({});
@@ -1137,14 +1148,12 @@
 		}
 
 		function read (task) {
-			var path = self.getInternalPath(task.path);
-
 			self.response(task, {
 				state:'reading',
 				progress:0
 			});
 
-			getMetadataFromPath(path,
+			getMetadataFromPath(task.path,
 				function (fragments, data, xhr) {
 					// valid path and new file
 					if (!data && fragments.length == 1 /* new file on the root directory */
@@ -1155,7 +1164,7 @@
 							content:'',
 							meta:{
 								status:404,
-								path:self.getExternalPath(path),
+								path:self.getExternalPath(task.path),
 								charLength:0
 							}
 						});
@@ -1165,7 +1174,7 @@
 
 					// invalid (non-existent) path
 					if (!data) {
-						self.responseError(task, 'Invalid path');
+						self.responseError(task, _('Invalid path'));
 						taskQueue.run();
 						return;
 					}
@@ -1173,17 +1182,17 @@
 					// valid path and existent file
 					var meta = data[data.length - 1];
 					if (meta.mimeType == 'application/vnd.google-apps.folder') {
-						self.responseError(task, 'Cannot edit a directory.');
+						self.responseError(task, _('Cannot edit a directory.'));
 						taskQueue.run();
 						return;
 					}
 					if (!/^text\//.test(meta.mimeType)) {
-						self.responseError(task, 'Unknown MIME type: ' + meta.mimeType);
+						self.responseError(task, _('Unknown MIME type: {0}', meta.mimeType));
 						taskQueue.run();
 						return;
 					}
 					if (!('downloadUrl' in meta)) {
-						self.responseError(task, 'Unable to download.');
+						self.responseError(task, _('Unable to download.'));
 						taskQueue.run();
 						return;
 					}
@@ -1208,7 +1217,7 @@
 								content:xhr.responseText,
 								meta:{
 									status:xhr.status,
-									path:self.getExternalPath(path),
+									path:self.getExternalPath(task.path),
 									charLength:xhr.responseText.length
 								}
 							});
@@ -1222,7 +1231,7 @@
 								content:'',
 								meta:{
 									status:xhr && xhr.status || 404,
-									path:self.getExternalPath(path),
+									path:self.getExternalPath(task.path),
 									charLength:0
 								}
 							});
@@ -1233,21 +1242,19 @@
 				},
 				function (xhr) {
 					if (handleError(task, xhr)) return;
-					self.responseError(task, 'Network Error');
+					self.responseError(task, _('Network Error'));
 					taskQueue.run();
 				}
 			);
 		}
 
 		function write (task) {
-			var path = self.getInternalPath(task.path);
-
 			self.response(task, {
 				state:'writing',
 				progress:0
 			});
 
-			getMetadataFromPath(path,
+			getMetadataFromPath(task.path,
 				function (fragments, data, xhr) {
 					var fileId;
 					var parentId;
@@ -1263,7 +1270,7 @@
 					}
 					// invalid (non-existent) path
 					else if (!data) {
-						self.responseError(task, 'Invalid path');
+						self.responseError(task, _('Invalid path'));
 						taskQueue.run();
 						return;
 					}
@@ -1282,7 +1289,7 @@
 									id:parentId
 								}
 							],
-							title:/\/([^\/]+)$/.exec(path)[1],
+							title:/\/([^\/]+)$/.exec(task.path)[1],
 							mimeType:mimeType
 						},
 						task.content
@@ -1317,20 +1324,20 @@
 							self.response(task, {
 								state:'complete',
 								meta:{
-									path:self.getExternalPath(path),
+									path:self.getExternalPath(task.path),
 									charLength:task.content.length
 								}
 							});
 						},
 						function (xhr) {
 							if (handleError(task, xhr)) return;
-							self.responseError(task, 'Failed to save (' + xhr.status + ')');
+							self.responseError(task, _('Failed to save ({0})', xhr.status));
 						}
 					);
 				},
 				function (xhr) {
 					if (handleError(task, xhr)) return;
-					self.responseError(task, 'Network Error');
+					self.responseError(task, _('Network Error'));
 				}
 			);
 		}
@@ -1409,6 +1416,8 @@
 	else if (typeof require == 'function') {
 		u = require('./WasaviUtils').WasaviUtils;
 	}
+
+	_ = u && u._ ? u._ : function (a) {return a};
 
 	exports.FileSystem = {create:create};
 })(this);

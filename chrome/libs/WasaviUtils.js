@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: WasaviUtils.js 342 2013-07-18 02:02:38Z akahuku $
+ * @version $Id: WasaviUtils.js 347 2013-07-25 04:40:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -100,6 +100,10 @@
 				xhr.mozBackgroundRequest = true;
 				return xhr;
 			}
+		},
+
+		_: function () {
+			return Array.prototype.slice.call(arguments);
 		}
 	};
 })(this);

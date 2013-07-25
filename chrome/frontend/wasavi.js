@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 346 2013-07-24 05:35:12Z akahuku $
+ * @version $Id: wasavi.js 347 2013-07-25 04:40:17Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -896,10 +896,9 @@ left:0; top:0; \
 	 */
 
 	fireEvent('initialized', {height:cnt.offsetHeight});
+	isStandAlone && runExrc();
 }
 function runExrc () {
-	console.log('runExrc');
-
 	/*
 	 * set up event handlers
 	 */
@@ -4110,7 +4109,7 @@ function handleExtensionChannelMessage (req) {
 	case 'authorize-response':
 		if (req.error) {
 			exCommandExecutor.stop();
-			showMessage(req.error, true, false);
+			showMessage(_.apply(null, req.error), true, false);
 			break;
 		}
 		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
@@ -4128,7 +4127,7 @@ function handleExtensionChannelMessage (req) {
 		break;
 	case 'fileio-write-response':
 		if (req.error) {
-			showMessage(req.error, true, false);
+			showMessage(_.apply(null, req.error), true, false);
 			//exCommandExecutor.stop();
 			break;
 		}
@@ -4148,7 +4147,7 @@ function handleExtensionChannelMessage (req) {
 	case 'fileio-read-response':
 		if (req.error) {
 			exCommandExecutor.stop();
-			showMessage(req.error, true, false);
+			showMessage(_.apply(null, req.error), true, false);
 			break;
 		}
 		switch (req.state) {

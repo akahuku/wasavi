@@ -671,5 +671,85 @@
 	"top_of_history": {
 		"message": "履歴の先頭です。",
 		"description": "Top of history."
+	},
+	"file_not_found": {
+		"message": "ファイルが見つかりません。",
+		"description": "File not found."
+	},
+	"not_a_authentication_task_@0": {
+		"message": "認証タスクではありません: {0}",
+		"description": "Not a authentication task: {0}"
+	},
+	"unknown_file_system_error": {
+		"message": "不明なファイルシステムエラー",
+		"description": "Unknown file system error"
+	},
+	"invalid_authentication_state_frt_@0": {
+		"message": "不正な認証状態 (frt): {0}",
+		"description": "Invalid authentication state (frt): {0}"
+	},
+	"invalid_authentication_state_cua_@0": {
+		"message": "不正な認証状態 (cua): {0}",
+		"description": "Invalid authentication state (cua): {0}"
+	},
+	"invalid_authentication_state_wts_@0": {
+		"message": "不正な認証状態 (wts): {0}",
+		"description": "Invalid authentication state (wts): {0}"
+	},
+	"access_token_missmatch_@0": {
+		"message": "Access token missmatch: {0}",
+		"description": "Access token missmatch: {0}"
+	},
+	"invalid_authentication_state_fat_@0": {
+		"message": "不正な認証状態 (fat): {0}",
+		"description": "Invalid authentication state (fat): {0}"
+	},
+	"invalid_authentication_state_fai_@0": {
+		"message": "不正な認証状態 (fai): {0}",
+		"description": "Invalid authentication state (fai): {0}"
+	},
+	"user_unmatch": {
+		"message": "ユーザーが異なります。",
+		"description": "User unmatch."
+	},
+	"cannot_edit_a_directory": {
+		"message": "ディレクトリは編集できません。",
+		"description": "Cannot edit a directory."
+	},
+	"unknown_mime_type_@0": {
+		"message": "不明な MIME タイプ: {0}",
+		"description": "Unknown MIME type: {0}"
+	},
+	"authentication_declined_@0": {
+		"message": "認証が拒否されました: {0}",
+		"description": "Authentication declined: {0}"
+	},
+	"invalid_status_code_@0": {
+		"message": "不正なステータスコード #{0}",
+		"description": "Invalid status code #{0}"
+	},
+	"invalid_authentication_state_vat_@0": {
+		"message": "不正な認証状態 (vat): {0}",
+		"description": "Invalid authentication state (vat): {0}"
+	},
+	"invalid_authentication_audience": {
+		"message": "不正な認証オーディエンス",
+		"description": "Invalid authentication audience"
+	},
+	"invalid_path": {
+		"message": "不正なパス",
+		"description": "Invalid path"
+	},
+	"unable_to_download": {
+		"message": "ダウンロードできません。",
+		"description": "Unable to download."
+	},
+	"network_error": {
+		"message": "ネットワークエラー",
+		"description": "Network Error"
+	},
+	"failed_to_save_@0": {
+		"message": "保存に失敗しました ({0})",
+		"description": "Failed to save ({0})"
 	}
 }
