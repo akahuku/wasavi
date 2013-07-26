@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 347 2013-07-25 04:40:17Z akahuku $
+ * @version $Id: wasavi.js 349 2013-07-26 02:15:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -308,7 +308,6 @@ ExCommandExecutor.prototype = {
 		if (this.commands.length == 0) return true;
 
 		if (this.isAsync && this.isRoot && isInteractive) {
-			//devMode && console.log('*** starting ExCommandExecutor (async:' + this.editLogLevel + ') ***');
 			if (this.editLogLevel == 0) {
 				editLogger.open('excommand');
 				this.running = true;
@@ -1587,16 +1586,6 @@ function executeExCommand (source, isRoot, parseOnly) {
 		if (commandObj) {
 			commandName = commandObj.name;
 		}
-		/*
-		for (var i = 0, commands = Wasavi.ExCommand.commands; i < commands.length; i++) {
-			if (commandName.indexOf(commands[i].shortName) == 0
-			&&  commands[i].name.indexOf(commandName) == 0) {
-				commandObj = commands[i];
-				commandName = commands[i].name;
-				break;
-			}
-		}
-		 */
 
 		// 9. (wasavi does not support '!' command)
 
@@ -4128,7 +4117,6 @@ function handleExtensionChannelMessage (req) {
 	case 'fileio-write-response':
 		if (req.error) {
 			showMessage(_.apply(null, req.error), true, false);
-			//exCommandExecutor.stop();
 			break;
 		}
 		switch (req.state) {
@@ -4142,7 +4130,6 @@ function handleExtensionChannelMessage (req) {
 			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.charLength)));
 			break;
 		}
-		//exCommandExecutor.runAsyncNext();
 		break;
 	case 'fileio-read-response':
 		if (req.error) {
