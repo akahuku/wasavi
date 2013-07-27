@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 349 2013-07-26 02:15:46Z akahuku $
+ * @version $Id: wasavi.js 350 2013-07-27 23:46:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -983,16 +983,14 @@ function setupEventHandlers (install) {
 	window[method]('blur', handleWindowBlur, false);
 	window[method]('resize', handleWindowResize, false);
 
+	// document
+	document[method]('paste', handlePaste, false);
+
 	// key manager
-	install ? keyManager.install(handleKeydown2) :
+	install ? keyManager.install(handleKeydown) :
 			  keyManager.uninstall();
 
-	var editor = $(EDITOR_CORE_ID);
-	if (editor) {
-		editor[method]('mousedown', handleMousedown, false);
-		editor[method]('mouseup', handleMouseup, false);
-	}
-
+	// cover
 	var cover = $('wasavi_cover');
 	if (cover) {
 		cover[method]('mousedown', handleCoverMousedown, false);
@@ -4018,7 +4016,17 @@ function handleWindowResize (e) {
 }
 
 // editor (document)
-function handleKeydown2 (e) {
+function handleKeydownMain (code, e) {
+	fireNotifyKeydownEvent(e.code, e.fullIdentifier, '');
+	processInput(code, e);
+}
+function handleKeydownWrap (content, e) {
+	if (recordedStrokes) {
+		recordedStrokes.strokes += keyManager.toInternalString(e);
+	}
+	mapManager.process(e, handleKeydownMain);
+}
+function handleKeydown (e) {
 	if (scroller.running
 	|| exCommandExecutor.running
 	|| completer.running
@@ -4035,20 +4043,47 @@ function handleKeydown2 (e) {
 		);
 		return;
 	}
+
 	isInteractive = true;
-	(extensionChannel && prefixInput.toString() == '"*' ? extensionChannel.getClipboard : $call)
-		.call(extensionChannel, function () {
-			if (recordedStrokes) {
-				recordedStrokes.strokes += keyManager.toInternalString(e);
-			}
-			mapManager.process(e, function (code, e) {
-				fireNotifyKeydownEvent(e.code, e.fullIdentifier, '');
-				processInput(code, e);
-			});
-		});
+	if (extensionChannel && prefixInput.toString() == '"*') {
+		extensionChannel.getClipboard(handleKeydownWrap, e);
+	}
+	else {
+		handleKeydownWrap('', e);
+	}
 }
-function handleMousedown (e) {}
-function handleMouseup (e) {}
+function handlePaste (e) {
+	e.preventDefault();
+	if (scroller.running
+	|| exCommandExecutor.running
+	|| completer.running
+	|| isBulkInputting && !e.isCompositioned) {
+		return;
+	}
+
+	var s = e.clipboardData.getData('text/plain');
+	switch (state) {
+	case 'normal':
+		switch (inputMode) {
+		case 'command':
+			isInteractive = true;
+			executeViCommand('"*p');
+			break;
+		case 'edit': case 'edit-overwrite':
+			isInteractive = true;
+			s = s.replace(/\u001b/g, '\u0016$&');
+			executeViCommand(s);
+			break;
+		}
+		break;
+
+	case 'line-input':
+		isInteractive = true;
+		s = s.replace(/[\r\n]/g, '\u0016$&');
+		executeViCommand(s);
+		break;
+	}
+}
 
 // cover
 function handleCoverMousedown (e) {
@@ -4083,7 +4118,7 @@ function handleCoverMousewheel (e) {
 	}
 }
 
-// frame channel
+// message channel to extension background
 function handleExtensionChannelMessage (req) {
 	if (!req) return;
 

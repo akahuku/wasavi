@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 345 2013-07-23 04:14:51Z akahuku $
+ * @version $Id: extension_wrapper.js 350 2013-07-27 23:46:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -108,14 +108,17 @@
 		setClipboard: function (data) {
 			this.postMessage({type:'set-clipboard', data:data});
 		},
-		getClipboard: function (callback) {
-			var result = '';
+		getClipboard: function () {
 			var self = this;
+			var args = Array.prototype.slice.call(arguments);
+			var callback = args.shift();
 			this.postMessage({type:'get-clipboard'}, function (req) {
-				result = self.clipboardData = (req.data || '').replace(/\r\n/g, '\n');
-				callback && callback(result);
+				self.clipboardData = (req.data || '').replace(/\r\n/g, '\n');
+				if (callback) {
+					args.unshift(self.clipboardData);
+					callback.apply(null, args);
+				}
 			});
-			return result;
 		},
 		getExtensionFileURL: function (path, callback) {
 			callback && callback();

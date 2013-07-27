@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 343 2013-07-22 22:31:43Z akahuku $
+ * @version $Id: classes.js 350 2013-07-27 23:46:43Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1010,6 +1010,7 @@ Wasavi.KeyManager = function () {
 			}
 
 			if (specialKeyName !== false) {
+				if (isPasteKeyStroke(e)) return;
 				handleKeypress(e);
 			}
 		}
@@ -1018,6 +1019,7 @@ Wasavi.KeyManager = function () {
 				specialKeys[e.keyCode] : false;
 			specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
 
+			if (isPasteKeyStroke(e)) return;
 			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
 				handleKeypress(e);
 			}
@@ -1033,6 +1035,7 @@ Wasavi.KeyManager = function () {
 		var isSpecial = false;
 
 		if (specialKeyName) {
+			if (isPasteKeyStroke(e)) return;
 			e.shiftKey && c.push('s');
 			e.ctrlKey  && c.push('c');
 			baseKeyName = specialKeyName;
@@ -1494,6 +1497,9 @@ Wasavi.KeyManager = function () {
 		while (bs.length) {
 			fire('input', inputEventHandlers, bs.shift());
 		}
+	}
+	function isPasteKeyStroke (e) {
+		return specialKeyCode == -45 && e.shiftKey && !e.ctrlKey;
 	}
 
 	publish(this,
