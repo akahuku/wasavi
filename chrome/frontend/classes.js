@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 350 2013-07-27 23:46:43Z akahuku $
+ * @version $Id: classes.js 351 2013-07-29 16:55:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1486,8 +1486,8 @@ Wasavi.KeyManager = function () {
 		}
 		return result;
 	}
-	function push (e) {
-		bufferedStrokes.push(e);
+	function push () {
+		bufferedStrokes.push.apply(bufferedStrokes, arguments);
 	}
 	function sweep () {
 		if (bufferedStrokes.length == 0) return;
@@ -1498,6 +1498,10 @@ Wasavi.KeyManager = function () {
 			fire('input', inputEventHandlers, bs.shift());
 		}
 	}
+	function pushSweep (s) {
+		push.apply(push, createSequences(s));
+		sweep();
+	}
 	function isPasteKeyStroke (e) {
 		return specialKeyCode == -45 && e.shiftKey && !e.ctrlKey;
 	}
@@ -1506,7 +1510,7 @@ Wasavi.KeyManager = function () {
 		install, uninstall, addEventListener, removeEventListener,
 		init, code2letter, toInternalString, objectFromCode,
 		nopObjectFromCode, insertFnKeyHeader, parseKeyDesc, createSequences,
-		push, sweep, dispose,
+		push, sweep, pushSweep, dispose,
 		{
 			preserve:[
 				function () {return isPreserve},

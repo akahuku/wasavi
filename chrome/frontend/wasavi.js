@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 350 2013-07-27 23:46:43Z akahuku $
+ * @version $Id: wasavi.js 351 2013-07-29 16:55:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -284,7 +284,7 @@ ExCommandExecutor.prototype = {
 		if (this.commands.length) {
 			setTimeout((function (obj, fn, cmd) {return function () {
 				if (obj._isClipboardAccess(cmd[1])) {
-					extensionChannel.getClipboard(function () {fn.call(obj);});
+					extensionChannel.getClipboard(function () {fn.call(obj)});
 				}
 				else {
 					fn.call(obj);
@@ -863,6 +863,7 @@ left:0; top:0; \
 	lastSubstituteInfo = new Collection;
 	lastMessage = '';
 	requestedState = {};
+	clipboardReadingState = 0;
 
 	buffer.value = x.value;
 	buffer.selectionStart = x.selectionStart || 0;
@@ -4019,68 +4020,69 @@ function handleWindowResize (e) {
 function handleKeydownMain (code, e) {
 	fireNotifyKeydownEvent(e.code, e.fullIdentifier, '');
 	processInput(code, e);
-}
-function handleKeydownWrap (content, e) {
-	if (recordedStrokes) {
-		recordedStrokes.strokes += keyManager.toInternalString(e);
+	if (clipboardReadingState == 2) {
+		clipboardReadingState = 0;
 	}
-	mapManager.process(e, handleKeydownMain);
+}
+function handleClipboardRead () {
+	clipboardReadingState = 2;
+	keyManager.sweep();
 }
 function handleKeydown (e) {
 	if (scroller.running
 	|| exCommandExecutor.running
 	|| completer.running
-	|| isBulkInputting && !e.isCompositioned) {
+	|| isBulkInputting && !e.isCompositioned
+	|| clipboardReadingState == 1) {
 		keyManager.push(e);
 		fireNotifyKeydownEvent(
 			e.code, e.fullIdentifier,
 			'busy now('
-				+ (scroller.running ? 'scroller' : '')
-				+ (exCommandExecutor.running ? 'exCommandExecutor' : '')
-				+ (completer.running ? 'completer' : '')
+				+ (scroller.running ? 'scrolling' : '')
+				+ (exCommandExecutor.running ? 'ex command running' : '')
+				+ (completer.running ? 'completing' : '')
 				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
+				+ (clipboardReadingState ? 'clipboard reading' : '')
 				+ ')'
 		);
 		return;
 	}
 
-	isInteractive = true;
-	if (extensionChannel && prefixInput.toString() == '"*') {
-		extensionChannel.getClipboard(handleKeydownWrap, e);
-	}
-	else {
-		handleKeydownWrap('', e);
-	}
-}
-function handlePaste (e) {
-	e.preventDefault();
-	if (scroller.running
-	|| exCommandExecutor.running
-	|| completer.running
-	|| isBulkInputting && !e.isCompositioned) {
+	if (extensionChannel && prefixInput.toString() == '"*' && clipboardReadingState != 2) {
+		clipboardReadingState = 1;
+		keyManager.push(e);
+		extensionChannel.getClipboard(handleClipboardRead);
 		return;
 	}
 
+	if (recordedStrokes) {
+		recordedStrokes.strokes += keyManager.toInternalString(e);
+	}
+
+	isInteractive = true;
+	mapManager.process(e, handleKeydownMain);
+}
+function handlePaste (e) {
+	e.preventDefault();
 	var s = e.clipboardData.getData('text/plain');
 	switch (state) {
 	case 'normal':
 		switch (inputMode) {
 		case 'command':
-			isInteractive = true;
-			executeViCommand('"*p');
-			break;
-		case 'edit': case 'edit-overwrite':
-			isInteractive = true;
 			s = s.replace(/\u001b/g, '\u0016$&');
-			executeViCommand(s);
+			keyManager.pushSweep('a' + s + '\u001b');
+			break;
+
+		case 'edit': case 'edit-overwrite':
+			s = s.replace(/\u001b/g, '\u0016$&');
+			keyManager.pushSweep(s);
 			break;
 		}
 		break;
 
 	case 'line-input':
-		isInteractive = true;
 		s = s.replace(/[\r\n]/g, '\u0016$&');
-		executeViCommand(s);
+		keyManager.pushSweep(s);
 		break;
 	}
 }
@@ -4088,16 +4090,12 @@ function handlePaste (e) {
 // cover
 function handleCoverMousedown (e) {
 	e.preventDefault();
-	e.stopPropagation();
-	e.returnValue = false;
 }
 function handleCoverClick (e) {
 	fireEvent('focus-me');
 }
 function handleCoverMousewheel (e) {
 	e.preventDefault();
-	e.stopPropagation();
-	e.returnValue = false;
 	switch (state) {
 	case 'normal':
 		switch (inputMode) {
@@ -4110,7 +4108,7 @@ function handleCoverMousewheel (e) {
 				delta = e.detail;
 			}
 			if (delta) {
-				executeViCommand(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'), true);
+				keyManager.pushSweep(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'));
 			}
 			break;
 		}
@@ -4599,6 +4597,7 @@ var searchUtils;
 var recordedStrokes;
 var literalInput;
 var notifier;
+var clipboardReadingState; // 0:free 1:reading 2:ready
 
 var isEditCompleted;
 var isVerticalMotion;

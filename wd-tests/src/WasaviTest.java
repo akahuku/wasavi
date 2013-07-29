@@ -36,6 +36,13 @@ import com.opera.core.systems.OperaProfile;
 
 
 
+class WasaviSendCallback {
+	void exec (Actions act) {
+	}
+}
+
+
+
 class WasaviWrapper {
 	private static final Boolean LOG_EXCEPTION = true;
 
@@ -118,6 +125,9 @@ class WasaviWrapper {
 			return wasaviState.getInt(name);
 		}
 		catch (JSONException e) {
+			if (LOG_EXCEPTION) {
+				System.out.println(e.getMessage());
+			}
 		}
 		return defaultValue;
 	}
@@ -131,6 +141,9 @@ class WasaviWrapper {
 			return wasaviState.getString(name);
 		}
 		catch (JSONException e) {
+			if (LOG_EXCEPTION) {
+				System.out.println(e.getMessage());
+			}
 		}
 		return defaultValue;
 	}
@@ -148,6 +161,19 @@ class WasaviWrapper {
 			WebElement elm = waitCommandCompletion();
 			sendFinish(elm);
 		}
+
+		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
+	}
+
+	public void send (WasaviSendCallback callback) {
+		sendSetup();
+
+		Actions act = new Actions(driver);
+		callback.exec(act);
+		act.perform();
+
+		WebElement elm = waitCommandCompletion();
+		sendFinish(elm);
 
 		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
@@ -273,6 +299,9 @@ class WasaviWrapper {
 			}
 		}
 		catch (JSONException e) {
+			if (LOG_EXCEPTION) {
+				System.out.println(e.getMessage());
+			}
 			return "**Exception in getRegister***";
 		}
 		return "";
@@ -287,6 +316,9 @@ class WasaviWrapper {
 			return result;
 		}
 		catch (JSONException e) {
+			if (LOG_EXCEPTION) {
+				System.out.println(e.getMessage());
+			}
 			return null;
 		}
 	}

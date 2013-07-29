@@ -10,6 +10,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 
 public class EditingTest extends WasaviTest {
 	private void _testDeleteRightChar (CharSequence a) {
@@ -139,9 +140,44 @@ public class EditingTest extends WasaviTest {
 
 	@Test
 	public void testPasteFromClipboard () {
-		setClipboardText("clipboard text");
+		String s = "paste via vi command";
+		setClipboardText(s);
 		Wasavi.send("\"*P");
-		assertEquals("#1", "clipboard text", Wasavi.getValue());
+		assertEquals("#1", s, Wasavi.getValue());
+	}
+
+	@Test
+	public void testPasteFromClipboard2 () {
+		String s = "shift+insert, in command mode";
+		setClipboardText(s);
+		Wasavi.send(new WasaviSendCallback() {
+			@Override
+			void exec (Actions act) {
+				act
+					.keyDown(Keys.SHIFT)
+					.sendKeys(Keys.INSERT)
+					.keyUp(Keys.SHIFT);
+			}
+		});
+		assertEquals("#1", s, Wasavi.getValue());
+	}
+
+	@Test
+	public void testPasteFromClipboard3 () {
+		String s = "shift+insert, in insert mode";
+		setClipboardText(s);
+		Wasavi.send(new WasaviSendCallback() {
+			@Override
+			void exec (Actions act) {
+				act
+					.sendKeys("i")
+					.keyDown(Keys.SHIFT)
+					.sendKeys(Keys.INSERT)
+					.keyUp(Keys.SHIFT)
+					.sendKeys("\u001b");
+			}
+		});
+		assertEquals("#1", s, Wasavi.getValue());
 	}
 
 	@Test

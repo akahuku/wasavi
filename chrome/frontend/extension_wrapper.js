@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 350 2013-07-27 23:46:43Z akahuku $
+ * @version $Id: extension_wrapper.js 351 2013-07-29 16:55:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -113,7 +113,7 @@
 			var args = Array.prototype.slice.call(arguments);
 			var callback = args.shift();
 			this.postMessage({type:'get-clipboard'}, function (req) {
-				self.clipboardData = (req.data || '').replace(/\r\n/g, '\n');
+				self.clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
 				if (callback) {
 					args.unshift(self.clipboardData);
 					callback.apply(null, args);
