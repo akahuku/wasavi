@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 346 2013-07-24 05:35:12Z akahuku $
+ * @version $Id: agent.js 352 2013-07-30 06:51:15Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -872,7 +872,6 @@ extension.setMessageListener(function (req) {
 	 */
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
-		document.activeElement != wasaviFrame && focusToFrame(req);
 		var currentHeight = wasaviFrame.offsetHeight;
 		var newHeight = req.height || targetElement.offsetHeight;
 		extraHeight = newHeight - currentHeight;
@@ -897,6 +896,7 @@ extension.setMessageListener(function (req) {
 
 	case 'wasavi-ready':
 		if (!wasaviFrame) break;
+		document.activeElement != wasaviFrame && focusToFrame(req);
 		wasaviFrame.style.visibility = 'visible';
 		devMode && console.info('wasavi started');
 		var ev = document.createEvent('CustomEvent');
