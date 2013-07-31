@@ -320,6 +320,10 @@
 		"message": "edit はスタンドアロンフォームでのみ有効です。",
 		"description": "Only stand alone form can edit."
 	},
+	"only_stand_alone_form_can_rename": {
+		"message": "リネームはスタンドアロンフォームでのみ有効です。",
+		"description": "Only stand alone form can rename."
+	},
 	"default_file_system_@0": {
 		"message": "既定のファイルシステム: {0}",
 		"description": "default file system: {0}"

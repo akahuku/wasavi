@@ -320,6 +320,10 @@
 		"message": "Only stand alone form can edit.",
 		"description": "Only stand alone form can edit."
 	},
+	"only_stand_alone_form_can_rename": {
+		"message": "Only stand alone form can rename.",
+		"description": "Only stand alone form can rename."
+	},
 	"default_file_system_@0": {
 		"message": "default file system: {0}",
 		"description": "default file system: {0}"

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 338 2013-07-08 13:04:46Z akahuku $
+ * @version $Id: classes_ex.js 353 2013-07-31 19:23:13Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1106,7 +1106,7 @@ Wasavi.ExCommand.commands = [
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (!app.extensionChannel || !WasaviExtensionWrapper.IS_TOP_FRAME) {
-			return _('Only stand alone form can edit.');
+			return _('Only stand alone form can rename.');
 		}
 		if (a.argv.length > 1) {
 			return _('Too much arguments.');
