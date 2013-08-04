@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 351 2013-07-29 16:55:53Z akahuku $
+ * @version $Id: wasavi.js 354 2013-08-04 09:33:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4064,18 +4064,20 @@ function handleKeydown (e) {
 }
 function handlePaste (e) {
 	e.preventDefault();
-	var s = e.clipboardData.getData('text/plain');
+	var s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
 	switch (state) {
 	case 'normal':
 		switch (inputMode) {
 		case 'command':
 			s = s.replace(/\u001b/g, '\u0016$&');
-			keyManager.pushSweep('a' + s + '\u001b');
+			keyManager.pushSweep('a');
+			keyManager.pushSweep(s, true);
+			keyManager.pushSweep('\u001b');
 			break;
 
 		case 'edit': case 'edit-overwrite':
 			s = s.replace(/\u001b/g, '\u0016$&');
-			keyManager.pushSweep(s);
+			keyManager.pushSweep(s, true);
 			break;
 		}
 		break;

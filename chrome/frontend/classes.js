@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 351 2013-07-29 16:55:53Z akahuku $
+ * @version $Id: classes.js 354 2013-08-04 09:33:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1337,9 +1337,6 @@ Wasavi.KeyManager = function () {
 			fullIdentifier:   false,
 			shift:            false,
 			ctrl:             false,
-			nativeKeyCode:    0,
-			nativeCharCode:   0,
-			nativeIdentifier: '',
 			isCompositioned:  true,
 			isCompositionedFirst: false,
 			isCompositionedLast: false
@@ -1498,8 +1495,13 @@ Wasavi.KeyManager = function () {
 			fire('input', inputEventHandlers, bs.shift());
 		}
 	}
-	function pushSweep (s) {
+	function pushSweep (s, asComposition) {
 		push.apply(push, createSequences(s));
+		if (asComposition && bufferedStrokes.length) {
+			bufferedStrokes.forEach(function (a) {a.isCompositioned = true});
+			bufferedStrokes[0].isCompositionedFirst = true;
+			bufferedStrokes.lastItem.isCompositionedLast = true;
+		}
 		sweep();
 	}
 	function isPasteKeyStroke (e) {
