@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 354 2013-08-04 09:33:32Z akahuku $
+ * @version $Id: wasavi.js 356 2013-08-09 04:42:07Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2138,31 +2138,32 @@ function processInput (code, e, ignoreAbbreviation) {
 			if (execEditMap(buffer, mapkey, subkey, code)) {
 				requestShowPrefixInput(getDefaultPrefixInputString());
 			}
+			else if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
+				(inputMode == 'edit' ? insert : overwrite)(letterActual);
+				processAutoDivide(e);
+				processAbbrevs();
+			}
 			else {
-				if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
-					(inputMode == 'edit' ? insert : overwrite)(letterActual);
-					processAutoDivide(e);
-					processAbbrevs();
-				}
-				else {
-					inputHandler.ungetText();
-				}
-				if (runLevel == 0 && e.isCompositionedFirst) {
-					cursor.editCursor.style.display = 'none';
-					isBulkInputting = true;
-				}
-				if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
-					isBulkInputting = false;
-					cursor.ensureVisible();
-					cursor.update({visible:true, focused:true});
-					requestShowPrefixInput(getDefaultPrefixInputString());
-				}
+				inputHandler.ungetText();
+			}
+			if (runLevel == 0 && e.isCompositionedFirst) {
+				cursor.editCursor.style.display = 'none';
+				isBulkInputting = true;
+			}
+			if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
+				isBulkInputting = false;
+				cursor.ensureVisible();
+				cursor.update({visible:true, focused:true});
+				requestShowPrefixInput(getDefaultPrefixInputString());
+				needEmitEvent = true;
 			}
 			if (config.vars.showmatch && !pairBracketsIndicator) {
 				pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
 					letterActual, buffer, prevPos);
 			}
-			needEmitEvent = 'notify-state';
+			if (needEmitEvent === false) {
+				needEmitEvent = 'notify-state';
+			}
 		}
 		result = true;
 		break;
@@ -2463,6 +2464,22 @@ function fireCommandCompleteEvent (eventName) {
 			lineInput:  state == 'line-input' ? $(LINE_INPUT_ID).value : ''
 		}
 	});
+}
+function fireDOMPasteEvent (s) {
+	if (window.ClipboardEvent) {
+		document.dispatchEvent(new window.ClipboardEvent('paste', {
+			bubbles:true,
+			cancelable:true,
+			dataType:'text/plain',
+			data:s
+		}));
+	}
+	else {
+		handlePaste({
+			preventDefault:function () {},
+			clipboardData:{getData:function () {return s}}
+		});
+	}
 }
 function setSubstituteWorker (obj) {
 	if (!(obj instanceof Wasavi.SubstituteWorker)) {
@@ -4069,21 +4086,23 @@ function handlePaste (e) {
 	case 'normal':
 		switch (inputMode) {
 		case 'command':
-			s = s.replace(/\u001b/g, '\u0016$&');
+			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
 			keyManager.pushSweep('a');
 			keyManager.pushSweep(s, true);
 			keyManager.pushSweep('\u001b');
 			break;
 
 		case 'edit': case 'edit-overwrite':
-			s = s.replace(/\u001b/g, '\u0016$&');
+			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
 			keyManager.pushSweep(s, true);
 			break;
 		}
 		break;
 
 	case 'line-input':
-		s = s.replace(/[\r\n]/g, '\u0016$&');
+		s = s
+			.replace(/[\u0016\u001b]/g, '\u0016$&')
+			.replace(/\n/g, toVisibleControl(13));
 		keyManager.pushSweep(s);
 		break;
 	}
@@ -4643,7 +4662,7 @@ var commandMap = {
 			if (prefixInput.isEmpty) {
 				inputModeSub = 'wait-register';
 				prefixInput.register = c;
-				requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', o.e.fullIdentifier));
+				requestShowPrefixInput(_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList));
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
@@ -5772,7 +5791,7 @@ var commandMap = {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				inputModeSub = 'wait-a-letter';
-				requestShowPrefixInput(_('{0}: register (a-z,A-Z,1-9)', o.e.fullIdentifier));
+				requestShowPrefixInput(_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList));
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
@@ -6180,25 +6199,6 @@ var editMap = {
 			inputHandler.invalidateHeadPosition();
 		}
 	},
-	'\u007f'/*delete*/: function (c) {
-		inputHandler.ungetText();
-		if (clipOverrun()) return;
-		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
-		buffer.selectionStartCol >= buffer.getLineTailOffset(buffer.selectionStartRow).col) {
-			requestShowMessage(_('Tail of text.'), true);
-			inputHandler.ungetStroke();
-			return;
-		}
-		inputHandler.flush();
-		deleteCharsForward(1, {canJoin:true});
-		inputHandler.invalidateHeadPosition();
-	},
-	'\u0014'/*^T*/: function (c) {
-		this['\u0004'].apply(this, arguments);
-	},
-	'\u0015'/*^U*/: function (c) {
-		this['\u0008'].apply(this, arguments);
-	},
 	'\u0009'/*^I, tab*/: function (c) {
 		if (clipOverrun()) return;
 		insert('\t');
@@ -6214,6 +6214,50 @@ var editMap = {
 			inputHandler.textFragment += indent;
 		}
 		insert('\n' + indent);
+	},
+	'\u0012'/*^R*/: {
+		'edit': function (c, o) {
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+			if (clipOverrun()) return;
+			inputModeSub = 'wait-register';
+			requestShowPrefixInput(_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList));
+		},
+		'edit-overwrite': function (c, o) {
+			this['\u0012'].edit.apply(this, arguments);
+		},
+		'wait-register': function (c) {
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+
+			var s;
+			if (c == '*') {
+				clipboardReadingState = 1;
+				extensionChannel.getClipboard(function (data) {
+					if (data == '') {
+						showMessage(_('Register {0} is empty.', c));
+						clipboardReadingState = 0;
+					}
+					else {
+						clipboardReadingState = 2;
+						fireDOMPasteEvent(data);
+					}
+				});
+				return undefined;
+			}
+			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
+				fireDOMPasteEvent(s);
+			}
+			else {
+				requestShowMessage(_('Register {0} is empty.', c));
+			}
+		}
+	},
+	'\u0014'/*^T*/: function (c) {
+		this['\u0004'].apply(this, arguments);
+	},
+	'\u0015'/*^U*/: function (c) {
+		this['\u0008'].apply(this, arguments);
 	},
 	'\u0016'/*^V*/: {
 		'edit': function (c, o) {
@@ -6283,6 +6327,19 @@ var editMap = {
 	'\u0017'/*^W*/: function (c) {
 		this['\u0008'].apply(this, arguments);
 	},
+	'\u007f'/*delete*/: function (c) {
+		inputHandler.ungetText();
+		if (clipOverrun()) return;
+		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
+		buffer.selectionStartCol >= buffer.getLineTailOffset(buffer.selectionStartRow).col) {
+			requestShowMessage(_('Tail of text.'), true);
+			inputHandler.ungetStroke();
+			return;
+		}
+		inputHandler.flush();
+		deleteCharsForward(1, {canJoin:true});
+		inputHandler.invalidateHeadPosition();
+	},
 	'<left>': function (c) {
 		inputHandler.newState();
 		motionLeft(c, 1);
@@ -6327,6 +6384,9 @@ var editMap = {
  */
 
 var lineInputEditMap = {
+	'\u0000': function () {
+		return true;
+	},
 	'\u0001'/*^A*/: function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = 0;
 		keyManager.init(o.target);
@@ -6369,7 +6429,7 @@ var lineInputEditMap = {
 		isCompleteResetCanceled = true;
 		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
 			if (!compl) {
-				notifier.show('No completions');
+				notifier.show(_('No completions'));
 			}
 			else if (typeof compl == 'string') {
 				notifier.show(compl);
@@ -6384,21 +6444,6 @@ var lineInputEditMap = {
 			}
 			fireCommandCompleteEvent();
 		});
-	},
-	'\u007f'/*delete*/: function (c, o) {
-		if (o.target.selectionStart == o.target.selectionEnd) {
-			var n = Math.max(o.target.selectionStart, o.target.value.length - 1);
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd + 1);
-			o.target.selectionStart = o.target.selectionEnd = n;
-		}
-		else {
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionEnd = o.target.selectionStart;
-		}
-		lineInputHistories.isInitial = true;
-		return true;
 	},
 	'\u000e'/*^N*/: function (c, o) {
 		if (lineInputHistories.isInitial) {
@@ -6437,6 +6482,43 @@ var lineInputEditMap = {
 		}
 		return true;
 	},
+	'\u0012'/*^R*/: {
+		'line-input': function (c, o) {
+			inputModeSub = 'wait-register';
+			notifier.show(
+				_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList),
+				1000 * 60
+			);
+		},
+		'wait-register': function (c, o) {
+			var s;
+			if (c == '*') {
+				clipboardReadingState = 1;
+				extensionChannel.getClipboard(function (data) {
+					if (data == '') {
+						notifier.show(_('Register {0} is empty.', c));
+						clipboardReadingState = 0;
+					}
+					else {
+						notifier.hide();
+						clipboardReadingState = 2;
+						fireDOMPasteEvent(data);
+					}
+					processInput(0, keyManager.nopObjectFromCode());
+				});
+				return undefined;
+			}
+			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
+				notifier.hide();
+				fireDOMPasteEvent(s);
+				return true;
+			}
+			else {
+				notifier.show(_('Register {0} is empty.', c));
+				return true;
+			}
+		}
+	},
 	'\u0015'/*^U*/: function (c, o) {
 		o.target.value = '';
 		o.target.selectionStart = o.target.selectionEnd = 0;
@@ -6447,26 +6529,26 @@ var lineInputEditMap = {
 	'\u0016'/*^V*/: {
 		'line-input': function (c, o) {
 			inputModeSub = 'wait-a-letter';
+			notifier.show(
+				_('{0}: literal input', o.e.fullIdentifier),
+				1000 * 60
+			);
 			literalInput = new Wasavi.LiteralInput;
-			inputHandler.ungetText();
-			inputHandler.pushText();
-			inputHandler.pushStroke();
 		},
 		'wait-a-letter': function (c, o) {
 			var result = literalInput.process(c);
 			if (!result) {
+				notifier.show(literalInput.message);
 				inputModeSub = 'wait-a-letter';
 				isLastKeyCodeLocked = true;
 				return;
 			}
 			if (result.error) {
+				notifier.show(result.error);
 				requestRegisterNotice();
-				inputHandler.popStroke();
-				inputHandler.ungetStroke();
-				inputHandler.popText();
 			}
 			else {
-				inputHandler.popText();
+				notifier.hide();
 
 				if (result.sequence) {
 					for (var i = 0, goal = result.sequence.length; i < goal; i++) {
@@ -6474,7 +6556,6 @@ var lineInputEditMap = {
 						var code = ch.charCodeAt(0);
 						var e = keyManager.objectFromCode(code);
 
-						inputHandler.updateText(e);
 						if (code == 10) {
 							requestRegisterNotice();
 							break;
@@ -6486,12 +6567,7 @@ var lineInputEditMap = {
 						keyManager.init(o.target);
 					}
 				}
-				else {
-					inputHandler.popStroke();
-					inputHandler.ungetStroke();
-				}
 				if (result.trail) {
-					inputHandler.ungetStroke();
 					insertToLineInput(o.target, result.trail);
 				}
 			}
@@ -6518,6 +6594,21 @@ var lineInputEditMap = {
 		}
 		lineInputHistories.isInitial = true;
 		keyManager.init(o.target);
+		return true;
+	},
+	'\u007f'/*delete*/: function (c, o) {
+		if (o.target.selectionStart == o.target.selectionEnd) {
+			var n = Math.max(o.target.selectionStart, o.target.value.length - 1);
+			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
+				o.target.value.substring(o.target.selectionEnd + 1);
+			o.target.selectionStart = o.target.selectionEnd = n;
+		}
+		else {
+			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
+				o.target.value.substring(o.target.selectionEnd);
+			o.target.selectionEnd = o.target.selectionStart;
+		}
+		lineInputHistories.isInitial = true;
 		return true;
 	},
 	'<left>': function () {

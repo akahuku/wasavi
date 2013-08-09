@@ -592,9 +592,9 @@
 		"message": "Invalid read handler.",
 		"description": "Invalid read handler."
 	},
-	"@0_register_azaz19": {
-		"message": "{0}: register (a-z,A-Z,1-9)",
-		"description": "{0}: register (a-z,A-Z,1-9)"
+	"@0_register_@1": {
+		"message": "{0}: register [{1}]",
+		"description": "{0}: register [{1}]"
 	},
 	"changing_@0_line": {
 		"message": "Changing {0} {line:0}.",
@@ -659,6 +659,10 @@
 	"@0_literal_input": {
 		"message": "{0}: literal input",
 		"description": "{0}: literal input"
+	},
+	"no_completions": {
+		"message": "No completions",
+		"description": "No completions"
 	},
 	"matched_@0_of_@1": {
 		"message": "matched #{0} of {1}",

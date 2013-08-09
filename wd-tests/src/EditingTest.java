@@ -1017,4 +1017,18 @@ public class EditingTest extends WasaviTest {
 			"exercitation ullamco laboris nisi ut\n" +
 			"aliquip ex ea commodo consequat.");
 	}
+
+	@Test
+	public void pasteRegister () {
+		Wasavi.send("afoo\nbar\u001b1GyG");
+		Wasavi.send("O\u0012\"\u001b");
+		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+	}
+
+	@Test
+	public void pasteClipboard () {
+		Wasavi.send("afoo\nbar\u001b1G\"*yG");
+		Wasavi.send("O\u0012*\u001b");
+		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+	}
 }

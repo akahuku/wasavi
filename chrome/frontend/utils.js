@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 335 2013-07-04 08:43:45Z akahuku $
+ * @version $Id: utils.js 355 2013-08-07 01:17:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -270,7 +270,7 @@ function removeClass (elem) {
 function insertToLineInput (t, ch) {
 	var ss = t.selectionStart;
 	t.value = t.value.substring(0, t.selectionStart) + ch + t.value.substring(t.selectionEnd);
-	t.selectionStart = ss + 1;
+	t.selectionStart = ss + ch.length;
 	t.selectionEnd = t.selectionStart;
 }
 function _ () {

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 354 2013-08-04 09:33:32Z akahuku $
+ * @version $Id: classes.js 355 2013-08-07 01:17:57Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1825,6 +1825,8 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 	var unnamed;
 	var named;
 	var storageKey = 'wasavi_registers';
+	var writableRegex = /^[1-9a-zA-Z@]$/;
+	var readableRegex = /^["1-9a-z@.:*\/\^]$/;
 
 	function serialize () {
 		return JSON.stringify(serializeGeneral({unnamed:unnamed, named:named}));
@@ -1862,10 +1864,10 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 		});
 	}
 	function isWritable (name) {
-		return /^[1-9a-zA-Z@]$/.test(name);
+		return writableRegex.test(name);
 	}
 	function isReadable (name) {
-		return /^["1-9a-z@.:*\/\^]$/.test(name);
+		return readableRegex.test(name);
 	}
 	function exists (name) {
 		if (!isReadable(name)) {
@@ -1976,7 +1978,17 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 	publish(this,
 		set, get, isWritable, isReadable, exists, dump, dumpData, save, load,
 		{
-			storageKey:function () {return storageKey}
+			storageKey:function () {return storageKey},
+			writableList:function () {
+				return writableRegex.source
+					.replace(/^\^\[/, '')
+					.replace(/\]\$$/, '');
+			},
+			readableList:function () {
+				return readableRegex.source
+					.replace(/^\^\[/, '')
+					.replace(/\]\$$/, '');
+			}
 		}
 	);
 	load(loadCallback);

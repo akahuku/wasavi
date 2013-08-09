@@ -171,10 +171,26 @@ public class LineInputEditingTest extends WasaviTest {
 	}
 
 	@Test
-	public void completeThemeFromWithPrefix () {
+	public void completeThemeWithPrefix () {
 		Wasavi.setInputModeOfWatchTarget("line-input");
 		Wasavi.send(":set theme=c\t");
 		assertTrue("#1-1", Pattern.matches("^set theme=charcoal", Wasavi.getLineInput()));
+	}
+
+	@Test
+	public void pasteRegister () {
+		Wasavi.send("afoo\nbar\u001b1GyG");
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":\u0012\"");
+		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
+	}
+
+	@Test
+	public void pasteClipboard () {
+		Wasavi.send("afoo\nbar\u001b1G\"*yG");
+		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.send(":\u0012*");
+		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
 	}
 }
 
