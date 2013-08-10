@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 319 2013-06-21 22:53:19Z akahuku $
+ * @version $Id: classes_ui.js 357 2013-08-10 06:28:55Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -57,11 +57,11 @@ Wasavi.Theme = function (app) {
 	};
 	var colorSets = {
 		blight: {
-			statusHue:-1,
+			statusHue:'#4f6881',
 			background:'white',
 			overTextMarkerFg:'#888',
 			warnedStatusFg:'white', warnedStatusBg:'#f00',
-			invertFg:'white', invertBg:'black',
+			invertFg:'white', invertBg:'#333',
 			blurFg:'white', blurBg:'gray',
 
 			rowBgOdd:'#f3f6fa',

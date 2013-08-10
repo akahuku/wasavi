@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 352 2013-07-30 06:51:15Z akahuku $
+ * @version $Id: agent.js 357 2013-08-10 06:28:55Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -876,7 +876,7 @@ extension.setMessageListener(function (req) {
 		var newHeight = req.height || targetElement.offsetHeight;
 		extraHeight = newHeight - currentHeight;
 		wasaviFrame.style.height = newHeight + 'px';
-		wasaviFrame.style.boxShadow = '0 2px 8px 4px #444';
+		wasaviFrame.style.boxShadow = '0 3px 8px 4px #888';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
 		window.addEventListener('resize', handleTargetResize, false);
 
