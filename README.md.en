@@ -178,11 +178,16 @@ wasavi also accepts offset.
 Input mode commands
 -------------------
 
-^@ ^D ^H ^T ^U ^V ^W
+^@: input the most recently input text, and exit input mode
+^D: if the last input character is '0' or '^', delete all indent
+^H: delete a character
+^R: paste register's content
+^T: shift
+^U: delete all the characters entered in the current input session
+^V: literal input
+^W: delete a word
 
 ^@ is actually `ctrl+space`.
-
-^D accepts the last ^ and 0.
 
 Line input mode commands
 ------------------------
@@ -194,6 +199,7 @@ Line input mode commands
 * ^H: delete a character
 * ^N: next history
 * ^P: previous history
+* ^R: paste register's content
 * ^U: delete whole line
 * ^V: literal input
 * ^W: delete a word
