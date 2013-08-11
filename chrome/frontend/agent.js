@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 357 2013-08-10 06:28:55Z akahuku $
+ * @version $Id: agent.js 359 2013-08-11 05:13:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -83,15 +83,15 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		return isFixed;
 	}
 	if (isFullscreen) {
-		var rect = {
-			left:FULLSCREEN_MARGIN,
-			top:FULLSCREEN_MARGIN,
-			width:document.documentElement.clientWidth - FULLSCREEN_MARGIN * 2,
-			height:document.documentElement.clientHeight - FULLSCREEN_MARGIN * 2
-		};
+		var div = document.body.appendChild(document.createElement('div'));
+		div.style.position = 'fixed';
+		div.style.left = div.style.top =
+		div.style.right = div.style.bottom = FULLSCREEN_MARGIN + 'px';
+		var rect = div.getBoundingClientRect();
+		div.parentNode.removeChild(div);
+
 		iframe.style.position = 'fixed';
-		iframe.style.left = rect.left + 'px';
-		iframe.style.top = rect.top + 'px';
+		iframe.style.left = iframe.style.top = FULLSCREEN_MARGIN + 'px';
 		iframe.style.width = rect.width + 'px';
 		iframe.style.height = rect.height + 'px';
 	}
