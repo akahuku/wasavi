@@ -21,9 +21,11 @@ public class OpYankTest extends WasaviTest {
 		assertEquals("#1-1", "1\n", Wasavi.getRegister("\""));
 		assertPos("#1-2", 0, 0);
 
+		Wasavi.send(":set report=2\n");
 		Wasavi.send("y2y");
 		assertEquals("#2-1", "1\n2\n", Wasavi.getRegister("\""));
 		assertPos("#2-2", 0, 0);
+		assertEquals("#2-3", "Yanked 2 lines.", Wasavi.getLastMessage());
 
 		Wasavi.send("2yy");
 		assertEquals("#3-1", "1\n2\n", Wasavi.getRegister("\""));

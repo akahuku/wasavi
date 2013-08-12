@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: ClipboardManager.js 300 2013-06-06 16:31:37Z akahuku $
+ * @version $Id: ClipboardManager.js 362 2013-08-12 13:21:23Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,21 +38,30 @@
 		set: function (data) {
 			var buffer = document.getElementById('clipboard-buffer');
 			data || (data = '');
-			if (buffer && data != '') {
-				buffer.value = data;
-				buffer.focus();
-				buffer.select();
-				document.execCommand('cut');
+			try {
+				if (buffer && data != '') {
+					buffer.value = data;
+					buffer.focus();
+					buffer.select();
+					document.execCommand('cut');
+				}
+			}
+			catch (e) {
 			}
 		},
 		get: function () {
 			var buffer = document.getElementById('clipboard-buffer');
 			var data = '';
-			if (buffer) {
-				buffer.value = '';
-				buffer.focus();
-				document.execCommand('paste');
-				data = buffer.value;
+			try {
+				if (buffer) {
+					buffer.value = '';
+					buffer.focus();
+					document.execCommand('paste');
+					data = buffer.value;
+				}
+			}
+			catch (e) {
+				data = '';
 			}
 			return data;
 		}

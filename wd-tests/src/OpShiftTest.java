@@ -22,9 +22,11 @@ public class OpShiftTest extends WasaviTest {
 		assertEquals("#1-1", "\t1\n2\n3", Wasavi.getValue());
 		assertPos("#1-2", 0, 1);
 
+		Wasavi.send(":set report=2\n");
 		Wasavi.send("gg>2>");
 		assertEquals("#2-1", "\t\t1\n\t2\n3", Wasavi.getValue());
 		assertPos("#2-2", 0, 2);
+		assertEquals("#2-3", "Shifted 2 lines.", Wasavi.getLastMessage());
 
 		Wasavi.send("gg2>>");
 		assertEquals("#3-1", "\t\t\t1\n\t\t2\n3", Wasavi.getValue());
@@ -65,9 +67,11 @@ public class OpShiftTest extends WasaviTest {
 		assertEquals("#1-1", "\t\t\t1\n\t\t\t2\n\t3", Wasavi.getValue());
 		assertPos("#1-2", 0, 3);
 
+		Wasavi.send(":set report=2\n");
 		Wasavi.send("gg<2<");
 		assertEquals("#2-1", "\t\t1\n\t\t2\n\t3", Wasavi.getValue());
 		assertPos("#2-2", 0, 2);
+		assertEquals("#2-3", "Unshifted 2 lines.", Wasavi.getLastMessage());
 
 		Wasavi.send("gg2<<");
 		assertEquals("#3-1", "\t1\n\t2\n\t3", Wasavi.getValue());

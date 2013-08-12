@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 356 2013-08-09 04:42:07Z akahuku $
+ * @version $Id: wasavi.js 362 2013-08-12 13:21:23Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4052,16 +4052,17 @@ function handleKeydown (e) {
 	|| isBulkInputting && !e.isCompositioned
 	|| clipboardReadingState == 1) {
 		keyManager.push(e);
-		fireNotifyKeydownEvent(
-			e.code, e.fullIdentifier,
-			'busy now('
+		if (testMode) {
+			var s = 'busy now('
 				+ (scroller.running ? 'scrolling' : '')
 				+ (exCommandExecutor.running ? 'ex command running' : '')
 				+ (completer.running ? 'completing' : '')
 				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
 				+ (clipboardReadingState ? 'clipboard reading' : '')
-				+ ')'
-		);
+				+ ')';
+			devMode && console.log(s);
+			fireNotifyKeydownEvent(e.code, e.fullIdentifier, s);
+		}
 		return;
 	}
 
@@ -4705,6 +4706,7 @@ var commandMap = {
 				buffer.selectionEnd = buffer.selectionStart;
 				buffer.isLineOrientSelection = true;
 				yank(actualCount);
+				requestedState.modeline = null;
 				var deleted = deleteSelection();
 				if (deleted >= config.vars.report) {
 					requestShowMessage(_('Changing {0} {line:0}.', deleted));
@@ -4766,6 +4768,7 @@ var commandMap = {
 			}
 
 			yank(actualCount);
+			requestedState.modeline = null;
 			var deleted = deleteSelection();
 
 			if (isLineOrient) {
@@ -6237,6 +6240,7 @@ var editMap = {
 					if (data == '') {
 						showMessage(_('Register {0} is empty.', c));
 						clipboardReadingState = 0;
+						cursor.update({visible:true, focused:true});	// for opera
 					}
 					else {
 						clipboardReadingState = 2;

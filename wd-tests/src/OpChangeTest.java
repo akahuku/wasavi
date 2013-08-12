@@ -22,10 +22,12 @@ public class OpChangeTest extends WasaviTest {
 		assertEquals("#1-2", "XYZ\n2\n3", Wasavi.getValue());
 		assertPos("#1-3", 0, 2);
 
+		Wasavi.send(":set report=2\n");
 		Wasavi.send("gg", "c2cX\nY\nZ\u001b");
 		assertEquals("#2-1", "XYZ\n2\n", Wasavi.getRegister("\""));
 		assertEquals("#2-2", "X\nY\nZ\n3", Wasavi.getValue());
 		assertPos("#2-3", 2, 0);
+		assertEquals("#2-4", "Changing 2 lines.", Wasavi.getLastMessage());
 
 		Wasavi.send("gg", "2ccFOO\u001b");
 		assertEquals("#3-1", "X\nY\n", Wasavi.getRegister("\""));

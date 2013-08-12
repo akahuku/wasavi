@@ -21,9 +21,11 @@ public class OpDeleteTest extends WasaviTest {
 		assertEquals("#1-1", "2\n3\n4\n5\n6", Wasavi.getValue());
 		assertPos("#1-2", 0, 0);
 
+		Wasavi.send(":set report=2\n");
 		Wasavi.send("d2d");
 		assertEquals("#2-1", "4\n5\n6", Wasavi.getValue());
 		assertPos("#2-2", 0, 0);
+		assertEquals("#2-3", "Deleted 2 lines.", Wasavi.getLastMessage());
 
 		Wasavi.send("2dd");
 		assertEquals("#3-1", "6", Wasavi.getValue());
