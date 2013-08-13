@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 359 2013-08-11 05:13:09Z akahuku $
+ * @version $Id: agent.js 363 2013-08-13 04:48:46Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -226,7 +226,7 @@ function runCore (element, frameSource) {
 function cleanup (value, isImplicit) {
 	if (targetElement) {
 		if (value !== undefined) {
-			targetElement.value = value;
+			setValue(targetElement, value);
 		}
 		!isImplicit && targetElement.focus();
 		targetElement.removeAttribute(EXTENSION_CURRENT);
@@ -332,7 +332,7 @@ function setValue (element, value) {
 	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
 		element.value = value;
 	}
-	else if (Object.prototype.toString.call(value) != '[object Array]') {
+	else if (Object.prototype.toString.call(value) == '[object Array]') {
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
