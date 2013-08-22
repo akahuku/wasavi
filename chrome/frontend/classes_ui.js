@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 357 2013-08-10 06:28:55Z akahuku $
+ * @version $Id: classes_ui.js 366 2013-08-22 16:34:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -660,11 +660,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	function handleCompositionEnd (e) {
 		var result = wrapper.compositionComplete(e.data);
 		return result;
-	}
-	function handleInput (e) {
-		e.preventDefault();
-		e.stopPropagation();
-		e.returnValue = false;
 	}
 	function setupEventHandlers (method) {
 		app.keyManager[method]('compositionstart', handleCompositionStart);

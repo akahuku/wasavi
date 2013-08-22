@@ -8,6 +8,8 @@ import org.junit.runner.Description;
 import org.json.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -462,9 +464,33 @@ class WasaviAsserts {
 
 
 
+class InvokeState {
+	protected int count = 0;
+	protected int index = 0;
+
+	InvokeState (int aindex) {
+		index = aindex;
+	}
+
+	public int getCount () {
+		return count;
+	}
+
+	public int getIndex () {
+		return index;
+	}
+
+	public void incrementCount () {
+		++count;
+	}
+}
+
+
+
 public class WasaviTest {
 	protected static WebDriver driver;
 	protected static WasaviWrapper Wasavi;
+	protected static InvokeState[] invokeStates = {new InvokeState(0), new InvokeState(1)};
 	protected String logText;
 	protected Boolean isSectionTest;
 
@@ -510,6 +536,7 @@ public class WasaviTest {
 		else if (name.equals("firefox")) {
 			FirefoxProfile p = new FirefoxProfile();
 			try {
+				p.setPreference("general.useragent.locale", "en-US");
 				java.io.File f = new java.io.File(
 						System.getProperty("wasavi.tests.firefox.extension_path"));
 				p.addExtension(f);
@@ -524,50 +551,94 @@ public class WasaviTest {
 		return driver;
 	}
 
-	private void invokeWasavi () {
-		if (isSectionTest) {
-			WebElement sectionInitializer = driver.findElement(By.id("init-section-button"));
-			if (sectionInitializer == null) {
-				System.out.println("section initializer not found.");
-			}
-			else {
-				sectionInitializer.click();
-			}
+	protected WebElement findElement (By locator) {
+		WebElement result = null;
+		try {
+			result = driver.findElement(locator);
 		}
-		else {
-			WebElement reset = driver.findElement(By.id("reset-button"));
-			if (reset == null) {
-				System.out.println("reset button not found.");
-			}
-			else {
-				reset.click();
-			}
+		catch (org.openqa.selenium.NoSuchElementException e) {
+			result = null;
 		}
+		return result;
+	}
 
-		WebElement t2 = driver.findElement(By.id("t2"));
+	protected WebElement invokeWasavi () {
+		WebElement wasaviFrame = null;
+
+		WebElement t2 = findElement(By.id("t2"));
 		if (t2 == null) {
 			System.out.println("target textarea not found.");
+			return null;
 		}
-		else {
+
+		for (int i = 0; i < invokeStates.length; ++i) {
+			if (isSectionTest) {
+				WebElement sectionInitializer = findElement(By.id("init-section-button"));
+				if (sectionInitializer == null) {
+					System.out.println("section initializer not found.");
+					return null;
+				}
+
+				sectionInitializer.click();
+			}
+			else {
+				WebElement reset = findElement(By.id("reset-button"));
+				if (reset == null) {
+					System.out.println("reset button not found.");
+					return null;
+				}
+
+				reset.click();
+			}
+
 			t2.click();
 
-			new Actions(driver)
-				.keyDown(Keys.CONTROL)
-				.sendKeys(Keys.RETURN)
-				.keyUp(Keys.CONTROL)
-				.perform();
+			switch (invokeStates[i].getIndex()) {
+			case 0:
+				new Actions(driver)
+					.keyDown(Keys.CONTROL)
+					.sendKeys(Keys.RETURN)
+					.keyUp(Keys.CONTROL)
+					.perform();
+				break;
 
-			WebElement wasaviFrame = new WebDriverWait(driver, 60).until(
+			case 1:
+				WebElement launcher = findElement(By.id("request-launch-wasavi"));
+				if (launcher == null) {
+					System.out.println("launch button not found.");
+					return null;
+				}
+
+				launcher.click();
+				break;
+			}
+
+			try {
+				wasaviFrame = new WebDriverWait(driver, 5).until(
 					new ExpectedCondition<WebElement>() {
 						public WebElement apply (WebDriver driver) {
-							return driver.findElement(By.id("wasavi_frame"));
+							return findElement(By.id("wasavi_frame"));
 						}
 					});
+			}
+			catch (org.openqa.selenium.TimeoutException e) {
+				wasaviFrame = null;
+			}
 
 			if (wasaviFrame != null) {
 				wasaviFrame.click();
+				invokeStates[i].incrementCount();
+				break;
 			}
 		}
+
+		java.util.Arrays.sort(invokeStates, new Comparator<InvokeState>() {
+			public int compare (InvokeState o1, InvokeState o2) {
+				return o2.getCount() - o1.getCount();
+			}
+		});
+
+		return wasaviFrame;
 	}
 
 	@BeforeClass
@@ -591,16 +662,19 @@ public class WasaviTest {
 
 	@After
 	public void tearDown () {
-		logText = driver.findElement(By.id("test-log")).getAttribute("value");
+		WebElement testLog = findElement(By.id("test-log"));
+		if (testLog != null) {
+			logText = testLog.getAttribute("value");
 
-		Wasavi.js(
-			"var wasaviFrame = document.getElementById('wasavi_frame');" +
-			"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
+			Wasavi.js(
+				"var wasaviFrame = document.getElementById('wasavi_frame');" +
+				"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
 
-		try {
-			Thread.sleep(500);
-		}
-		catch (Exception e) {
+			try {
+				Thread.sleep(500);
+			}
+			catch (Exception e) {
+			}
 		}
 	}
 

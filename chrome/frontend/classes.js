@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 355 2013-08-07 01:17:57Z akahuku $
+ * @version $Id: classes.js 366 2013-08-22 16:34:38Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -831,8 +831,7 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 };
 
 Wasavi.KeyManager = function () {
-	// consts
-	var specialKeys = {
+	/*const*/var SPECIAL_KEYS = {
 		/*
 		 * TODO:
 		 * internal code of special keys shoud be the following form:
@@ -853,14 +852,14 @@ Wasavi.KeyManager = function () {
 		116: 'f5', 117:  'f6', 118:  'f7', 119:  'f8',
 		120: 'f9', 121: 'f10', 122: 'f11', 123: 'f12'
 	};
-	var specialKeyCodes = {
+	/*const*/var SPECIAL_KEY_CODES = {
 		8:8,
 		9:9,
 		13:13,
 		27:27,
 		46:127
 	};
-	var translateTableWebkit = {
+	/*const*/var TRANSLATE_TABLE_WEBKIT = {
 		'u+0008':  8,  'backspace': 8,
 		'u+0009':  9,  'tab':       9,
 		'u+000d':  13, 'enter':     13,
@@ -873,6 +872,7 @@ Wasavi.KeyManager = function () {
 		'f5':116, 'f6': 117, 'f7': 118, 'f8': 119,
 		'f9':120, 'f10':121, 'f11':122, 'f12':123
 	};
+	/*const*/var ENABLE_LOG = false;
 
 	var target;
 	var specialKeyName;
@@ -971,23 +971,23 @@ Wasavi.KeyManager = function () {
 
 		if (window.opera && e.keyCode == 229 && !e.__delayedTrace) {
 			keydownStack.push([e, [], '']);
-			//logit('[keydown] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
+			//ENABLE_LOG && logit('[keydown] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
 			return;
 		}
 
 		keyDownCode = e.keyCode;
 		inputEventInvokedCount = 0;
 		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
-		logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
+		ENABLE_LOG && logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
 		if (window.chrome) {
 			specialKeyName = false;
 
 			// special keys
 			if (specialKeyName === false) {
-				var translated = translateTableWebkit[e.keyIdentifier.toLowerCase()];
+				var translated = TRANSLATE_TABLE_WEBKIT[e.keyIdentifier.toLowerCase()];
 				if (translated !== undefined) {
-					specialKeyName = specialKeys[translated] || false;
-					specialKeyCode = specialKeyCodes[translated] || -translated;
+					specialKeyName = SPECIAL_KEYS[translated] || false;
+					specialKeyCode = SPECIAL_KEY_CODES[translated] || -translated;
 				}
 			}
 
@@ -1015,9 +1015,9 @@ Wasavi.KeyManager = function () {
 			}
 		}
 		else {
-			specialKeyName = e.keyCode == e.which && specialKeys[e.keyCode] ?
-				specialKeys[e.keyCode] : false;
-			specialKeyCode = specialKeyCodes[e.keyCode] || -e.keyCode;
+			specialKeyName = e.keyCode == e.which && SPECIAL_KEYS[e.keyCode] ?
+				SPECIAL_KEYS[e.keyCode] : false;
+			specialKeyCode = SPECIAL_KEY_CODES[e.keyCode] || -e.keyCode;
 
 			if (isPasteKeyStroke(e)) return;
 			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
@@ -1091,18 +1091,18 @@ Wasavi.KeyManager = function () {
 			return;
 		}*/
 
-		//logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which);
+		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which);
 	}
 	function handleKeyupOpera (e) {
 		if (keydownStack.length) {
 			keydownStack = keydownStack.filter(function (item) {return !item[0].repeat});
 			if (keyupStack.length != keydownStack.length - 1 && !e.__delayedTrace) {
 				keyupStack.push(e);
-				//logit('[  keyup] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
+				//ENABLE_LOG && logit('[  keyup] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
 				return;
 			}
 			if (!e.__delayedTrace) {
-				//logit('[  keyup] *** delayed tracing start. 1:' + keydownStack.length + ', 2:' + keyupStack.length + ' ***');
+				//ENABLE_LOG && logit('[  keyup] *** delayed tracing start. 1:' + keydownStack.length + ', 2:' + keyupStack.length + ' ***');
 				while (keyupStack.length) {
 					var keyup = keyupStack.shift();
 					keyup.__delayedValue = e.target.value;
@@ -1117,7 +1117,7 @@ Wasavi.KeyManager = function () {
 					keyup.__delayedTrace = true;
 					handleKeyupOpera(keyup);
 				}
-				//logit('[  keyup] *** delayed tracing end ***');
+				//ENABLE_LOG && logit('[  keyup] *** delayed tracing end ***');
 				if (keydownStack.length != 1 || keyupStack.length != 0) {
 					//console.error('keyup: balance mismatch. 1:' + keydownStack.length + ', 2:' + keyupStack.length);
 					return;
@@ -1135,7 +1135,7 @@ Wasavi.KeyManager = function () {
 		}
 
 		if (e.keyCode == 16 || e.keyCode == 17) return;
-		//logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', __v:"' + e.__delayedValue + '", v:"' + e.target.value + '"');
+		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', __v:"' + e.__delayedValue + '", v:"' + e.target.value + '"');
 		if (keyDownCode == 229 || isInComposition) {
 			var value = e.__delayedValue || e.target.value;
 			var composition, increment;
@@ -1145,12 +1145,12 @@ Wasavi.KeyManager = function () {
 					compositionStartPos,
 					lastCompositionLength);
 				bulkFire(composition);
-				logit('[  keyup] composition end(1) with:"' + composition + '"');
+				ENABLE_LOG && logit('[  keyup] composition end(1) with:"' + composition + '"');
 				clear(e);
 				compositionStartPos += lastCompositionLength;
 				lastCompositionLength = value.length - lastValue.length;
 				fire('compositionstart', compositStartEventHandlers, {data:''});
-				logit('[  keyup] composition start(1)');
+				ENABLE_LOG && logit('[  keyup] composition start(1)');
 			}
 			else if (isInComposition && inputEventInvokedCount == 2) {
 				isInComposition = false;
@@ -1158,7 +1158,7 @@ Wasavi.KeyManager = function () {
 					compositionStartPos,
 					lastCompositionLength + value.length - lastValue.length);
 				bulkFire(composition);
-				logit('[  keyup] composition end(2) with:"' + composition + '"');
+				ENABLE_LOG && logit('[  keyup] composition end(2) with:"' + composition + '"');
 				clear(e);
 				value = e.target.value;
 			}
@@ -1168,7 +1168,7 @@ Wasavi.KeyManager = function () {
 			) {
 				isInComposition = false;
 				fireCompositEnd('');
-				logit('[  keyup] composition end(3)');
+				ENABLE_LOG && logit('[  keyup] composition end(3)');
 				clear(e);
 				value = e.target.value;
 			}
@@ -1176,7 +1176,7 @@ Wasavi.KeyManager = function () {
 				if (!isInComposition) {
 					isInComposition = true;
 					fire('compositionstart', compositStartEventHandlers, {data:''});
-					logit('[  keyup] composition start(2)');
+					ENABLE_LOG && logit('[  keyup] composition start(2)');
 					compositionStartPos = getCompositionStartPos(lastValue, value);
 					lastCompositionLength = 0;
 				}
@@ -1191,7 +1191,7 @@ Wasavi.KeyManager = function () {
 				else {
 					isInComposition = false;
 					fireCompositEnd('');
-					logit('[  keyup] composition end(4)');
+					ENABLE_LOG && logit('[  keyup] composition end(4)');
 					clear(e);
 					value = e.target.value;
 				}
@@ -1220,7 +1220,7 @@ Wasavi.KeyManager = function () {
 	}
 	function handleInputChrome (e) {
 		if (!ensureTarget(e)) return;
-		logit('[  input]\tvalue:"' + e.target.value + '"');
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
 		if (lastReceivedEvent == 'keydown') {
 			var s = e.target.value.substring(lastValue.length);
 			if (s != '') {
@@ -1245,18 +1245,21 @@ Wasavi.KeyManager = function () {
 				last[1].push(e);
 				last[2] = e.target.value;
 			}
-			//logit('[  input] *** stacked: "' + e.target.value + '", ' + keydownStack.length + ' ***');
+			//ENABLE_LOG && logit('[  input] *** stacked: "' + e.target.value + '", ' + keydownStack.length + ' ***');
 			return;
 		}
 		if (!ensureTarget(e)) return;
-		var a = [document.activeElement.nodeName, document.activeElement.id, document.activeElement.style.display].join(', ');
-		logit('[  input]\tvalue:"' + e.target.value + '", activeElement:' + a);
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '", activeElement:' + [
+			document.activeElement.nodeName,
+			document.activeElement.id,
+			document.activeElement.style.display
+		].join(', '));
 		inputEventInvokedCount++;
 		lastReceivedEvent = e.type;
 	}
 	function handleInputGecko (e) {
 		if (!ensureTarget(e)) return;
-		logit('[  input]\tvalue:"' + e.target.value + '"');
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
 		if (lastReceivedEvent == 'compositionend') {
 			bulkFire(compositionResult);
 			clear(e);
@@ -1267,7 +1270,7 @@ Wasavi.KeyManager = function () {
 
 	// privates
 	function logit (s) {
-		//console.log(s);
+		console.log(s);
 	}
 	function getCompositionStartPos (before, current) {
 		var length = current.length - before.length;
@@ -1358,7 +1361,7 @@ Wasavi.KeyManager = function () {
 	function code2letter (c, useSpecial) {
 		if (typeof c != 'number') return '';
 		if (c >= 0) return String.fromCharCode(c);
-		if (useSpecial && specialKeys[-c]) return '<' + specialKeys[-c] + '>';
+		if (useSpecial && SPECIAL_KEYS[-c]) return '<' + SPECIAL_KEYS[-c] + '>';
 		return '';
 	}
 	function toInternalString (e) {
@@ -1368,14 +1371,14 @@ Wasavi.KeyManager = function () {
 	}
 	function objectFromCode (c) {
 		if (typeof c != 'number') return null;
-		var identifier = c >= 0 ? String.fromCharCode(c) : specialKeys[-c] ? specialKeys[-c] : '';
+		var identifier = c >= 0 ? String.fromCharCode(c) : SPECIAL_KEYS[-c] ? SPECIAL_KEYS[-c] : '';
 		return {
 			code: c,
 			identifier: identifier,
 			fullIdentifier: identifier,
 			shift: false,
 			ctrl: false,
-			isSpecial: c < 0 && specialKeys[-c]
+			isSpecial: c < 0 && SPECIAL_KEYS[-c]
 		};
 	}
 	function nopObjectFromCode () {
@@ -1406,10 +1409,10 @@ Wasavi.KeyManager = function () {
 
 			name = parts[0];
 
-			for (var i in specialKeys) {
-				if (specialKeys[i] == name) {
+			for (var i in SPECIAL_KEYS) {
+				if (SPECIAL_KEYS[i] == name) {
 					return {
-						code:specialKeyCodes[i] || -i,
+						code:SPECIAL_KEY_CODES[i] || -i,
 						name:name,
 						shift:shift,
 						ctrl:ctrl

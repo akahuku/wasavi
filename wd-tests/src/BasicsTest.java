@@ -31,24 +31,9 @@ public class BasicsTest extends WasaviTest {
 	public void runtimeOverrideSettings () {
 		driver.navigate().to(driver.getCurrentUrl() + "?ros-test");
 
-		WebElement t2 = null;
-		WebElement wasaviFrame = null;
+		WebElement wasaviFrame = invokeWasavi();
 
 		// phase 1
-		t2 = driver.findElement(By.id("t2"));
-		if (t2 == null) {
-			fail("runtimeOverrideSettings: cannot find #t2");
-		}
-
-		t2.click();
-		new Actions(driver)
-			.keyDown(Keys.CONTROL)
-			.sendKeys(Keys.RETURN)
-			.keyUp(Keys.CONTROL)
-			.perform();
-		sleep(1000);
-
-		wasaviFrame = driver.findElement(By.tagName("iframe"));
 		if (wasaviFrame == null) {
 			fail("runtimeOverrideSettings: cannot find wasaviFrame");
 		}
@@ -64,20 +49,7 @@ public class BasicsTest extends WasaviTest {
 		sleep(1000);
 
 		// phase 2
-		t2 = driver.findElement(By.id("t2"));
-		if (t2 == null) {
-			fail("runtimeOverrideSettings: cannot find #t2, phase 2");
-		}
-
-		t2.click();
-		new Actions(driver)
-			.keyDown(Keys.CONTROL)
-			.sendKeys(Keys.RETURN)
-			.keyUp(Keys.CONTROL)
-			.perform();
-		sleep(1000);
-
-		wasaviFrame = driver.findElement(By.tagName("iframe"));
+		wasaviFrame = invokeWasavi();
 		if (wasaviFrame == null) {
 			fail("runtimeOverrideSettings: cannot find wasaviFrame, phase 2");
 		}
@@ -85,6 +57,14 @@ public class BasicsTest extends WasaviTest {
 		wasaviFrame.click();
 		Wasavi.sendNoWait("a\t\nabc\u001b:wq\n");
 		sleep(1000);
-		assertEquals("#1-1", "\t\n\tabc", t2.getAttribute("value"));
+		assertEquals("#1-1", "\t\n\tabc", findElement(By.id("t2")).getAttribute("value"));
+	}
+
+	@Test
+	public void launchAppMode () {
+		driver.navigate().to("http://wasavi.appsweets.net/");
+		assertEquals("#1-1", "http://wasavi.appsweets.net/", driver.getCurrentUrl());
+		WebElement a = driver.findElement(By.tagName("html"));
+		assertEquals("#1-2", "1", a.getAttribute("data-wasavi-present"));
 	}
 }

@@ -7,10 +7,22 @@
 			body { background-color:#fff; color:#333; }
 			#container { margin:32px 0 0 32px; }
 			#log-container { margin:16px 0 0 32px; }
+			#textbox-container {
+				border-collapse:collapse;
+				border:none;
+			}
 			#t2 {
 			    width:400px;
 			    height:300px;
 			    padding:0;
+			    font:normal normal normal medium/1 "Consolas";
+			}
+			#t3 {
+				width:400px;
+				height:300px;
+				border:1px solid silver;
+				padding:1px;
+				background-color:#eee;
 			    font:normal normal normal medium/1 "Consolas";
 			}
 			#test-log {
@@ -75,6 +87,18 @@
 					e.preventDefault();
 					document.getElementById('t2').value = wrap_test_text;
 				}, false);
+
+				document
+				.getElementById('request-launch-wasavi')
+				.addEventListener('click', function (e) {
+					e.preventDefault();
+
+					document.getElementById('t2').focus();
+
+					var ev = document.createEvent('CustomEvent');
+					ev.initCustomEvent('WasaviRequestLaunch', false, false, 0);
+					document.dispatchEvent(ev);
+				}, false);
 			}, false);
 		</script>
 	</head>
@@ -83,10 +107,18 @@
 		<hr>
 		<form id="container">
 			<div><input type="text" id="t1"></div>
-			<textarea id="t2" data-textarea-extension="wasavi"></textarea>
-			<input type="reset" id="reset-button">
-			<button id="init-section-button">init section test</button>
-			<button id="init-wrap-button">init wrap test</button>
+			<table id="textbox-container">
+				<tr>
+					<td><textarea id="t2" data-textarea-extension="wasavi"></textarea></td>
+					<td><div id="t3" contenteditable="true"></div></td>
+				</tr>
+			</table>
+			<div>
+				<input type="reset" id="reset-button">
+				<button id="init-section-button">init section test</button>
+				<button id="init-wrap-button">init wrap test</button>
+				<button id="request-launch-wasavi">launch wasavi</button>
+			</div>
 		</form>
 		<div id="log-container">
 			<table>

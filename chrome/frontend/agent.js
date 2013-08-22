@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 363 2013-08-13 04:48:46Z akahuku $
+ * @version $Id: agent.js 365 2013-08-20 17:21:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -38,6 +38,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 /*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 /*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
 /*const*/var FULLSCREEN_MARGIN = 8;
+/*const*/var MIN_WIDTH_PIXELS = 320;
 /*const*/var ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
@@ -94,23 +95,39 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		iframe.style.left = iframe.style.top = FULLSCREEN_MARGIN + 'px';
 		iframe.style.width = rect.width + 'px';
 		iframe.style.height = rect.height + 'px';
+
+		return rect;
 	}
 	else {
 		var rect = target.getBoundingClientRect();
-		var isFixed = isFixedPosition(target);
-		iframe.style.position = isFixed ? 'fixed' : 'absolute';
-		iframe.style.left = (
-			rect.left +
-			(isFixed ? 0 : Math.max(document.documentElement.scrollLeft, document.body.scrollLeft))
-		) + 'px';
-		iframe.style.top = (
-			rect.top +
-			(isFixed ? 0 : Math.max(document.documentElement.scrollTop, document.body.scrollTop))
-		) + 'px';
-		iframe.style.width = rect.width + 'px';
-		iframe.style.height = rect.height + (extraHeight || 0) + 'px';
+		var position = 'fixed';
+		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
+		var widthAdjusted = Math.max(MIN_WIDTH_PIXELS, rect.width);
+		var heightAdjusted = rect.height + (extraHeight || 0);
+
+		if (!isFixedPosition(target)) {
+			position = 'absolute';
+			offsetLeft = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
+			offsetTop = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+		}
+		centerLeft = rect.left + offsetLeft + rect.width / 2;
+		centerTop = rect.top + offsetTop + rect.height / 2;
+
+		var result = {
+			left: Math.max(0, Math.floor(centerLeft - widthAdjusted / 2)),
+			top: Math.max(0, Math.floor(centerTop - rect.height / 2)),
+			width: widthAdjusted,
+			height: rect.height
+		};
+
+		iframe.style.position = position;
+		iframe.style.left = result.left + 'px';
+		iframe.style.top = result.top + 'px';
+		iframe.style.width = widthAdjusted + 'px';
+		iframe.style.height = heightAdjusted + 'px';
+
+		return result;
 	}
-	return rect;
 }
 
 function run (element) {
@@ -789,6 +806,24 @@ function createPageAgent () {
 }
 
 /**
+ * handler for launch request event
+ */
+
+function handleRequestLaunch () {
+	if (wasaviFrame || targetElement) return;
+	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
+
+	var target = document.activeElement;
+	if (target.isContentEditable && enableList.enableContentEditable
+	||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
+		&& target.type in ACCEPTABLE_TYPES
+		&& enableList[ACCEPTABLE_TYPES[target.type]]) {
+
+		run(target);
+	}
+}
+
+/**
  * bootstrap
  * ----------------
  */
@@ -854,17 +889,7 @@ extension.setMessageListener(function (req) {
 		break;
 
 	case 'request-run':
-		if (wasaviFrame || targetElement) break;
-		if (typeof document.hasFocus == 'function' && !document.hasFocus()) break;
-
-		var target = document.activeElement;
-		if (target.isContentEditable && enableList.enableContentEditable
-		||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
-			&& target.type in ACCEPTABLE_TYPES
-			&& enableList[ACCEPTABLE_TYPES[target.type]]) {
-
-			run(target);
-		}
+		handleRequestLaunch();
 		break;
 
 	/*
@@ -876,7 +901,7 @@ extension.setMessageListener(function (req) {
 		var newHeight = req.height || targetElement.offsetHeight;
 		extraHeight = newHeight - currentHeight;
 		wasaviFrame.style.height = newHeight + 'px';
-		wasaviFrame.style.boxShadow = '0 3px 8px 4px #888';
+		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
 		window.addEventListener('resize', handleTargetResize, false);
 
@@ -1082,6 +1107,7 @@ extension.setMessageListener(function (req) {
 	}
 });
 extension.connect('init-agent');
+document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 
 })(this);
 
