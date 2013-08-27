@@ -37,6 +37,7 @@ mklink FileSystem.js ..\..\chrome\libs\FileSystem.js
 mklink RuntimeOverwriteSettings.js ..\..\chrome\libs\RuntimeOverwriteSettings.js
 mklink SimilarityComputer.js ..\..\chrome\libs\SimilarityComputer.js
 mklink StorageWrapper.js ..\..\chrome\libs\StorageWrapper.js
+mklink Hotkey.js ..\..\chrome\libs\Hotkey.js
 popd
 
 mklink LICENSE ..\LICENSE

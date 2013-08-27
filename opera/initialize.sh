@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ln -s ../chrome/appsweets.png
 ln -s ../chrome/background.html
 ln -s ../chrome/background.js
@@ -6,10 +6,17 @@ ln -s ../chrome/beep.ogg
 ln -s ../chrome/beep.ogg.txt
 ln -s ../chrome/consumer_keys.json
 ln -s ../chrome/exports_init.js
-ln -s ../chrome/unicode
 ln -s ../chrome/icon016.png
 ln -s ../chrome/icon048.png
 ln -s ../chrome/icon128.png
+ln -s ../chrome/libs
+ln -s ../chrome/unicode
+
+mkdir -p locales
+pushd locales
+ln -s ../../chrome/_locales/en_US en-us
+ln -s ../../chrome/_locales/ja
+popd
 
 mkdir -p includes
 pushd includes

@@ -786,7 +786,7 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send("afoobar");
 		assertEquals("#1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 5);
 		assertEquals("#2-2", "foobar", Wasavi.getValue());
 		assertEquals("#2-3", "foobar", Wasavi.getRegister("."));
@@ -803,12 +803,12 @@ public class EditingTest extends WasaviTest {
 	}
 
 	@Test
-	public void testAppentToLast () {
+	public void testAppendToLast () {
 		Wasavi.setInputModeOfWatchTarget("edit");
 		Wasavi.send("Afoobar");
 		assertEquals("#1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 5);
 		assertEquals("#2-2", "foobar", Wasavi.getValue());
 		assertEquals("#2-3", "foobar", Wasavi.getRegister("."));
@@ -882,7 +882,7 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send("R", "foo\nbar");
 		assertEquals("#1", "edit-overwrite", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 1, 2);
 		assertEquals("#2-2", "foo\nbar", Wasavi.getValue());
 		assertEquals("#2-3", "foo\nbar", Wasavi.getRegister("."));

@@ -71,8 +71,10 @@ class WasaviWrapper {
 				public WebElement apply (WebDriver d) {
 					try {
 						WebElement elm = d.findElement(By.id("wasavi_frame"));
-						if (elm.getAttribute("data-wasavi-command-state") == null &&
-							inputModeOfWacthTarget.contains(elm.getAttribute("data-wasavi-input-mode"))) {
+						String commandState = elm.getAttribute("data-wasavi-command-state");
+						String inputMode = elm.getAttribute("data-wasavi-input-mode");
+
+						if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
 							return elm;
 						}
 					}
@@ -511,7 +513,7 @@ public class WasaviTest {
 		WebDriver driver = null;
 
 		if (name.equals("opera")) {
-			DesiredCapabilities cap = new DesiredCapabilities();
+			DesiredCapabilities cap = DesiredCapabilities.opera();
 			cap.setCapability("opera.profile",
 					new OperaProfile(System.getProperty("wasavi.tests.opera.profile_path")));
 			cap.setCapability("opera.logging.level",
@@ -524,12 +526,14 @@ public class WasaviTest {
 		else if (name.equals("chrome")) {
 			ChromeDriverService service = ChromeDriverService.createDefaultService();
 			ChromeOptions options = new ChromeOptions();
-			options.addArguments("--start-maximized");
-			options.addArguments("--load-extension="
-					+ System.getProperty("wasavi.tests.chrome.extension_path"));
-			options.addArguments("--user-data-dir="
-					+ System.getProperty("wasavi.tests.chrome.profile_path"));
-			options.addArguments("--lang=en");
+			options.addArguments(
+				"--start-maximized",
+				"--lang=en",
+				//"--load-extension="
+				//	+ System.getProperty("wasavi.tests.chrome.extension_path"),
+				"--user-data-dir="
+					+ System.getProperty("wasavi.tests.chrome.profile_path")
+			);
 			driver = new ChromeDriver(service, options);
 		}
 

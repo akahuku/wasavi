@@ -18,7 +18,7 @@ public class LearningTheViEditor6th extends WasaviTest {
 		Wasavi.send("iintroduction");
 		assertEquals("#1-1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 11);
 		assertEquals("#2-2", "introduction", Wasavi.getValue());
 		assertEquals("#2-3", "introduction", Wasavi.getRegister("."));

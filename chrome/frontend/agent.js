@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 365 2013-08-20 17:21:09Z akahuku $
+ * @version $Id: agent.js 370 2013-08-25 01:31:49Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1100,6 +1100,7 @@ extension.setMessageListener(function (req) {
 			keyStrokeLog = [];
 
 			stateClearTimer = null;
+			//wasaviFrame.setAttribute('data-wasavi-command-state', 'done');
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
 		}, 100);
 		//log('command-completed: timer registered.', '', '');

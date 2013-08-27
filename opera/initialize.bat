@@ -1,15 +1,22 @@
 @echo off
-mklink appsweets.png ..\chrome\appsweets.png
-mklink background.html ..\chrome\background.html
-mklink background.js ..\chrome\background.js
-mklink beep.ogg ..\chrome\beep.ogg
-mklink beep.ogg.txt ..\chrome\beep.ogg.txt
+mklink appsweets.png      ..\chrome\appsweets.png
+mklink background.html    ..\chrome\background.html
+mklink background.js      ..\chrome\background.js
+mklink beep.ogg           ..\chrome\beep.ogg
+mklink beep.ogg.txt       ..\chrome\beep.ogg.txt
 mklink consumer_keys.json ..\chrome\consumer_keys.json
-mklink exports_init.js ..\chrome\exports_init.js
-mklink /d unicode ..\chrome\unicode
-mklink icon016.png ..\chrome\icon016.png
-mklink icon048.png ..\chrome\icon048.png
-mklink icon128.png ..\chrome\icon128.png
+mklink exports_init.js    ..\chrome\exports_init.js
+mklink icon016.png        ..\chrome\icon016.png
+mklink icon048.png        ..\chrome\icon048.png
+mklink icon128.png        ..\chrome\icon128.png
+mklink /d libs            ..\chrome\libs
+mklink /d unicode         ..\chrome\unicode
+
+mkdir locales
+pushd locales
+mklink en-us ..\..\chrome\_locales\en_US
+mklink ja    ..\..\chrome\_locales\ja
+popd
 
 mkdir includes
 pushd includes

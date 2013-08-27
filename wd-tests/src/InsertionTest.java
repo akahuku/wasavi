@@ -18,7 +18,7 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("ifoobar");
 		assertEquals("#1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 5);
 		assertEquals("#2-2", "foobar", Wasavi.getValue());
 		assertEquals("#2-3", "foobar", Wasavi.getRegister("."));
@@ -40,7 +40,7 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("Ifoobar");
 		assertEquals("#1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 5);
 		assertEquals("#2-2", "foobar", Wasavi.getValue());
 		assertEquals("#2-3", "foobar", Wasavi.getRegister("."));
@@ -62,7 +62,7 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("Afoobar");
 		assertEquals("#1", "edit", Wasavi.getInputMode());
 
-		Wasavi.send(Keys.ESCAPE);
+		Wasavi.send("\u001b");
 		assertPos("#2-1", 0, 5);
 		assertEquals("#2-2", "foobar", Wasavi.getValue());
 		assertEquals("#2-3", "foobar", Wasavi.getRegister("."));
@@ -234,7 +234,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#2-8", "\u0009bar");
 
 		// less chars and explicit completion
-		Wasavi.send("cc\u0016o11" + Keys.ENTER + "foo" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016o11" + Keys.ENTER + "foo" + "\u001b");
 		assertValue("#3-1", "\u0009foo");
 		assertEquals("#3-2", "\u0016o11\nfoo", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -242,7 +242,7 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#3-4", "\u0009foo");
 
-		Wasavi.send("cc\u0016O11" + Keys.ENTER + "bar" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016O11" + Keys.ENTER + "bar" + "\u001b");
 		assertValue("#3-5", "\u0009bar");
 		assertEquals("#3-6", "\u0016O11\nbar", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -338,7 +338,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#2-8", "\u0009Zar");
 
 		// less chars and explicit completion
-		Wasavi.send("cc\u0016x9" + Keys.ENTER + "foo" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016x9" + Keys.ENTER + "foo" + "\u001b");
 		assertValue("#3-1", "\u0009foo");
 		assertEquals("#3-2", "\u0016x9\nfoo", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -346,7 +346,7 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#3-4", "\u0009foo");
 
-		Wasavi.send("cc\u0016X9" + Keys.ENTER + "bar" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016X9" + Keys.ENTER + "bar" + "\u001b");
 		assertValue("#3-5", "\u0009bar");
 		assertEquals("#3-6", "\u0016X9\nbar", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -426,7 +426,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#2-4", "\u0009Yoo");
 
 		// less chars and explicit completion
-		Wasavi.send("cc\u0016u9" + Keys.ENTER + "foo" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016u9" + Keys.ENTER + "foo" + "\u001b");
 		assertValue("#3-1", "\u0009foo");
 		assertEquals("#3-2", "\u0016u9\nfoo", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -486,7 +486,7 @@ public class InsertionTest extends WasaviTest {
 		assertValue("#2-4", "\u0009Yoo");
 
 		// less chars and explicit completion
-		Wasavi.send("cc\u0016U9" + Keys.ENTER + "foo" + Keys.ESCAPE);
+		Wasavi.send("cc\u0016U9" + Keys.ENTER + "foo" + "\u001b");
 		assertValue("#3-1", "\u0009foo");
 		assertEquals("#3-2", "\u0016U9\nfoo", Wasavi.getRegister("."));
 		Wasavi.send("u");
@@ -559,7 +559,7 @@ public class InsertionTest extends WasaviTest {
 				"ifoa" +
 				Keys.BACK_SPACE +
 				"o" +
-				Keys.ESCAPE);
+				"\u001b");
 		assertValue("#1-1", "foo");
 		assertEquals("#1-2", "foa\u0008o", Wasavi.getRegister("."));
 		assertEquals("#1-3", "ifoa\u0008o\u001b", Wasavi.getLastSimpleCommand());
@@ -575,7 +575,7 @@ public class InsertionTest extends WasaviTest {
 				"Rfoa" +
 				Keys.BACK_SPACE +
 				"o" +
-				Keys.ESCAPE);
+				"\u001b");
 		assertValue("#1-1", "foo");
 		assertEquals("#1-2", "foa\u0008o", Wasavi.getRegister("."));
 		assertEquals("#1-3", "Rfoa\u0008o\u001b", Wasavi.getLastSimpleCommand());
@@ -593,7 +593,7 @@ public class InsertionTest extends WasaviTest {
 				Keys.BACK_SPACE +
 				Keys.BACK_SPACE +
 				Keys.BACK_SPACE +
-				Keys.ESCAPE);
+				"\u001b");
 		assertValue("#1-1", "foo");
 		assertEquals("#1-2", "bar\u0008\u0008\u0008\u0008\u0008", Wasavi.getRegister("."));
 		assertEquals("#1-3", "Rbar\u0008\u0008\u0008\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
@@ -606,7 +606,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testBackspaceTopOfLine () {
 		Wasavi.send("ifoo\n\u001b");
-		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "fo");
 		assertEquals("#1-2", "\u0008\u0008", Wasavi.getRegister("."));
 		assertEquals("#1-3", "a\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
@@ -619,7 +619,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testBackspaceTopOfLineOverwrite () {
 		Wasavi.send("ifoo\n\u001b");
-		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "foo\n");
 		assertEquals("#1-2", "\u0008\u0008", Wasavi.getRegister("."));
 		assertEquals("#1-3", "R\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
@@ -631,7 +631,7 @@ public class InsertionTest extends WasaviTest {
 
 	@Test
 	public void testBackspaceTopOfBuffer () {
-		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "");
 		assertEquals("#1-2", "", Wasavi.getRegister("."));
 		assertEquals("#1-3", "a\u001b", Wasavi.getLastSimpleCommand());
@@ -643,7 +643,7 @@ public class InsertionTest extends WasaviTest {
 
 	@Test
 	public void testBackspaceTopOfBufferOverwrite () {
-		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "");
 		assertEquals("#1-2", "", Wasavi.getRegister("."));
 		assertEquals("#1-3", "R\u001b", Wasavi.getLastSimpleCommand());
@@ -656,7 +656,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testBackspaceMiddleOfLine () {
 		Wasavi.send("ifoobar\u001b");
-		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("a" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "foob");
 		assertEquals("#1-2", "\u0008\u0008", Wasavi.getRegister("."));
 		assertEquals("#1-3", "a\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
@@ -669,7 +669,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testBackspaceMiddleOfLineOverwrite () {
 		Wasavi.send("ifoobar\u001b");
-		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + Keys.ESCAPE);
+		Wasavi.send("R" + Keys.BACK_SPACE + Keys.BACK_SPACE + "\u001b");
 		assertValue("#1-1", "foobar");
 		assertEquals("#1-2", "\u0008\u0008", Wasavi.getRegister("."));
 		assertEquals("#1-3", "R\u0008\u0008\u001b", Wasavi.getLastSimpleCommand());
@@ -682,7 +682,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDelete () {
 		Wasavi.send("idar\u001b1|");
-		Wasavi.send("ifoo" + Keys.DELETE + "b" + Keys.ESCAPE);
+		Wasavi.send("ifoo" + Keys.DELETE + "b" + "\u001b");
 		assertValue("#1-1", "foobar");
 		assertEquals("#1-2", "foo\u007fb", Wasavi.getRegister("."));
 		assertEquals("#1-3", "ifoo\u007fb\u001b", Wasavi.getLastSimpleCommand());
@@ -695,7 +695,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDeleteOverwrite () {
 		Wasavi.send("idar\u001b1|");
-		Wasavi.send("Rf" + Keys.DELETE + "e" + Keys.ESCAPE);
+		Wasavi.send("Rf" + Keys.DELETE + "e" + "\u001b");
 		assertValue("#1-1", "fe");
 		assertEquals("#1-2", "f\u007fe", Wasavi.getRegister("."));
 		assertEquals("#1-3", "Rf\u007fe\u001b", Wasavi.getLastSimpleCommand());
@@ -708,7 +708,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDeleteTailOfLine () {
 		Wasavi.send("ifoo\nbar\u001b1G$");
-		Wasavi.send("a" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
+		Wasavi.send("a" + Keys.DELETE + Keys.DELETE + "\u001b");
 		assertValue("#1-1", "fooar");
 		assertEquals("#1-2", "\u007f\u007f", Wasavi.getRegister("."));
 		assertEquals("#1-3", "a\u007f\u007f\u001b", Wasavi.getLastSimpleCommand());
@@ -721,7 +721,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDeleteTailOfLineOverwrite () {
 		Wasavi.send("ifoo\nbar\u001b1G$");
-		Wasavi.send("R" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
+		Wasavi.send("R" + Keys.DELETE + Keys.DELETE + "\u001b");
 		assertValue("#1-1", "fobar");
 		assertEquals("#1-2", "\u007f\u007f", Wasavi.getRegister("."));
 		assertEquals("#1-3", "R\u007f\u007f\u001b", Wasavi.getLastSimpleCommand());
@@ -734,7 +734,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDeleteTailOfBuffer () {
 		Wasavi.send("ifoobar\u001b");
-		Wasavi.send("$a" + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
+		Wasavi.send("$a" + Keys.DELETE + Keys.DELETE + "\u001b");
 		assertValue("#1-1", "foobar");
 		/*
 		 * wasavi doesn't update the register content with empty string.
@@ -751,7 +751,7 @@ public class InsertionTest extends WasaviTest {
 	@Test
 	public void testDeleteTailOfBufferOverwrite () {
 		Wasavi.send("ifoobar\u001b");
-		Wasavi.send("$R" + Keys.ARROW_RIGHT + Keys.DELETE + Keys.DELETE + Keys.ESCAPE);
+		Wasavi.send("$R" + Keys.ARROW_RIGHT + Keys.DELETE + Keys.DELETE + "\u001b");
 		assertValue("#1-1", "foobar");
 		/*
 		 * wasavi doesn't update the register content with empty string.
