@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 346 2013-07-24 05:35:12Z akahuku $
+ * @version $Id: background.js 380 2013-09-07 06:01:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1102,6 +1102,32 @@ if (window.jetpack && typeof require == 'function') {
 
 		var needForward = true;
 		switch (req.payload.type) {
+		case 'wasavi-chdir':
+			if ('tabId' in req
+			&& 'path' in req.payload) {
+				needForward = false;
+				if (req.payload.path == '') {
+					extension.sendRequest(
+						req.tabId,
+						{type:'fileio-chdir-response', data:null}
+					);
+				}
+				else {
+					getFileSystem(req.payload.path)
+						.ls(req.payload.path, req.tabId, function (data) {
+							var error = null;
+							if (data.error) {
+								error = data.error;
+								data = null;
+							}
+							extension.sendRequest(
+								req.tabId,
+								{type:'fileio-chdir-response', data:data, error:error}
+							);
+						});
+				}
+			}
+			break;
 		case 'wasavi-read':
 			if ('tabId' in req
 			&& 'path' in req.payload

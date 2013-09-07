@@ -309,7 +309,7 @@ public class EditingTest extends WasaviTest {
 	}
 
 	@Test
-	public void testRepetiionDelete () {
+	public void testRepetitionDelete () {
 		Wasavi.send("ifoo\nbar\nfoobar\u001b", "1G");
 
 		Wasavi.send("d2l\u001b");

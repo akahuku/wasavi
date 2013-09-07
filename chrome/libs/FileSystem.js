@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 347 2013-07-25 04:40:17Z akahuku $
+ * @version $Id: FileSystem.js 380 2013-09-07 06:01:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -619,7 +619,7 @@
 						taskQueue.run(task);
 					}
 					else {
-						task.callback({});
+						task.callback({error:_('Invalid path.')});
 					}
 				}
 			);
@@ -804,6 +804,11 @@
 
 	function FileSystemGDrive (key, secret, extension) {
 
+		/*
+		 * consts
+		 */
+
+		var MIME_TYPE_FOLDER = 'application/vnd.google-apps.folder';
 		/*
 		 * privates
 		 */
@@ -1120,7 +1125,7 @@
 			getMetadataFromPath(task.path,
 				function (fragments, data, xhr) {
 					if (!data || data.length == 0) {
-						task.callback({});
+						task.callback({error:_('Invalid path.')});
 						return;
 					}
 					var prefix = Array.prototype.slice.call(fragments);
@@ -1129,18 +1134,21 @@
 							var contents = items.map(function (item) {
 								return {
 									path:prefix.concat(item.title),
-									is_dir:item.mimeType == 'application/vnd.google-apps.folder'
+									is_dir:item.mimeType == MIME_TYPE_FOLDER
 								};
 							});
-							task.callback({contents:contents});
+							task.callback({
+								is_dir:data[data.length - 1].mimeType == MIME_TYPE_FOLDER,
+								contents:contents
+							});
 						},
 						function (xhr) {
-							handleError(task, xhr) || task.callback({});
+							handleError(task, xhr) || task.callback({error:_('Invalid path.')});
 						}
 					);
 				},
 				function (xhr) {
-					handleError(task, xhr) || task.callback({});
+					handleError(task, xhr) || task.callback({error:_('Invalid path.')});
 				}
 			);
 
@@ -1174,14 +1182,14 @@
 
 					// invalid (non-existent) path
 					if (!data) {
-						self.responseError(task, _('Invalid path'));
+						self.responseError(task, _('Invalid path.'));
 						taskQueue.run();
 						return;
 					}
 
 					// valid path and existent file
 					var meta = data[data.length - 1];
-					if (meta.mimeType == 'application/vnd.google-apps.folder') {
+					if (meta.mimeType == MIME_TYPE_FOLDER) {
 						self.responseError(task, _('Cannot edit a directory.'));
 						taskQueue.run();
 						return;
@@ -1270,7 +1278,7 @@
 					}
 					// invalid (non-existent) path
 					else if (!data) {
-						self.responseError(task, _('Invalid path'));
+						self.responseError(task, _('Invalid path.'));
 						taskQueue.run();
 						return;
 					}

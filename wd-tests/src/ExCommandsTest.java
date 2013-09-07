@@ -1794,6 +1794,18 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":%@a\n");
 		assertValue("#2-1", "1\n2\n\tfoo\u001b\n\t");
 	}
+
+	@Test
+	public void testFileWithoutFileName () {
+		Wasavi.send(":file\n");
+		assertEquals("#1-1", "\"TEXTAREA#t2\" [unix] --No lines in buffer--", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void testFileWithFileName () {
+		Wasavi.send(":file foobar.txt\n");
+		assertEquals("#1-1", "file: Only stand alone form can rename.", Wasavi.getLastMessage());
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

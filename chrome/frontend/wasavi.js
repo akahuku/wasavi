@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 362 2013-08-12 13:21:23Z akahuku $
+ * @version $Id: wasavi.js 380 2013-09-07 06:01:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -112,8 +112,6 @@
 			requestInputMode:requestInputMode,
 			executeExCommand:executeExCommand,
 			executeViCommand:executeViCommand,
-			processInput:processInput,
-			processInputSupplement:processInputSupplement,
 			getFindRegex:getFindRegex,
 			getFileIoResultInfo:getFileIoResultInfo,
 			getFileInfo:getFileInfo,
@@ -122,6 +120,8 @@
 			fireCommandCompleteEvent:fireCommandCompleteEvent,
 			setSubstituteWorker:setSubstituteWorker,
 			extractDriveName:extractDriveName,
+			getFileSystemIndex:getFileSystemIndex,
+			splitPath:splitPath,
 			regalizeFilePath:regalizeFilePath
 		}),
 
@@ -881,7 +881,9 @@ left:0; top:0; \
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 	refreshIdealWidthPixels();
-	showMessage(getFileIoResultInfo('', x.value.length, true));
+	var initialMessage = getFileIoResultInfo('', x.value.length, true);
+	showMessage(initialMessage);
+	document.title = initialMessage;
 
 	x.value = undefined;
 
@@ -1165,7 +1167,8 @@ function showPrefixInput (message) {
 		break;
 	case 'command':
 	default:
-		indf.textContent = getFileNameString();
+		document.title = indf.textContent =
+			getFileNameString() + (config.vars.modified ? ' [+]' : '');
 		break;
 	}
 	indp.textContent = message || prefixInput.toString() || getDefaultPrefixInputString();
@@ -2333,7 +2336,7 @@ function getFindRegex (src) {
 	}
 	return result;
 }
-function getFileNameString () {
+function getFileNameString (full) {
 	var result = '';
 	if (extensionChannel && WasaviExtensionWrapper.IS_TOP_FRAME) {
 		if (fileName == '') {
@@ -2341,6 +2344,21 @@ function getFileNameString () {
 		}
 		else {
 			result = fileName;
+			if (!full) {
+				var drive = fstab[fileSystemIndex].name + ':';
+
+				if (result.indexOf(drive) == 0) {
+					result = result.substring(drive.length);
+
+					var cwd = fstab[fileSystemIndex].cwd;
+					if (cwd != '/') {
+						cwd += '/';
+					}
+					if (result.indexOf(cwd) == 0) {
+						result = result.substring(cwd.length);
+					}
+				}
+			}
 		}
 	}
 	else if (targetElement) {
@@ -2350,9 +2368,6 @@ function getFileNameString () {
 		else {
 			result = targetElement.nodeName;
 		}
-	}
-	if (config.vars.modified) {
-		result += ' [+]';
 	}
 	return result;
 }
@@ -2378,6 +2393,7 @@ function getFileIoResultInfo (aFileName, charLength, isNew) {
 	result.push('"' + (aFileName || getFileNameString()) + '"');
 
 	// partial attributes
+	config.vars.modified && attribs.push(_('modified')); // modified
 	attribs.push(getNewlineType(preferredNewline)); // newline type
 	result.push('[' + attribs.join(', ') + ']');
 
@@ -2396,12 +2412,12 @@ function getFileIoResultInfo (aFileName, charLength, isNew) {
 
 	return result.join(' ');
 }
-function getFileInfo () {
+function getFileInfo (fullPath) {
 	var result = [];
 	var attribs = [];
 
 	// file name
-	result.push('"' + getFileNameString() + '"');
+	result.push('"' + getFileNameString(fullPath) + '"');
 
 	// attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
@@ -2503,17 +2519,21 @@ function getFileSystemIndex (name) {
 	});
 	return result;
 }
-function splitPath (path) {
-	var re, regex = /(?:\u2416.|[^\/])*(?:\/|$)/g, result = [], foundLast = false;
-	while (!foundLast && (re = regex.exec(path))) {
+function splitPath (path, escapeChar) {
+	escapeChar || (escapeChar = '\u2416');
+	var componentRegex = new RegExp('(?:\\' + escapeChar + '.|[^\\/])*(?:\\/|$)', 'g');
+	var replaceRegex = new RegExp('\\' + escapeChar + '(.)', 'g');
+	var re, result = [], foundLast = false;
+	while (!foundLast && (re = componentRegex.exec(path))) {
 		foundLast = re[0].substr(-1) != '/';
 		var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
-		tmp = tmp.replace(/\u2416(.)/g, '$1');
+		tmp = tmp.replace(replaceRegex, '$1');
 		tmp != '' && result.push(tmp);
 	}
 	return result;
 }
 function regalizeFilePath (path, completeDriveName) {
+	path || (path = '');
 	if (path == '') {
 		return path;
 	}
@@ -4211,6 +4231,19 @@ function handleExtensionChannelMessage (req) {
 			exCommandExecutor.runAsyncNext(read, exCommandExecutor.lastCommandArg);
 			break;
 		}
+		break;
+	case 'fileio-chdir-response':
+		if (req.error) {
+			exCommandExecutor.stop();
+			showMessage(_.apply(null, req.error), true, false);
+			break;
+		}
+		var chdir = exCommandExecutor.lastCommandObj.clone();
+		chdir.handler = function (app, t, a) {
+			return Wasavi.ExCommand.chdir(app, t, a, req.data);
+		};
+		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
+		break;
 	}
 }
 
@@ -4326,7 +4359,7 @@ var completer = new Wasavi.Completer(appProxy,
 		[
 			[
 				/^(\s*)(ed?i?t?!?\s+(?:\+\+(?:\u2416.|\S)*\s+)?)((?:\u2416.|\S)*)$/,
-				/^(\s*)((?:re?a?d?|wr?i?t?e?!?|fi?l?e?)\s+)((?:\u2416.|\S)*)$/,
+				/^(\s*)((?:re?a?d?|wr?i?t?e?!?|fi?l?e?|cd|chdi?r?)\s+)((?:\u2416.|\S)*)$/,
 			],
 			3,
 			function (prefix, notifyCandidates) {

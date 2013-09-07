@@ -501,8 +501,10 @@ public class WasaviTest {
 			System.out.println("Testcase: " + d.getMethodName());
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
 			Wasavi.js(
-					"document.getElementsByTagName('h1')[0].textContent = " +
-					"'now testing: " + d.getMethodName() + "';");
+					"var h1 = document.getElementsByTagName('h1')[0];" +
+					"if (h1) {" +
+					"  h1.textContent = 'now testing: " + d.getMethodName() + "';" +
+					"}");
 		}
 		protected void failed (Throwable e, Description d) {
 			System.out.println(d.getMethodName() + " FAILED\n" + logText);
@@ -538,18 +540,12 @@ public class WasaviTest {
 		}
 
 		else if (name.equals("firefox")) {
-			FirefoxProfile p = new FirefoxProfile();
-			try {
-				p.setPreference("general.useragent.locale", "en-US");
-				java.io.File f = new java.io.File(
-						System.getProperty("wasavi.tests.firefox.extension_path"));
-				p.addExtension(f);
-				driver = new FirefoxDriver(p);
-			}
-			catch (java.io.IOException e) {
-				System.out.println(e.getMessage());
-				driver = null;
-			}
+			java.io.File profileDir = new java.io.File(
+					System.getProperty("wasavi.tests.firefox.profile_path"));
+			FirefoxProfile p = new FirefoxProfile(profileDir);
+
+			p.setPreference("general.useragent.locale", "en-US");
+			driver = new FirefoxDriver(p);
 		}
 
 		return driver;
@@ -593,6 +589,19 @@ public class WasaviTest {
 				}
 
 				reset.click();
+
+				new WebDriverWait(driver, 1).until(
+					new ExpectedCondition<Boolean>() {
+						public Boolean apply (WebDriver driver) {
+							WebElement t2 = findElement(By.id("t2"));
+							if (t2 == null) return false;
+
+							String v = t2.getAttribute("value");
+							if (v == null) return false;
+
+							return v.length() == 0;
+						}
+					});
 			}
 
 			t2.click();
@@ -649,11 +658,7 @@ public class WasaviTest {
 	public static void beforeClass () {
 		driver = createDriver(System.getProperty("wasavi.tests.browser"));
 		if (driver != null) {
-			try {
-				Thread.sleep(1000);
-			}
-			catch (Exception e) {
-			}
+			WasaviUtils.sleep(1000);
 			driver.navigate().to(System.getProperty("wasavi.tests.frame_url"));
 			Wasavi = new WasaviWrapper(driver);
 		}
@@ -674,11 +679,7 @@ public class WasaviTest {
 				"var wasaviFrame = document.getElementById('wasavi_frame');" +
 				"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
 
-			try {
-				Thread.sleep(500);
-			}
-			catch (Exception e) {
-			}
+			WasaviUtils.sleep(1000);
 		}
 	}
 

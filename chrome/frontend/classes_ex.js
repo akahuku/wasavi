@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 353 2013-07-31 19:23:13Z akahuku $
+ * @version $Id: classes_ex.js 380 2013-09-07 06:01:54Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -766,31 +766,27 @@ Wasavi.ExCommand.parseWriteArg = function (app, t, a) {
 	};
 };
 Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
-	var isForce = !!a.flags.force;
+	path || (path = app.fileName);
+	var pathRegalized = app.low.regalizeFilePath(path);
 
 	if (isCommand) {
 		return _('Command redirection is not implemented.');
 	}
-
-	path || (path = app.fileName);
-	/*if (path != '' && !WasaviExtensionWrapper.IS_TOP_FRAME) {
-		return _('Only stand alone form can write.');
-	}*/
+	if (path == '' && WasaviExtensionWrapper.IS_TOP_FRAME) {
+		return _('No file name.');
+	}
 	if (isAppend) {
 		return _('Appending is not implemented.');
 	}
-
-	var target = app.targetElement;
-
-	if (isForce) {
-		target.readOnly = false;
+	if (a.flags.force) {
+		app.targetElement.readOnly = false;
 		app.config.setData('noreadonly');
 	}
 	else {
-		if (app.config.vars.readonly && target == app.targetElement) {
+		if (app.config.vars.readonly) {
 			return _('Readonly option is set (use "!" to override).');
 		}
-		if (target.readOnly) {
+		if (app.targetElement.readOnly) {
 			return _('Element to be written has readonly attribute (use "!" to override).');
 		}
 	}
@@ -801,21 +797,24 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	var content = toNativeControl(rg.toString());
 	rg.detach();
 
-	if (a.range[1] == t.rowLength - 1) {
-		content = trimTerm(content);
-	}
 	if (app.targetElement.isContentEditable) {
 		content = content.split('\n');
 	}
 	else {
 		content = content.replace(/\n/g, app.preferredNewline);
 	}
+	if (a.range[1] == t.rowLength - 1) {
+		content = trimTerm(content);
+	}
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',
-		path:app.low.regalizeFilePath(path, true),
+		path:pathRegalized,
 		value:content
 	});
-	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1 && target == app.targetElement) {
+	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
+		if (app.fileName == '') {
+			app.fileName = pathRegalized;
+		}
 		app.isTextDirty = false;
 		app.editLogger.notifySave();
 	}
@@ -958,9 +957,15 @@ Wasavi.ExCommand.pwd = function (app, t, a) {
 		app.fstab[app.fileSystemIndex].cwd);
 	return undefined;
 };
-Wasavi.ExCommand.chdir = function (app, t, a) {
+Wasavi.ExCommand.chdir = function (app, t, a, data) {
 	if (a.argv.length == 0) {
 		return Wasavi.ExCommand.pwd.apply(this, arguments);
+	}
+	if (!data || !('is_dir' in data)) {
+		return _('Invalid chdir result.');
+	}
+	if (!data.is_dir) {
+		return _('Cannot change current directory into a file.');
 	}
 
 	var drive = '';
@@ -969,19 +974,7 @@ Wasavi.ExCommand.chdir = function (app, t, a) {
 
 	path = path.replace(/\\(.)/g, '$1');
 	path = app.low.extractDriveName(path, function ($0, d) {drive = d});
-
-	if (drive == '') {
-		index = app.fileSystemIndex;
-	}
-	else {
-		app.fstab.some(function (fs, i) {
-			if (fs.name == drive) {
-				index = i;
-				return true;
-			}
-			return false;
-		});
-	}
+	index = drive == '' ? app.fileSystemIndex : app.low.getFileSystemIndex(drive);
 
 	if (index < 0) {
 		return _('Unknown drive name.');
@@ -1050,11 +1043,13 @@ Wasavi.ExCommand.commands = [
 		}
 		return undefined;
 	}),
-	new Wasavi.ExCommand('cd', 'cd', 'f', 0, function (app, t, a) {
-		return Wasavi.ExCommand.chdir.apply(this, arguments);
+	new Wasavi.ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		return undefined;
 	}),
-	new Wasavi.ExCommand('chdir', 'chd', 'f', 0, function (app, t, a) {
-		return Wasavi.ExCommand.chdir.apply(this, arguments);
+	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		return undefined;
 	}),
 	new Wasavi.ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		return Wasavi.ExCommand.copy(app, t, a);
@@ -1105,45 +1100,37 @@ Wasavi.ExCommand.commands = [
 		return undefined;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
-		if (!app.extensionChannel || !WasaviExtensionWrapper.IS_TOP_FRAME) {
-			return _('Only stand alone form can rename.');
-		}
 		if (a.argv.length > 1) {
 			return _('Too much arguments.');
 		}
 		if (a.argv.length == 1) {
-			var arg = a.argv[0].replace(/\\(.)/g, '$1');
-			if (/(?:^|\/)\.{1,2}$/.test(arg)) {
-				arg += '/';
+			if (!app.extensionChannel || !WasaviExtensionWrapper.IS_TOP_FRAME) {
+				return _('Only stand alone form can rename.');
 			}
 
-			var from = /^(.*\/)?([^\/]*)$/
-				.exec(app.fileName)
-				.map(function (a) {return a || '';});
-			var to = /^(.*\/)?([^\/]*)$/
-				.exec(arg)
-				.map(function (a) {return a || '';});
+			var oldPath = app.low.splitPath(app.fileName, '\\');
+			var newPath = app.low.splitPath(a.argv[0], '\\');
 
-			if (to[2] == '') {
-				if (from[2] == '') {
+			if (a.argv[0] == '/'
+			|| /[^\\]\/$/.test(a.argv[0])
+			|| /^\.{1,2}$/.test(newPath.lastItem)) {
+				newPath.push('');
+			}
+
+			if (newPath.lastItem == '') {
+				if (oldPath.length == 0 || oldPath.lastItem == '') {
 					return _('File name is empty.');
 				}
-				to[2] = from[2];
-			}
-			if (to[1].charAt(0) == '/') {
-				app.fileName = to[1] + to[2];
-			}
-			else {
-				app.fileName = (from[1] != '' ? from[1] : '/') + to[1] + to[2];
+				newPath.lastItem = oldPath.lastItem;
 			}
 
-			app.fileName = app.fileName.replace(/\/\.\//g, '//');
-			app.fileName = app.fileName.replace(/\/\//g, '/');
-			while (/\/\.\.\//.test(app.fileName)) {
-				app.fileName = app.fileName.replace(/(?:[^\/]*)\/\.\.\/([^\/]+)/, '$1');
-			}
+			app.fileName = app.low.regalizeFilePath(
+				newPath
+					.map(function (a) {return a.replace(/\//g, '\\/')})
+					.join('/'),
+				true);
 		}
-		app.low.requestShowMessage(app.low.getFileInfo(t));
+		app.low.requestShowMessage(app.low.getFileInfo(true));
 		return undefined;
 	}),
 	new Wasavi.ExCommand('filesystem', 'files', 'W', 0, function (app, t, a) {

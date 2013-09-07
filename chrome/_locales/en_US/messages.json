@@ -248,9 +248,9 @@
 		"message": "Command redirection is not implemented.",
 		"description": "Command redirection is not implemented."
 	},
-	"only_stand_alone_form_can_write": {
-		"message": "Only stand alone form can write.",
-		"description": "Only stand alone form can write."
+	"no_file_name": {
+		"message": "No file name.",
+		"description": "No file name."
 	},
 	"appending_is_not_implemented": {
 		"message": "Appending is not implemented.",
@@ -283,6 +283,14 @@
 	"extension_system_required": {
 		"message": "Extension system required.",
 		"description": "Extension system required."
+	},
+	"invalid_chdir_result": {
+		"message": "Invalid chdir result.",
+		"description": "Invalid chdir result."
+	},
+	"cannot_change_current_directory_into_a_file": {
+		"message": "Cannot change current directory into a file.",
+		"description": "Cannot change current directory into a file."
 	},
 	"unknown_drive_name": {
 		"message": "Unknown drive name.",
@@ -488,6 +496,10 @@
 		"message": "line {0} of {1} ({2}%)",
 		"description": "line {0} of {1} ({2}%)"
 	},
+	"modified": {
+		"message": "modified",
+		"description": "modified"
+	},
 	"new_file": {
 		"message": "New file",
 		"description": "New file"
@@ -495,10 +507,6 @@
 	"@0_line_@1_character": {
 		"message": "{0} {line:0}, {1} {character:1}.",
 		"description": "{0} {line:0}, {1} {character:1}."
-	},
-	"modified": {
-		"message": "modified",
-		"description": "modified"
 	},
 	"readonly": {
 		"message": "readonly",
@@ -720,6 +728,10 @@
 		"message": "User unmatch.",
 		"description": "User unmatch."
 	},
+	"invalid_path": {
+		"message": "Invalid path.",
+		"description": "Invalid path."
+	},
 	"cannot_edit_a_directory": {
 		"message": "Cannot edit a directory.",
 		"description": "Cannot edit a directory."
@@ -743,10 +755,6 @@
 	"invalid_authentication_audience": {
 		"message": "Invalid authentication audience",
 		"description": "Invalid authentication audience"
-	},
-	"invalid_path": {
-		"message": "Invalid path",
-		"description": "Invalid path"
 	},
 	"unable_to_download": {
 		"message": "Unable to download.",
