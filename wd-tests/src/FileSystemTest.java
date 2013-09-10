@@ -19,8 +19,8 @@ public class FileSystemTest extends WasaviTest {
 	 *
 	 *    /hello-world.txt
 	 *    /test
-	 *        read-test.txt  (content: "hello,\nworld")
-	 *        write-test.txt
+	 *        read test.txt  (content: "hello,\nworld")
+	 *        write test.txt
 	 */
 
 	private void completeRootPath (String testLabel, String fs, String prefix, Boolean makeDefault) {
@@ -78,16 +78,16 @@ public class FileSystemTest extends WasaviTest {
 	}
 
 	private void read (String fs) {
-		Wasavi.send(":0r " + fs + ":/test/read-test.txt\n", "gg");
+		Wasavi.send(":0r " + fs + ":/test/read\\ test.txt\n", "gg");
 		assertEquals("#1-1", "hello,\nworld", Wasavi.getValue());
 	}
 
 	private void write (String fs) {
 		Wasavi.send(":files default " + fs + "\n");
 		Wasavi.send("ggawrite test.\nwrite test\u001b");
-		Wasavi.send(":w /test/write-test.txt\n", "G");
+		Wasavi.send(":w /test/write\\ test.txt\n", "G");
 		sleep(1000 * 30); // BAD!
-		Wasavi.send(":r /test/write-test.txt\n", "gg");
+		Wasavi.send(":r /test/write\\ test.txt\n", "gg");
 		assertEquals("#1-1", "write test.\nwrite test\nwrite test.\nwrite test", Wasavi.getValue());
 	}
 
@@ -160,90 +160,6 @@ public class FileSystemTest extends WasaviTest {
 	@Test
 	public void writeGDrive () {
 		write("gdrive");
-	}
-
-	@Test
-	public void appModeFile () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		Wasavi.sendNoWait("i!\u001b:file\n");
-		sleep(1000);
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-		assertEquals("#1-1", "\"*Untitled*\" [unix, modified] line 1 of 1 (0%)", elm.getText());
-	}
-
-	@Test
-	public void appModeFileForRename () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-
-		Wasavi.sendNoWait(":cd foo/bar\n:file ../baz/test.txt\n");
-		sleep(1000);
-		assertEquals("#1-1", "\"dropbox:/foo/baz/test.txt\" [unix] --No lines in buffer--", elm.getText());
-		Wasavi.sendNoWait("\u001b");
-		sleep(1000);
-		assertEquals("#1-2", "/foo/baz/test.txt", elm.getText());
-		Wasavi.sendNoWait(":cd /\n");
-		sleep(1000);
-		assertEquals("#1-3", "foo/baz/test.txt", elm.getText());
-
-		Wasavi.sendNoWait(":cd foo\n:file\n");
-		sleep(1000);
-		assertEquals("#2-1", "\"dropbox:/foo/baz/test.txt\" [unix] --No lines in buffer--", elm.getText());
-		Wasavi.sendNoWait("\u001b");
-		sleep(1000);
-		assertEquals("#2-2", "baz/test.txt", elm.getText());
-	}
-
-	@Test
-	public void appModeWriteNewFile () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		Wasavi.sendNoWait(":write\n");
-		sleep(1000);
-
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-		assertEquals("#1-1", "write: No file name.", elm.getText());
-	}
-
-	@Test
-	public void appModeRead404 () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-
-		Wasavi.sendNoWait(":r noexist.txt\n");
-		sleep(1000 * 10);
-		assertEquals("#1-1", "read: Cannot open \"dropbox:/noexist.txt\".", elm.getText());
-	}
-
-	@Test
-	public void appModeChdir () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-
-		Wasavi.sendNoWait(":chdir test\n");
-		sleep(1000 * 10);
-		Wasavi.sendNoWait(":pwd\n");
-		sleep(1000);
-		assertEquals("#1-1", "dropbox:/test", elm.getText());
-	}
-
-	@Test
-	public void appModeChdir404 () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-
-		Wasavi.sendNoWait(":chdir noexist\n");
-		sleep(1000 * 10);
-		assertEquals("#1-1", "Invalid path.", elm.getText());
-	}
-
-	@Test
-	public void appModeChdirNoArg () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
-		WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
-
-		Wasavi.sendNoWait(":chdir\n");
-		sleep(1000 * 1);
-		assertEquals("#1-1", "dropbox:/", elm.getText());
 	}
 }
 

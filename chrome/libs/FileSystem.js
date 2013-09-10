@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 380 2013-09-07 06:01:54Z akahuku $
+ * @version $Id: FileSystem.js 381 2013-09-10 03:19:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -91,11 +91,11 @@
 	}
 
 	function splitPath (path) {
-		var re, regex = /(?:\u2416.|[^\/])*(?:\/|$)/g, result = [], foundLast = false;
+		var re, regex = /(?:\\.|[^\/])*(?:\/|$)/g, result = [], foundLast = false;
 		while (!foundLast && (re = regex.exec(path))) {
 			foundLast = re[0].substr(-1) != '/';
 			var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
-			tmp = tmp.replace(/\u2416(.)/g, '$1');
+			tmp = tmp.replace(/\\(.)/g, '$1');
 			tmp != '' && result.push(tmp);
 		}
 		return result;

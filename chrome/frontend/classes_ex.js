@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 380 2013-09-07 06:01:54Z akahuku $
+ * @version $Id: classes_ex.js 381 2013-09-10 03:19:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -58,20 +58,20 @@ Wasavi.ExCommand.prototype = {
 		);
 	},
 	parseArgs: function (app, range, line, syntax) {
-		function argv_exp0 (s) {
+		function push_string (s) {
 			result.argv.push(s);
 		}
-		function argv_exp3 (s) {
+		function push_words (s) {
 			while ((s = s.replace(/^\s+/, '')) != '') {
 				var re = /(?:\u0016.|\S)*/.exec(s);
 				result.argv.push(re[0]);
 				s = s.substring(re[0].length);
 			}
 		}
-		function argv_fexp (s) {
+		function push_paths (s) {
 			while ((s = s.replace(/^\s+/, '')) != '') {
 				var re = /(?:\\(.)|\S)*/.exec(s);
-				result.argv.push(re[0]);
+				result.argv.push(re[0].replace(/\\([^\/])/g, '$1'));
 				s = s.substring(re[0].length);
 			}
 		}
@@ -114,7 +114,7 @@ syntax_expansion_loop:
 					while (line.charAt(j) == this.name) {j++;}
 					line = line.substring(j);
 				}
-				argv_exp0(j + 1);
+				push_string(j + 1);
 				continue;
 			}
 
@@ -182,6 +182,7 @@ flag23_loop:
 				break;
 
 			case 'b':
+				// [register name]
 				if (/[+\-^#]+\s*$/.test(line)
 				&& syntax.indexOf('1') >= 0) {
 					break;
@@ -194,7 +195,12 @@ flag23_loop:
 				line = line.substring(1);
 				break;
 
-			case 'c': // c[01+a]
+			case 'c':
+				// [count]
+				// c0: accepts a count that >= 0
+				// c1: accepts a count that >= 1
+				// c+: accepts preceding sign (optional), and a count that >= 1
+				// ca: accepts a count that >= 1, and range will be adjusted
 				ch = syntax.charAt(++i);
 
 				var re = /^\d+/.exec(line);
@@ -221,11 +227,13 @@ flag23_loop:
 				break;
 
 			case 'f':
-				argv_fexp(line);
+				// [path format string]
+				push_paths(line);
 				needCheckRest = false;
 				break syntax_expansion_loop;
 
 			case 'l':
+				// [destination address]
 				var dest = this.parseRange(app, line, 1, true);
 				if (typeof dest == 'string') {
 					return dest;
@@ -243,30 +251,18 @@ flag23_loop:
 				result.lineNumber = dest.rows[0];
 				break;
 
-			case 'S':
-				if (line != '') {
-					argv_exp1(line);
-					needCheckRest = false;
-					break syntax_expansion_loop;
-				}
-				/*FALLTHRU*/
-
 			case 's':
-				argv_exp0(line);
+				// [whole of string remain]
+				push_string(line);
 				needCheckRest = false;
 				break syntax_expansion_loop;
 
-			case 'W':
-				var re;
-				while (line != '' && (re = /(?:\u0016.|\S)*/.exec(line))) {
-					argv_exp0(re[0]);
-					line = line.substring(re[0].length).replace(/^[ \t]+/, '');
-				}
-				needCheckRest = false;
-				break syntax_expansion_loop;
-
-			case 'w': // w(N|\d)[or]
-				argv_exp3(line);
+			case 'w':
+				// [word (count specified)]
+				// wN:  accepts any number of words
+				// w3o: requires 3 words, but accepts empty arg
+				// w3r: requires 3 words
+				push_words(line);
 				ch = syntax.charAt(++i);
 				if (/\d/.test(ch)) {
 					var tmp = ch - 0;
@@ -972,7 +968,6 @@ Wasavi.ExCommand.chdir = function (app, t, a, data) {
 	var path = a.argv[0];
 	var index = -1;
 
-	path = path.replace(/\\(.)/g, '$1');
 	path = app.low.extractDriveName(path, function ($0, d) {drive = d});
 	index = drive == '' ? app.fileSystemIndex : app.low.getFileSystemIndex(drive);
 
@@ -988,7 +983,7 @@ Wasavi.ExCommand.chdir = function (app, t, a, data) {
 	return undefined;
 };
 Wasavi.ExCommand.commands = [
-	new Wasavi.ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
+	new Wasavi.ExCommand('abbreviate', 'ab', 'wN', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
 			var maxWidth = 0;
 			var count = 0;
@@ -1044,10 +1039,16 @@ Wasavi.ExCommand.commands = [
 		return undefined;
 	}),
 	new Wasavi.ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+		if (!app.extensionChannel) {
+			return _('Extension system required.');
+		}
 		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+		if (!app.extensionChannel) {
+			return _('Extension system required.');
+		}
 		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
 		return undefined;
 	}),
@@ -1069,6 +1070,9 @@ Wasavi.ExCommand.commands = [
 		return undefined;
 	}),
 	new Wasavi.ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (app, t, a) {
+		if (!app.extensionChannel) {
+			return _('Extension system required.');
+		}
 		if (!a.flags.force && app.isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
@@ -1083,7 +1087,6 @@ Wasavi.ExCommand.commands = [
 		else {
 			a.initCommand = '';
 		}
-		path = path.replace(/\\(.)/g, '$1');
 
 		if (WasaviExtensionWrapper.IS_TOP_FRAME) {
 			if (path == '' && app.fileName == '') {
@@ -1104,7 +1107,10 @@ Wasavi.ExCommand.commands = [
 			return _('Too much arguments.');
 		}
 		if (a.argv.length == 1) {
-			if (!app.extensionChannel || !WasaviExtensionWrapper.IS_TOP_FRAME) {
+			if (!app.extensionChannel) {
+				return _('Extension system required.');
+			}
+			if (!WasaviExtensionWrapper.IS_TOP_FRAME) {
 				return _('Only stand alone form can rename.');
 			}
 
@@ -1133,7 +1139,7 @@ Wasavi.ExCommand.commands = [
 		app.low.requestShowMessage(app.low.getFileInfo(true));
 		return undefined;
 	}),
-	new Wasavi.ExCommand('filesystem', 'files', 'W', 0, function (app, t, a) {
+	new Wasavi.ExCommand('filesystem', 'files', 'wN', 0, function (app, t, a) {
 		var list = [];
 		var command = (a.argv[0] || '').replace(/\u0016(.)/g, '$1');
 		if (/^(?:de?f?a?u?l?t?)$/.test(command)) {
@@ -1204,7 +1210,7 @@ Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('k', 'k', 'w1r', 1, function (app, t, a) {
 		return Wasavi.ExCommand.setMark(app, t, a);
 	}),
-	new Wasavi.ExCommand('map', 'map', '!W', 0, function (app, t, a) {
+	new Wasavi.ExCommand('map', 'map', '!wN', 0, function (app, t, a) {
 		var mapName = a.flags.force ? 'edit' : 'command';
 		var map = app.mapManager.getMap(mapName);
 		function dispMap (map) {
@@ -1347,11 +1353,15 @@ Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('quit', 'q', '!', 0, function (app, t, a) {
 		return Wasavi.ExCommand.quit(app, a.flags.force);
 	}),
-	new Wasavi.ExCommand('read', 'r', 's', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
+	new Wasavi.ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.fireEvent('read', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		var path = a.argv[0] || '';
+		if (path == '' && app.fileName == '') {
+			return _('File name is empty.');
+		}
+		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path, true) || app.fileName});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {

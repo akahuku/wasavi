@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 370 2013-08-25 01:31:49Z akahuku $
+ * @version $Id: agent.js 381 2013-09-10 03:19:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1053,9 +1053,11 @@ extension.setMessageListener(function (req) {
 
 	case 'wasavi-command-start':
 		if (!isTestFrame) break;
-		wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
+		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
+			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
+			log('command-start', '', '');
+		}
 		document.querySelector('h1').style.color = 'red';
-		log('command-start', '', '');
 		break;
 
 	case 'wasavi-notify-state':

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 380 2013-09-07 06:01:54Z akahuku $
+ * @version $Id: wasavi.js 381 2013-09-10 03:19:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1789,7 +1789,7 @@ function processInput (code, e, ignoreAbbreviation) {
 		}
 	}
 	function execCommandMap (t, key, subkey, code) {
-		testMode && fireEvent('command-start');
+		fireCommandStartEvent();
 		lastMessage = '';
 
 		var map = commandMap;
@@ -1842,28 +1842,23 @@ function processInput (code, e, ignoreAbbreviation) {
 		}
 	}
 	function execEditMap (t, key, subkey, code) {
-		if (editMap[key]) {
-			var ss = t.selectionStart;
-			var se = t.selectionEnd;
-			cursor.update({visible:false});
-			execMap(t, e, editMap, key, subkey, code);
-			completeSelectionRange(ss, se);
-			cursor.ensureVisible();
-			cursor.update({focused:true, visible:true});
-
-			return true;
-		}
-		return false;
+		if (!editMap[key]) return false;
+		var ss = t.selectionStart;
+		var se = t.selectionEnd;
+		cursor.update({visible:false});
+		execMap(t, e, editMap, key, subkey, code);
+		completeSelectionRange(ss, se);
+		cursor.ensureVisible();
+		cursor.update({focused:true, visible:true});
+		return true;
 	}
 	function execLineInputEditMap (t, key, subkey, code) {
-		if (lineInputEditMap[key]) {
-			testMode && fireEvent('command-start');
-			if (execMap(t, e, lineInputEditMap, key, subkey, code)) {
-				needEmitEvent = true;
-			}
-			return true;
+		if (!lineInputEditMap[key]) return false;
+		fireCommandStartEvent();
+		if (execMap(t, e, lineInputEditMap, key, subkey, code)) {
+			needEmitEvent = true;
 		}
-		return false;
+		return true;
 	}
 	function processAbbrevs (force) {
 		if (ignoreAbbreviation) return;
@@ -2457,7 +2452,15 @@ function fireNotifyKeydownEvent (code, key, note) {
 		eventType:note
 	});
 }
+function fireCommandStartEvent () {
+	document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
+	if (!testMode) return;
+	fireEvent('command-start');
+}
 function fireCommandCompleteEvent (eventName) {
+	if (exCommandExecutor.commands.length) return;
+	document.documentElement.removeAttribute('data-wasavi-command-state');
+	document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
 	if (!testMode) return;
 	eventName || (eventName = 'command-completed');
 	var pt = new Position(getCurrentViewPositionIndices().top, 0);
@@ -2528,7 +2531,8 @@ function splitPath (path, escapeChar) {
 		foundLast = re[0].substr(-1) != '/';
 		var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
 		tmp = tmp.replace(replaceRegex, '$1');
-		tmp != '' && result.push(tmp);
+		//tmp != '' && result.push(tmp);
+		result.push(tmp);
 	}
 	return result;
 }
@@ -2551,21 +2555,26 @@ function regalizeFilePath (path, completeDriveName) {
 	}
 
 	// resolve special directories (".", "..")
-	var fragments = [];
-	splitPath(path).forEach(function (f) {
-		if (f == '') return;
+	var fragmentsSrc = splitPath(path);
+	var fragmentsDst = [];
+	fragmentsSrc.forEach(function (f, i) {
 		switch (f) {
 		case '.':
 			break;
 		case '..':
-			fragments.pop();
+			fragmentsDst.pop();
 			break;
+		case '':
+			if (i > 0 && i < fragmentsSrc.length - 1) {
+				break;
+			}
+			/* FALLTHRU */
 		default:
-			fragments.push(f);
+			fragmentsDst.push(f);
 			break;
 		}
 	});
-	path = '/' + fragments.join('/');
+	path = fragmentsDst.join('/');
 
 	// restore drive name
 	path = drive + path;
@@ -2579,46 +2588,43 @@ function regalizeFilePath (path, completeDriveName) {
  */
 
 function execMap (target, e, map, key, subkey, code, pos) {
-	if (map[key]) {
-		subkey || (subkey = '');
-		var opts = {
-			target:target,
-			e:e,
-			key:key,
-			subkey:subkey,
-			selectionStart:pos && pos.s || buffer.selectionStart,
-			selectionEnd:pos && pos.e || buffer.selectionEnd
-		};
-		switch (typeof map[key]) {
-		case 'function':
-			if (subkey == '' || subkey == inputMode) {
-				return map[key].call(map, keyManager.code2letter(code) || code, opts);
-			}
-			break;
-		case 'object':
-			if (subkey != '' && subkey in map[key]) {
-				return map[key][subkey].call(map, keyManager.code2letter(code) || code, opts);
-			}
-			break;
+	if (!map[key]) return false;
+	subkey || (subkey = '');
+	var opts = {
+		target:target,
+		e:e,
+		key:key,
+		subkey:subkey,
+		selectionStart:pos && pos.s || buffer.selectionStart,
+		selectionEnd:pos && pos.e || buffer.selectionEnd
+	};
+	switch (typeof map[key]) {
+	case 'function':
+		if (subkey == '' || subkey == inputMode) {
+			return map[key].call(map, keyManager.code2letter(code) || code, opts);
 		}
-		return true;
+		break;
+	case 'object':
+		if (subkey != '' && subkey in map[key]) {
+			return map[key][subkey].call(map, keyManager.code2letter(code) || code, opts);
+		}
+		break;
 	}
-	return false;
+	return true;
 }
 function refreshIdealWidthPixels () {
-	if (idealWidthPixels < 0) {
-		var n = buffer.selectionStart;
-		var line = buffer.rows(n).substr(0, n.col);
-		var textspan = $('wasavi_singleline_scaler');
-		if (textspan.textContent != line) {
-			textspan.textContent = line;
-		}
-		idealWidthPixels = textspan.offsetWidth;
-
-		var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
-		var curRect = buffer.charRectAt(n);
-		idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
+	if (idealWidthPixels >= 0) return;
+	var n = buffer.selectionStart;
+	var line = buffer.rows(n).substr(0, n.col);
+	var textspan = $('wasavi_singleline_scaler');
+	if (textspan.textContent != line) {
+		textspan.textContent = line;
 	}
+	idealWidthPixels = textspan.offsetWidth;
+
+	var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
+	var curRect = buffer.charRectAt(n);
+	idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
 }
 function getCurrentViewPositionIndices () {
 	function findTopLineIndex (line) {
@@ -4358,11 +4364,12 @@ var completer = new Wasavi.Completer(appProxy,
 		// file path completion
 		[
 			[
-				/^(\s*)(ed?i?t?!?\s+(?:\+\+(?:\u2416.|\S)*\s+)?)((?:\u2416.|\S)*)$/,
-				/^(\s*)((?:re?a?d?|wr?i?t?e?!?|fi?l?e?|cd|chdi?r?)\s+)((?:\u2416.|\S)*)$/,
+				/^(\s*)(ed?i?t?!?\s+(?:\+\+(?:\\.|\S)*\s+)?)((?:\\.|\S)*)$/,
+				/^(\s*)(wr?i?t?e?!?(?:\s+!?|>>)?)((?:\\.|\S)*)$/,
+				/^(\s*)((?:re?a?d?|fi?l?e?|cd|chdi?r?)\s+)((?:\\.|\S)*)$/,
 			],
 			3,
-			function (prefix, notifyCandidates) {
+			function (prefix, notifyCandidates, line) {
 				if (!extensionChannel) {
 					notifyCandidates([]);
 					return;
@@ -4394,15 +4401,21 @@ var completer = new Wasavi.Completer(appProxy,
 							return;
 						}
 
+						var onlyDirectory = /^\s*(?:cd|chdi?r?)\b/.test(line);
+						var fs = drive == '' ? fileSystemIndex : getFileSystemIndex(drive);
 						var result = res.data
 							.map(function (file) {
 								var pathFixed = '';
 								var baseName = '';
 
+								if (onlyDirectory && !file.is_dir) {
+									return '';
+								}
+
 								if (getObjectType(file.path) == 'Array') {
 									pathFixed = file.path
 										.slice(0, file.path.length - 1)
-										.map(function (s) {return s.replace(/\//g, '\u2416/')})
+										.map(function (s) {return s.replace(/\//g, '\\/')})
 										.join('/') + '/';
 									baseName = file.path[file.path.length - 1];
 								}
@@ -4416,8 +4429,6 @@ var completer = new Wasavi.Completer(appProxy,
 								}
 
 								if (pathInput.charAt(0) != '/') {
-									var fs = drive == '' ?
-										fileSystemIndex : getFileSystemIndex(drive);
 									if (fs < 0) {
 										return '';
 									}
@@ -4427,12 +4438,12 @@ var completer = new Wasavi.Completer(appProxy,
 								}
 
 								return drive +
-									pathFixed.replace(/\s/g, '\u2416$&') +
-									baseName.replace(/\s/g, '\u2416$&') +
+									pathFixed.replace(/\s/g, '\\$&') +
+									baseName.replace(/\s/g, '\\$&') +
 									(file.is_dir ? '/' : '');
 							})
 							.filter(function (s) {return s.length > 0})
-							.sort();
+							.sort(function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())});
 
 						notifyCandidates(result);
 					}

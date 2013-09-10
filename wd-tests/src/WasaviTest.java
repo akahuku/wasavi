@@ -39,92 +39,150 @@ import com.opera.core.systems.OperaProfile;
 
 
 class WasaviSendCallback {
-	void exec (Actions act) {
-	}
+	void exec (Actions act) {}
 }
 
 
 
 class WasaviWrapper {
-	private static final Boolean LOG_EXCEPTION = true;
+	protected static final Boolean LOG_EXCEPTION = true;
 
-	private WebDriver driver;
-	private JSONObject wasaviState;
-	private final ArrayList<String> inputModeOfWacthTargetDefault =
+	protected WebDriver driver;
+	protected JSONObject wasaviState;
+	protected final ArrayList<String> inputModeOfWacthTargetDefault =
 		new ArrayList<String>(java.util.Arrays.asList("command", "console-wait"));
-	private ArrayList<String> inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
+	protected ArrayList<String> inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
+	protected Boolean isAppMode = false;
+	protected StrokeSender strokeSender = null;
+
+	abstract class StrokeSender {
+		abstract public void setup ();
+		abstract public WebElement waitCommandCompletion ();
+		abstract public void finish (WebElement wasaviFrame);
+	}
+
+	class SymbiosisModeStrokeSender extends StrokeSender {
+		@Override public void setup () {
+			js("document.getElementById('wasavi_frame')" +
+				".setAttribute('data-wasavi-command-state', 'busy');");
+		}
+
+		@Override public WebElement waitCommandCompletion () {
+			try {
+				return new WebDriverWait(driver, 60)
+					.until(new ExpectedCondition<WebElement>() {
+					public WebElement apply (WebDriver d) {
+						try {
+							WebElement elm = d.findElement(By.id("wasavi_frame"));
+							String commandState = elm.getAttribute("data-wasavi-command-state");
+							String inputMode = elm.getAttribute("data-wasavi-input-mode");
+
+							if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
+								return elm;
+							}
+						}
+						catch (org.openqa.selenium.NoSuchElementException e) {
+							if (LOG_EXCEPTION) {
+								System.out.println("waitCommandCompletion: wasavi frame not found.");
+							}
+						}
+						return null;
+					}
+				});
+			}
+			catch (org.openqa.selenium.TimeoutException e) {
+				if (LOG_EXCEPTION) {
+					System.out.println("waitCommandCompletion: timed out.");
+				}
+			}
+			return null;
+		}
+
+		@Override public void finish (WebElement wasaviFrame) {
+			if (wasaviFrame == null) {
+				return;
+			}
+
+			String source = wasaviFrame.getAttribute("data-wasavi-state");
+			if (source != null) {
+				try {
+					//System.out.println(source);
+					wasaviState = new JSONObject(source);
+				}
+				catch (JSONException e) {
+					if (LOG_EXCEPTION) {
+						System.out.println("sendFinish: invalid json source: " + source);
+					}
+					wasaviState = new JSONObject();
+				}
+			}
+			else {
+				if (LOG_EXCEPTION) {
+					System.out.println("sendFinish: cannot retrieve wasavi state.");
+				}
+				wasaviState = new JSONObject();
+			}
+
+			WasaviAsserts.setWasaviState(wasaviState);
+			//System.out.println(getValue());
+		}
+	}
+
+	class AppModeStrokeSender extends StrokeSender {
+		@Override public void setup () {
+			js("document.documentElement" +
+				".setAttribute('data-wasavi-command-state', 'busy');");
+		}
+
+		@Override public WebElement waitCommandCompletion () {
+			try {
+				return new WebDriverWait(driver, 60)
+					.until(new ExpectedCondition<WebElement>() {
+					public WebElement apply (WebDriver d) {
+						try {
+							WebElement elm = d.findElement(By.tagName("html"));
+							String commandState = elm.getAttribute("data-wasavi-command-state");
+							String inputMode = elm.getAttribute("data-wasavi-input-mode");
+
+							if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
+								return elm;
+							}
+						}
+						catch (org.openqa.selenium.NoSuchElementException e) {
+							if (LOG_EXCEPTION) {
+								System.out.println("waitCommandCompletion: wasavi frame not found.");
+							}
+						}
+						return null;
+					}
+				});
+			}
+			catch (org.openqa.selenium.TimeoutException e) {
+				if (LOG_EXCEPTION) {
+					System.out.println("waitCommandCompletion: timed out.");
+				}
+			}
+			return null;
+		}
+
+		@Override public void finish (WebElement wasaviFrame) {
+		}
+	}
+
+	/*
+	 * constructor
+	 */
 
 	WasaviWrapper (WebDriver d) {
 		driver = d;
 		wasaviState = new JSONObject();
 	}
 
-	private void sendSetup () {
-		js("document.getElementById('wasavi_frame')" +
-			".setAttribute('data-wasavi-command-state', 'busy');");
-	}
-
-	private WebElement waitCommandCompletion () {
-		try {
-			return new WebDriverWait(driver, 60)
-				.until(new ExpectedCondition<WebElement>() {
-				public WebElement apply (WebDriver d) {
-					try {
-						WebElement elm = d.findElement(By.id("wasavi_frame"));
-						String commandState = elm.getAttribute("data-wasavi-command-state");
-						String inputMode = elm.getAttribute("data-wasavi-input-mode");
-
-						if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
-							return elm;
-						}
-					}
-					catch (org.openqa.selenium.NoSuchElementException e) {
-						if (LOG_EXCEPTION) {
-							System.out.println("send: wasavi frame not found.");
-						}
-					}
-					return null;
-				}
-			});
-		}
-		catch (org.openqa.selenium.TimeoutException e) {
-			if (LOG_EXCEPTION) {
-				System.out.println("waitCommandCompletion: timed out.");
-			}
-		}
-		return null;
-	}
-
-	private void sendFinish (WebElement wasaviFrame) {
-		if (wasaviFrame == null) {
-			return;
-		}
-
-		String source = wasaviFrame.getAttribute("data-wasavi-state");
-		if (source != null) {
-			try {
-				//System.out.println(source);
-				wasaviState = new JSONObject(source);
-			}
-			catch (JSONException e) {
-				if (LOG_EXCEPTION) {
-					System.out.println("sendFinish: invalid json source: " + source);
-				}
-				wasaviState = new JSONObject();
-			}
-		}
-		else {
-			if (LOG_EXCEPTION) {
-				System.out.println("sendFinish: cannot retrieve wasavi state.");
-			}
-			wasaviState = new JSONObject();
-		}
-
-		WasaviAsserts.setWasaviState(wasaviState);
-		//System.out.println(getValue());
-	}
-
-	private int getInt (String name, int defaultValue) {
+	/*
+	 * protected methods
+	 */
+	
+	protected int getInt (String name, int defaultValue) {
 		try {
 			return wasaviState.getInt(name);
 		}
@@ -136,11 +194,11 @@ class WasaviWrapper {
 		return defaultValue;
 	}
 
-	private int getInt (String name) {
+	protected int getInt (String name) {
 		return getInt(name, 0);
 	}
 
-	private String getString (String name, String defaultValue) {
+	protected String getString (String name, String defaultValue) {
 		try {
 			return wasaviState.getString(name);
 		}
@@ -152,32 +210,58 @@ class WasaviWrapper {
 		return defaultValue;
 	}
 
-	private String getString (String name) {
+	protected String getString (String name) {
 		return getString(name, "");
 	}
 
+	protected StrokeSender getStrokeSender () {
+		if (strokeSender == null) {
+			if (isAppMode) {
+				strokeSender = new AppModeStrokeSender();
+			}
+			else {
+				strokeSender = new SymbiosisModeStrokeSender();
+			}
+		}
+		return strokeSender;
+	}
+
+	/*
+	 * publics
+	 */
+
+	public void setAppMode (Boolean value) {
+		if (value != isAppMode) {
+			isAppMode = value;
+			strokeSender = null;
+		}
+	}
+
 	public void send (CharSequence... strokes) {
+		getStrokeSender();
+
 		for (CharSequence s: strokes) {
-			sendSetup();
+			strokeSender.setup();
 
 			(new Actions(driver)).sendKeys(s).perform();
 
-			WebElement elm = waitCommandCompletion();
-			sendFinish(elm);
+			WebElement elm = strokeSender.waitCommandCompletion();
+			strokeSender.finish(elm);
 		}
 
 		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
 
 	public void send (WasaviSendCallback callback) {
-		sendSetup();
+		getStrokeSender();
+		strokeSender.setup();
 
 		Actions act = new Actions(driver);
 		callback.exec(act);
 		act.perform();
 
-		WebElement elm = waitCommandCompletion();
-		sendFinish(elm);
+		WebElement elm = strokeSender.waitCommandCompletion();
+		strokeSender.finish(elm);
 
 		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
@@ -324,6 +408,16 @@ class WasaviWrapper {
 				System.out.println(e.getMessage());
 			}
 			return null;
+		}
+	}
+
+	public String getAppModeStatusLine () {
+		try {
+			WebElement elm = driver.findElement(By.id("wasavi_footer_file_indicator"));
+			return elm.getText();
+		}
+		catch (org.openqa.selenium.NoSuchElementException e) {
+			return "***Exception in getAppModeStatusLine***";
 		}
 	}
 }
@@ -493,21 +587,31 @@ public class WasaviTest {
 	protected static WebDriver driver;
 	protected static WasaviWrapper Wasavi;
 	protected static InvokeState[] invokeStates = {new InvokeState(0), new InvokeState(1)};
-	protected String logText;
+	protected ArrayList<String> logText = new ArrayList<String>();
 	protected Boolean isSectionTest;
+	protected Boolean isAppMode;
+	protected int testIndex = 1;
 
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
-			System.out.println("Testcase: " + d.getMethodName());
+			logText.clear();
+			logText.add("Testcase: " + d.getMethodName());
+
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
+			isAppMode = d.getMethodName().matches(".*appMode.*");
+
 			Wasavi.js(
-					"var h1 = document.getElementsByTagName('h1')[0];" +
-					"if (h1) {" +
-					"  h1.textContent = 'now testing: " + d.getMethodName() + "';" +
-					"}");
+				"var h1 = document.getElementsByTagName('h1')[0];" +
+				"if (h1) {" +
+				"  h1.textContent = '" + String.format(
+					"%s (%d of %d)", d.getMethodName(), testIndex++, d.testCount()) + "';" +
+				"}");
 		}
 		protected void failed (Throwable e, Description d) {
-			System.out.println(d.getMethodName() + " FAILED\n" + logText);
+			System.out.println("FAILED: " + d.getMethodName());
+			for (CharSequence s: logText) {
+				System.out.println(s);
+			}
 		}
 	};
 
@@ -654,11 +758,14 @@ public class WasaviTest {
 		return wasaviFrame;
 	}
 
+	protected void invokeAppModeWasavi () {
+		driver.navigate().to("http://wasavi.appsweets.net/");
+	}
+
 	@BeforeClass
 	public static void beforeClass () {
 		driver = createDriver(System.getProperty("wasavi.tests.browser"));
 		if (driver != null) {
-			WasaviUtils.sleep(1000);
 			driver.navigate().to(System.getProperty("wasavi.tests.frame_url"));
 			Wasavi = new WasaviWrapper(driver);
 		}
@@ -666,20 +773,25 @@ public class WasaviTest {
 
 	@Before
 	public void setUp () {
-		invokeWasavi();
+		if (isAppMode) {
+			Wasavi.setAppMode(true);
+			invokeAppModeWasavi();
+		}
+		else {
+			Wasavi.setAppMode(false);
+			invokeWasavi();
+		}
 	}
 
 	@After
 	public void tearDown () {
 		WebElement testLog = findElement(By.id("test-log"));
 		if (testLog != null) {
-			logText = testLog.getAttribute("value");
+			logText.add(testLog.getAttribute("value"));
 
 			Wasavi.js(
 				"var wasaviFrame = document.getElementById('wasavi_frame');" +
 				"wasaviFrame && wasaviFrame.parentNode.removeChild(wasaviFrame);");
-
-			WasaviUtils.sleep(1000);
 		}
 	}
 
