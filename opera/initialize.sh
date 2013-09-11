@@ -16,6 +16,7 @@ mkdir -p locales
 pushd locales
 ln -s ../../chrome/_locales/en_US en-us
 ln -s ../../chrome/_locales/ja
+ln -s ../../chrome/_locales/locales.json
 popd
 
 mkdir -p includes
