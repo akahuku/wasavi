@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 380 2013-09-07 06:01:54Z akahuku $
+ * @version $Id: background.js 382 2013-09-11 02:36:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -124,7 +124,7 @@ if (window.jetpack && typeof require == 'function') {
 		this.tabWatcher = TabWatcher.create(window);
 		this.extensionId = '';
 		this.lastRegisteredTab = '';
-		this.messageCatalogPath = '';
+		this.messageCatalogPath = false;
 		this.cryptKeyPath = '';
 		this.version = '';
 		this.isDev = false;
@@ -247,6 +247,7 @@ if (window.jetpack && typeof require == 'function') {
 			return result;
 		});
 		this.cryptKeyPath = 'frontend/wasavi.js';
+
 		(function (self) {
 			resourceLoader.get('manifest.json', function (data) {
 				self.version = u.parseJson(data).version;
@@ -411,7 +412,46 @@ if (window.jetpack && typeof require == 'function') {
 			lastRegisteredTab = undefined;
 			return result;
 		});
-		this.messageCatalogPath = 'messages.json';
+		this.__defineGetter__('messageCatalogPath', function () {
+			var result;
+			resourceLoader.get('locales/locales.json', function (locales) {
+				var fallbackLocaleIndex = -1;
+				var currentLocale = (navigator.browserLanguage
+					|| navigator.language
+					|| navigator.userLanguage).toLowerCase().replace(/_/g, '-');
+
+				locales = u.parseJson(locales).map(function (locale, i) {
+					locale = locale.toLowerCase().replace(/_/g, '-');
+					if (locale == 'en-us') {
+						fallbackLocaleIndex = i;
+					}
+					return locale;
+				});
+
+				var index = locales.indexOf(currentLocale);
+				if (index < 0) {
+					currentLocale = currentLocale.replace(/-.+$/, '');
+					locales.some(function (locale, i) {
+						locale = locale.replace(/-.+$/, '');
+						if (locale == currentLocale) {
+							index = i;
+							return true;
+						}
+						return false;
+					});
+				}
+				if (index < 0) {
+					index = fallbackLocaleIndex;
+				}
+				if (index < 0) {
+					result = false;
+				}
+				else {
+					result = 'locales/' + locales[index] + '/messages.json';
+				}
+			}, {noCache:true, sync:true});
+			return result;
+		});
 		this.cryptKeyPath = 'includes/wasavi.js';
 		this.version = widget.version;
 		this.isDev = widget.version == TEST_VERSION;
@@ -678,7 +718,7 @@ if (window.jetpack && typeof require == 'function') {
 			lastRegisteredTab = undefined;
 			return result;
 		});
-		this.messageCatalogPath = (function () {
+		this.__defineGetter__('messageCatalogPath', function () {
 			var prefered = l10n.getPreferedLocales();
 			if (!prefered) {
 				return undefined;
@@ -700,7 +740,7 @@ if (window.jetpack && typeof require == 'function') {
 			}
 
 			return 'xlocale/' + result + '/messages.json';
-		})();
+		});
 		this.cryptKeyPath = 'frontend/wasavi.js';
 		this.version = self.version;
 		this.isDev = this.version == TEST_VERSION;
@@ -816,12 +856,13 @@ if (window.jetpack && typeof require == 'function') {
 	/** {{{2 message catalog initializer */
 
 	function initMessageCatalog () {
-		if (typeof extension.messageCatalogPath != 'string') {
+		var path = extension.messageCatalogPath;
+		if (typeof path != 'string') {
 			messageCatalog = false;
 			extension.initContextMenu();
 			return;
 		}
-		resourceLoader.get(extension.messageCatalogPath, function (text) {
+		resourceLoader.get(path, function (text) {
 			messageCatalog = u.parseJson(text);
 			for (var i in messageCatalog) {
 				delete messageCatalog[i].description;
