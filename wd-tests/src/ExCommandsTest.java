@@ -1616,15 +1616,25 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send(":write\n");
 
-		String text = driver.findElement(By.id("t2")).getAttribute("value");
+		String text = driver.findElement(By.id(wasaviTargetID)).getAttribute("value");
+		assertEquals("#1-1", "foobar", text);
+	}
+
+	@Test
+	public void writeToContentEditable () {
+		Wasavi.send("ifoobar\u001b");
+		Wasavi.send(":write\n");
+
+		String text = driver.findElement(By.id(wasaviTargetID)).getText();
 		assertEquals("#1-1", "foobar", text);
 	}
 
 	@Test
 	public void testWriteToFile () {
-		Wasavi.send(":writ foobar\n");
-		// tests for web-based storage is in another file...
-		assertEquals("#1-1", "", Wasavi.getLastMessage());
+		Wasavi.send("ifoobar\u001b");
+		Wasavi.send(":writ test/foobar\n");
+		Wasavi.waitCommandCompletion();
+		assertEquals("#1-1", "Written: \"dropbox:/test/foobar\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
 	}
 
 	@Test

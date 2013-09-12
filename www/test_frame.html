@@ -24,6 +24,7 @@
 				padding:1px;
 				background-color:#eee;
 			    font:normal normal normal medium/1 "Consolas";
+				overflow-y:scroll;
 			}
 			#test-log {
 				width:100%;
@@ -74,26 +75,53 @@
 				'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.			'
 			].join('\n');
 			document.addEventListener('DOMContentLoaded', function () {
+				function getTargetElement () {
+					var useDiv = document.getElementById('use-div-checkbox').checked;
+					return document.getElementById(useDiv ? 't3' : 't2');
+				}
+				function setText (elm, text) {
+					if (elm.nodeName == 'TEXTAREA') {
+						t.value = text;
+					}
+					else {
+						var lines = text.split('\n');
+						lines.forEach(function (line, i) {
+							elm.appendChild(document.createTextNode(line));
+							if (i < lines.length - 1) {
+								elm.appendChild(document.createElement('br'));
+							}
+						});
+					}
+				}
+
+				document
+				.getElementById('reset-button')
+				.addEventListener('click', function (e) {
+					e.preventDefault();
+					document.getElementById('t1').value == '';
+					document.getElementById('t2').value == '';
+					document.getElementById('t3').textContent = '';
+				}, false);
+
 				document
 				.getElementById('init-section-button')
 				.addEventListener('click', function (e) {
 					e.preventDefault();
-					document.getElementById('t2').value = section_test_text;
+					setText(getTargetElement(), section_test_text);
 				}, false);
 
 				document
 				.getElementById('init-wrap-button')
 				.addEventListener('click', function (e) {
 					e.preventDefault();
-					document.getElementById('t2').value = wrap_test_text;
+					setText(getTargetElement(), wrap_test_text);
 				}, false);
 
 				document
 				.getElementById('request-launch-wasavi')
 				.addEventListener('click', function (e) {
 					e.preventDefault();
-
-					document.getElementById('t2').focus();
+					getTargetElement().focus();
 
 					var ev = document.createEvent('CustomEvent');
 					ev.initCustomEvent('WasaviRequestLaunch', false, false, 0);
@@ -118,6 +146,7 @@
 				<button id="init-section-button">init section test</button>
 				<button id="init-wrap-button">init wrap test</button>
 				<button id="request-launch-wasavi">launch wasavi</button>
+				<label><input type="checkbox" id="use-div-checkbox"> Use div as target</label>
 			</div>
 		</form>
 		<div id="log-container">

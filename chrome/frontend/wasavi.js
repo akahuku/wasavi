@@ -4209,6 +4209,7 @@ function handleExtensionChannelMessage (req) {
 			break;
 		case 'complete':
 			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.charLength)));
+			fireCommandCompleteEvent();
 			break;
 		}
 		break;

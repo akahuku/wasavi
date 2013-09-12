@@ -793,14 +793,14 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	var content = toNativeControl(rg.toString());
 	rg.detach();
 
+	if (a.range[1] == t.rowLength - 1) {
+		content = trimTerm(content);
+	}
 	if (app.targetElement.isContentEditable) {
 		content = content.split('\n');
 	}
 	else {
 		content = content.replace(/\n/g, app.preferredNewline);
-	}
-	if (a.range[1] == t.rowLength - 1) {
-		content = trimTerm(content);
 	}
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',

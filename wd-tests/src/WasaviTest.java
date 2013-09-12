@@ -266,6 +266,14 @@ class WasaviWrapper {
 		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
 
+	public void waitCommandCompletion () {
+		getStrokeSender();
+		strokeSender.setup();
+		WebElement elm = strokeSender.waitCommandCompletion();
+		strokeSender.finish(elm);
+		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
+	}
+
 	public void sendNoWait (CharSequence stroke) {
 		(new Actions(driver)).sendKeys(stroke).perform();
 	}
@@ -587,10 +595,11 @@ public class WasaviTest {
 	protected static WebDriver driver;
 	protected static WasaviWrapper Wasavi;
 	protected static InvokeState[] invokeStates = {new InvokeState(0), new InvokeState(1)};
+	protected static int testIndex = 1;
 	protected ArrayList<String> logText = new ArrayList<String>();
 	protected Boolean isSectionTest;
 	protected Boolean isAppMode;
-	protected int testIndex = 1;
+	protected String wasaviTargetID;
 
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
@@ -599,6 +608,7 @@ public class WasaviTest {
 
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
 			isAppMode = d.getMethodName().matches(".*appMode.*");
+			wasaviTargetID = d.getMethodName().matches(".*[Cc]ontentEditable.*") ? "t3" : "t2";
 
 			Wasavi.js(
 				"var h1 = document.getElementsByTagName('h1')[0];" +
@@ -669,8 +679,8 @@ public class WasaviTest {
 	protected WebElement invokeWasavi () {
 		WebElement wasaviFrame = null;
 
-		WebElement t2 = findElement(By.id("t2"));
-		if (t2 == null) {
+		WebElement target = findElement(By.id(wasaviTargetID));
+		if (target == null) {
 			System.out.println("target textarea not found.");
 			return null;
 		}
@@ -697,10 +707,11 @@ public class WasaviTest {
 				new WebDriverWait(driver, 1).until(
 					new ExpectedCondition<Boolean>() {
 						public Boolean apply (WebDriver driver) {
-							WebElement t2 = findElement(By.id("t2"));
-							if (t2 == null) return false;
+							WebElement target = findElement(By.id(wasaviTargetID));
+							if (target == null) return false;
 
-							String v = t2.getAttribute("value");
+							String v = target.getAttribute(
+								target.getTagName().equals("textarea") ? "value" : "textContent");
 							if (v == null) return false;
 
 							return v.length() == 0;
@@ -708,7 +719,21 @@ public class WasaviTest {
 					});
 			}
 
-			t2.click();
+			//
+			WebElement targetSwitcher = findElement(By.id("use-div-checkbox"));
+			if (targetSwitcher == null) {
+				System.out.println("target switcher not found.");
+				return null;
+			}
+			String useDivChecked = targetSwitcher.getAttribute("checked");
+			if (wasaviTargetID.equals("t2") && useDivChecked != null
+			||  wasaviTargetID.equals("t3") && useDivChecked == null) {
+				targetSwitcher.click();
+				System.out.println("target switcher clicked.");
+			}
+
+			//
+			target.click();
 
 			switch (invokeStates[i].getIndex()) {
 			case 0:
