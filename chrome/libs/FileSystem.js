@@ -1264,9 +1264,10 @@
 
 			getMetadataFromPath(task.path,
 				function (fragments, data, xhr) {
-					var fileId;
+					var fileId = '';
 					var parentId;
 					var mimeType = 'text/plain;charset=UTF-8';
+					var method = 'POST';
 
 					// new file on the root directory
 					if (!data && fragments.length == 1) {
@@ -1284,9 +1285,10 @@
 					}
 					// valid and exsitent file
 					else {
-						fileId = data[data.length - 1].id;
+						fileId = '/' + data[data.length - 1].id;
 						parentId = data.length >= 2 ? data[data.length - 2].id : 'root';
 						mimeType = data[data.length - 1].mimeType;
+						method = 'PUT';
 					}
 
 					var mp = new MultiPart(
@@ -1305,12 +1307,11 @@
 
 					// save...
 					request(
-						'https://www.googleapis.com/upload/drive/v2/files',
+						'https://www.googleapis.com/upload/drive/v2/files' + fileId,
 						{
-							method:'POST',
+							method:method,
 							query:{
-								uploadType:'multipart',
-								fileId:fileId
+								uploadType:'multipart'
 							},
 							content:mp.result,
 							beforesend:function (xhr) {
