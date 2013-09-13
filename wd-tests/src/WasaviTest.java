@@ -599,6 +599,7 @@ public class WasaviTest {
 	protected ArrayList<String> logText = new ArrayList<String>();
 	protected Boolean isSectionTest;
 	protected Boolean isAppMode;
+	protected Boolean isReadonlyElement;
 	protected String wasaviTargetID;
 
 	@Rule public TestRule watcher = new TestWatcher() {
@@ -608,13 +609,14 @@ public class WasaviTest {
 
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
 			isAppMode = d.getMethodName().matches(".*appMode.*");
+			isReadonlyElement = d.getMethodName().matches(".*ReadonlyElement.*");
 			wasaviTargetID = d.getMethodName().matches(".*[Cc]ontentEditable.*") ? "t3" : "t2";
 
 			Wasavi.js(
 				"var h1 = document.getElementsByTagName('h1')[0];" +
 				"if (h1) {" +
 				"  h1.textContent = '" + String.format(
-					"%s (%d of %d)", d.getMethodName(), testIndex++, d.testCount()) + "';" +
+					"%s (#%d)", d.getMethodName(), testIndex++) + "';" +
 				"}");
 		}
 		protected void failed (Throwable e, Description d) {
@@ -681,7 +683,7 @@ public class WasaviTest {
 
 		WebElement target = findElement(By.id(wasaviTargetID));
 		if (target == null) {
-			System.out.println("target textarea not found.");
+			System.out.println("target element not found.");
 			return null;
 		}
 
@@ -704,17 +706,36 @@ public class WasaviTest {
 
 				reset.click();
 
+				WebElement ro = findElement(By.id("readonly-checkbox"));
+				String roChecked = ro.getAttribute("checked");
+				if (isReadonlyElement && roChecked == null
+				||  !isReadonlyElement && roChecked != null) {
+					ro.click();
+					System.out.println("readonly checkbox clicked.");
+				}
+
 				new WebDriverWait(driver, 1).until(
 					new ExpectedCondition<Boolean>() {
 						public Boolean apply (WebDriver driver) {
 							WebElement target = findElement(By.id(wasaviTargetID));
-							if (target == null) return false;
+							if (target == null) {
+								System.out.println("target element not found (2).");
+								return false;
+							}
 
 							String v = target.getAttribute(
 								target.getTagName().equals("textarea") ? "value" : "textContent");
-							if (v == null) return false;
+							if (v == null) {
+								System.out.println("content of target is null.");
+								return false;
+							}
 
-							return v.length() == 0;
+							if (v.length() > 0) {
+								System.out.println(String.format("content of target is not an empty: '%s'.", v));
+								return false;
+							}
+
+							return true;
 						}
 					});
 			}

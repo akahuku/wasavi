@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 381 2013-09-10 03:19:04Z akahuku $
+ * @version $Id: classes_ex.js 387 2013-09-13 09:30:13Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -775,15 +775,11 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 		return _('Appending is not implemented.');
 	}
 	if (a.flags.force) {
-		app.targetElement.readOnly = false;
 		app.config.setData('noreadonly');
 	}
 	else {
 		if (app.config.vars.readonly) {
 			return _('Readonly option is set (use "!" to override).');
-		}
-		if (app.targetElement.readOnly) {
-			return _('Element to be written has readonly attribute (use "!" to override).');
 		}
 	}
 
@@ -805,6 +801,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	app.low.fireEvent('saved', {
 		type:'wasavi-saved',
 		path:pathRegalized,
+		isForce:a.flags.force,
 		value:content
 	});
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {

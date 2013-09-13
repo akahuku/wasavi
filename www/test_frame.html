@@ -17,6 +17,9 @@
 			    padding:0;
 			    font:normal normal normal medium/1 "Consolas";
 			}
+			#t2[readonly="readonly"] {
+				background-color:#eee;
+			}
 			#t3 {
 				width:400px;
 				height:300px;
@@ -98,8 +101,14 @@
 				.getElementById('reset-button')
 				.addEventListener('click', function (e) {
 					e.preventDefault();
-					document.getElementById('t1').value == '';
-					document.getElementById('t2').value == '';
+
+					document.getElementById('use-div-checkbox').checked = false;
+					document.getElementById('readonly-checkbox').checked = false;
+
+					document.getElementById('t1').value = '';
+					document.getElementById('t2').removeAttribute('readonly');
+					document.getElementById('t2').removeAttribute('disabled');
+					document.getElementById('t2').value = '';
 					document.getElementById('t3').textContent = '';
 				}, false);
 
@@ -127,6 +136,20 @@
 					ev.initCustomEvent('WasaviRequestLaunch', false, false, 0);
 					document.dispatchEvent(ev);
 				}, false);
+
+				document
+				.getElementById('readonly-checkbox')
+				.addEventListener('click', function (e) {
+					var t = getTargetElement();
+					if (t.nodeName == 'TEXTAREA') {
+						if (e.target.checked) {
+							t.setAttribute('readonly', 'readonly');
+						}
+						else {
+							t.removeAttribute('readonly');
+						}
+					}
+				}, false);
 			}, false);
 		</script>
 	</head>
@@ -146,6 +169,7 @@
 				<button id="init-section-button">init section test</button>
 				<button id="init-wrap-button">init wrap test</button>
 				<button id="request-launch-wasavi">launch wasavi</button>
+				<label><input type="checkbox" id="readonly-checkbox"> Readonly</label>
 				<label><input type="checkbox" id="use-div-checkbox"> Use div as target</label>
 			</div>
 		</form>

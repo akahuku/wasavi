@@ -260,10 +260,6 @@
 		"message": "Readonly option is set (use \"!\" to override).",
 		"description": "Readonly option is set (use \"!\" to override)."
 	},
-	"element_to_be_written_has_readonly_attribute_use_to_override": {
-		"message": "Element to be written has readonly attribute (use \"!\" to override).",
-		"description": "Element to be written has readonly attribute (use \"!\" to override)."
-	},
 	"cannot_open_@0": {
 		"message": "Cannot open \"{0}\".",
 		"description": "Cannot open \"{0}\"."
@@ -427,6 +423,22 @@
 	"press_any_key_to_continue_or_enter_more_ex_command": {
 		"message": "Press any key to continue, or enter more ex command:",
 		"description": "Press any key to continue, or enter more ex command:"
+	},
+	"element_to_be_written_has_readonly_attribute_use_to_override": {
+		"message": "Element to be written has readonly attribute (use \"!\" to override).",
+		"description": "Element to be written has readonly attribute (use \"!\" to override)."
+	},
+	"element_to_be_written_has_disabled_attribute_use_to_override": {
+		"message": "Element to be written has disabled attribute (use \"!\" to override).",
+		"description": "Element to be written has disabled attribute (use \"!\" to override)."
+	},
+	"invalid_text_format": {
+		"message": "Invalid text format.",
+		"description": "Invalid text format."
+	},
+	"exception_while_saving_@0": {
+		"message": "Exception while saving: {0}",
+		"description": "Exception while saving: {0}"
 	},
 	"@0_unknown_error": {
 		"message": "{0}: unknown error.",

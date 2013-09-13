@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 381 2013-09-10 03:19:04Z akahuku $
+ * @version $Id: agent.js 387 2013-09-13 09:30:13Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -70,6 +70,10 @@ var targetElementResizedTimer;
 var wasaviFrameTimeoutTimer;
 var keyStrokeLog = [];
 var mutationObserver;
+
+function _ () {
+	return Array.prototype.slice.call(arguments);
+}
 
 function locate (iframe, target, isFullscreen, extraHeight) {
 	function isFixedPosition (element) {
@@ -213,7 +217,7 @@ function runCore (element, frameSource) {
 		selectionEnd:element.selectionEnd,
 		scrollTop:element.scrollTop,
 		scrollLeft:element.scrollLeft,
-		readOnly:element.readOnly,
+		readOnly:element.readOnly || element.disabled,
 		value:getValue(element),
 		rect:{width:rect.width, height:rect.height},
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily)
@@ -343,13 +347,41 @@ function getValue (element) {
 	return result;
 }
 
-function setValue (element, value) {
+function setValue (element, value, isForce) {
 	value || (value = '');
 
 	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		element.value = value;
+		if (element.readOnly) {
+			if (isForce) {
+				element.readOnly = false;
+			}
+			else {
+				return _('Element to be written has readonly attribute (use "!" to override).');
+			}
+		}
+		if (element.disabled) {
+			if (isForce) {
+				element.disabled = false;
+			}
+			else {
+				return _('Element to be written has disabled attribute (use "!" to override).');
+			}
+		}
+		if (typeof value != 'string') {
+			return _('Invalid text format.');
+		}
+		try {
+			element.value = value;
+		}
+		catch (e) {
+			return _('Exception while saving: {0}', e.message);
+		}
 	}
-	else if (Object.prototype.toString.call(value) == '[object Array]') {
+	else {
+		if (Object.prototype.toString.call(value) != '[object Array]') {
+			return _('Invalid text format.');
+		}
+
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
@@ -360,7 +392,12 @@ function setValue (element, value) {
 			f.appendChild(document.createElement('p')).textContent = value[i];
 		}
 
-		try {element.appendChild(f)} catch (e) {}
+		try {
+			element.appendChild(f)
+		}
+		catch (e) {
+			return _('Exception while saving: {0}', e.message);
+		}
 	}
 }
 
@@ -1021,18 +1058,22 @@ extension.setMessageListener(function (req) {
 	case 'wasavi-saved':
 		if (!wasaviFrame) break;
 		try {
-			setValue(targetElement, req.value);
+			var result = setValue(targetElement, req.value, req.isForce);
+			var payload = {type:'fileio-write-response'};
+			if (result) {
+				payload.error = result;
+			}
+			else {
+				payload.state = 'complete';
+				payload.meta = {
+					path:req.value.path,
+					charLength:req.value.length
+				};
+			}
 			extension.postMessage({
 				type:'notify-to-child',
 				childTabId:req.childTabId,
-				payload:{
-					type:'fileio-write-response',
-					state:'complete',
-					meta:{
-						path:req.value.path,
-						charLength:req.value.length
-					}
-				}
+				payload:payload
 			});
 		} catch (e) {}
 		break;

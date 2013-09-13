@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 381 2013-09-10 03:19:04Z akahuku $
+ * @version $Id: wasavi.js 385 2013-09-13 02:36:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com

@@ -1652,10 +1652,35 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
-	public void testWriteReadonlyWarning () {
+	public void testWriteWarnWithReadonlyOption () {
+		Wasavi.send("ifoobar\u001b");
 		Wasavi.send(":set readonly\n");
 		Wasavi.send(":w\n");
 		assertEquals("#1-1", "write: Readonly option is set (use \"!\" to override).", Wasavi.getLastMessage());
+		assertEquals("#1-2", "", driver.findElement(By.id("t2")).getAttribute("value"));
+	}
+
+	@Test
+	public void testWriteWarnWithReadonlyElement () {
+		Wasavi.send("ifoobar\u001b:w\n");
+		assertEquals("#1-1", "write: Readonly option is set (use \"!\" to override).", Wasavi.getLastMessage());
+		assertEquals("#1-2", "", driver.findElement(By.id("t2")).getAttribute("value"));
+	}
+
+	@Test
+	public void testForceWriteWithReadonlyOption () {
+		Wasavi.send("ifoobar\u001b:set readonly|w!\n");
+		sleep(1000);
+		assertEquals("#1-1", "Written: \"TEXTAREA#t2\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
+		assertEquals("#1-2", "foobar", driver.findElement(By.id("t2")).getAttribute("value"));
+	}
+
+	@Test
+	public void testForceWriteWithReadonlyElement () {
+		Wasavi.send("ifoobar\u001b:w!\n");
+		sleep(1000);
+		assertEquals("#1-1", "Written: \"TEXTAREA#t2\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
+		assertEquals("#1-2", "foobar", driver.findElement(By.id("t2")).getAttribute("value"));
 	}
 
 	@Test
