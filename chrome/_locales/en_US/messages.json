@@ -592,6 +592,10 @@
 		"message": "Putting data is empty.",
 		"description": "Putting data is empty."
 	},
+	"the_text_has_been_modified": {
+		"message": "The text has been modified.",
+		"description": "The text has been modified."
+	},
 	"obtaining_access_rights_@0": {
 		"message": "Obtaining access rights ({0})...",
 		"description": "Obtaining access rights ({0})..."

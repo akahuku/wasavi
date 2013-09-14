@@ -592,6 +592,10 @@
 		"message": "貼り付けるデータが空です。",
 		"description": "Putting data is empty."
 	},
+	"the_text_has_been_modified": {
+		"message": "テキストは変更されています。",
+		"description": "The text has been modified."
+	},
 	"obtaining_access_rights_@0": {
 		"message": "アクセス権を取得しています ({0})...",
 		"description": "Obtaining access rights ({0})..."

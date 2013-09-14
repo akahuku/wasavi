@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 390 2013-09-14 20:07:04Z akahuku $
+ * @version $Id: wasavi.js 392 2013-09-14 23:16:36Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -985,6 +985,7 @@ function setupEventHandlers (install) {
 	window[method]('focus', handleWindowFocus, false);
 	window[method]('blur', handleWindowBlur, false);
 	window[method]('resize', handleWindowResize, false);
+	window[method]('beforeunload', handleBeforeUnload, false);
 
 	// document
 	document[method]('paste', handlePaste, false);
@@ -4105,6 +4106,17 @@ function handleKeydown (e) {
 
 	isInteractive = true;
 	mapManager.process(e, handleKeydownMain);
+}
+function handleBeforeUnload (e) {
+	try {
+		if (!WasaviExtensionWrapper.IS_TOP_FRAME) return;
+		if (!config.vars.modified) return;
+	}
+	catch (ex) {
+		return;
+	}
+
+	return e.returnValue = _('The text has been modified.');
 }
 function handlePaste (e) {
 	e.preventDefault();
