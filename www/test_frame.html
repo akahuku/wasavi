@@ -84,7 +84,7 @@
 				}
 				function setText (elm, text) {
 					if (elm.nodeName == 'TEXTAREA') {
-						t.value = text;
+						elm.value = text;
 					}
 					else {
 						var lines = text.split('\n');

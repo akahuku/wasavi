@@ -83,12 +83,15 @@ public class FileSystemTest extends WasaviTest {
 	}
 
 	private void write (String fs) {
+		int n = (int)(Math.random() * 1000);
 		Wasavi.send(":files default " + fs + "\n");
-		Wasavi.send("ggawrite test.\nwrite test\u001b");
+		Wasavi.send(String.format("ggawrite test:%d\nwrite test\u001b", n));
 		Wasavi.send(":w /test/write\\ test.txt\n", "G");
-		sleep(1000 * 30); // BAD!
+		Wasavi.waitCommandCompletion();
 		Wasavi.send(":r /test/write\\ test.txt\n", "gg");
-		assertEquals("#1-1", "write test.\nwrite test\nwrite test.\nwrite test", Wasavi.getValue());
+		assertEquals("#1-1",
+				String.format("write test:%d\nwrite test\nwrite test:%d\nwrite test", n, n),
+				Wasavi.getValue());
 	}
 
 	@Test

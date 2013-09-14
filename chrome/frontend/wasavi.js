@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 389 2013-09-14 00:32:19Z akahuku $
+ * @version $Id: wasavi.js 390 2013-09-14 20:07:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4198,6 +4198,7 @@ function handleExtensionChannelMessage (req) {
 	case 'fileio-write-response':
 		if (req.error) {
 			showMessage(_.apply(null, req.error), true, false);
+			fireCommandCompleteEvent();
 			break;
 		}
 		switch (req.state) {

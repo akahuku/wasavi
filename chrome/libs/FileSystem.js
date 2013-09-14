@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: FileSystem.js 385 2013-09-13 02:36:51Z akahuku $
+ * @version $Id: FileSystem.js 390 2013-09-14 20:07:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -87,6 +87,9 @@
 	}
 
 	function getCanonicalPath (path) {
+		path = path.replace(/\\\//g, '_');
+		path = path.replace(/\\(.)/g, '$1');
+		path = path.replace(/\\/g, '');
 		return path.split('/').map(OAuth.urlEncode).join('/');
 	}
 
@@ -1285,6 +1288,11 @@
 					}
 					// valid and exsitent file
 					else {
+						if (data[data.length - 1].mimeType == MIME_TYPE_FOLDER) {
+							self.responseError(task, _('Cannot overwrite a directory.'));
+							taskQueue.run();
+							return;
+						}
 						fileId = '/' + data[data.length - 1].id;
 						parentId = data.length >= 2 ? data[data.length - 2].id : 'root';
 						mimeType = data[data.length - 1].mimeType;
@@ -1299,7 +1307,7 @@
 									id:parentId
 								}
 							],
-							title:/\/([^\/]+)$/.exec(task.path)[1],
+							title:fragments[fragments.length - 1],
 							mimeType:mimeType
 						},
 						task.content

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 387 2013-09-13 09:30:13Z akahuku $
+ * @version $Id: classes_ex.js 390 2013-09-14 20:07:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -763,7 +763,7 @@ Wasavi.ExCommand.parseWriteArg = function (app, t, a) {
 };
 Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	path || (path = app.fileName);
-	var pathRegalized = app.low.regalizeFilePath(path);
+	var pathRegalized = app.low.regalizeFilePath(path, true);
 
 	if (isCommand) {
 		return _('Command redirection is not implemented.');
