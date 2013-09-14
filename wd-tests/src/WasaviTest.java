@@ -707,6 +707,10 @@ public class WasaviTest {
 				reset.click();
 
 				WebElement ro = findElement(By.id("readonly-checkbox"));
+				if (ro == null) {
+					System.out.println("readonly checkbox not found.");
+					return null;
+				}
 				String roChecked = ro.getAttribute("checked");
 				if (isReadonlyElement && roChecked == null
 				||  !isReadonlyElement && roChecked != null) {

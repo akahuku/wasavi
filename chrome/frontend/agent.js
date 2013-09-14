@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 387 2013-09-13 09:30:13Z akahuku $
+ * @version $Id: agent.js 389 2013-09-14 00:32:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -372,6 +372,7 @@ function setValue (element, value, isForce) {
 		}
 		try {
 			element.value = value;
+			return value.length;
 		}
 		catch (e) {
 			return _('Exception while saving: {0}', e.message);
@@ -388,12 +389,20 @@ function setValue (element, value, isForce) {
 		r.detach();
 
 		var f = document.createDocumentFragment();
-		for (var i = 0, goal = value.length; i < goal; i++) {
-			f.appendChild(document.createElement('p')).textContent = value[i];
+		var length = 0;
+		for (var i = 0, goal = value.length - 1; i < goal; i++) {
+			f.appendChild(document.createTextNode(value[i]));
+			f.appendChild(document.createElement('br'));
+			length += value[i].length + 1;
+		}
+		if (value.length >= 1) {
+			f.appendChild(document.createTextNode(value[value.length - 1]));
+			length += value[i].length;
 		}
 
 		try {
 			element.appendChild(f)
+			return length;
 		}
 		catch (e) {
 			return _('Exception while saving: {0}', e.message);
@@ -1057,19 +1066,22 @@ extension.setMessageListener(function (req) {
 
 	case 'wasavi-saved':
 		if (!wasaviFrame) break;
+		var result = setValue(targetElement, req.value, req.isForce);
+		var payload = {type:'fileio-write-response'};
+		if (typeof result == 'number') {
+			payload.state = 'complete';
+			payload.meta = {
+				path:req.value.path,
+				charLength:result
+			};
+		}
+		else if (Object.prototype.toString.call(value) == '[object Array]') {
+			payload.error = result;
+		}
+		else {
+			payload.error = _('Internal state error.');
+		}
 		try {
-			var result = setValue(targetElement, req.value, req.isForce);
-			var payload = {type:'fileio-write-response'};
-			if (result) {
-				payload.error = result;
-			}
-			else {
-				payload.state = 'complete';
-				payload.meta = {
-					path:req.value.path,
-					charLength:req.value.length
-				};
-			}
 			extension.postMessage({
 				type:'notify-to-child',
 				childTabId:req.childTabId,

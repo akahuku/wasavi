@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 385 2013-09-13 02:36:51Z akahuku $
+ * @version $Id: wasavi.js 389 2013-09-14 00:32:19Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2388,8 +2388,8 @@ function getFileIoResultInfo (aFileName, charLength, isNew) {
 	result.push('"' + (aFileName || getFileNameString()) + '"');
 
 	// partial attributes
-	config.vars.modified && attribs.push(_('modified')); // modified
 	attribs.push(getNewlineType(preferredNewline)); // newline type
+	config.vars.readonly && attribs.push(_('RO')); // read only
 	result.push('[' + attribs.join(', ') + ']');
 
 	// current line number

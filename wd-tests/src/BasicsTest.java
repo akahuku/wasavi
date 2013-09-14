@@ -29,13 +29,14 @@ public class BasicsTest extends WasaviTest {
 
 	@Test
 	public void runtimeOverrideSettings () {
-		driver.navigate().to(driver.getCurrentUrl() + "?ros-test");
+		String currentUrl = driver.getCurrentUrl();
+		driver.navigate().to(currentUrl + "?ros-test");
 
 		WebElement wasaviFrame = invokeWasavi();
 
 		// phase 1
 		if (wasaviFrame == null) {
-			fail("runtimeOverrideSettings: cannot find wasaviFrame");
+			fail("runtimeOverrideSettings: cannot find wasaviFrame, phase 1");
 		}
 
 		wasaviFrame.click();
@@ -58,6 +59,8 @@ public class BasicsTest extends WasaviTest {
 		Wasavi.sendNoWait("a\t\nabc\u001b:wq\n");
 		sleep(1000);
 		assertEquals("#1-1", "\t\n\tabc", findElement(By.id("t2")).getAttribute("value"));
+
+		driver.navigate().to(currentUrl);
 	}
 
 	@Test
