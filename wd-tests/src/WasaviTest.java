@@ -810,6 +810,26 @@ public class WasaviTest {
 
 	protected void invokeAppModeWasavi () {
 		driver.navigate().to("http://wasavi.appsweets.net/");
+
+		WebElement wasaviFrame = null;
+
+		try {
+			wasaviFrame = new WebDriverWait(driver, 5).until(
+				new ExpectedCondition<WebElement>() {
+					public WebElement apply (WebDriver driver) {
+						return findElement(By.id("wasavi_container"));
+					}
+				});
+		}
+		catch (org.openqa.selenium.TimeoutException e) {
+			wasaviFrame = null;
+		}
+
+		if (wasaviFrame != null) {
+			wasaviFrame.click();
+		}
+
+		return wasaviFrame;
 	}
 
 	@BeforeClass
