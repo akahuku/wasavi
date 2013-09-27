@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 351 2013-07-29 16:55:53Z akahuku $
+ * @version $Id: extension_wrapper.js 414 2013-09-27 13:13:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -144,9 +144,7 @@
 		window.chrome && chrome.extension
 		|| global.opera && global.opera.extension
 		|| IS_GECKO && IS_FX_JETPACK;
-	ExtensionWrapper.HOTKEY_ENABLED =
-		/*window.chrome && chrome.extension
-		||*/ IS_GECKO && IS_FX_JETPACK;
+	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.IS_TOP_FRAME = (function () {
 		if (IS_GECKO) {
 			var result = false;
@@ -165,7 +163,7 @@
 	 */
 
 	function ChromeExtensionWrapper () {
-		function handleMessage (req, sender, res) {
+		function handleMessage (req) {
 			if (req && req.type == 'init-response') {
 				theObj.tabId = req.tabId;
 			}
@@ -380,4 +378,4 @@
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :
+// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker :

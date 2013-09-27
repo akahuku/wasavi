@@ -153,10 +153,7 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send(new WasaviSendCallback() {
 			@Override
 			void exec (Actions act) {
-				act
-					.keyDown(Keys.SHIFT)
-					.sendKeys(Keys.INSERT)
-					.keyUp(Keys.SHIFT);
+				act.sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT));
 			}
 		});
 		assertEquals("#1", s, Wasavi.getValue());
@@ -169,11 +166,8 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send(new WasaviSendCallback() {
 			@Override
 			void exec (Actions act) {
-				act
-					.sendKeys("i")
-					.keyDown(Keys.SHIFT)
-					.sendKeys(Keys.INSERT)
-					.keyUp(Keys.SHIFT)
+				act .sendKeys("i")
+					.sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT))
 					.sendKeys("\u001b");
 			}
 		});

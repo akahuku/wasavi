@@ -57,8 +57,7 @@
     }
   ],
   "web_accessible_resources": [
-    "wasavi_frame.html",
-    "key_hook.js"
+    "wasavi_frame.html"
   ],
   "options_page": "options.html",
   "homepage_url": "http://appsweets.net/",

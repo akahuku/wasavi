@@ -11,7 +11,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: agent.js 389 2013-09-14 00:32:19Z akahuku $
+ * @version $Id: agent.js 414 2013-09-27 13:13:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -70,9 +70,19 @@ var targetElementResizedTimer;
 var wasaviFrameTimeoutTimer;
 var keyStrokeLog = [];
 var mutationObserver;
+var getValueCallback;
 
 function _ () {
 	return Array.prototype.slice.call(arguments);
+}
+
+function getUniqueClass () {
+	var result;
+	do {
+		result = 'wasavi_tmp_' + Math.floor(Math.random() * 0x10000);
+	}
+	while (document.getElementsByClassName(result).length > 0);
+	return result;
 }
 
 function locate (iframe, target, isFullscreen, extraHeight) {
@@ -135,15 +145,40 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 }
 
 function run (element) {
-	extension.postMessage(
-		{type:'request-wasavi-frame'},
-		function (res) {
-			runCore(element, res.data);
+	var isPseudoTextarea = false;
+	for (var e = element; e; e = e.parentNode) {
+		if (!e.classList) continue;
+		if (e.classList.contains('CodeMirror') || e.classList.contains('ace_editor')) {
+			element = e;
+			isPseudoTextarea = true;
+			break;
 		}
-	);
+	}
+	extension.postMessage({type:'request-wasavi-frame'}, function (res) {
+		if (isPseudoTextarea) {
+			if (getValueCallback) {
+				runCore(element, res.data, '');
+				return;
+			}
+			getValueCallback = function (value) {runCore(element, res.data, value)};
+			var className = getUniqueClass();
+			element.classList.add(className);
+			setTimeout(function () {
+				getValueCallback = null;
+				element.classList.remove(className);
+			}, 1000 * 5);
+			fireCustomEvent('WasaviRequestGetContent', {className:className});
+		}
+		else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
+			runCore(element, res.data, element.value);
+		}
+		else if (element.isContentEditable) {
+			runCore(element, res.data, toPlainText(element));
+		}
+	});
 }
 
-function runCore (element, frameSource) {
+function runCore (element, frameSource, value) {
 	/*
 	 * boot sequence:
 	 *
@@ -218,7 +253,7 @@ function runCore (element, frameSource) {
 		scrollTop:element.scrollTop,
 		scrollLeft:element.scrollLeft,
 		readOnly:element.readOnly || element.disabled,
-		value:getValue(element),
+		value:value,
 		rect:{width:rect.width, height:rect.height},
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily)
 	});
@@ -334,23 +369,28 @@ function log (eventType, keyCode, key) {
 	keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
 }
 
-function getValue (element) {
-	var result = '';
-
-	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		result = element.value;
-	}
-	else if (element.isContentEditable) {
-		result = toPlainText(element);
-	}
-
-	return result;
+function fireCustomEvent (name, detail, target) {
+	var ev = document.createEvent('CustomEvent');
+	ev.initCustomEvent(name, false, false, detail);
+	(target || document).dispatchEvent(ev);
 }
 
 function setValue (element, value, isForce) {
 	value || (value = '');
 
-	if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
+	if (element.classList.contains('CodeMirror')) {
+		if (typeof value != 'string') {
+			return _('Invalid text format.');
+		}
+		var className = getUniqueClass();
+		element.classList.add(className);
+		setTimeout(function () {
+			element.classList.remove(className);
+		}, 1000 * 5);
+		fireCustomEvent('WasaviRequestSetContent', {className:className, content:value});
+		return value.length;
+	}
+	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
 		if (element.readOnly) {
 			if (isForce) {
 				element.readOnly = false;
@@ -449,7 +489,7 @@ function toPlainText (input) {
 		var block = isBlock(display);
 		var forceInline = isForceInline(display);
 
-		if (isBlock(display)) {
+		if (block) {
 			newBlock(node.nodeName);
 			t[t.length - 1].display = display;
 			t[t.length - 1].whiteSpace = getStyle(node, 'whiteSpace');
@@ -577,9 +617,7 @@ function handleKeydown (e) {
 		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
 
 		if (matchWithShortcut(e)) {
-			var ev = document.createEvent('CustomEvent');
-			ev.initCustomEvent('WasaviStarting', false, false, 0);
-			document.dispatchEvent(ev);
+			fireCustomEvent('WasaviStarting', 0);
 			e.preventDefault();
 			run(e.target);
 		}
@@ -823,7 +861,7 @@ function handleAgentInitialized (req) {
 
 	devMode
 	&& WasaviExtensionWrapper.IS_TOP_FRAME
-	&& document.querySelectorAll('textarea').length
+	&& document.querySelector('textarea')
 	&& console.info(
 		'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
 }
@@ -833,22 +871,96 @@ function handleAgentInitialized (req) {
  * ----------------
  */
 
-function createPageAgent () {
-	extension.getExtensionFileURL('/key_hook.js', function (url) {
-		if (!url) return;
+function createPageAgent (doHook) {
+	var parent = document.head || document.body || document.documentElement;
+	if (!parent) return;
 
-		var parent = document.head || document.body || document.documentElement;
-		if (!parent) return;
+	var code = '';
 
-		var s = document.createElement('script');
-		s.onload = function () {
-			this.onload = null;
-			this.parentNode.removeChild(this);
-		};
-		s.type = 'text/javascript';
-		s.src = url;
-		parent.appendChild(s);
-	});
+	// keyboard event hooking
+	if (doHook) {
+		code += " \
+var wasaviRunning = false; \
+function isHookEvent (en) {return en == 'keydown' || en == 'keypress'} \
+function getKey (en, uc) {return en + '_' + !!uc} \
+function hook (target) { \
+	if (!target || !target.addEventListener || !target.removeEventListener) return; \
+	var addOriginal = target.addEventListener, \
+		removeOriginal = target.removeEventListener, \
+		listeners = []; \
+	target.addEventListener = function (en, fn, uc) { \
+		if (!isHookEvent(en)) { \
+			addOriginal.call(this, en, fn, uc); \
+			return; \
+		} \
+		var key = getKey(en, uc); \
+		!listeners[key] && (listeners[key] = []); \
+		if (!listeners[key].some(function (o) {return o[0] == fn})) { \
+			var wrappedListener = function (e) {!wasaviRunning && fn && fn(e)}; \
+			listeners[key].push([fn, wrappedListener]); \
+			addOriginal.call(this, en, wrappedListener, uc); \
+		} \
+	}; \
+	target.removeEventListener = function (en, fn, uc) { \
+		if (!isHookEvent(en)) { \
+			removeOriginal.call(this, en, fn, uc); \
+			return; \
+		} \
+		var key = getKey(en, uc); \
+		if (!listeners[key]) return; \
+		listeners[key] = listeners[key].filter(function (o) { \
+			if (o[0] != fn) return true; \
+			removeOriginal.call(this, en, o[1], uc); \
+			return false; \
+		}, this); \
+	}; \
+} \
+hook(win.HTMLInputElement && win.HTMLInputElement.prototype); \
+hook(win.HTMLTextAreaElement && win.HTMLTextAreaElement.prototype); \
+hook(win.Node && win.Node.prototype); \
+";
+	}
+
+	// launch event handlers and indirect content setter/getter
+	code += "\
+doc.addEventListener('WasaviStarting', function () {wasaviRunning = true}, false); \
+doc.addEventListener('WasaviTerminated', function () {wasaviRunning = false}, false); \
+doc.addEventListener('WasaviRequestGetContent', function (e) { \
+	var node = doc.getElementsByClassName(e.detail.className)[0]; \
+	if (!node) return; \
+	var result = ''; \
+	node.classList.remove(e.detail.className); \
+	if (node.CodeMirror) \
+		try {result = node.CodeMirror.getValue()} catch (ex) {result = ''} \
+	else if (node.classList.contains('ace_editor') && win.ace) \
+		try {result = win.ace.edit(node).getValue()} catch(ex) {result = ''} \
+	var ev = doc.createEvent('CustomEvent'); \
+	ev.initCustomEvent('WasaviResponseGetContent', false, false, result); \
+	doc.dispatchEvent(ev); \
+}, false); \
+doc.addEventListener('WasaviRequestSetContent', function (e) { \
+	var node = doc.getElementsByClassName(e.detail.className)[0]; \
+	if (!node) return; \
+	node.classList.remove(e.detail.className); \
+	if (node.CodeMirror) \
+		try {node.CodeMirror.setValue(e.detail.content)} catch (ex) {} \
+	else if (node.classList.contains('ace_editor') && win.ace) \
+		try {win.ace.edit(node).setValue(e.detail.content)} catch(ex) {} \
+}, false); \
+";
+
+	var s = document.createElement('script');
+	s.onload = function () {
+		this.onload = null;
+		this.parentNode.removeChild(this);
+	};
+	s.type = 'text/javascript';
+	s.src = 'data:text/javascript;base64,' + window.btoa(
+		'!function(win,doc){' +
+		code +
+		'}(window, document);'
+	);
+	parent.appendChild(s);
 }
 
 /**
@@ -870,15 +982,30 @@ function handleRequestLaunch () {
 }
 
 /**
+ * handler for response from element content retriever
+ */
+
+function handleResponseGetContent (e) {
+	if (getValueCallback) {
+		getValueCallback(e.detail);
+		getValueCallback = null;
+	}
+}
+
+/**
  * bootstrap
  * ----------------
  */
 
 extension = WasaviExtensionWrapper.create();
 
-if (!WasaviExtensionWrapper.HOTKEY_ENABLED) {
+if (WasaviExtensionWrapper.HOTKEY_ENABLED) {
+	createPageAgent(false);
+}
+else {
 	window.addEventListener('keydown', handleKeydown, true);
-	createPageAgent();
+	createPageAgent(true);
+	
 }
 
 extension.setMessageListener(function (req) {
@@ -970,9 +1097,7 @@ extension.setMessageListener(function (req) {
 		document.activeElement != wasaviFrame && focusToFrame(req);
 		wasaviFrame.style.visibility = 'visible';
 		devMode && console.info('wasavi started');
-		var ev = document.createEvent('CustomEvent');
-		ev.initCustomEvent('WasaviStarted', false, false, 0);
-		document.dispatchEvent(ev);
+		fireCustomEvent('WasaviStarted', 0);
 
 		clearTimeout(wasaviFrameTimeoutTimer);
 		wasaviFrameTimeoutTimer = null;
@@ -1040,9 +1165,7 @@ extension.setMessageListener(function (req) {
 		}
 		cleanup(req.value, req.isImplicit);
 		devMode && console.info('wasavi terminated');
-		var ev = document.createEvent('CustomEvent');
-		ev.initCustomEvent('WasaviTerminated', false, false, 0);
-		document.dispatchEvent(ev);
+		fireCustomEvent('WasaviTerminated', 0);
 		break;
 
 	case 'wasavi-read':
@@ -1164,7 +1287,8 @@ extension.setMessageListener(function (req) {
 });
 extension.connect('init-agent');
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
+document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :
+// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker :

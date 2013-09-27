@@ -14,9 +14,9 @@ mklink /d unicode         ..\chrome\unicode
 
 mkdir locales
 pushd locales
-mklink en-us ..\..\chrome\_locales\en_US
-mklink ja    ..\..\chrome\_locales\ja
-mklink locales.json ..\..\chrome\locales.json
+mklink /d en-us     ..\..\chrome\_locales\en_US
+mklink /d ja        ..\..\chrome\_locales\ja
+mklink locales.json ..\..\chrome\_locales\locales.json
 popd
 
 mkdir includes

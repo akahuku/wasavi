@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 392 2013-09-14 23:16:36Z akahuku $
+ * @version $Id: wasavi.js 413 2013-09-25 00:17:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -774,9 +774,6 @@ left:0; top:0; \
 	var conscaler = $('wasavi_console_scaler');
 	conscaler.textContent = '#';
 
-	// footer container
-	var footer = $('wasavi_footer');
-
 	// footer (default indicator)
 	var footerDefault = $('wasavi_footer_modeline');
 	$('wasavi_footer_file_indicator').textContent = '#';
@@ -785,16 +782,9 @@ left:0; top:0; \
 	// footer (alter: line input)
 	var footerAlter = $('wasavi_footer_alter');
 
-	// footer alter contents
-	var footerAlterTable = $('wasavi_footer_alter_table');
-	var footerAlterRow = footerAlterTable.getElementsByTagName('tr')[0];
-
 	// footer alter contents: indicator
 	var footerIndicator = $('wasavi_footer_input_indicator');
 	footerIndicator.textContent = '/';
-
-	// footer alter contents: line input container
-	var footerLineInputContainer = $('wasavi_footer_input_container');
 
 	// footer alter contents: line input
 	var footerInput = $('wasavi_footer_input');
@@ -1276,17 +1266,6 @@ function executeExCommand (source, isRoot, parseOnly) {
 		delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
 		return new RegExp('\\n|' + delimiter, 'g');
 	}
-	function pushLiteral (key, value) {
-		if (!literalBuffer) {
-			literalBuffer = {};
-		}
-		if (!(key in literalBuffer)) {
-			literalBuffer[key] = [];
-		}
-		if (value !== undefined) {
-			literalBuffer[key].push(value);
-		}
-	}
 	function skipby (n, justSkip) {
 		var skip = source.substring(0, n);
 		if (!justSkip && source != '\n') {
@@ -1733,7 +1712,6 @@ function executeExCommand (source, isRoot, parseOnly) {
 	return parseOnly ? executor : executor.run();
 }
 function executeViCommand (arg, keepRunLevel) {
-	var input = $(LINE_INPUT_ID);
 	var cursorState = {visible:cursor.visible};
 	cursor.update({visible:false});
 	cursor.locked = true;
@@ -1931,7 +1909,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			var lastIndex = 0;
 
 			scaler.textContent = '';
-			var lb = lineBreaker.run(line, function (item) {
+			lineBreaker.run(line, function (item) {
 				if (!item) return false;
 
 				scaler.textContent += line.substring(lastIndex, item.index + item.length);
@@ -3579,7 +3557,6 @@ function overwrite (s, opts) {
 
 	opts || (opts = {});
 	var keepPosition = !!opts.keepPosition;
-	var isLineOrientedLast = !!opts.isLineOrientedLast;
 
 	inputHandler.updateOverwritten();
 
@@ -3670,7 +3647,7 @@ function reformat () {
 				var lastIndex = 0;
 
 				scaler.textContent = '';
-				var lb = lineBreaker.run(line, function (item) {
+				lineBreaker.run(line, function (item) {
 					if (!item) return false;
 					scaler.textContent += line.substring(lastIndex, item.index + item.length);
 					lastIndex = item.index + item.length;
@@ -4858,7 +4835,6 @@ var commandMap = {
 			}
 
 			var isLineOrient = isAlias(c) || isVerticalMotion;
-			var actualCount = Math.abs(buffer.selectionEndRow - buffer.selectionStartRow) + 1;
 
 			buffer.isLineOrientSelection = isLineOrient;
 			!isLineOrient && extendRightIfInclusiveMotion();
@@ -5417,7 +5393,7 @@ var commandMap = {
 		}
 	},
 	gq: {
-		'@op': function (c, o) {
+		'@op': function (c) {
 			if (isAlias(c, prefixInput.operation.substring(1))) {
 				this._.apply(this, arguments);
 			}
@@ -5430,7 +5406,6 @@ var commandMap = {
 				isAlias(c, prefixInput.operation.substring(1)) || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			var isLineOrient = adjusted.isLineOrient;
-			var actualCount = adjusted.actualCount;
 
 			!isLineOrient && extendRightIfInclusiveMotion();
 			buffer.setSelectionRange(reformat());

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: classes_subst.js 413 2013-09-25 00:17:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -339,7 +339,7 @@ Wasavi.SubstituteWorker.prototype = {
 
 		if (repl == '') return [];
 
-		var result, stack = [];
+		var stack = [];
 		var specialEscapes = {'\\':'\\', 'n':'\n', 't':'\t'};
 		var specialLetters = {'\r':'\n'};
 		var magic = this.app.config.vars.magic;

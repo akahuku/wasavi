@@ -620,7 +620,8 @@ public class WasaviTest {
 				"}");
 		}
 		protected void failed (Throwable e, Description d) {
-			System.out.println("FAILED: " + d.getMethodName());
+			logText.add("FAILED");
+			System.out.println("--------------------");
 			for (CharSequence s: logText) {
 				System.out.println(s);
 			}
@@ -762,11 +763,27 @@ public class WasaviTest {
 
 			switch (invokeStates[i].getIndex()) {
 			case 0:
-				new Actions(driver)
-					.keyDown(Keys.CONTROL)
-					.sendKeys(Keys.RETURN)
-					.keyUp(Keys.CONTROL)
-					.perform();
+				target.sendKeys(Keys.chord(Keys.CONTROL, Keys.ENTER));
+
+				/*
+				 * alternative valid code:
+				 *
+				 * new Actions(driver)
+				 *   .sendKeys(Keys.chord(Keys.CONTROL, Keys.ENTER))
+				 *   .perform();
+				 */
+
+				/*
+				 * does not execute:
+				 *
+				 * new Actions(driver)
+				 *   .keyDown(Keys.CONTROL)
+				 *   .sendKeys(Keys.ENTER)
+				 *   .keyUp(Keys.CONTROL)
+				 *   .perform();
+				 */
+
+				//System.out.println("sendKeys");
 				break;
 
 			case 1:
@@ -777,6 +794,7 @@ public class WasaviTest {
 				}
 
 				launcher.click();
+				//System.out.println("launcher click");
 				break;
 			}
 
@@ -795,6 +813,7 @@ public class WasaviTest {
 			if (wasaviFrame != null) {
 				wasaviFrame.click();
 				invokeStates[i].incrementCount();
+				//System.out.println("found wasavi frame");
 				break;
 			}
 		}
@@ -808,7 +827,7 @@ public class WasaviTest {
 		return wasaviFrame;
 	}
 
-	protected void invokeAppModeWasavi () {
+	protected WebElement invokeAppModeWasavi () {
 		driver.navigate().to("http://wasavi.appsweets.net/");
 
 		WebElement wasaviFrame = null;

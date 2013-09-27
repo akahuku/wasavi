@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_search.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: classes_search.js 413 2013-09-25 00:17:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -543,7 +543,6 @@ loop:		do {
 		return true;
 	}
 	function paragraph (count, includeAnchor) {
-		var origPos = buffer.selectionStart;
 		var startPos = new Wasavi.Position(buffer.selectionStartRow, 0);
 		var whiteInFront = isWhiteCharOnly(startPos);
 

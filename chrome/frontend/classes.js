@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 381 2013-09-10 03:19:04Z akahuku $
+ * @version $Id: classes.js 413 2013-09-25 00:17:53Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -760,7 +760,6 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 		s = extend(s, tmp);
 	}
 	function save () {
-		var value = serialize();
 		app.low.setLocalStorage(storageKey, serialize());
 	}
 	function load (callback) {
@@ -1657,7 +1656,7 @@ Wasavi.MapManager = function (app) {
 			handler, context || 'expand delayed'
 		);
 	}
-	function expand (rhs, remap, handler, context) {
+	function expand (rhs, remap, handler) {
 		if (!handler) return;
 		if (depth < NEST_MAX) {
 			depth++;
@@ -1686,14 +1685,6 @@ Wasavi.MapManager = function (app) {
 		else {
 			requestShowMessage(_('Map expansion reached maximum recursion limit.'), true);
 		}
-	}
-	function firstPropName (obj) {
-		if (obj instanceof Object) {
-			for (var i in obj) {
-				return i;
-			}
-		}
-		return null;
 	}
 	function process (keyCode, handler) {
 		var delayed = resetDelayed();
@@ -2111,7 +2102,6 @@ Wasavi.Marks = function (app, ignoreStorage) {
 			for (var i = 0, goal = nodes.length; i < goal; i++) {
 				var span = nodes[i];
 				var index = dataset(span, 'index');
-				var m = marks[index];
 				marks[index].row = buffer.indexOf(span.parentNode);
 				marks[index].col = calcColumn(span);
 				var pa = span.parentNode;
@@ -2494,7 +2484,6 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getIndent: function () {
 			var a = arg2pos(arguments);
-			var line = '';
 			while (a.row >= 0 &&
 				(
 					this.rowNodes(a).getAttribute('data-indent-ignore') == '1' ||
@@ -3726,13 +3715,13 @@ Wasavi.Completer = function (appProxy, alist) {
 			var offset = 0;
 			var pieces = [];
 
-			commands.forEach(function (command, i) {
+			commands.forEach(function (command) {
 				var args = command.range + command.rest;
 				pieces.push(args);
 
 				var argsForMatch = multiply(' ', command.range.length) + command.rest;
 
-				item.patterns.forEach(function (pattern, patternIndex) {
+				item.patterns.forEach(function (pattern) {
 					var re = pattern.exec(argsForMatch);
 					if (!re) return;
 
