@@ -61,5 +61,5 @@
   ],
   "options_page": "options.html",
   "homepage_url": "http://appsweets.net/",
-  "update_url":"http://appsweets.net/wasavi/queryversion.php?chrome-xml"
+  "update_url":"https://github.com/akahuku/wasavi/raw/master/verinfo/chrome.xml"
 }

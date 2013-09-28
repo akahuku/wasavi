@@ -8,7 +8,7 @@
     <icon src="icon048.png" width="48" height="48" />
     <icon src="icon128.png" width="128" height="128" />
     <content src="background.html" encoding="UTF-8" type="text/html" />
-    <update-description href="http://appsweets.net/wasavi/queryversion.php?opera-xml" />
+	<update-description href="https://github.com/akahuku/wasavi/raw/master/verinfo/opera-presto.xml" />
     <access origin="https://dropbox.com/" subdomains="true" />
     <access origin="https://www.googleapis.com/" subdomains="false" />
     <access origin="https://googleusercontent.com/" subdomains="true" />
