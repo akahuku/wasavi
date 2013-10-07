@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets" id="http://appsweets.net/wasavi/" defaultlocale="en-us" version="0.0.1">
-    <name>wasavi</name>
-    <description>vi editor for any web page.</description>
-    <author href="http://appsweets.net" email="akahuku@gmail.com">akahuku@gmail.com</author>
-    <license href="http://www.apache.org/licenses/LICENSE-2.0.html">Licensed under the Apache License, Version 2.0</license>
-    <icon src="icon016.png" width="16" height="16" />
-    <icon src="icon048.png" width="48" height="48" />
-    <icon src="icon128.png" width="128" height="128" />
-    <content src="background.html" encoding="UTF-8" type="text/html" />
+	<name>wasavi</name>
+	<description>vi editor for any web page.</description>
+	<author href="http://appsweets.net" email="akahuku@gmail.com">akahuku@gmail.com</author>
+	<license href="http://www.apache.org/licenses/LICENSE-2.0.html">Licensed under the Apache License, Version 2.0</license>
+	<icon src="icon016.png" width="16" height="16" />
+	<icon src="icon048.png" width="48" height="48" />
+	<icon src="icon128.png" width="128" height="128" />
+	<content src="background.html" encoding="UTF-8" type="text/html" />
 	<update-description href="https://github.com/akahuku/wasavi/raw/master/verinfo/opera-presto.xml" />
-    <access origin="https://dropbox.com/" subdomains="true" />
-    <access origin="https://www.googleapis.com/" subdomains="false" />
-    <access origin="https://googleusercontent.com/" subdomains="true" />
-    <feature name="opera:contextmenus"/>
+	<access origin="https://dropbox.com/" subdomains="true" />
+	<access origin="https://www.googleapis.com/" subdomains="false" />
+	<access origin="https://googleusercontent.com/" subdomains="true" />
+	<feature name="opera:contextmenus"/>
 </widget>
 
 

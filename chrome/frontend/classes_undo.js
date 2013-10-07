@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 309 2013-06-15 08:57:07Z akahuku $
+ * @version $Id: classes_undo.js 422 2013-10-06 18:48:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -51,6 +51,9 @@ Wasavi.EditLogger = function (app, max) {
 				multiply(' ', depth + 2) +
 				'position:' + (this.position ? this.position.toString() : '(N/A)') +
 				', data:' + (this.data != undefined ? ('"' + toVisibleString(this.data) + '"') : '(N/A)');
+		},
+		_ensureValidRow: function (t, p) {
+			return p.row >= 0 && p.row < t.rowLength;
 		},
 		_ensureValidPosition: function (t, p) {
 			return p.row >= 0 && p.row < t.rowLength
@@ -286,16 +289,17 @@ Wasavi.EditLogger = function (app, max) {
 	/*constructor*/function EditLogItemShift () {}
 	EditLogItemShift.prototype = extend(new EditLogItemBase, {
 		type: 'Shift',
-		init: function (p, d, rc, sc, sw, ts) {
+		init: function (p, d, rc, sc, sw, ts, et) {
 			this._init.apply(this, arguments);
 			this.rowCount = rc;
 			this.shiftCount = sc;
 			this.shiftWidth = sw;
 			this.tabStop = ts;
+			this.expandTab = et;
 		},
 		undo: function (app, t, isClusterMember) {
-			if (!this._ensureValidPosition(t, this.position)) {
-				app.devMode && console.error(this.toString() + '#undo: bad position!');
+			if (!this._ensureValidRow(t, this.position)) {
+				app.devMode && console.error(this.toString() + '#undo: bad row position!');
 				return 0;
 			}
 			var s = this;
@@ -303,15 +307,16 @@ Wasavi.EditLogger = function (app, max) {
 				t.shift(
 					s.position.row,
 					Math.min(s.position.row + s.rowCount, t.rowLength) - s.position.row,
-					-s.shiftCount, s.shiftWidth, s.tabStop
+					-s.shiftCount, s.shiftWidth, s.tabStop, s.expandTab,
+					s.indents
 				);
 			});
 			!isClusterMember && this.restorePosition(app);
 			return 1;
 		},
 		redo: function (app, t, isClusterMember) {
-			if (!this._ensureValidPosition(t, this.position)) {
-				app.devMode && console.error(this.toString() + '#redo: bad position!');
+			if (!this._ensureValidRow(t, this.position)) {
+				app.devMode && console.error(this.toString() + '#redo: bad row position!');
 				return 0;
 			}
 			var s = this;
@@ -319,7 +324,7 @@ Wasavi.EditLogger = function (app, max) {
 				t.shift(
 					s.position.row,
 					Math.min(s.position.row + s.rowCount, t.rowLength) - s.position.row,
-					s.shiftCount, s.shiftWidth, s.tabStop, s.indents
+					s.shiftCount, s.shiftWidth, s.tabStop, s.expandTab
 				);
 			});
 			!isClusterMember && this.restorePosition(app);
@@ -338,7 +343,8 @@ Wasavi.EditLogger = function (app, max) {
 				indent + 'rc:' + this.rowCount +
 				indent + 'sc:' + this.shiftCount +
 				indent + 'sw:' + this.shiftWidth +
-				indent + 'ts:' + this.tabStop;
+				indent + 'ts:' + this.tabStop +
+				indent + 'et:' + this.expandTab;
 		}
 	});
 	/*

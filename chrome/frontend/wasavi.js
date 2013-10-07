@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 413 2013-09-25 00:17:53Z akahuku $
+ * @version $Id: wasavi.js 422 2013-10-06 18:48:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -3589,17 +3589,16 @@ function overwrite (s, opts) {
 }
 function shift (rowCount, shiftCount) {
 	rowCount || (rowCount = 1);
-	shiftCount || (shiftCount = 1);
 	editLogger.open('shift', function () {
-		var startn = buffer.selectionStart;
-		editLogger.write(
+		var startn = buffer.getLineTopOffset(buffer.selectionStart);
+		var editLogItem = editLogger.write(
 			Wasavi.EditLogger.ITEM_TYPE.SHIFT, startn, '', rowCount, shiftCount,
-			config.vars.shiftwidth, config.vars.tabstop
+			config.vars.shiftwidth, config.vars.tabstop, config.vars.expandtab
 		);
 		marks.update(startn, function () {
-			buffer.shift(
+			editLogItem.indents = buffer.shift(
 				startn.row, rowCount, shiftCount,
-				config.vars.shiftwidth, config.vars.tabstop
+				config.vars.shiftwidth, config.vars.tabstop, config.vars.expandtab
 			);
 		});
 		if (rowCount >= config.vars.report) {
@@ -3610,17 +3609,16 @@ function shift (rowCount, shiftCount) {
 }
 function unshift (rowCount, shiftCount) {
 	rowCount || (rowCount = 1);
-	shiftCount || (shiftCount = 1);
 	editLogger.open('unshift', function () {
-		var startn = buffer.selectionStart;
+		var startn = buffer.getLineTopOffset(buffer.selectionStart);
 		var editLogItem = editLogger.write(
 			Wasavi.EditLogger.ITEM_TYPE.UNSHIFT, startn, '', rowCount, shiftCount,
-			config.vars.shiftwidth, config.vars.tabstop
+			config.vars.shiftwidth, config.vars.tabstop, config.vars.expandtab
 		);
 		marks.update(startn, function () {
 			editLogItem.indents = buffer.shift(
 				startn.row, rowCount, -shiftCount,
-				config.vars.shiftwidth, config.vars.tabstop
+				config.vars.shiftwidth, config.vars.tabstop, config.vars.expandtab
 			);
 		});
 		if (rowCount >= config.vars.report) {
@@ -4521,6 +4519,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['jkdenotative', 'b', false],
 
 		/* defined by vim */
+		['expandtab', 'b', false],
 		['iskeyword', 'r', '^[a-zA-Z0-9_]\\+$'],
 		['searchincr', 'b', true],
 		['smartcase', 'b', true],
@@ -4604,7 +4603,7 @@ var config = new Wasavi.Configurator(appProxy,
 		scs: 'smartcase',		tw: 'textwidth',	ul: 'undolevels',
 		qe: 'quoteescape',		rnu: 'relativenumber',
 
-		fs: 'fullscreen',		jk: 'jkdenotative'
+		fs: 'fullscreen',		jk: 'jkdenotative',	et: 'expandtab'
 	}
 );
 var isStandAlone = (function () {
@@ -4864,7 +4863,7 @@ var commandMap = {
 				buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
 			}
 
-			(o.key == '<' ? unshift : shift)(actualCount);
+			(o.key == '<' ? unshift : shift)(actualCount, 1);
 			buffer.setSelectionRange(buffer.getLineTopOffset2(buffer.selectionStart));
 			isVerticalMotion = true;
 			prefixInput.motion = c;
@@ -6237,7 +6236,45 @@ var editMap = {
 	},
 	'\u0009'/*^I, tab*/: function (c) {
 		if (clipOverrun()) return;
-		insert('\t');
+		if (config.vars.expandtab) {
+			var ts = config.vars.tabstop;
+			var curCol = getLogicalColumn();
+			var nextTabCol = Math.floor(curCol / ts) * ts + ts;
+			if (nextTabCol > curCol) {
+				var s = multiply(' ', nextTabCol - curCol);
+				inputHandler.ungetText();
+				if (inputMode == 'edit') {
+					insert(s);
+					inputHandler.text += s;
+					inputHandler.textFragment += s;
+				}
+				else {
+					var top = s.charAt(0);
+					var rest = s.substring(1);
+					overwrite(s.charAt(0));
+					inputHandler.text += top;
+					inputHandler.textFragment += top;
+					inputHandler.flush();
+					if (rest.length) {
+						editLogger.write(
+							Wasavi.EditLogger.ITEM_TYPE.INSERT,
+							buffer.selectionStart, rest
+						);
+						insert(rest);
+					}
+					inputHandler.invalidateHeadPosition();
+				}
+			}
+		}
+		else {
+			(inputMode == 'edit' ? insert : overwrite)('\t');
+			inputHandler.flush();
+			var m = 'normalize-indent';
+			marks.setPrivate(m, buffer.selectionStart);
+			shift(1, 0);
+			buffer.setSelectionRange(marks.getPrivate(m));
+			marks.setPrivate(m);
+		}
 	},
 	'\u000a'/*^J*/: function (c) {
 		this['\u000d'].apply(this, arguments);

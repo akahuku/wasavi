@@ -1106,4 +1106,86 @@ public class InsertionTest extends WasaviTest {
 			"laboris nisi ut aliquip ex ea\n" +
 			"commodo consequat.");
 	}
+
+	@Test
+	public void expandTab () {
+		Wasavi.send(":set expandtab ts=8 sw=4\n");
+		/*
+		 * "    foo"			insert 4 spaces and 'foo'
+		 * "    \tfoo"			move to top of line, insert tab
+		 * "        foo"		4 spaces must be inserted (total indent is 8 spaces)
+		 */
+		Wasavi.setInputModeOfWatchTarget("edit");
+		Wasavi.send("a    foo\u001b^i\t");
+		assertValue("#1-1", "        foo");
+		assertPos("#1-2", 0, 8);
+		Wasavi.send("\u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-3", "    foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "        foo");
+	}
+
+	@Test
+	public void noExpandTab () {
+		Wasavi.send(":set noexpandtab ts=8 sw=4\n");
+		/*
+		 * "    foo"			insert 4 spaces and 'foo'
+		 * "    \tfoo"			move to top of line, insert tab
+		 * "\tfoo"				indent normalization is executed
+		 */
+		Wasavi.setInputModeOfWatchTarget("edit");
+		Wasavi.send("a    foo\u001b^i\t");
+		assertValue("#1-1", "\tfoo");
+		assertPos("#1-2", 0, 1);
+		Wasavi.send("\u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-3", "    foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "\tfoo");
+	}
+
+	@Test
+	public void expandTabOverwrite () {
+		Wasavi.send(":set expandtab ts=8 sw=4\n");
+		/*
+		 * "    foo"			insert 4 spaces and 'foo'
+		 * "    \too"			move to top of line, overwrite tab (f must be deleted)
+		 * "       oo"			3 spaces must be inserted (total indent is 7 spaces)
+		 */
+		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.send("a    foo\u001b^R\t");
+		assertValue("#1-1", "       oo");
+		assertPos("#1-2", 0, 8);
+		Wasavi.send("\u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-3", "    foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "       oo");
+	}
+
+	@Test
+	public void noExpandTabOverwrite () {
+		Wasavi.send(":set noexpandtab ts=8 sw=4\n");
+		/*
+		 * "    foo"			insert 4 spaces and 'foo'
+		 * "    \tfoo"			move to top of line, overwrite tab (f must be deleted)
+		 * "\too"				indent normalization is executed
+		 */
+		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.send("a    foo\u001b^R\t");
+		assertValue("#1-1", "\too");
+		assertPos("#1-2", 0, 1);
+		Wasavi.send("\u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-3", "    foo");
+		Wasavi.send("\u0012");
+		assertValue("#1-4", "\too");
+	}
 }
+
+/* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

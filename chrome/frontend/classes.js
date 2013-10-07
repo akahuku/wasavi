@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 413 2013-09-25 00:17:53Z akahuku $
+ * @version $Id: classes.js 422 2013-10-06 18:48:24Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2713,136 +2713,192 @@ Wasavi.Editor.prototype = new function () {
 
 			return arg;
 		},
-		shift: function (row, rowCount, shiftCount, shiftWidth, tabWidth, indents) {
+		shift: function (row, rowCount, shiftCount, shiftWidth, tabWidth, isExpandTab, indents) {
 			if (rowCount < 1) return null;
-			if (shiftCount == 0) return null;
-			if (shiftWidth < 1) shiftWidth = 1;
+			if (shiftWidth < 0) shiftWidth = 0;
 			if (tabWidth < 1) tabWidth = 8;
 
-			var tabExpanded = multiply(' ', tabWidth);
 			var shifted = multiply(' ', shiftWidth * Math.abs(shiftCount));
-			var shiftLeftRegex = new RegExp('^ {1,' + shiftWidth * Math.abs(shiftCount) + '}');
-			var toTabRegex = new RegExp(' {' + tabWidth + '}', 'g');
+			var shiftLeftRegex = shifted.length ? new RegExp('^ {1,' + shifted.length + '}') : null;
 			var currentIndents = [];
-			var indentBuffer = '';
 
 			function expandTab (row) {
+				var marks = [];
+				var marksInfo = {};
+				var indentOriginal = '';
+				var indentExpanded = '';
 				var node = row.firstChild;
-				var total = 0;
-				var elements = [];
-				while (node) {
-					if (node.nodeType == 3) {
-						node.nodeValue = node.nodeValue.replace(/\t/g, tabExpanded);
-						var index = node.nodeValue.search(/[^ \t]/);
-						if (index >= 0) {
-							total += index;
-							break;
-						}
-						total += node.nodeValue.length;
-						node = node.nextSibling;
-					}
-					else {
-						var next = node.nextSibling;
-						elements.push([total, node]);
-						node.parentNode.removeChild(node);
-						node = next;
-					}
-				}
-				currentIndents.push(total);
-				elements.length && row.normalize();
-				return elements;
-			}
-
-			function shiftRight (row, elements) {
-				var node = row.firstChild;
-				if (node.nodeType != 3) return;
-
-				node.insertData(0, shifted);
-				for (var i = 0, goal = elements.length; i < goal; i++) {
-					elements[i][0] += shifted.length;
-				}
-			}
-
-			function shiftRight2 (row, elements, indent) {
-				var node = row.firstChild;
-				if (node.nodeType != 3) return;
-
-				var q = indent - currentIndents.lastItem;
-				if (q <= 0) return;
-
-				if (indentBuffer.length < q) {
-					indentBuffer = multiply(' ', q);
-				}
-
-				node.insertData(0, indentBuffer.substr(0, q));
-				for (var i = 0, goal = elements.length; i < goal; i++) {
-					elements[i][0] += q;
-				}
-			}
-
-			function shiftLeft (row, elements) {
-				var node = row.firstChild;
-				if (node.nodeType != 3) return;
-
-				var re = shiftLeftRegex.exec(node.nodeValue);
-				if (re) {
-					node.deleteData(0, re[0].length);
-					for (var i = 0, goal = elements.length; i < goal; i++) {
-						elements[i][0] += shifted.length;
-					}
-				}
-			}
-
-			function windup (row, elements) {
-				var node = row.firstChild;
-				if (node.nodeType != 3) return;
-
-				var expandedIndex = 0;
-				var tabbedIndex = 0;
-				node.replaceData(
-					0, node.nodeValue.length, node.nodeValue.replace(toTabRegex, function () {
-						for (var i = 0, goal = elements.length; i < goal; i++) {
-							if (elements[i][0] >= expandedIndex
-							&&  elements[i][0] < expandedIndex + tabWidth) {
-								elements[i][0] = tabbedIndex + 1;
+loop:			while (node) {
+					switch (node.nodeType) {
+					case 3:
+						var left = '';
+						var right = node.nodeValue;
+						while (true) {
+							var re;
+							if ((re = /^\t/.exec(right))) {
+								var nextTabCol = Math.floor(indentExpanded.length / tabWidth) * tabWidth +
+												 tabWidth;
+								var s = multiply(' ', nextTabCol - indentExpanded.length);
+								indentOriginal += re[0];
+								indentExpanded += s;
+								left += s;
+								right = right.substring(re[0].length);
+							}
+							else if ((re = /^ +/.exec(right))) {
+								indentOriginal += re[0];
+								indentExpanded += re[0];
+								left += re[0];
+								right = right.substring(re[0].length);
+							}
+							else if (right.length || !node.nextSibling) {
+								node.nodeValue = left + right;
+								break loop;
+							}
+							else {
+								node.nodeValue = left + right;
+								node = node.nextSibling;
+								break;
 							}
 						}
-						expandedIndex += tabWidth;
-						tabbedIndex += 1;
-						return '\t';
-					})
-				);
+						break;
 
-				for (var i = elements.length - 1; i >= 0; i--) {
-					var offset = Math.min(elements[i][0], tabbedIndex);
-					var element = elements[i][1];
+					case 1:
+						if (node.nodeName != 'SPAN' || node.className != MARK_CLASS) {
+							throw new Error('unknown node found');
+						}
+						var next = node.nextSibling;
+						var markName = dataset(node, 'index');
+						marks.push([indentExpanded.length, node, markName]);
+						marksInfo[markName] = indentOriginal.length;
+						node.parentNode.removeChild(node);
+						node = next;
+						break;
+					}
+				}
+				if (marks.length) {
+					currentIndents.push([indentOriginal, marksInfo]);
+				}
+				else {
+					currentIndents.push(indentOriginal);
+				}
+				row.normalize();
+				return marks;
+			}
+
+			function shiftRight (row, marks) {
+				var node = row.firstChild;
+				if (node.nodeType != 3) return;
+				node.insertData(0, shifted);
+				for (var i = 0, goal = marks.length; i < goal; i++) {
+					marks[i][0] += shifted.length;
+				}
+			}
+
+			function shiftLeft (row, marks) {
+				var node = row.firstChild;
+				if (node.nodeType != 3) return;
+				if (!shiftLeftRegex) return;
+				var re = shiftLeftRegex.exec(node.nodeValue);
+				if (!re) return;
+				node.deleteData(0, re[0].length);
+				for (var i = 0, goal = marks.length; i < goal; i++) {
+					marks[i][0] -= re[0].length;
+				}
+			}
+
+			function shiftByOriginalIndent (row, marks, indentInfo) {
+				var node = row.firstChild;
+				if (node.nodeType != 3) return;
+				var indent, marksInfo;
+				if (indentInfo instanceof Array) {
+					indent = indentInfo[0];
+					marksInfo = indentInfo[1];
+				}
+				else {
+					indent = indentInfo;
+				}
+				node.nodeValue = indent + node.nodeValue.replace(/^[\t ]+/, '');
+				if (!marksInfo) return;
+				for (var i = 0, goal = marks.length; i < goal; i++) {
+					var markName = marks[i][2];
+					if (markName in marksInfo) {
+						marks[i][0] = marksInfo[markName];
+					}
+					else {
+						marks.push([marksInfo[markName], null, markName, false]);
+					}
+				}
+			}
+
+			function collectTabs (row, marks) {
+				var node = row.firstChild;
+				if (node.nodeType != 3) return;
+				var re = /^ +/.exec(node.nodeValue);
+				if (!re) return;
+				var tabs = '';
+				var left = re[0];
+				var right = node.nodeValue.substring(re[0].length);
+				var spaces = multiply(' ', tabWidth);
+				var offsetExpanded = 0;
+				var index;
+				while ((index = left.indexOf(spaces)) === 0) {
+					for (var i = 0, goal = marks.length; i < goal; i++) {
+						if (marks[i][0] >= offsetExpanded) {
+							marks[i][0] = Math.max(offsetExpanded, marks[i][0] - (tabWidth - 1));
+						}
+					}
+					offsetExpanded += tabWidth;
+					tabs += '\t';
+					left = left.substring(spaces.length);
+				}
+				node.nodeValue = tabs + left + right;
+			}
+
+			function restoreMarks (row, marks) {
+				if (marks.length == 0) return;
+				marks.sort(function (a, b) {return b[0] - a[0]});
+				for (var i = 0, goal = marks.length; i < goal; i++) {
+					var offset = marks[i][0];
+					var mark = marks[i][1];
 					var text = row.firstChild;
+					if (!mark) {
+						mark = document.createElement('span');
+						mark.className = MARK_CLASS;
+						dataset(mark, 'index', marks[i][2]);
+					}
 					if (offset == text.nodeValue.length) {
-						text.parentNode.insertBefore(element, text.nextSibling);
+						text.parentNode.insertBefore(mark, text.nextSibling);
 					}
 					else if (offset < text.nodeValue.length) {
 						var rest = text.splitText(offset);
-						rest.parentNode.insertBefore(element, rest);
+						rest.parentNode.insertBefore(mark, rest);
 					}
 				}
 			}
 
+			function nop () {}
+
 			var goal = Math.min(row + rowCount, this.elm.childNodes.length);
-			if (indents && shiftCount > 0) {
+			var doShift, doCollectTabs;
+			if (indents) {
+				doCollectTabs = isExpandTab ? nop : collectTabs;
 				for (var i = row, j = 0; i < goal; i++) {
 					var node = this.elm.childNodes[i];
-					var elements = expandTab(node);
-					shiftRight2(node, elements, indents[j++]);
-					windup(node, elements);
+					var marks = expandTab(node);
+					shiftByOriginalIndent(node, marks, indents[j++]);
+					doCollectTabs(node, marks);
+					restoreMarks(node, marks);
 				}
 			}
 			else {
-				var shifter = shiftCount < 0 ? shiftLeft : shiftRight;
+				doShift = shiftCount == 0 ? nop : shiftCount < 0 ? shiftLeft : shiftRight;
+				doCollectTabs = isExpandTab ? nop : collectTabs;
 				for (var i = row; i < goal; i++) {
 					var node = this.elm.childNodes[i];
-					var elements = expandTab(node);
-					shifter(node, elements);
-					windup(node, elements);
+					var marks = expandTab(node);
+					doShift(node, marks);
+					doCollectTabs(node, marks);
+					restoreMarks(node, marks);
 				}
 			}
 
