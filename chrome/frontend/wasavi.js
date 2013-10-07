@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 422 2013-10-06 18:48:24Z akahuku $
+ * @version $Id: wasavi.js 423 2013-10-07 23:20:09Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -6083,8 +6083,6 @@ var commandMap = {
 		}
 	}
 
-
-
 	/*
 	 * not implemented
 	 */
@@ -6104,7 +6102,7 @@ var commandMap = {
 };
 
 /*
- * insert mode mapping {{{1
+ * insert/overwrite mode mapping {{{1
  * ----------------
  */
 
@@ -6202,6 +6200,14 @@ var editMap = {
 			buffer.selectionStart = n;
 		}
 
+		function getBackspaceWidth () {
+			var n = getLogicalColumn();
+			var ts = config.vars.tabstop;
+			var d = n - Math.floor(n / ts) * ts - (n % ts ? 0 : ts);
+			var p = buffer.selectionStart;
+			return /[^ ]/.test(buffer.rows(p).substring(p.col - d, p.col)) ? 1 : d;
+		}
+
 		inputHandler.flush();
 		if (inputMode == 'edit-overwrite' &&
 		buffer.selectionStart.le(inputHandler.getStartPosition())) {
@@ -6220,7 +6226,7 @@ var editMap = {
 		else {
 			switch (c) {
 			case '\u0008':
-				deleteCharsBackward(1, {canJoin:true});
+				deleteCharsBackward(getBackspaceWidth(), {canJoin:true});
 				break;
 			case '\u0015':
 				backToStartPosition();
