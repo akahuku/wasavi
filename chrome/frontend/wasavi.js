@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 423 2013-10-07 23:20:09Z akahuku $
+ * @version $Id: wasavi.js 424 2013-10-08 19:06:16Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1072,7 +1072,7 @@ function setGeometory (target) {
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight));
 	config.setData('columns', parseInt(editor.clientWidth / charWidth));
 }
-function setInputMode (newInputMode, newInputModeSub, initial) {
+function setInputMode (newInputMode, newInputModeSub, prefix, initial) {
 	var newState;
 	if (/^(?:command|edit|edit-overwrite|wait-a-letter|wait-register)$/.test(newInputMode)) {
 		newState = 'normal';
@@ -1094,7 +1094,7 @@ function setInputMode (newInputMode, newInputModeSub, initial) {
 		case 'line-input':
 			state = newState;
 			inputMode = newInputMode;
-			showLineInput(initial);
+			showLineInput(prefix, initial);
 			cursor.update({type:newInputMode, focused:true, visible:true});
 			break;
 		case 'console-wait':
@@ -1109,9 +1109,9 @@ function setInputMode (newInputMode, newInputModeSub, initial) {
 	}
 	inputModeSub = newInputModeSub || '';
 }
-function pushInputMode (mode, modeSub, initial) {
+function pushInputMode (mode, modeSub, prefix, initial) {
 	inputModeStack.push(inputMode);
-	setInputMode(mode, modeSub, initial);
+	setInputMode(mode, modeSub, prefix, initial);
 }
 function popInputMode () {
 	if (inputModeStack.length) {
@@ -1194,16 +1194,18 @@ function showMessage (message, emphasis, pseudoCursor, volatile_) {
 		lastMessage = toNativeControl(message);
 	}
 }
-function showLineInput (initial) {
+function showLineInput (prefix, initial) {
 	if (state != 'line-input') return;
 	var line = $('wasavi_footer_alter');
 	var alter = $('wasavi_footer_modeline');
 	var input = $(LINE_INPUT_ID);
 	line.style.display = 'block';
 	alter.style.display = 'none';
-	$('wasavi_footer_input_indicator').textContent = initial;
-	input.value = '';
-	dataset(input, 'current', '');
+	prefix || (prefix = '>');
+	initial || (initial = '');
+	$('wasavi_footer_input_indicator').textContent = prefix;
+	input.value = initial;
+	dataset(input, 'current', initial);
 }
 function requestShowPrefixInput (message) {
 	if (!requestedState.modeline) {
@@ -1232,15 +1234,16 @@ function requestRegisterNotice (message) {
 	}
 	return message;
 }
-function requestInputMode (mode, modeSub, initial, updateCursor) {
+function requestInputMode (mode, modeSub, prefix, updateCursor) {
 	if (!requestedState.inputMode) {
 		requestedState.inputMode = {
 			mode:mode,
 			modeSub:modeSub || '',
-			initial:initial || '',
+			prefix:prefix || '',
 			updateCursor:updateCursor
 		};
 	}
+	return requestedState.inputMode;
 }
 function requestSimpleCommandUpdate () {
 	if (runLevel == 0) {
@@ -2210,7 +2213,7 @@ function processInput (code, e, ignoreAbbreviation) {
 	else {
 		if (requestedState.inputMode) {
 			var im = requestedState.inputMode;
-			pushInputMode(im.mode, im.modeSub, im.initial);
+			pushInputMode(im.mode, im.modeSub, im.prefix, im.initial);
 			im.updateCursor && cursor.update({focused:true, visible:true});
 			requestedState.inputMode = null;
 		}
@@ -6056,7 +6059,10 @@ var commandMap = {
 			if (prefixInput.isEmptyOperation) {
 				prefixInput.operation = c;
 				lineInputHistories.defaultName = ':';
-				requestInputMode('line-input', '', config.vars.prompt ? c : '');
+				var im = requestInputMode('line-input', '', config.vars.prompt ? c : '');
+				if (prefixInput.isCountSpecified) {
+					im.initial = '.,.+' + (prefixInput.count - 1);
+				}
 			}
 			else {
 				inputEscape(o.e.fullIdentifier);
@@ -6203,7 +6209,7 @@ var editMap = {
 		function getBackspaceWidth () {
 			var n = getLogicalColumn();
 			var ts = config.vars.tabstop;
-			var d = n - Math.floor(n / ts) * ts - (n % ts ? 0 : ts);
+			var d = n - (Math.floor(n / ts) * ts - (n % ts ? 0 : ts));
 			var p = buffer.selectionStart;
 			return /[^ ]/.test(buffer.rows(p).substring(p.col - d, p.col)) ? 1 : d;
 		}
