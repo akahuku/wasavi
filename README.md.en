@@ -23,7 +23,7 @@ Salient Features
 
   ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
 
-* Vim's incremental search 
+* Vim's incremental search
 
   ![incremental search](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
 
@@ -43,20 +43,18 @@ Currently, wasavi is available for following browsers only. Select your browser 
 
 * [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/wasavi/)
 
-Latest development releases can be downloaded from [this link](http://appsweets.net/wasavi/).
+Source code and latest development releases are hosted at [Github](https://github.com/akahuku/wasavi).
 
-Source code is hosted at [Github](https://github.com/akahuku/wasavi). 
+### A note for Opera users
 
-### A note for Opera users 
-
-Opera does not support DOM3 Composition Event therefore input via IME is not available.
+Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed.
 
 Frequently Asked Questions
 ==========================
 
-## How to launch wasavi  
+## How to launch wasavi
 
-Focus TEXTAREA and press `Ctrl+Enter`. 
+Focus TEXTAREA and press `Ctrl+Enter`.
 
 
 ## How to quit wasavi
@@ -133,12 +131,12 @@ Operations
 
 c y d &gt; &lt; gq
 
-Operations Aliases
+Operation Aliases
 ------------------
 
 cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
 
-Motion
+Motions
 ------
 
 &#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
@@ -168,9 +166,9 @@ ex commands
 
 abbreviate cd chdir copy delete edit file filesystem global join k map mark marks move options print put pwd quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
 
-ex commands to specify address are fully supported. 
+ex commands to specify address are fully supported.
 
-absolute line number, relative line number, regal expression. 
+absolute line number, relative line number, regal expression.
 
 wasavi also accepts offset.
 
@@ -178,31 +176,29 @@ wasavi also accepts offset.
 Input mode commands
 -------------------
 
-* ^@: input the most recently input text, and exit input mode
-* ^D: if the last input character is '0' or '^', delete all indent
-* ^H: delete a character
-* ^R: paste register's content
-* ^T: shift
-* ^U: delete all the characters entered in the current input session
-* ^V: literal input
-* ^W: delete a word
-
-^@ is actually `ctrl+space`.
+* `^@`: input the most recently input text, and exit input mode. this key stroke is actually `ctrl+space`.
+* `^D`: if the last input character is '0' or '^', delete all indent
+* `^H`: delete a character
+* `^R`: paste register's content
+* `^T`: shift
+* `^U`: delete all the characters entered in the current input session
+* `^V`: literal input
+* `^W`: delete a word
 
 Line input mode commands
 ------------------------
 
-* ^A: move cursor to top of line
-* ^B: back
-* ^E: move cursor to end of line
-* ^F: forward
-* ^H: delete a character
-* ^N: next history
-* ^P: previous history
-* ^R: paste register's content
-* ^U: delete whole line
-* ^V: literal input
-* ^W: delete a word
+* `^A`: move cursor to top of line
+* `^B`: back
+* `^E`: move cursor to end of line
+* `^F`: forward
+* `^H`: delete a character
+* `^N`: next history
+* `^P`: previous history
+* `^R`: paste register's content
+* `^U`: delete whole line
+* `^V`: literal input
+* `^W`: delete a word
 * `tab`: complete ex command name, set option name, file name argument of read/edit/write/file
 
 
@@ -216,5 +212,5 @@ Vim features in wasavi
 * auto-reformat in input mode, and reformat operator (gq command) on the
   state of textwidth > 0
 * options: iskeyword, incsearch, smartcase, undolevels, quoteescape,
-  relativenumber, textwidth
+  relativenumber, textwidth, expandtab
 
