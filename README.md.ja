@@ -43,9 +43,7 @@ wasavi の作成は継続中です。バグレポートや機能の要請はど�
 
 * [Firefox addon](https://addons.mozilla.org/ja/firefox/addon/wasavi/)
 
-最新の開発版は [ここ](http://appsweets.net/wasavi/) でダウンロードできます。
-
-ソースコードは [Github](https://github.com/akahuku/wasavi) で管理しています。
+ソースコードと最新の開発版は [Github](https://github.com/akahuku/wasavi) で管理しています。
 
 ### Opera ユーザへの注意
 
@@ -120,62 +118,62 @@ Tips and Tricks
 実装済みコマンド
 ================
 
-* [count] operation [count] motion
-* [count] operation [count] range-symbol
-* [count] operation-alias
-* [count] motion
-* [count] scroll-command
-* [count] edit-command
-* : ex-command
+* `[count] _operation_ [count] _motion_`
+* `[count] _operation_ [count] _range-symbol_`
+* `[count] _operation-alias_`
+* `[count] _motion_`
+* `[count] _scroll-command_`
+* `[count] _edit-command_`
+* `[count] : _ex-command_`
 
 Operations
 ----------
 
-c y d &gt; &lt; gq
+`c` `y` `d` `&gt;` `&lt;` `gq`
 
 Operation Aliases
 ------------------
 
-cc yy dd &gt;&gt; &lt;&lt; C Y D gqq
+`cc` `yy` `dd` `&gt;&gt;` `&lt;&lt;` `C` `Y` `D` `gqq`
 
 Motions
 ------
 
-&#45; &#43; ^ &lt;home&gt; $ &lt;end&gt; % | comma(,) ;
-  &#95; / ? ' ` ( ) { } [[ ]] &lt;enter&gt; 0
-  j k h l ^N ^P ^H
-  &lt;down&gt; &lt;up&gt; &lt;left&gt; &lt;right&gt; &lt;space&gt;
-  w W b B e E gg gj gk g^ g$ gi G H M L f F t T n N
+`&#45;` `&#43;` `^` `&lt;home&gt;` `$` `&lt;end&gt;` `%` `|` `,` `;`
+  `&#95;` `/` `?` `'` ````` `(` `)` `{` `}` `[[` `]]` `&lt;enter&gt;` `0`
+  `j` `k` `h` `l` `^N` `^P` `^H`
+  `&lt;down&gt;` `&lt;up&gt;` `&lt;left&gt;` `&lt;right&gt;` `&lt;space&gt;`
+  `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `gi` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
 
-Vim のテキストオブジェクト（レンジシンボル）
--------------------------------------------
+Vim text objects (range symbol)
+-------------------------------
 
-* a" a' a` a[ a] a{ a} aB a< a> a( a) ab aw aW ap as
-* i" i' i` i[ i] i{ i} iB i< i> i( i) ib iw iW ip is
+* `a"` `a'` ``a``` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as`
+* `i"` `i'` ``i``` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is`
 
 Scroll commands
 ---------------
 
-^U ^D ^Y ^E ^B ^F &lt;pageup&gt; &lt;pagedown&gt; z&lt;enter&gt; z. zz z-
+`^U` `^D` `^Y` `^E` `^B` `^F` `&lt;pageup&gt;` `&lt;pagedown&gt;` `z&lt;enter&gt;` `z.` `zz` `z-`
 
 Edit commands
 -------------
 
-x X &lt;delete&gt; p P J period( . ) u ^R ~ ^L ^G m @ q r R a A i I o O & s S ZZ
+`x` `X` `&lt;delete&gt;` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `ZZ`
 
 ex commands
 -----------
 
-abbreviate cd chdir copy delete edit file filesystem global join k map mark marks move options print put pwd quit read redo s & ~ set registers to unabbreviate undo unmap version v write wq xit yank > < @ &#42;
+`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `&#42;`
 
-ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現のいずれも可能です。オフセットを付加することも可能です。
+ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現、マーク参照のいずれも可能です。さらに、オフセットを付加することも可能です。
 
 
 入力モードのコマンド
 --------------------
 
-* `^@`: 最後に入力したテキストを入力し、input モードを抜ける。このキーストロークは実際には `ctrl+space` です。
-* `^D`: 最後に入力した文字が '0' か '^' のとき、インデントを全て削除する
+* `^@`: 最後に入力したテキストを入力し、input モードを抜ける。このキーストロークは実際には `Ctrl+Space` です。
+* `^D`: 最後に入力した文字が `0` か `^` のとき、インデントを全て削除する
 * `^H`: 1 文字削除
 * `^R`: レジスタの内容を貼り付ける
 * `^T`: シフト
@@ -208,5 +206,5 @@ Vim 互換の機能
 * レンジシンボル（Vim で言うところのテキストオブジェクト）
 * レジスタ "、:、*、/（特に * はクリップボードとのアクセスを行うので重要です）
 * textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ（gq コマンド）
-* オプション iskeyword、incsearch、smartcase、undolevels、quoteescape、relativenumber、textwidth、
-  expandtab
+* オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、
+  `relativenumber`、`textwidth`、 `expandtab`
