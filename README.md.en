@@ -173,7 +173,7 @@ Input mode commands
 -------------------
 
 * `^@`: input the most recently input text, and exit input mode. this key stroke is actually `Ctrl+Space`.
-* `^D`: if the last input character is `0` or `^`, delete all indent
+* `^D`: unshift. but if the last input character is `0` or `^`, delete all indent
 * `^H`: delete a character
 * `^R`: paste register's content
 * `^T`: shift

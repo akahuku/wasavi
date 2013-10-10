@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 424 2013-10-08 19:06:16Z akahuku $
+ * @version $Id: wasavi.js 428 2013-10-10 14:33:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1976,6 +1976,15 @@ function processInput (code, e, ignoreAbbreviation) {
 			inputHandler.updateText(e);
 		}
 	}
+	function needBreakUndo (s, ch) {
+		var scaler = $('wasavi_singleline_scaler');
+		scaler.textContent = s;
+		if (scaler.offsetWidth < charWidth * config.vars.undoboundlen) return;
+		return unicodeUtils.isSpace(ch)
+			|| unicodeUtils.isSTerm(ch)
+			|| unicodeUtils.isPTerm(ch)
+			|| unicodeUtils.isIdeograph(ch);
+	}
 
 	var input = $(LINE_INPUT_ID);
 	var letter = keyManager.code2letter(code);
@@ -2122,6 +2131,7 @@ function processInput (code, e, ignoreAbbreviation) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
 				processAbbrevs();
+				needBreakUndo(inputHandler.textFragment, letterActual) && inputHandler.newState();
 			}
 			else {
 				inputHandler.ungetText();
@@ -4520,6 +4530,7 @@ var config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['jkdenotative', 'b', false],
+		['undoboundlen', 'i', 20],
 
 		/* defined by vim */
 		['expandtab', 'b', false],

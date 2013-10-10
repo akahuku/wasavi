@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: unicode_utils.js 313 2013-06-19 06:47:58Z akahuku $
+ * @version $Id: unicode_utils.js 428 2013-10-10 14:33:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -49,6 +49,15 @@ var unicodeUtils = (function () {
 		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'  // xyz{|}~
 	];
 
+	// letters of General_Category == Zs, in UnicodeData.txt of Unicode 6.2.0
+	/*const*/var REGEX_ZS = new RegExp('[' + [
+		'\\u0020', '\\u00A0', '\\u1680', '\\u180E',
+		'\\u2000', '\\u2001', '\\u2002', '\\u2003',
+		'\\u2004', '\\u2005', '\\u2006', '\\u2007',
+		'\\u2008', '\\u2009', '\\u200A', '\\u202F',
+		'\\u205F', '\\u3000'
+	].join('') + ']');
+
 	// letters of General_Category == Pe, in UnicodeData.txt of Unicode 6.2.0
 	/*const*/var REGEX_PE = new RegExp('[' + [
 		'\\u0029', '\\u005D', '\\u007D', '\\u0F3B',
@@ -85,6 +94,25 @@ var unicodeUtils = (function () {
 		'\\uAA5D-\\uAA5F','\\uAAF0-\\uAAF1','\\uABEB',        '\\uFE52',
 		'\\uFE56-\\uFE57','\\uFF01',        '\\uFF0E',        '\\uFF1F',
 		'\\uFF61'
+	].join('') + ']');
+
+	// letters of Terminal_Punctuation in PropList.txt of Unicode 6.2.0
+	/*const*/var REGEX_PTERM = new RegExp('[' + [
+		'\\u0021',        '\\u002C',        '\\u002E',        '\\u003A-\\u003B',
+		'\\u003F',        '\\u037E',        '\\u0387',        '\\u0589',
+		'\\u05C3',        '\\u060C',        '\\u061B',        '\\u061F',
+		'\\u06D4',        '\\u0700-\\u070A','\\u070C',        '\\u07F8-\\u07F9',
+		'\\u0830-\\u083E','\\u085E',        '\\u0964-\\u0965','\\u0E5A-\\u0E5B',
+		'\\u0F08',        '\\u0F0D-\\u0F12','\\u104A-\\u104B','\\u1361-\\u1368',
+		'\\u166D-\\u166E','\\u16EB-\\u16ED','\\u17D4-\\u17D6','\\u17DA',
+		'\\u1802-\\u1805','\\u1808-\\u1809','\\u1944-\\u1945','\\u1AA8-\\u1AAB',
+		'\\u1B5A-\\u1B5B','\\u1B5D-\\u1B5F','\\u1C3B-\\u1C3F','\\u1C7E-\\u1C7F',
+		'\\u203C-\\u203D','\\u2047-\\u2049','\\u2E2E',        '\\u3001-\\u3002',
+		'\\uA4FE-\\uA4FF','\\uA60D-\\uA60F','\\uA6F3-\\uA6F7','\\uA876-\\uA877',
+		'\\uA8CE-\\uA8CF','\\uA92F',        '\\uA9C7-\\uA9C9','\\uAA5D-\\uAA5F',
+		'\\uAADF',        '\\uAAF0-\\uAAF1','\\uABEB',        '\\uFE50-\\uFE52',
+		'\\uFE54-\\uFE57','\\uFF01',        '\\uFF0C',        '\\uFF0E',
+		'\\uFF1A-\\uFF1B','\\uFF1F',        '\\uFF61',        '\\uFF64'
 	].join('') + ']');
 
 	// ideographic letters
@@ -808,11 +836,17 @@ var unicodeUtils = (function () {
 		if (cp >= 0xfff0 && cp <= 0xffff) return 150;	// Specials
 		return 0;
 	}
+	function isSpace (ch) {
+		return REGEX_ZS.test(ch.charAt(0));
+	}
 	function isClosedPunct (ch) {
 		return REGEX_PE.test(ch.charAt(0));
 	}
 	function isSTerm (ch) {
 		return REGEX_STERM.test(ch.charAt(0));
+	}
+	function isPTerm (ch) {
+		return REGEX_PTERM.test(ch.charAt(0));
 	}
 	function isIdeograph (ch) {
 		return REGEX_HAN_FAMILY.test(ch.charAt(0));
@@ -844,8 +878,10 @@ var unicodeUtils = (function () {
 
 		getUnicodeBlock:getUnicodeBlock,
 		getLatin1Prop:getLatin1Prop,
+		isSpace:isSpace,
 		isClosedPunct:isClosedPunct,
 		isSTerm:isSTerm,
+		isPTerm:isPTerm,
 		isIdeograph:isIdeograph,
 		isHighSurrogate:isHighSurrogate,
 		isLowSurrogate:isLowSurrogate,
