@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 428 2013-10-10 14:33:51Z akahuku $
+ * @version $Id: wasavi.js 429 2013-10-10 19:05:34Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1747,251 +1747,244 @@ function executeViCommand (arg, keepRunLevel) {
 		}
 	}
 }
-function processInput (code, e, ignoreAbbreviation) {
-	function completeSelectionRange (ss, se) {
-		if (buffer.selectionStart.gt(ss) && buffer.selectionStart.gt(se)) {
-			buffer.setSelectionRange(buffer.selectionStart);
-		}
-		else if (buffer.selectionEnd.lt(ss) && buffer.selectionEnd.lt(se)) {
-			buffer.setSelectionRange(buffer.selectionEnd);
-		}
-		else if (buffer.selectionStart.ne(ss) && buffer.selectionEnd.eq(se)) {
-			buffer.setSelectionRange(buffer.selectionStart);
-		}
-		else if (buffer.selectionStart.eq(ss) && buffer.selectionEnd.ne(se)) {
-			buffer.setSelectionRange(buffer.selectionEnd);
-		}
+function completeSelectionRange (ss, se) {
+	if (buffer.selectionStart.gt(ss) && buffer.selectionStart.gt(se)) {
+		buffer.setSelectionRange(buffer.selectionStart);
 	}
-	function doEditComplete () {
-		config.setData('modified');
-		lastRegexFindCommand.text = null;
-		if (config.vars.readonly && !isReadonlyWarned) {
-			isReadonlyWarned = true;
-			requestShowMessage(requestRegisterNotice(_('Warning: changing readonly element.')), true);
-		}
+	else if (buffer.selectionEnd.lt(ss) && buffer.selectionEnd.lt(se)) {
+		buffer.setSelectionRange(buffer.selectionEnd);
 	}
-	function execCommandMap (t, key, subkey, code) {
-		fireCommandStartEvent();
-		lastMessage = '';
-
-		var map = commandMap;
-		var ss = buffer.selectionStart;
-		var se = buffer.selectionEnd;
-		var result = execMap(t, e, map, key, subkey, code);
-
-		if (result) {
-			var canContinue = true;
-
-			if (prefixInput.operation.length) {
-				canContinue = execMap(
-					t, e, map, prefixInput.operation, '@op', code, {s:ss, e:se}
-				);
-			}
-			if (canContinue !== false) {
-				isEditCompleted && doEditComplete();
-				completeSelectionRange(ss, se);
-
-				buffer.isLineOrientSelection =
-				isEditCompleted =
-				isVerticalMotion =
-				isSmoothScrollRequested = false;
-
-				if (isSimpleCommandUpdateRequested) {
-					lastSimpleCommand = prefixInput.toString();
-					isSimpleCommandUpdateRequested = false;
-				}
-
-				if (!scroller.running) {
-					needEmitEvent = true;
-				}
-
-				prefixInput.reset();
-				requestShowPrefixInput();
-			}
-		}
-		else {
-			needEmitEvent = true;
-		}
-		if (requestedState.inputMode) {
-			cursor.ensureVisible(false);
-		}
-		else {
-			cursor.ensureVisible(isSmoothScrollRequested);
-		}
-		if (!requestedState.inputMode || !requestedState.inputMode.updateCursor) {
-			cursor.update(scroller.running || state != 'normal' ?
-				{visible:false} : {focused:true, visible:true});
-		}
+	else if (buffer.selectionStart.ne(ss) && buffer.selectionEnd.eq(se)) {
+		buffer.setSelectionRange(buffer.selectionStart);
 	}
-	function execEditMap (t, key, subkey, code) {
-		if (!editMap[key]) return false;
-		var ss = t.selectionStart;
-		var se = t.selectionEnd;
-		cursor.update({visible:false});
-		execMap(t, e, editMap, key, subkey, code);
-		completeSelectionRange(ss, se);
-		cursor.ensureVisible();
-		cursor.update({focused:true, visible:true});
-		return true;
+	else if (buffer.selectionStart.eq(ss) && buffer.selectionEnd.ne(se)) {
+		buffer.setSelectionRange(buffer.selectionEnd);
 	}
-	function execLineInputEditMap (t, key, subkey, code) {
-		if (!lineInputEditMap[key]) return false;
-		fireCommandStartEvent();
-		if (execMap(t, e, lineInputEditMap, key, subkey, code)) {
-			needEmitEvent = true;
-		}
-		return true;
+}
+function doEditComplete () {
+	config.setData('modified');
+	lastRegexFindCommand.text = null;
+	if (config.vars.readonly && !isReadonlyWarned) {
+		isReadonlyWarned = true;
+		requestShowMessage(requestRegisterNotice(_('Warning: changing readonly element.')), true);
 	}
-	function processAbbrevs (force) {
-		if (ignoreAbbreviation) return;
+}
+function processAbbrevs (force, ignoreAbbreviation) {
+	if (ignoreAbbreviation) return;
 
-		var regex = config.vars.iskeyword;
-		var target, last;
+	var regex = config.vars.iskeyword;
+	var target, last;
 
-		if (force) {
-			if (inputHandler.text.length < 1) return;
-			target = inputHandler.text;
-			last = '';
-		}
-		else {
-			if (inputHandler.text.length < 2) return;
-			target = inputHandler.text.substring(0, inputHandler.text.length - 1);
-			last = inputHandler.text.substr(-1);
-			if (!(regex.test(target.substr(-1)) && !regex.test(last))) return;
-		}
+	if (force) {
+		if (inputHandler.text.length < 1) return;
+		target = inputHandler.text;
+		last = '';
+	}
+	else {
+		if (inputHandler.text.length < 2) return;
+		target = inputHandler.text.substring(0, inputHandler.text.length - 1);
+		last = inputHandler.text.substr(-1);
+		if (!(regex.test(target.substr(-1)) && !regex.test(last))) return;
+	}
 
-		for (var i in abbrevs) {
-			if (target.substr(-i.length) != i) continue;
+	for (var i in abbrevs) {
+		if (target.substr(-i.length) != i) continue;
 
-			var canTransit = false;
-			if (regex.test(i.charAt(0))) {
-				if (i.length == 1) {
-					if (buffer.selectionStartCol - i.length <= 1
-					||  target.length - i.length <= 0
-					||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
-						canTransit = true;
-					}
-				}
-				else {
-					if (buffer.selectionStartCol - i.length <= 1
-					||  target.length - i.length <= 0
-					||  !regex.test(target.substr(-(i.length + 1), 1))) {
-						canTransit = true;
-					}
+		var canTransit = false;
+		if (regex.test(i.charAt(0))) {
+			if (i.length == 1) {
+				if (buffer.selectionStartCol - i.length <= 1
+				||  target.length - i.length <= 0
+				||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
+					canTransit = true;
 				}
 			}
 			else {
 				if (buffer.selectionStartCol - i.length <= 1
 				||  target.length - i.length <= 0
-				||  regex.test(target.substr(-(i.length + 1), 1))
-				||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
+				||  !regex.test(target.substr(-(i.length + 1), 1))) {
 					canTransit = true;
 				}
 			}
-			if (!canTransit) continue;
+		}
+		else {
+			if (buffer.selectionStartCol - i.length <= 1
+			||  target.length - i.length <= 0
+			||  regex.test(target.substr(-(i.length + 1), 1))
+			||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
+				canTransit = true;
+			}
+		}
+		if (!canTransit) continue;
 
-			inputHandler.text = target + multiply('\u0008', i.length) + abbrevs[i] + last;
-			deleteCharsBackward(i.length + last.length);
-			(inputMode == 'edit' ? insert : overwrite)(abbrevs[i] + last);
+		inputHandler.text = target + multiply('\u0008', i.length) + abbrevs[i] + last;
+		deleteCharsBackward(i.length + last.length);
+		(inputMode == 'edit' ? insert : overwrite)(abbrevs[i] + last);
+		break;
+	}
+}
+function processAutoDivide (e) {
+	if (config.vars.textwidth <= 0) return;
+
+	var limitWidth = charWidth * config.vars.textwidth;
+	var tmpMark = 'auto-format';
+	var scaler = $('wasavi_singleline_scaler');
+	var inputStateSaved;
+	var prepared = false;
+
+	while (true) {
+		var line = buffer.rows(buffer.selectionStartRow);
+		var overed = false;
+		var breakItem = false;
+		var lastIndex = 0;
+
+		scaler.textContent = '';
+		lineBreaker.run(line, function (item) {
+			if (!item) return false;
+
+			scaler.textContent += line.substring(lastIndex, item.index + item.length);
+			lastIndex = item.index + item.length;
+
+			if (item.codePoint != 32 && item.codePoint != 9
+			&& scaler.offsetWidth > limitWidth) {
+				overed = true;
+			}
+			else if (unicodeUtils.canBreak(item.breakAction)) {
+				breakItem = item;
+			}
+
+			return overed && !!breakItem;
+		});
+
+		if (!overed || !breakItem) {
 			break;
 		}
-	}
-	function processAutoDivide (e) {
-		if (config.vars.textwidth <= 0) return;
+		if (!prepared) {
+			prepared = true;
+			inputHandler.ungetText();
+			inputHandler.flush();
+			marks.setPrivate(tmpMark, buffer.selectionStart);
+			inputStateSaved = {
+				text:inputHandler.text,
+				textFragment:inputHandler.textFragment
+			};
+		}
 
-		var limitWidth = charWidth * config.vars.textwidth;
-		var tmpMark = 'auto-format';
-		var scaler = $('wasavi_singleline_scaler');
-		var inputStateSaved;
-		var prepared = false;
+		buffer.setSelectionRange(new Position(
+			buffer.selectionStartRow, breakItem.index + breakItem.length));
 
-		while (true) {
-			var line = buffer.rows(buffer.selectionStartRow);
-			var overed = false;
-			var breakItem = false;
-			var lastIndex = 0;
-
-			scaler.textContent = '';
-			lineBreaker.run(line, function (item) {
-				if (!item) return false;
-
-				scaler.textContent += line.substring(lastIndex, item.index + item.length);
-				lastIndex = item.index + item.length;
-
-				if (item.codePoint != 32 && item.codePoint != 9
-				&& scaler.offsetWidth > limitWidth) {
-					overed = true;
-				}
-				else if (unicodeUtils.canBreak(item.breakAction)) {
-					breakItem = item;
-				}
-
-				return overed && !!breakItem;
-			});
-
-			if (!overed || !breakItem) {
+		var n = buffer.selectionStart;
+		while (n.col > 0) {
+			var left = buffer.leftPos(n);
+			if (!/[ \t]/.test(buffer.charAt(left))) {
 				break;
 			}
-			if (!prepared) {
-				prepared = true;
-				inputHandler.ungetText();
-				inputHandler.flush();
-				marks.setPrivate(tmpMark, buffer.selectionStart);
-				inputStateSaved = {
-					text:inputHandler.text,
-					textFragment:inputHandler.textFragment
-				};
-			}
-
-			buffer.setSelectionRange(new Position(
-				buffer.selectionStartRow, breakItem.index + breakItem.length));
-
-			var n = buffer.selectionStart;
-			while (n.col > 0) {
-				var left = buffer.leftPos(n);
-				if (!/[ \t]/.test(buffer.charAt(left))) {
-					break;
-				}
-				n = left;
-			}
-			if (n.lt(buffer.selectionEnd)) {
-				buffer.selectionStart = n;
-				deleteSelection();
-			}
-
-			inputHandler.inputHeadPosition = buffer.selectionStart;
-			inputHandler.textFragment = '';
-			var newlineObj = keyManager.objectFromCode(0x000d);
-			inputHandler.updateText(newlineObj);
-			execMap(buffer, newlineObj, editMap, '\u000d', '', '\u000d');
-			inputHandler.flush();
+			n = left;
+		}
+		if (n.lt(buffer.selectionEnd)) {
+			buffer.selectionStart = n;
+			deleteSelection();
 		}
 
-		if (prepared) {
-			buffer.setSelectionRange(marks.getPrivate(tmpMark));
-			marks.setPrivate(tmpMark);
-			inputHandler.inputHeadPosition = buffer.leftPos(buffer.selectionStart);
-			inputHandler.text = inputStateSaved.text;
-			inputHandler.textFragment = inputStateSaved.textFragment;
-			inputHandler.updateText(e);
-		}
-	}
-	function needBreakUndo (s, ch) {
-		var scaler = $('wasavi_singleline_scaler');
-		scaler.textContent = s;
-		if (scaler.offsetWidth < charWidth * config.vars.undoboundlen) return;
-		return unicodeUtils.isSpace(ch)
-			|| unicodeUtils.isSTerm(ch)
-			|| unicodeUtils.isPTerm(ch)
-			|| unicodeUtils.isIdeograph(ch);
+		inputHandler.inputHeadPosition = buffer.selectionStart;
+		inputHandler.textFragment = '';
+		var newlineObj = keyManager.objectFromCode(0x000d);
+		inputHandler.updateText(newlineObj);
+		execMap(buffer, newlineObj, editMap, '\u000d', '', '\u000d');
+		inputHandler.flush();
 	}
 
-	var input = $(LINE_INPUT_ID);
+	if (prepared) {
+		buffer.setSelectionRange(marks.getPrivate(tmpMark));
+		marks.setPrivate(tmpMark);
+		inputHandler.inputHeadPosition = buffer.leftPos(buffer.selectionStart);
+		inputHandler.text = inputStateSaved.text;
+		inputHandler.textFragment = inputStateSaved.textFragment;
+		inputHandler.updateText(e);
+	}
+}
+function needBreakUndo (s, ch) {
+	var scaler = $('wasavi_singleline_scaler');
+	scaler.textContent = s;
+	if (scaler.offsetWidth < charWidth * config.vars.undoboundlen) return;
+	return unicodeUtils.isSpace(ch)
+		|| unicodeUtils.isSTerm(ch)
+		|| unicodeUtils.isPTerm(ch)
+		|| unicodeUtils.isIdeograph(ch);
+}
+function execCommandMap (r, e, key, subkey, code) {
+	fireCommandStartEvent();
+	lastMessage = '';
+	var ss = buffer.selectionStart;
+	var se = buffer.selectionEnd;
+	if (execMap(buffer, e, commandMap, key, subkey, code)) {
+		var canContinue = true;
+
+		if (prefixInput.operation.length) {
+			canContinue = execMap(
+				buffer, e, commandMap, prefixInput.operation, '@op', code, {s:ss, e:se}
+			);
+		}
+		if (canContinue !== false) {
+			isEditCompleted && doEditComplete();
+			completeSelectionRange(ss, se);
+
+			buffer.isLineOrientSelection =
+			isEditCompleted =
+			isVerticalMotion =
+			isSmoothScrollRequested = false;
+
+			if (isSimpleCommandUpdateRequested) {
+				lastSimpleCommand = prefixInput.toString();
+				isSimpleCommandUpdateRequested = false;
+			}
+
+			if (!scroller.running) {
+				r.needEmitEvent = true;
+			}
+
+			prefixInput.reset();
+			requestShowPrefixInput();
+		}
+	}
+	else {
+		r.needEmitEvent = true;
+	}
+	if (requestedState.inputMode) {
+		cursor.ensureVisible(false);
+	}
+	else {
+		cursor.ensureVisible(isSmoothScrollRequested);
+	}
+	if (!requestedState.inputMode || !requestedState.inputMode.updateCursor) {
+		cursor.update(scroller.running || state != 'normal' ?
+			{visible:false} : {focused:true, visible:true});
+	}
+}
+function execEditMap (r, e, key, subkey, code) {
+	if (!editMap[key]) return false;
+	var ss = buffer.selectionStart;
+	var se = buffer.selectionEnd;
+	cursor.update({visible:false});
+	execMap(buffer, e, editMap, key, subkey, code);
+	completeSelectionRange(ss, se);
+	cursor.ensureVisible();
+	cursor.update({focused:true, visible:true});
+	return true;
+}
+function execLineInputEditMap (r, e, key, subkey, code) {
+	if (!lineInputEditMap[key]) return false;
+	fireCommandStartEvent();
+	if (execMap($(LINE_INPUT_ID), e, lineInputEditMap, key, subkey, code)) {
+		r.needEmitEvent = true;
+	}
+	return true;
+}
+function processInput (code, e, ignoreAbbreviation) {
 	var letter = keyManager.code2letter(code);
 	var mapkey = keyManager.code2letter(code, true);
 	var subkey = inputMode;
-	var result = false;
-	var needEmitEvent = false;
+	var result = {value:false, needEmitEvent: false};
 
 	switch (inputModeSub) {
 	case 'wait-a-letter':
@@ -2062,8 +2055,8 @@ function processInput (code, e, ignoreAbbreviation) {
 	switch (inputMode) {
 	case 'command':
 		cursor.windup();
-		execCommandMap(buffer, mapkey, subkey, code);
-		result = true;
+		execCommandMap(result, e, mapkey, subkey, code);
+		result.value = true;
 		break;
 
 	case 'edit':
@@ -2072,7 +2065,7 @@ function processInput (code, e, ignoreAbbreviation) {
 
 		if (subkey == inputMode && code == 0x1b) {
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
-			processAbbrevs(true);
+			processAbbrevs(true, ignoreAbbreviation);
 
 			var finalStroke = inputHandler.stroke;
 			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
@@ -2111,7 +2104,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			isEditCompleted = isVerticalMotion = isSmoothScrollRequested = false;
 			requestShowPrefixInput();
 			editLogger.close();// edit-wrapper
-			needEmitEvent = true;
+			result.needEmitEvent = true;
 			idealWidthPixels = -1;
 		}
 		else {
@@ -2124,13 +2117,13 @@ function processInput (code, e, ignoreAbbreviation) {
 				pairBracketsIndicator.clear();
 				pairBracketsIndicator = null;
 			}
-			if (execEditMap(buffer, mapkey, subkey, code)) {
+			if (execEditMap(result, e, mapkey, subkey, code)) {
 				requestShowPrefixInput(getDefaultPrefixInputString());
 			}
 			else if ((code == 0x08 || code == 0x0a || code >= 32) && !clipOverrun()) {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
-				processAbbrevs();
+				processAbbrevs(false, ignoreAbbreviation);
 				needBreakUndo(inputHandler.textFragment, letterActual) && inputHandler.newState();
 			}
 			else {
@@ -2145,20 +2138,21 @@ function processInput (code, e, ignoreAbbreviation) {
 				cursor.ensureVisible();
 				cursor.update({visible:true, focused:true});
 				requestShowPrefixInput(getDefaultPrefixInputString());
-				needEmitEvent = true;
+				result.needEmitEvent = true;
 			}
 			if (config.vars.showmatch && !pairBracketsIndicator) {
 				pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
 					letterActual, buffer, prevPos);
 			}
-			if (needEmitEvent === false) {
-				needEmitEvent = 'notify-state';
+			if (result.needEmitEvent === false) {
+				result.needEmitEvent = 'notify-state';
 			}
 		}
-		result = true;
+		result.value = true;
 		break;
 
 	case 'line-input':
+		var input = $(LINE_INPUT_ID);
 		var canEscape = code == 0x1b
 			|| code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
 
@@ -2182,12 +2176,12 @@ function processInput (code, e, ignoreAbbreviation) {
 			execMap(
 				buffer, e, commandMap,
 				mapkey, '@' + inputMode + '-reset', line);
-			execCommandMap(buffer, mapkey, subkey, line);
+			execCommandMap(result, buffer, mapkey, subkey, line);
 
 			popInputMode();
 			prefixInput.reset();
 		}
-		else if (execLineInputEditMap(input, mapkey, subkey, code)) {
+		else if (execLineInputEditMap(result, e, mapkey, subkey, code)) {
 			setTimeout(function () {
 				var input = $(LINE_INPUT_ID);
 				if (input.value != dataset(input, 'current')) {
@@ -2210,11 +2204,11 @@ function processInput (code, e, ignoreAbbreviation) {
 			completer.reset();
 		}
 
-		result = true;
+		result.value = true;
 		break;
 
 	default:
-		result = true;
+		result.value = true;
 	}
 
 	if (terminated) {
@@ -2245,7 +2239,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			requestedState.modeline = null;
 			config.vars.errorbells && requestRegisterNotice();
-			needEmitEvent = true;
+			result.needEmitEvent = true;
 		}
 		if (requestedState.notice) {
 			if (requestedState.notice.play) {
@@ -2256,24 +2250,24 @@ function processInput (code, e, ignoreAbbreviation) {
 				devMode && console.log(requestedState.notice.message);
 			}
 			requestedState.notice = null;
-			needEmitEvent = true;
+			result.needEmitEvent = true;
 		}
 		if (runLevel == 0 && state == 'normal' && (backlog.queued || backlog.visible)) {
 			backlog.write(false, messageUpdated);
 		}
-		if (needEmitEvent !== false) {
-			if (needEmitEvent === true) {
+		if (result.needEmitEvent !== false) {
+			if (result.needEmitEvent === true) {
 				fireCommandCompleteEvent();
 			}
-			else if (typeof needEmitEvent == 'string') {
-				fireCommandCompleteEvent(needEmitEvent);
+			else if (typeof result.needEmitEvent == 'string') {
+				fireCommandCompleteEvent(result.needEmitEvent);
 			}
 		}
 	}
 	if (!isLastKeyCodeLocked) {
 		lastKeyCode = code;
 	}
-	return result;
+	return result.value;
 }
 function processInputSupplement () {
 	if (inputMode != 'line-input') return;
