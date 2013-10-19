@@ -125,7 +125,7 @@ public class UndoTest extends WasaviTest {
 	public void testOverwriteToIsolatedPosition () {
 		Wasavi.send("ifoobarbaz\u001b");
 
-		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.setInputModeOfWatchTarget("overwrite");
 		Wasavi.send("1|RFOO", 
 			Keys.ARROW_RIGHT,
 			Keys.ARROW_RIGHT,

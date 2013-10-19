@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 422 2013-10-06 18:48:24Z akahuku $
+ * @version $Id: classes.js 431 2013-10-19 22:03:22Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -689,6 +689,7 @@ Wasavi.RegexFinderInfo = function () {
 	var pattern;
 	var verticalOffset;
 	var text;
+	var updateBound;
 
 	function push (o) {
 		head = o.head || '';
@@ -696,6 +697,7 @@ Wasavi.RegexFinderInfo = function () {
 		offset = o.offset || 0;
 		scrollTop = o.scrollTop || 0;
 		scrollLeft = o.scrollLeft || 0;
+		updateBound = o.updateBound || false;
 	}
 	function setPattern (p, withOffset) {
 		pattern = p;
@@ -724,7 +726,8 @@ Wasavi.RegexFinderInfo = function () {
 			scrollLeft: function () {return scrollLeft},
 			pattern: function () {return pattern},
 			verticalOffset: function () {return verticalOffset},
-			text: [function () {return text}, function (v) {text = v}]
+			text: [function () {return text}, function (v) {text = v}],
+			updateBound: function () {return updateBound}
 		}
 	);
 };
@@ -1576,7 +1579,7 @@ Wasavi.MapManager = function (app) {
 	/*const*/var MAP_INDICES = {
 		 'command':0,
 		 'edit':1,
-		 'edit-overwrite':1
+		 'overwrite':1
 	};
 
 	var rules = [{}, {}];
@@ -2017,7 +2020,7 @@ Wasavi.Marks = function (app, ignoreStorage) {
 		app.dataset('wasaviMarks', serialize());
 	}
 	function isValidName (name) {
-		return /^[a-z'\^]/.test(name);
+		return /^[a-z'\^<>]/.test(name);
 	}
 	function regalizeName (name) {
 		if (name == '`') {
@@ -2504,9 +2507,29 @@ Wasavi.Editor.prototype = new function () {
 			) {}
 			return a.row >= 0 ? /^[\t ]*/.exec(this.rows(a))[0] : '';
 		},
-		getSpans: function (className) {
-			return document.querySelectorAll(
-				'#wasavi_editor>div span' + (className ? ('.' + className) : ''));
+		getSpans: function (className, start, end) {
+			var q = ['#wasavi_editor>div'];
+			if (typeof start == 'number') {
+				if (start < 0) {
+					start = this.elm.childNodes.length + start;
+					end = false;
+				}
+				q.push(':nth-child(n+' + (start + 1) + ')');
+			}
+			if (typeof end == 'number') {
+				end = Math.min(end, this.elm.childNodes.length - 1);
+				q.push(':nth-child(-n+' + (end + 1) + ')');
+			}
+			if (q.length == 3 && start == end) {
+				q.pop();
+				q.pop();
+				q.push(':nth-child(' + (start + 1) + ')');
+			}
+			q.push(' span');
+			if (typeof className == 'string' && className != '') {
+				q.push('.' + className);
+			}
+			return document.querySelectorAll(q.join(''));
 		},
 		// vim compatible cursor iterators
 		inc: function (pos) {
@@ -3031,19 +3054,19 @@ loop:			while (node) {
 			var iter = document.createNodeIterator(
 				this.elm, window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
-			var pa;
+			var rowTopLength = 0;
 			var node;
-			var row = -1;
+			var row = 0;
 
 			while ((node = iter.nextNode())) {
-				if (node.parentNode != pa) {
-					pa = node.parentNode;
-					row++;
-				}
 				var next = totalLength + node.nodeValue.length;
 				if (totalLength <= n && n < next) {
-					result = new Wasavi.Position(row, n - totalLength);
+					result = new Wasavi.Position(row, n - rowTopLength);
 					break;
+				}
+				if (node.nodeValue.substr(-1) == '\n') {
+					row++;
+					rowTopLength = next;
 				}
 				totalLength = next;
 			}
@@ -3052,18 +3075,23 @@ loop:			while (node) {
 		},
 		binaryPositionToLinearPosition: function (a) {
 			var r = document.createRange();
-			r.setStart(this.elm.childNodes[0].firstChild, 0);
-			r.setEnd(this.elm.childNodes[a.row].firstChild, a.col);
+			setRange.call(this, r, new Wasavi.Position(0, 0), false);
+			setRange.call(this, r, a, true);
 			var result = r.toString().length;
 			r.detach();
 			return result;
 		},
-		emphasis: function (s, length, className) {
-			if (s == undefined) {
-				s = this.selectionStart;
-			}
-			else if (typeof s == 'number') {
+		emphasis: function (s, e, className) {
+			return typeof e == 'number' ?
+				this.emphasis_p_length(s, e, className) :
+				this.emphasis_p_p(s, e, className);
+		},
+		emphasis_p_length: function (s, length, className) {
+			if (typeof s == 'number') {
 				s = this.linearPositionToBinaryPosition(s);
+			}
+			else {
+				s || (s = this.selectionStart);
 			}
 
 			var isInRange = false;
@@ -3102,12 +3130,13 @@ whole:
 							length = 0;
 							break whole;
 						}
-						else {
+						else if (nodeLength > 0) {
 							r.setStart(node, offset);
 							r.setEnd(node, nodeLength);
 							r.surroundContents(createSpan());
 							length -= nodeLength - offset;
 							offset = 0;
+							node = iter.nextNode();
 						}
 					}
 				}
@@ -3116,8 +3145,56 @@ whole:
 			r.detach();
 			return result;
 		},
-		unEmphasis: function (className) {
-			var nodes = this.getSpans(className || EMPHASIS_CLASS);
+		emphasis_p_p: function (s, e, className) {
+			s || (s = this.selectionStart);
+			e || (e = this.selectionEnd);
+			className || (className = EMPHASIS_CLASS);
+
+			if (s.gt(e)) {
+				var t = s; s = e; e = t;
+			}
+
+			var result = [];
+			var r = document.createRange();
+			var f = document.createDocumentFragment();
+			var snode = this.elm.childNodes[s.row];
+			var enode = this.elm.childNodes[e.row];
+			r.setStart(snode.firstChild, s.col);
+			r.setEnd(enode.firstChild, e.col);
+			f.appendChild(r.extractContents());
+
+			function createSpan (content) {
+				var span = document.createElement('span');
+				span.className = className;
+				span.textContent = content || '';
+				result.push(span);
+				return span;
+			}
+
+			if (f.childNodes.length >= 2) {
+				snode.appendChild(createSpan(f.firstChild.textContent));
+				enode.insertBefore(createSpan(f.lastChild.textContent), enode.firstChild);
+				f.removeChild(f.firstChild);
+				f.removeChild(f.lastChild);
+				if (f.childNodes.length) {
+					for (var i = 0, goal = f.childNodes.length; i < goal; i++) {
+						f.childNodes[i].replaceChild(
+							createSpan(f.childNodes[i].textContent), f.childNodes[i].firstChild);
+					}
+					r.insertNode(f);
+				}
+			}
+			else {
+				var span = createSpan();
+				span.appendChild(f);
+				r.insertNode(span);
+			}
+
+			r.detach();
+			return result;
+		},
+		unEmphasis: function (className, start, end) {
+			var nodes = this.getSpans(className || EMPHASIS_CLASS, start, end);
 			if (nodes.length) {
 				var r = document.createRange();
 				for (var i = 0; i < nodes.length; i++) {

@@ -1155,7 +1155,7 @@ public class InsertionTest extends WasaviTest {
 		 * "    \too"			move to top of line, overwrite tab (f must be deleted)
 		 * "       oo"			3 spaces must be inserted (total indent is 7 spaces)
 		 */
-		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.setInputModeOfWatchTarget("overwrite");
 		Wasavi.send("a    foo\u001b^R\t");
 		assertValue("#1-1", "       oo");
 		assertPos("#1-2", 0, 8);
@@ -1175,7 +1175,7 @@ public class InsertionTest extends WasaviTest {
 		 * "    \tfoo"			move to top of line, overwrite tab (f must be deleted)
 		 * "\too"				indent normalization is executed
 		 */
-		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.setInputModeOfWatchTarget("overwrite");
 		Wasavi.send("a    foo\u001b^R\t");
 		assertValue("#1-1", "\too");
 		assertPos("#1-2", 0, 1);

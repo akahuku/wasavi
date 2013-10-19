@@ -28,7 +28,7 @@ public class FileSystemTest extends WasaviTest {
 			Wasavi.send(":files default " + fs + "\n");
 		}
 
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 
 		if (makeDefault) {
 			Wasavi.send(":r " + prefix + "\t");
@@ -55,7 +55,7 @@ public class FileSystemTest extends WasaviTest {
 			Wasavi.send(":files default " + fs + "\n");
 		}
 
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 
 		if (makeDefault) {
 			Wasavi.send(":r /test\t");

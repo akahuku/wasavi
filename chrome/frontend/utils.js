@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: utils.js 414 2013-09-27 13:13:51Z akahuku $
+ * @version $Id: utils.js 430 2013-10-18 21:11:01Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -129,7 +129,7 @@ function style (src, styles) {
 	}
 }
 function multiply (letter, times) {
-	if (times <= 0) return '';
+	if (letter == '' || times <= 0) return '';
 	var result = letter;
 	while (result.length * 2 <= times) {
 		result += result;

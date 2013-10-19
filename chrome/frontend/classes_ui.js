@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 366 2013-08-22 16:34:38Z akahuku $
+ * @version $Id: classes_ui.js 431 2013-10-19 22:03:22Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -48,12 +48,14 @@ Wasavi.Theme = function (app) {
 		lineNumberBg:['#wasavi_editor.n>div:before', ''],
 		rowFg:['#wasavi_editor>div', ''],
 		rowBg:['#wasavi_editor>div', ''],
-		highlightFg:['#wasavi_editor>div>span.' + EMPHASIS_CLASS, ''],
-		highlightBg:['#wasavi_editor>div>span.' + EMPHASIS_CLASS, ''],
+		highlightFg:['#wasavi_editor>div span.' + EMPHASIS_CLASS, ''],
+		highlightBg:['#wasavi_editor>div span.' + EMPHASIS_CLASS, ''],
 		lineInputFg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
 		lineInputBg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
 		consoleFg:['#wasavi_console', ''],
-		consoleBg:['#wasavi_console_container', '']
+		consoleBg:['#wasavi_console_container', ''],
+		boundFg:['#wasavi_editor>div span.wasavi_bound', ''],
+		boundBg:['#wasavi_editor>div span.wasavi_bound', '']
 	};
 	var colorSets = {
 		blight: {
@@ -71,7 +73,8 @@ Wasavi.Theme = function (app) {
 			rowFg:'black', rowBg:'white',
 			highlightFg:'highlighttext', highlightBg:'highlight',
 			lineInputFg:'white', lineInputBg:'rgba(0,0,0,0.5)',
-			consoleFg:'white', consoleBg:'rgba(0,0,0,0.8)'
+			consoleFg:'white', consoleBg:'rgba(0,0,0,0.8)',
+			boundFg:'white', boundBg:'#799fc6'
 		},
 		charcoal: {
 			statusHue:'#c2bfa5',
@@ -88,7 +91,8 @@ Wasavi.Theme = function (app) {
 			rowFg:'#fff', rowBg:'#333',
 			highlightFg:'highlight', highlightBg:'highlighttext',
 			lineInputFg:'black', lineInputBg:'rgba(255,255,255,0.5)',
-			consoleFg:'black', consoleBg:'rgba(159,205,74,0.8)'
+			consoleFg:'black', consoleBg:'rgba(159,205,74,0.8)',
+			boundFg:'black', boundBg:'#f5b338'
 		}
 	};
 
@@ -629,11 +633,11 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 				break;
 
 			case 'edit':
-			case 'edit-overwrite':
+			case 'overwrite':
 				wrapper = new EditWrapper(cursorType);
 				break;
 
-			case 'line-input':
+			case 'line_input':
 				wrapper = new LineInputWrapper(cursorType);
 				break;
 			}
@@ -826,8 +830,8 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 			}
 		}
 
-		if (app.state != 'console-wait') {
-			app.low.pushInputMode('console-wait', 'backlog');
+		if (app.state != 'console_wait') {
+			app.low.pushInputMode('console_wait', 'backlog');
 		}
 		if (!preserveMessage) {
 			app.low.showMessage(

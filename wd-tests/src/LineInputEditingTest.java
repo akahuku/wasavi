@@ -102,77 +102,77 @@ public class LineInputEditingTest extends WasaviTest {
 
 	@Test
 	public void completeCommandNameFromEmpty () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":\t");
 		assertEquals("#1-1", "&", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeCommandNameWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":ab\t");
 		assertEquals("#1-1", "abbreviate", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeNestedCommandNameFromEmpty () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":g/re/\t");
 		assertEquals("#1-1", "g/re/&", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeNestedCommandNameWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":g/re/p\t");
 		assertEquals("#1-1", "g/re/print", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void complete2ndCommandNameFromEmpty () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":ver|1,2\t");
 		assertEquals("#1-1", "ver|1,2&", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void complete2ndCommandNameWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":ver|ab\t");
 		assertEquals("#1-1", "ver|abbreviate", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeOptionNameFromEmpty () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":set \t");
 		assertEquals("#1-1", "set autoindent", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeOptionNameWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":set textw\t");
 		assertEquals("#1-1", "set textwidth", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeAbbreviatedOptionName () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":set sw\t");
 		assertEquals("#1-1", "set shiftwidth", Wasavi.getLineInput());
 	}
 
 	@Test
 	public void completeThemeFromEmpty () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":set theme=\t");
 		assertTrue("#1-1", Pattern.matches("^set theme=.+", Wasavi.getLineInput()));
 	}
 
 	@Test
 	public void completeThemeWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":set theme=c\t");
 		assertTrue("#1-1", Pattern.matches("^set theme=charcoal", Wasavi.getLineInput()));
 	}
@@ -180,7 +180,7 @@ public class LineInputEditingTest extends WasaviTest {
 	@Test
 	public void pasteRegister () {
 		Wasavi.send("afoo\nbar\u001b1GyG");
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":\u0012\"");
 		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
 	}
@@ -188,7 +188,7 @@ public class LineInputEditingTest extends WasaviTest {
 	@Test
 	public void pasteClipboard () {
 		Wasavi.send("afoo\nbar\u001b1G\"*yG");
-		Wasavi.setInputModeOfWatchTarget("line-input");
+		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":\u0012*");
 		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
 	}

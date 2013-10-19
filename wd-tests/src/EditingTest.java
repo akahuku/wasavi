@@ -872,9 +872,9 @@ public class EditingTest extends WasaviTest {
 
 	@Test
 	public void testOverwrite () {
-		Wasavi.setInputModeOfWatchTarget("edit-overwrite");
+		Wasavi.setInputModeOfWatchTarget("overwrite");
 		Wasavi.send("R", "foo\nbar");
-		assertEquals("#1", "edit-overwrite", Wasavi.getInputMode());
+		assertEquals("#1", "overwrite", Wasavi.getInputMode());
 
 		Wasavi.send("\u001b");
 		assertPos("#2-1", 1, 2);

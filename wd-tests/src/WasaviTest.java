@@ -284,8 +284,8 @@ class WasaviWrapper {
 		for (String s: modes) {
 			if ("command".equals(s) ||
 				"edit".equals(s) ||
-				"edit-overwrite".equals(s) ||
-				"line-input".equals(s)) {
+				"overwrite".equals(s) ||
+				"line_input".equals(s)) {
 
 				inputModeOfWacthTarget.add(s);
 			}
