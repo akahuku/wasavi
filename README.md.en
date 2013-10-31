@@ -159,7 +159,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `ZZ`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ`
 
 ex commands
 -----------
@@ -197,6 +197,36 @@ Line input mode commands
 * `^W`: delete a word
 * `tab`: complete ex command name, set option name, file name argument of read/edit/write/file
 
+Bound mode commands
+------------------------
+
+Bound mode is similar to vim's visual mode.
+
+* `c`: delete the bound, and switch to insert mode
+* `d`: delete the bound
+* `y`: yank the bound
+* `<`: unshift the bound
+* `>`: shift the bound
+* `C`: delete the line-wise bound, and switch to insert mode
+* `S`: same as `C`
+* `R`: same as `C`
+* `D`: delete the line-wise bound
+* `X`: same as `C`
+* `Y`: yank the line-wise bound
+* `g` prefix commands
+* `a`, `i` prefix range symbols
+* `~`: swap lower case and upper case in the bound
+* `:`: switch to line input mode
+* `J`: join the bound
+* `p`: delete the bound, and paste a register's content
+* `P`: same as `p`
+* `r`: fill the bound up with inputted letter
+* `s`: same as `c`
+* `u`: lower-ize the bound
+* `U`: upper-ize the bound
+* `v`: character wise bound mode
+* `V`: line wise bound mode
+* `x`: same as `d`
 
 Vim features in wasavi
 ----------------------
@@ -207,5 +237,6 @@ Vim features in wasavi
 * register `"`, `:`, `*`, `/` (`*` is used to access system clipboard)
 * auto-reformat in input mode, and reformat operator (gq command) on the
   state of textwidth > 0
+* bound mode (aka, Vim visual mode)
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`,
   `relativenumber`, `textwidth`, `expandtab`
