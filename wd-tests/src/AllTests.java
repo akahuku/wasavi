@@ -8,7 +8,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @RunWith(Suite.class) @SuiteClasses({
 	BasicsTest.class
 	,FileSystemTest.class
-	,AppModeTest.class
+    ,AppModeTest.class
 	,EditingTest.class
 	,InsertionTest.class
 	,MotionsTest.class

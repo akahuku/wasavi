@@ -50,7 +50,7 @@ class WasaviWrapper {
 	protected WebDriver driver;
 	protected JSONObject wasaviState;
 	protected final ArrayList<String> inputModeOfWacthTargetDefault =
-		new ArrayList<String>(java.util.Arrays.asList("command", "console-wait"));
+		new ArrayList<String>(java.util.Arrays.asList("command", "console_wait"));
 	protected ArrayList<String> inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	protected Boolean isAppMode = false;
 	protected StrokeSender strokeSender = null;
@@ -509,13 +509,12 @@ class WasaviAsserts {
 	}
 
 	public static void assertEquals (String message, String expected, String actual) {
-		if (!expected.equals(actual)) {
-			org.junit.Assert.fail(
-					String.format(
+		org.junit.Assert.assertEquals(
+				String.format(
 						"%s: expected:\n<<%s>>\n\nbut was:\n<<%s>>",
 						message,
-						toVisibleString(expected), toVisibleString(actual)));
-		}
+						toVisibleString(expected), toVisibleString(actual)),
+				expected, actual);
 	}
 
 	public static void assertEqualst(String expected, String actual) {
@@ -526,14 +525,13 @@ class WasaviAsserts {
 		try {
 			int actualRow = wasaviState.getInt("row");
 			int actualCol = wasaviState.getInt("col");
-			if (row != actualRow || col != actualCol) {
-				org.junit.Assert.fail(
-						String.format(
+			org.junit.Assert.assertTrue(
+					String.format(
 							"%s: position unmatch.\nexpected:[%d, %d] but was:[%d, %d]\n%s",
 							message,
 							row, col, actualRow, actualCol,
-							wasaviState.getString("value")));
-			}
+							wasaviState.getString("value")),
+					row == actualRow && col == actualCol);
 		}
 		catch (JSONException e) {
 			org.junit.Assert.fail("invalid row or col in wasaviStates.");
@@ -547,14 +545,12 @@ class WasaviAsserts {
 	public static void assertValue (String message, String expected) {
 		try {
 			String value = wasaviState.getString("value");
-			if (!value.equals(expected)) {
-				org.junit.Assert.fail(
-						String.format(
-							"%s: value unmatch.\nexpected:\n<<%s>>\n\nbut was:\n<<%s>>\n\nstate:%s",
+			org.junit.Assert.assertEquals(
+					String.format(
+							"%s: value unmatch.\nexpected:\n<<%s>>\n\nbut was:\n<<%s>>\n\n",
 							message,
-							toVisibleString(expected), toVisibleString(value),
-							wasaviState.toString(2)));
-			}
+							toVisibleString(expected), toVisibleString(value)),
+					expected, value);
 		}
 		catch (JSONException e) {
 			org.junit.Assert.fail("invalid value col in wasaviStates.");
@@ -604,8 +600,8 @@ public class WasaviTest {
 
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
+			System.out.println("starting " + d.toString());
 			logText.clear();
-			logText.add("Testcase: " + d.getMethodName());
 
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");
 			isAppMode = d.getMethodName().matches(".*appMode.*");
@@ -616,15 +612,21 @@ public class WasaviTest {
 				"var h1 = document.getElementsByTagName('h1')[0];" +
 				"if (h1) {" +
 				"  h1.textContent = '" + String.format(
-					"%s (#%d)", d.getMethodName(), testIndex++) + "';" +
+					"#%d: %s", testIndex++, d.toString()) + "';" +
 				"}");
 		}
 		protected void failed (Throwable e, Description d) {
-			logText.add("FAILED");
 			System.out.println("--------------------");
+			System.out.println(d.toString() + " FAILED");
+			System.out.println("");
+			System.out.println(e.getMessage());
+			System.out.println("");
 			for (CharSequence s: logText) {
 				System.out.println(s);
 			}
+			System.out.println("");
+			System.out.println("");
+			System.out.println("");
 		}
 	};
 
@@ -836,11 +838,14 @@ public class WasaviTest {
 			wasaviFrame = new WebDriverWait(driver, 5).until(
 				new ExpectedCondition<WebElement>() {
 					public WebElement apply (WebDriver driver) {
-						return findElement(By.id("wasavi_container"));
+						return findElement(By.id("wasavi_cover"));
 					}
 				});
 		}
 		catch (org.openqa.selenium.TimeoutException e) {
+			wasaviFrame = null;
+		}
+		catch (org.openqa.selenium.UnhandledAlertException e) {
 			wasaviFrame = null;
 		}
 
@@ -874,6 +879,10 @@ public class WasaviTest {
 
 	@After
 	public void tearDown () {
+		if (isAppMode) {
+			Wasavi.send(":set nomodified\n");
+		}
+
 		WebElement testLog = findElement(By.id("test-log"));
 		if (testLog != null) {
 			logText.add(testLog.getAttribute("value"));

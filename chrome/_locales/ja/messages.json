@@ -424,6 +424,10 @@
 		"message": "何かキーを押すか、続きの ex コマンドを入力:",
 		"description": "Press any key to continue, or enter more ex command:"
 	},
+	"invalid_text_format": {
+		"message": "テキストの形式が不正です。",
+		"description": "Invalid text format."
+	},
 	"element_to_be_written_has_readonly_attribute_use_to_override": {
 		"message": "書き込み先要素は読み取り専用属性です (\"!\" 付加で上書きできます)。",
 		"description": "Element to be written has readonly attribute (use \"!\" to override)."
@@ -431,10 +435,6 @@
 	"element_to_be_written_has_disabled_attribute_use_to_override": {
 		"message": "書き込み先要素は選択不能属性です (\"!\" 付加で上書きできます)。",
 		"description": "Element to be written has disabled attribute (use \"!\" to override)."
-	},
-	"invalid_text_format": {
-		"message": "テキストの形式が不正です。",
-		"description": "Invalid text format."
 	},
 	"exception_while_saving_@0": {
 		"message": "保存中に例外が発生しました: {0}",
@@ -475,6 +475,14 @@
 	"overwrite": {
 		"message": "--上書きモード--",
 		"description": "--OVERWRITE--"
+	},
+	"bound": {
+		"message": "--範囲指定モード--",
+		"description": "--BOUND--"
+	},
+	"bound_line": {
+		"message": "--行範囲指定モード--",
+		"description": "--BOUND LINE--"
 	},
 	"@0_extra_range_specified": {
 		"message": "{0}: 余分な範囲が指定されました。",
@@ -568,10 +576,6 @@
 		"message": "検索が折り返されました。",
 		"description": "Search wrapped."
 	},
-	"replace_count_too_large": {
-		"message": "置き換える文字数が多すぎます。",
-		"description": "Replace count too large."
-	},
 	"you_are_in_the_restricted_region": {
 		"message": "保護された領域内です。",
 		"description": "You are in the restricted region."
@@ -591,6 +595,10 @@
 	"putting_data_is_empty": {
 		"message": "貼り付けるデータが空です。",
 		"description": "Putting data is empty."
+	},
+	"replace_count_too_large": {
+		"message": "置き換える文字数が多すぎます。",
+		"description": "Replace count too large."
 	},
 	"the_text_has_been_modified": {
 		"message": "テキストは変更されています。",
@@ -636,14 +644,6 @@
 		"message": "マーク {0} はセットされていません。",
 		"description": "Mark {0} is not set."
 	},
-	"last_inputted_position_is_undefined": {
-		"message": "最後の編集位置は未定義です。",
-		"description": "Last inputted position is undefined."
-	},
-	"unknown_gprefixed_command_@0": {
-		"message": "未知の g 始まりのコマンド: {0}",
-		"description": "Unknown g-prefixed command: {0}"
-	},
 	"@0_find_forward": {
 		"message": "{0}: 前方に検索",
 		"description": "{0}: find forward"
@@ -660,6 +660,22 @@
 		"message": "未知の画面調節コマンドです。",
 		"description": "Unknown adjust command."
 	},
+	"last_inputted_position_is_undefined": {
+		"message": "最後の編集位置は未定義です。",
+		"description": "Last inputted position is undefined."
+	},
+	"last_bound_is_undefined": {
+		"message": "最後の選択範囲は未定義です。",
+		"description": "Last bound is undefined."
+	},
+	"unknown_gprefixed_command_@0": {
+		"message": "未知の g 始まりのコマンド: {0}",
+		"description": "Unknown g-prefixed command: {0}"
+	},
+	"@0_range_symbol": {
+		"message": "{0}: レンジシンボル",
+		"description": "{0}: range symbol"
+	},
 	"@0_mark": {
 		"message": "{0}: マーク",
 		"description": "{0}: mark"
@@ -675,10 +691,6 @@
 	"@0_replace_a_char": {
 		"message": "{0}: 1 文字置き換え",
 		"description": "{0}: replace a char"
-	},
-	"@0_range_symbol": {
-		"message": "{0}: レンジシンボル",
-		"description": "{0}: range symbol"
 	},
 	"last_inputted_text_is_undefined": {
 		"message": "最後の入力文字列は未定義です。",

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ui.js 431 2013-10-19 22:03:22Z akahuku $
+ * @version $Id: classes_ui.js 433 2013-10-24 01:18:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -54,8 +54,8 @@ Wasavi.Theme = function (app) {
 		lineInputBg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
 		consoleFg:['#wasavi_console', ''],
 		consoleBg:['#wasavi_console_container', ''],
-		boundFg:['#wasavi_editor>div span.wasavi_bound', ''],
-		boundBg:['#wasavi_editor>div span.wasavi_bound', '']
+		boundFg:['#wasavi_editor>div span.' + BOUND_CLASS, ''],
+		boundBg:['#wasavi_editor>div span.' + BOUND_CLASS, '']
 	};
 	var colorSets = {
 		blight: {
@@ -74,7 +74,7 @@ Wasavi.Theme = function (app) {
 			highlightFg:'highlighttext', highlightBg:'highlight',
 			lineInputFg:'white', lineInputBg:'rgba(0,0,0,0.5)',
 			consoleFg:'white', consoleBg:'rgba(0,0,0,0.8)',
-			boundFg:'white', boundBg:'#799fc6'
+			boundFg:'white', boundBg:'#8495a7'
 		},
 		charcoal: {
 			statusHue:'#c2bfa5',
@@ -559,19 +559,14 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			var needFix2 = !app.requestedState.inputMode || !app.low.isEditing(app.requestedState.inputMode.mode);
 			if (needFix1 && needFix2) {
 				var n = buffer.selectionStart;
-				var fixed = false;
-				if (n.col > 0
-				&& n.row == buffer.rowLength - 1
-				&& n.col >= buffer.rows(n).length) {
-					n.col = Math.max(0, buffer.rows(n).length - 1);
-					fixed = true;
-				}
-				if (n.col > 0 && buffer.isNewline(n)) {
-					n.col--;
-					fixed = true;
-				}
-				if (fixed) {
-					buffer.setSelectionRange(n);
+				if (n.col > 0) {
+					var fixed = false;
+					var text = buffer.rows(n);
+					if (n.col >= text.length) {
+						n.col = text.length - 1;
+						fixed = true;
+					}
+					fixed && buffer.setSelectionRange(n);
 				}
 			}
 		}

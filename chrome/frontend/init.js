@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: init.js 272 2013-01-13 01:20:15Z akahuku $
+ * @version $Id: init.js 432 2013-10-21 20:57:39Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -72,6 +72,7 @@
 /*const*/var MARK_CLASS = 'wasavi_mark';
 /*const*/var EMPHASIS_CLASS = 'wasavi_em';
 /*const*/var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
+/*const*/var BOUND_CLASS = 'wasavi_bound';
 
 var Wasavi = {};
 

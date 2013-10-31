@@ -432,7 +432,7 @@ public class UndoTest extends WasaviTest {
 	}
 
 	@Test
-	public void testPastCharsForwardToTailOfBuffer () {
+	public void testPasteCharsForwardToTailOfBuffer () {
 		Wasavi.send("ifoo\nbar\u001b");
 
 		Wasavi.send("1G", "1|y3l");

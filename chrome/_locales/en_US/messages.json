@@ -424,6 +424,10 @@
 		"message": "Press any key to continue, or enter more ex command:",
 		"description": "Press any key to continue, or enter more ex command:"
 	},
+	"invalid_text_format": {
+		"message": "Invalid text format.",
+		"description": "Invalid text format."
+	},
 	"element_to_be_written_has_readonly_attribute_use_to_override": {
 		"message": "Element to be written has readonly attribute (use \"!\" to override).",
 		"description": "Element to be written has readonly attribute (use \"!\" to override)."
@@ -431,10 +435,6 @@
 	"element_to_be_written_has_disabled_attribute_use_to_override": {
 		"message": "Element to be written has disabled attribute (use \"!\" to override).",
 		"description": "Element to be written has disabled attribute (use \"!\" to override)."
-	},
-	"invalid_text_format": {
-		"message": "Invalid text format.",
-		"description": "Invalid text format."
 	},
 	"exception_while_saving_@0": {
 		"message": "Exception while saving: {0}",
@@ -475,6 +475,14 @@
 	"overwrite": {
 		"message": "--OVERWRITE--",
 		"description": "--OVERWRITE--"
+	},
+	"bound": {
+		"message": "--BOUND--",
+		"description": "--BOUND--"
+	},
+	"bound_line": {
+		"message": "--BOUND LINE--",
+		"description": "--BOUND LINE--"
 	},
 	"@0_extra_range_specified": {
 		"message": "{0}: extra range specified.",
@@ -568,10 +576,6 @@
 		"message": "Search wrapped.",
 		"description": "Search wrapped."
 	},
-	"replace_count_too_large": {
-		"message": "Replace count too large.",
-		"description": "Replace count too large."
-	},
 	"you_are_in_the_restricted_region": {
 		"message": "You are in the restricted region.",
 		"description": "You are in the restricted region."
@@ -591,6 +595,10 @@
 	"putting_data_is_empty": {
 		"message": "Putting data is empty.",
 		"description": "Putting data is empty."
+	},
+	"replace_count_too_large": {
+		"message": "Replace count too large.",
+		"description": "Replace count too large."
 	},
 	"the_text_has_been_modified": {
 		"message": "The text has been modified.",
@@ -636,14 +644,6 @@
 		"message": "Mark {0} is not set.",
 		"description": "Mark {0} is not set."
 	},
-	"last_inputted_position_is_undefined": {
-		"message": "Last inputted position is undefined.",
-		"description": "Last inputted position is undefined."
-	},
-	"unknown_gprefixed_command_@0": {
-		"message": "Unknown g-prefixed command: {0}",
-		"description": "Unknown g-prefixed command: {0}"
-	},
 	"@0_find_forward": {
 		"message": "{0}: find forward",
 		"description": "{0}: find forward"
@@ -660,6 +660,22 @@
 		"message": "Unknown adjust command.",
 		"description": "Unknown adjust command."
 	},
+	"last_inputted_position_is_undefined": {
+		"message": "Last inputted position is undefined.",
+		"description": "Last inputted position is undefined."
+	},
+	"last_bound_is_undefined": {
+		"message": "Last bound is undefined.",
+		"description": "Last bound is undefined."
+	},
+	"unknown_gprefixed_command_@0": {
+		"message": "Unknown g-prefixed command: {0}",
+		"description": "Unknown g-prefixed command: {0}"
+	},
+	"@0_range_symbol": {
+		"message": "{0}: range symbol",
+		"description": "{0}: range symbol"
+	},
 	"@0_mark": {
 		"message": "{0}: mark",
 		"description": "{0}: mark"
@@ -675,10 +691,6 @@
 	"@0_replace_a_char": {
 		"message": "{0}: replace a char",
 		"description": "{0}: replace a char"
-	},
-	"@0_range_symbol": {
-		"message": "{0}: range symbol",
-		"description": "{0}: range symbol"
 	},
 	"last_inputted_text_is_undefined": {
 		"message": "Last inputted text is undefined.",

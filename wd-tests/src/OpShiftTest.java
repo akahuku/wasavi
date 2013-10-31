@@ -11,7 +11,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
+	
 public class OpShiftTest extends WasaviTest {
 	@Test
 	public void testShift () {
@@ -47,15 +47,15 @@ public class OpShiftTest extends WasaviTest {
 		assertPos("#1-2", 0, 4);
 
 		/*
-		 * 4 spaces       1 tab
-		 * ....foo   -->  +.......foo
-		 *   ^mark                ^mark
+		 * 4 spaces       8 spaces          1 tab
+		 * ....foo   -->  ........foo  -->  +.......foo
+		 *   ^mark              ^mark       ^mark
 		 */
 		Wasavi.send("3|ma>>");
 		assertEquals("#2-1", "\tfoo", Wasavi.getValue());
 		assertPos("#2-2", 0, 1);
 		Wasavi.send("gg`a");
-		assertPos("#3-1", 0, 1);
+		assertPos("#3-1", 0, 0);
 	}
 
 	@Test

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_subst.js 430 2013-10-18 21:11:01Z akahuku $
+ * @version $Id: classes_subst.js 436 2013-10-31 07:14:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -192,7 +192,7 @@ Wasavi.SubstituteWorker.prototype = {
 				t.setSelectionRange(pos);
 				this.app.cursor.ensureVisible();
 				t.emphasis(pos, this.re[0].length);
-				this.app.low.requestInputMode('console_wait', 'ex_s');
+				this.app.low.requestInputMode('console_wait', {modeSub:'ex_s'});
 				this.app.low.requestShowMessage(_('Substitute? ([y]es, [n]o, [q]uit)'), false, true, true);
 			}
 			else {

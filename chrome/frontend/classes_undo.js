@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_undo.js 422 2013-10-06 18:48:24Z akahuku $
+ * @version $Id: classes_undo.js 436 2013-10-31 07:14:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -130,7 +130,7 @@ Wasavi.EditLogger = function (app, max) {
 				return 0;
 			}
 
-			app.marks.update(t.selectionStart, function () {
+			app.marks.update(ss, function () {
 				t.deleteRange(ss, se);
 			});
 			data2 !== false && t.setRow(ss, data2);
@@ -308,7 +308,7 @@ Wasavi.EditLogger = function (app, max) {
 					s.position.row,
 					Math.min(s.position.row + s.rowCount, t.rowLength) - s.position.row,
 					-s.shiftCount, s.shiftWidth, s.tabStop, s.expandTab,
-					s.indents
+					s instanceof EditLogItemShift ? s.indents : null
 				);
 			});
 			!isClusterMember && this.restorePosition(app);
@@ -324,7 +324,8 @@ Wasavi.EditLogger = function (app, max) {
 				t.shift(
 					s.position.row,
 					Math.min(s.position.row + s.rowCount, t.rowLength) - s.position.row,
-					s.shiftCount, s.shiftWidth, s.tabStop, s.expandTab
+					s.shiftCount, s.shiftWidth, s.tabStop, s.expandTab,
+					s instanceof EditLogItemUnshift ? s.indents : null
 				);
 			});
 			!isClusterMember && this.restorePosition(app);
@@ -340,11 +341,14 @@ Wasavi.EditLogger = function (app, max) {
 		dump: function (depth) {
 			var indent = '\n' + multiply(' ', depth + 2);
 			return this._dump(depth) +
-				indent + 'rc:' + this.rowCount +
-				indent + 'sc:' + this.shiftCount +
-				indent + 'sw:' + this.shiftWidth +
-				indent + 'ts:' + this.tabStop +
-				indent + 'et:' + this.expandTab;
+				indent + 'rowCount:' + this.rowCount +
+				', shiftCount:' + this.shiftCount +
+				', shiftWidth:' + this.shiftWidth +
+				', tabStop:' + this.tabStop +
+				', expandTab:' + this.expandTab +
+				indent + 'indents:' + (this.indents ? this.indents.map(function (ind, i) {
+					return indent + i + ': ' + toVisibleString(JSON.stringify(ind));
+				}).join('') : 'N/A')
 		}
 	});
 	/*
@@ -408,7 +412,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 
 		toString: function () {
-			return '[object EditLogItemCluster<' + (this.tag || '') + '>]';
+			return '[object EditLogItemCluster<' + (this.tag || 'root') + '>]';
 		},
 		dump: function (depth) {
 			depth || (depth = 0);

@@ -1072,7 +1072,7 @@ public class InsertionTest extends WasaviTest {
 
 	@Test
 	public void autoFormat () {
-		Wasavi.send(":set tw=30\n");
+		Wasavi.send(":set tw=30 undoboundlen=0\n");
 		Wasavi.send(
 			"i" +
 			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n" +
@@ -1080,7 +1080,7 @@ public class InsertionTest extends WasaviTest {
 			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat." +
 			"\u001b");
 
-		assertValue("#1-1",
+		String formatted =
 			"Lorem ipsum dolor sit amet,\n" +
 			"consectetur adipisicing elit,\n" +
 			"sed do eiusmod tempor\n" +
@@ -1090,21 +1090,13 @@ public class InsertionTest extends WasaviTest {
 			"Ut enim ad minim veniam, quis\n" +
 			"nostrud exercitation ullamco\n" +
 			"laboris nisi ut aliquip ex ea\n" +
-			"commodo consequat.");
+			"commodo consequat.";
+
+		assertValue("#1-1", formatted);
 		Wasavi.send("u");
-		assertValue("#1-2", "");
+		assertTrue("#1-2", Wasavi.getValue().length() < formatted.length());
 		Wasavi.send("\u0012");
-		assertValue("#1-3",
-			"Lorem ipsum dolor sit amet,\n" +
-			"consectetur adipisicing elit,\n" +
-			"sed do eiusmod tempor\n" +
-			"incididunt ut labore et dolore\n" +
-			"magna aliqua.\n" +
-			"\n" +
-			"Ut enim ad minim veniam, quis\n" +
-			"nostrud exercitation ullamco\n" +
-			"laboris nisi ut aliquip ex ea\n" +
-			"commodo consequat.");
+		assertValue("#1-3", formatted);
 	}
 
 	@Test
@@ -1152,19 +1144,20 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send(":set expandtab ts=8 sw=4\n");
 		/*
 		 * "    foo"			insert 4 spaces and 'foo'
-		 * "    \too"			move to top of line, overwrite tab (f must be deleted)
-		 * "       oo"			3 spaces must be inserted (total indent is 7 spaces)
+		 * "    \too"			move to first non-whitespace char, overwrite tab
+		 * "     oo"			f must be overwritten
+		 * "        oo"			3 spaces must be inserted (total indent is 8 spaces)
 		 */
 		Wasavi.setInputModeOfWatchTarget("overwrite");
 		Wasavi.send("a    foo\u001b^R\t");
-		assertValue("#1-1", "       oo");
+		assertValue("#1-1", "        oo");
 		assertPos("#1-2", 0, 8);
 		Wasavi.send("\u001b");
 
 		Wasavi.send("u");
 		assertValue("#1-3", "    foo");
 		Wasavi.send("\u0012");
-		assertValue("#1-4", "       oo");
+		assertValue("#1-4", "        oo");
 	}
 
 	@Test

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 431 2013-10-19 22:03:22Z akahuku $
+ * @version $Id: classes.js 436 2013-10-31 07:14:25Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2825,7 +2825,7 @@ loop:			while (node) {
 				if (!re) return;
 				node.deleteData(0, re[0].length);
 				for (var i = 0, goal = marks.length; i < goal; i++) {
-					marks[i][0] -= re[0].length;
+					marks[i][0] = Math.max(0, marks[i][0] - re[0].length);
 				}
 			}
 
