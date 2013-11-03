@@ -211,7 +211,7 @@ Bound mode is similar to vim's visual mode.
 * `S`: same as `C`
 * `R`: same as `C`
 * `D`: delete the line-wise bound
-* `X`: same as `C`
+* `X`: same as `D`
 * `Y`: yank the line-wise bound
 * `g` prefix commands
 * `a`, `i` prefix range symbols

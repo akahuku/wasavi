@@ -8,7 +8,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @RunWith(Suite.class) @SuiteClasses({
 	BasicsTest.class
 	,FileSystemTest.class
-    ,AppModeTest.class
+	,AppModeTest.class
 	,EditingTest.class
 	,InsertionTest.class
 	,MotionsTest.class
@@ -22,6 +22,7 @@ import org.junit.runners.Suite.SuiteClasses;
 	,RangeSymbolsTest.class
 	,LearningTheViEditor6th.class
 	,LineInputEditingTest.class
+	,BoundTest.class
 })
 public class AllTests {
 	public static void main (String[] args) {

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 436 2013-10-31 07:14:25Z akahuku $
+ * @version $Id: wasavi.js 437 2013-11-03 02:00:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2885,7 +2885,7 @@ function insertNewlineWithIndent (origin, selfIndent) {
 function motionLeft (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionStart;
-	n.col <= 0 && requestRegisterNotice(_('Top of line.'));
+	c != '' && n.col <= 0 && requestRegisterNotice(_('Top of line.'));
 	n.col = Math.max(n.col - count, 0);
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
@@ -2896,7 +2896,7 @@ function motionRight (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionEnd;
 	var length = buffer.rows(n).length;
-	n.col >= length - 1 && requestRegisterNotice(_('Tail of line.'));
+	c != '' && n.col >= length - 1 && requestRegisterNotice(_('Tail of line.'));
 	n.col = Math.min(n.col + count, length);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
@@ -3270,7 +3270,6 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 		}
 	}
 	else {
-		prefixInput.reset();
 		requestShowMessage(_('Pattern not found: {0}', pattern), true);
 	}
 	return true;
@@ -3930,8 +3929,6 @@ function toggleCase (count, allowMultiLine) {
 	editLogger.open('toggleCase', function () {
 		var n = buffer.selectionStart;
 		while (count > 0 && n.row < buffer.rowLength) {
-			buffer.setSelectionRange(n);
-
 			var text = buffer.rows(n);
 			var original = text.substr(n.col, Math.min(count, text.length - n.col));
 			var replaced = '';
@@ -3949,8 +3946,8 @@ function toggleCase (count, allowMultiLine) {
 					replaced += c;
 				}
 			}
-			deleteCharsForward(original.length);
-			insert(replaced);
+			editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replaced, text);
+			buffer.setSelectionRange(buffer.overwriteChars(n, replaced));
 
 			count -= allowMultiLine ? (original.length + 1) : count;
 			n.row++;
@@ -5319,7 +5316,7 @@ var commandMap = {
 				return true;
 			}
 			else {
-				requestShowMessage(_('Mark {0} is not set.', c), true);
+				c != '\u001b' && requestShowMessage(_('Mark {0} is not set.', c), true);
 				return inputEscape(o.e.fullIdentifier);
 			}
 		}
@@ -6229,7 +6226,9 @@ var boundMap = {
 				act >= config.vars.report && requestShowMessage(_('Changing {0} {line:0}.', act));
 			},
 			function () {
-				return startEdit(c);
+				prefixInput.reset();
+				requestSimpleCommandUpdate(lastSimpleCommand);
+				return startEdit('');
 			}
 		);
 	},
@@ -6280,7 +6279,9 @@ var boundMap = {
 				insertNewlineWithIndent(p1, selfIndent);
 			},
 			function () {
-				return startEdit(c);
+				prefixInput.reset();
+				requestSimpleCommandUpdate(lastSimpleCommand);
+				return startEdit('');
 			}
 		);
 	},
@@ -6295,7 +6296,7 @@ var boundMap = {
 			buffer.isLineOrientSelection = false;
 		});
 	},
-	X:function () {return this.C.apply(this, arguments)},
+	X:function () {return this.D.apply(this, arguments)},
 	Y:function (c, o) {
 		return operateToBound(c, o, true,
 			function (p1, p2, act) {
@@ -6423,6 +6424,8 @@ var boundMap = {
 				lineInputHistories.defaultName = ':';
 				var im = requestInputMode('line_input', {prefix:config.vars.prompt ? c : ''});
 				im.initial = "'<,'>";
+				prefixInput.reset();
+				prefixInput.operation = c;
 				return false;
 			});
 		},
@@ -6432,7 +6435,7 @@ var boundMap = {
 	J:function (c, o) {
 		return operateToBound(c, o, true, function (p1, p2, act) {
 			buffer.setSelectionRange(p1);
-			joinLines(act);
+			joinLines(act - 1);
 		});
 	},
 	p:function (c, o) {

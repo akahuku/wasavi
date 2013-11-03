@@ -105,6 +105,12 @@ public class ExCommandsTest extends WasaviTest {
 	public void testAddressMark () {
 		Wasavi.send("i1\n2\n3\n4\u001b");
 
+		Wasavi.send("1G:'ap\n");
+		assertEquals("#0-1", "Mark a is undefined.", Wasavi.getLastMessage());
+
+		Wasavi.send(":'Ap\n");
+		assertEquals("#0-2", "Invalid mark name.", Wasavi.getLastMessage());
+
 		Wasavi.send("4G", "ma1G", ":'ap\n");
 		assertEquals("#1-1", "4", Wasavi.getLastMessage());
 		assertPos("#1-2", 3, 0);

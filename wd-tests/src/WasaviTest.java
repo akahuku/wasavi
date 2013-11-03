@@ -600,7 +600,6 @@ public class WasaviTest {
 
 	@Rule public TestRule watcher = new TestWatcher() {
 		protected void starting (Description d) {
-			System.out.println("starting " + d.toString());
 			logText.clear();
 
 			isSectionTest = d.getMethodName().matches(".*([Ss]entence|[Pp]aragraph|[Ss]ection).*");

@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 390 2013-09-14 20:07:04Z akahuku $
+ * @version $Id: classes_ex.js 437 2013-11-03 02:00:12Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -327,18 +327,20 @@ flag23_loop:
 					app.isJumpBaseUpdateRequested = true;
 					found = true;
 				}
-				else if ((re = /^'([a-z`'])/.exec(s))) {
-					var mark = app.marks.get(re[1]);
-					if (mark == undefined) {
-						error = true;
+				else if ((re = /^'(.)/.exec(s))) {
+					if (!/^[a-z`'<>]$/.test(re[1])) {
+						error = _('Invalid mark name.');
 						break;
 					}
-					else {
-						rows.push(mark.row);
-						s = s.substring(re[0].length);
-						app.isJumpBaseUpdateRequested = true;
-						found = true;
+					var mark = app.marks.get(re[1]);
+					if (mark == undefined) {
+						error = _('Mark {0} is undefined.', re[1]);
+						break;
 					}
+					rows.push(mark.row);
+					s = s.substring(re[0].length);
+					app.isJumpBaseUpdateRequested = true;
+					found = true;
 				}
 				else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
 					var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
@@ -352,24 +354,22 @@ flag23_loop:
 						}
 						break;
 					}
-					else {
-						regexSpecified = true;
-						app.lastRegexFindCommand.push({direction:1});
-						pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
 
-						app.motion.lineEnd('');
-						var result = app.motion.findByRegexForward(regex, 1);
-						if (result) {
-							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-							s = s.substring(re[0].length);
-							app.isJumpBaseUpdateRequested = true;
-							found = true;
-						}
-						else {
-							error = _('Pattern not found: {0}', pattern);
-							break;
-						}
+					regexSpecified = true;
+					app.lastRegexFindCommand.push({direction:1});
+					pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
+
+					app.motion.lineEnd('');
+					var result = app.motion.findByRegexForward(regex, 1);
+					if (!result) {
+						error = _('Pattern not found: {0}', pattern);
+						break;
 					}
+
+					rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+					s = s.substring(re[0].length);
+					app.isJumpBaseUpdateRequested = true;
+					found = true;
 				}
 				else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
 					var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
@@ -383,24 +383,21 @@ flag23_loop:
 						}
 						break;
 					}
-					else {
-						regexSpecified = true;
-						app.lastRegexFindCommand.push({direction:-1});
-						pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
+					regexSpecified = true;
+					app.lastRegexFindCommand.push({direction:-1});
+					pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
 
-						app.motion.lineStart('', true);
-						var result = app.motion.findByRegexBackward(regex, 1);
-						if (result) {
-							rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-							s = s.substring(re[0].length);
-							app.isJumpBaseUpdateRequested = true;
-							found = true;
-						}
-						else {
-							error = _('Pattern not found: {0}', pattern);
-							break;
-						}
+					app.motion.lineStart('', true);
+					var result = app.motion.findByRegexBackward(regex, 1);
+					if (!result) {
+						error = _('Pattern not found: {0}', pattern);
+						break;
 					}
+
+					rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+					s = s.substring(re[0].length);
+					app.isJumpBaseUpdateRequested = true;
+					found = true;
 				}
 				else if ((re = /^[\+\-](\d*)/.exec(s))) {
 					var offset = re[1] == '' ?
