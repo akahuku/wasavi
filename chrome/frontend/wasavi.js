@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 438 2013-11-06 11:12:32Z akahuku $
+ * @version $Id: wasavi.js 439 2013-11-06 14:17:51Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -4169,27 +4169,41 @@ function quickReplace (c, count, allowMultiLine) {
 		count = buffer.getSelection().length;
 		buffer.setSelectionRange(buffer.selectionStart);
 	}
+	if (!allowMultiLine
+	&& count > buffer.rows(buffer.selectionStartRow).length - buffer.selectionStartCol) {
+		requestRegisterNotice(_('Replace count too large.'));
+		isEditCompleted = true;
+		idealWidthPixels = -1;
+		return true;
+	}
 	editLogger.open('quickReplace', function () {
-		var n = buffer.selectionStart;
-		var scaler = $('wasavi_singleline_scaler');
-		while (count > 0 && n.row < buffer.rowLength) {
-			var text = buffer.rows(n);
-			var original = text.substr(n.col, Math.min(count, text.length - n.col));
+		if (c == '\r' || c == '\n') {
+			buffer.selectionEnd = buffer.offsetBy(buffer.selectionStart, count);
+			deleteSelection();
+			insert('\n');
+		}
+		else {
+			var n = buffer.selectionStart;
+			var scaler = $('wasavi_singleline_scaler');
+			while (count > 0 && n.row < buffer.rowLength) {
+				var text = buffer.rows(n);
+				var original = text.substr(n.col, Math.min(count, text.length - n.col));
 
-			scaler.textContent = original;
-			var originalWidth = scaler.offsetWidth;
-			scaler.textContent = c;
-			var replacerWidth = scaler.offsetWidth;
+				scaler.textContent = original;
+				var originalWidth = scaler.offsetWidth;
+				scaler.textContent = c;
+				var replacerWidth = scaler.offsetWidth;
 
-			if (originalWidth && replacerWidth) {
-				var replacer = multiply(c, Math.max(1, Math.floor(originalWidth / replacerWidth)));
-				editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
-				buffer.setSelectionRange(buffer.leftPos(buffer.overwriteChars(n, replacer)));
+				if (originalWidth && replacerWidth) {
+					var replacer = multiply(c, Math.max(1, Math.floor(originalWidth / replacerWidth)));
+					editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
+					buffer.setSelectionRange(buffer.leftPos(buffer.overwriteChars(n, replacer)));
+				}
+
+				count -= allowMultiLine ? (original.length + 1) : count;
+				n.row++;
+				n.col = 0;
 			}
-
-			count -= allowMultiLine ? (original.length + 1) : count;
-			n.row++;
-			n.col = 0;
 		}
 	});
 	isEditCompleted = true;
