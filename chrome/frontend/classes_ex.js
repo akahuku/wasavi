@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes_ex.js 437 2013-11-03 02:00:12Z akahuku $
+ * @version $Id: classes_ex.js 438 2013-11-06 11:12:32Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -710,7 +710,7 @@ Wasavi.ExCommand.copy = function (app, t, a) {
 	t.setSelectionRange(new Wasavi.Position(a.lineNumber, 0));
 	app.edit.paste(1, {
 		isForward:true,
-		isForceLineOrient:true,
+		lineOrientOverride:true,
 		content:content
 	});
 	var copied = a.range[1] - a.range[0] + 1;
@@ -820,7 +820,7 @@ Wasavi.ExCommand.read = function (app, t, a, content, meta) {
 	t.setSelectionRange(new Wasavi.Position(startLine, 0));
 	app.edit.paste(1, {
 		isForward:true,
-		isForceLineOrient:true,
+		lineOrientOverride:true,
 		content:content
 	});
 	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
@@ -1302,7 +1302,7 @@ Wasavi.ExCommand.commands = [
 				t.setSelectionRange(new Wasavi.Position(dest, 0));
 				app.edit.paste(1, {
 					isForward:true,
-					isForceLineOrient:true,
+					lineOrientOverride:true,
 					content:content
 				});
 			}
@@ -1338,7 +1338,7 @@ Wasavi.ExCommand.commands = [
 		t.setSelectionRange(new Wasavi.Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
 		app.edit.paste(1, {
 			isForward:true,
-			isForceLineOrient:true,
+			lineOrientOverride:true,
 			register:register
 		});
 		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));

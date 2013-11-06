@@ -200,6 +200,14 @@
 		"message": "Invalid argument.",
 		"description": "Invalid argument."
 	},
+	"invalid_mark_name": {
+		"message": "Invalid mark name.",
+		"description": "Invalid mark name."
+	},
+	"mark_@0_is_undefined": {
+		"message": "Mark {0} is undefined.",
+		"description": "Mark {0} is undefined."
+	},
 	"no_previous_search_pattern": {
 		"message": "No previous search pattern.",
 		"description": "No previous search pattern."
@@ -231,10 +239,6 @@
 	"mark_names_must_be_a_single_character": {
 		"message": "Mark names must be a single character.",
 		"description": "Mark names must be a single character."
-	},
-	"invalid_mark_name": {
-		"message": "Invalid mark name.",
-		"description": "Invalid mark name."
 	},
 	"copied_@0_line": {
 		"message": "Copied {0} {line:0}.",

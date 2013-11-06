@@ -200,6 +200,14 @@
 		"message": "不正な引数です。",
 		"description": "Invalid argument."
 	},
+	"invalid_mark_name": {
+		"message": "不正なマーク名です。",
+		"description": "Invalid mark name."
+	},
+	"mark_@0_is_undefined": {
+		"message": "マーク {0} は未定義です。",
+		"description": "Mark {0} is undefined."
+	},
 	"no_previous_search_pattern": {
 		"message": "前回の検索パターンはありません。",
 		"description": "No previous search pattern."
@@ -231,10 +239,6 @@
 	"mark_names_must_be_a_single_character": {
 		"message": "マーク名は 1 文字でなければなりません。",
 		"description": "Mark names must be a single character."
-	},
-	"invalid_mark_name": {
-		"message": "不正なマーク名です。",
-		"description": "Invalid mark name."
 	},
 	"copied_@0_line": {
 		"message": "{0} 行がコピーされました。",
