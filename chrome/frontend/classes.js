@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 436 2013-10-31 07:14:25Z akahuku $
+ * @version $Id: classes.js 440 2013-11-07 09:53:47Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -1067,6 +1067,8 @@ Wasavi.KeyManager = function () {
 			}
 			// ctrl code directly
 			else if (keyCode >= 0 && keyCode <= 31) {
+				if (window.opera
+				&& keyCode != 8 && keyCode != 9 && keyCode != 13 && keyCode != 27) return;
 				baseKeyName = '^' + String.fromCharCode(keyCode + 64);
 				c.push(baseKeyName);
 				logicalCharCode = keyCode;
