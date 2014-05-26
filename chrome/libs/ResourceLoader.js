@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: ResourceLoader.js 342 2013-07-18 02:02:38Z akahuku $
+ * @version $Id: ResourceLoader.js 443 2014-05-26 08:11:02Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -73,7 +73,7 @@
 				isText = false;
 			}
 			else {
-				xhr.responseType = 'text';
+				//xhr.responseType = 'text';
 				xhr.overrideMimeType(opts.mimeType || 'text/plain;charset=UTF-8');
 				isText = true;
 			}

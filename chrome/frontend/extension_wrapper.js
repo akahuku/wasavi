@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: extension_wrapper.js 414 2013-09-27 13:13:51Z akahuku $
+ * @version $Id: extension_wrapper.js 442 2013-11-08 06:26:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -62,7 +62,7 @@
 		},
 		get isInternal () {
 			return this.eq(window.location.href, this.internalUrl)
-				|| /^data:text\/html;charset=UTF-8;class=wasavi;base64,/.test(window.location.href);
+				|| /^data:text\/html;charset=UTF-8;base64,/.test(window.location.href);
 		},
 		get isExternal () {
 			return this.eq(window.location.href, this.externalUrl)

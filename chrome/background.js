@@ -4,7 +4,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: background.js 382 2013-09-11 02:36:32Z akahuku $
+ * @version $Id: background.js 442 2013-11-08 06:26:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -980,7 +980,7 @@ if (window.jetpack && typeof require == 'function') {
 
 	function initWasaviFrame () {
 		resourceLoader.get('wasavi_frame.html', function (data) {
-			wasaviFrameData = 'data:text/html;charset=UTF-8;class=wasavi;base64,' + btoa(data);
+			wasaviFrameData = 'data:text/html;charset=UTF-8;base64,' + btoa(data);
 			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
 				.exec(data)[1]
 				.replace(/\n/g, '')

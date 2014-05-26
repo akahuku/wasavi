@@ -9,7 +9,7 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: wasavi.js 439 2013-11-06 14:17:51Z akahuku $
+ * @version $Id: wasavi.js 442 2013-11-08 06:26:04Z akahuku $
  */
 /**
  * Copyright 2012 akahuku, akahuku@gmail.com
@@ -2171,6 +2171,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			else {
 				inputHandler.ungetText();
+				inputHandler.ungetStroke();
 			}
 			if (runLevel == 0 && e.isCompositionedFirst) {
 				cursor.editCursor.style.display = 'none';
