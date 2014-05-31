@@ -1,8 +1,7 @@
-*.swp
+*.sw?
 *~
 Thumbs.db
 desktop.ini
-.svnignore
 consumer_keys.json
 consumer_keys.bin
 Session.vim
