@@ -1,0 +1,811 @@
+{
+	"wasavi_locale": {
+		"message": "日本語"
+	},
+	"wasavi_locale_code": {
+		"message": "ja"
+	},
+	"wasavi_desc": {
+		"message": "web ページ上の vi エディタ",
+		"description": "vi editor for any web page."
+	},
+	"option_title": {
+		"message": "wasavi のオプション",
+		"description": "wasavi options"
+	},
+	"option_exrc_desc": {
+		"message": "このテキストボックスは、wasavi の初期化コマンドです。コマンドは wasavi エディタが開始するごとに実行されます。任意の ex コマンドを書くことができます。",
+		"description": "Enter initialization commands for wasavi. These commands will be executed every time wasavi is launched. You can write any ex commands you like."
+	},
+	"option_quick_activation_on": {
+		"message": "要素がフォーカスを得たとき",
+		"description": "when an element is focused"
+	},
+	"option_quick_activation_off": {
+		"message": "ショートカットキーが入力されたとき",
+		"description": "when a key combination is entered"
+	},
+	"option_target_elements_desc": {
+		"message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace、bs、tab、enter、return、ret、pageup、pagedown、end、home、left、up、right、down、insert、ins、delete、del、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
+		"description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
+	},
+	"option_save": {
+		"message": "保存",
+		"description": "Save"
+	},
+	"option_exrc_head": {
+		"message": "exrc",
+		"description": "exrc"
+	},
+	"option_target_elements_head": {
+		"message": "対象の要素",
+		"description": "target elements"
+	},
+	"option_starting_type_head": {
+		"message": "開始トリガー",
+		"description": "Launch wasavi"
+	},
+	"option_font_family_head": {
+		"message": "フォントファミリー",
+		"description": "font family"
+	},
+	"option_preferred_storage_head": {
+		"message": "利用するストレージ",
+		"description": "preferred storage"
+	},
+	"option_init_head": {
+		"message": "初期化",
+		"description": "Initialize"
+	},
+	"option_init_desc": {
+		"message": "全てのオプションを初期化する",
+		"description": "Initialize all options"
+	},
+	"option_init_confirm": {
+		"message": "本当にいいですか？",
+		"description": "Are you sure?"
+	},
+	"edit_with_wasavi": {
+		"message": "wasavi で編集",
+		"description": "Edit with wasavi"
+	},
+	"_plural_rule@function": {
+		"message": "isone(one)"
+	},
+	"_plural_line": {
+		"message": "lines"
+	},
+	"_plural_line@one": {
+		"message": "line"
+	},
+	"_plural_operation": {
+		"message": "operations"
+	},
+	"_plural_operation@one": {
+		"message": "operation"
+	},
+	"_plural_substitution": {
+		"message": "substitutions"
+	},
+	"_plural_substitution@one": {
+		"message": "substitution"
+	},
+	"_plural_character": {
+		"message": "characters"
+	},
+	"_plural_character@one": {
+		"message": "character"
+	},
+	"invalid_boolean_value": {
+		"message": "不正なブーリアン値",
+		"description": "Invalid boolean value"
+	},
+	"invalid_integer_value": {
+		"message": "不正な整数値",
+		"description": "Invalid integer value"
+	},
+	"invalid_string_value": {
+		"message": "不正な文字列値",
+		"description": "Invalid string value"
+	},
+	"invalid_regex_source_string_value": {
+		"message": "不正な正規表現ソース",
+		"description": "Invalid regex source string value"
+	},
+	"unknown_option_@0": {
+		"message": "未知のオプション: {0}",
+		"description": "Unknown option: {0}"
+	},
+	"an_extra_value_assigned_to_@0_option": {
+		"message": "オプション {0} に余分な値が代入されました。",
+		"description": "An extra value assigned to {0} option."
+	},
+	"@0_option_is_not_a_boolean": {
+		"message": "{0} オプションはブーリアンではありません。",
+		"description": "{0} option is not a boolean."
+	},
+	"_options_": {
+		"message": "*** オプション ***",
+		"description": "*** options ***"
+	},
+	"map_expansion_reached_maximum_recursion_limit": {
+		"message": "マップの展開が再帰限界に達しました。",
+		"description": "Map expansion reached maximum recursion limit."
+	},
+	"_@0_@1": {
+		"message": "  {0}  {1}",
+		"description": "  {0}  {1}"
+	},
+	"_registers_": {
+		"message": "*** レジスタ ***",
+		"description": "*** registers ***"
+	},
+	"_marks_": {
+		"message": "*** マーク ***",
+		"description": "*** marks ***"
+	},
+	"dec": {
+		"message": "10進:",
+		"description": "dec:"
+	},
+	"oct": {
+		"message": "8進:",
+		"description": "oct:"
+	},
+	"hex": {
+		"message": "16進:",
+		"description": "hex:"
+	},
+	"unicode_hex": {
+		"message": "unicode 16進:",
+		"description": "unicode hex:"
+	},
+	"invalid_codepoint": {
+		"message": "不正なコードポイントです。",
+		"description": "Invalid codepoint."
+	},
+	"completing": {
+		"message": "補完しています...",
+		"description": "completing..."
+	},
+	"completion_timed_out": {
+		"message": "補完がタイムアウトしました",
+		"description": "completion timed out"
+	},
+	"bad_address": {
+		"message": "不正なアドレス。",
+		"description": "Bad address."
+	},
+	"count_may_not_be_zero": {
+		"message": "カウントは 0 にできません。",
+		"description": "Count may not be zero."
+	},
+	"address_not_specified": {
+		"message": "アドレスが指定されていません。",
+		"description": "Address not specified."
+	},
+	"wrong_address_specified": {
+		"message": "おかしなアドレスが指定されました。",
+		"description": "Wrong address specified."
+	},
+	"arguments_count_mismatch": {
+		"message": "引数の個数が合っていません。",
+		"description": "Arguments count mismatch."
+	},
+	"internal_syntax_table_error": {
+		"message": "内部の文法テーブルに誤りがあります。",
+		"description": "Internal syntax table error."
+	},
+	"invalid_argument": {
+		"message": "不正な引数です。",
+		"description": "Invalid argument."
+	},
+	"invalid_mark_name": {
+		"message": "不正なマーク名です。",
+		"description": "Invalid mark name."
+	},
+	"mark_@0_is_undefined": {
+		"message": "マーク {0} は未定義です。",
+		"description": "Mark {0} is undefined."
+	},
+	"no_previous_search_pattern": {
+		"message": "前回の検索パターンはありません。",
+		"description": "No previous search pattern."
+	},
+	"invalid_regex_pattern": {
+		"message": "不正な不正表現パターンです。",
+		"description": "Invalid regex pattern."
+	},
+	"pattern_not_found_@0": {
+		"message": "パターンが見つかりません: {0}",
+		"description": "Pattern not found: {0}"
+	},
+	"out_of_range": {
+		"message": "範囲外です。",
+		"description": "Out of range."
+	},
+	"the_second_address_is_smaller_than_the_first": {
+		"message": "2 つ目のアドレスが 1 つ目のアドレスより前にあります。",
+		"description": "The second address is smaller than the first."
+	},
+	"@0_out_of_range": {
+		"message": "{0}: 範囲外です。",
+		"description": "{0}: Out of range."
+	},
+	"pattern_found_in_every_line_@0": {
+		"message": "各行でパターンが見つかりました: {0}",
+		"description": "Pattern found in every line: {0}"
+	},
+	"mark_names_must_be_a_single_character": {
+		"message": "マーク名は 1 文字でなければなりません。",
+		"description": "Mark names must be a single character."
+	},
+	"copied_@0_line": {
+		"message": "{0} 行がコピーされました。",
+		"description": "Copied {0} {line:0}."
+	},
+	"the_text_has_been_modified_use_quit_to_discard_any_changes": {
+		"message": "テキストは変更されています; 変更を破棄するには :quit! としてください。",
+		"description": "The text has been modified; use :quit! to discard any changes."
+	},
+	"command_redirection_is_not_implemented": {
+		"message": "コマンドへのリダイレクトは実装されていません。",
+		"description": "Command redirection is not implemented."
+	},
+	"no_file_name": {
+		"message": "ファイル名がありません。",
+		"description": "No file name."
+	},
+	"appending_is_not_implemented": {
+		"message": "追記は実装されていません。",
+		"description": "Appending is not implemented."
+	},
+	"readonly_option_is_set_use_to_override": {
+		"message": "Readonly オプションがセットされています (\"!\" 付加で上書きできます)。",
+		"description": "Readonly option is set (use \"!\" to override)."
+	},
+	"cannot_open_@0": {
+		"message": "\"{0}\" を開けません。",
+		"description": "Cannot open \"{0}\"."
+	},
+	"no_previous_execution": {
+		"message": "前回の実行レジスタはありません。",
+		"description": "No previous execution."
+	},
+	"invalid_register_name_@0": {
+		"message": "不正なレジスタ名: {0}",
+		"description": "Invalid register name: {0}"
+	},
+	"register_@0_is_empty": {
+		"message": "レジスタ {0} は空です。",
+		"description": "Register {0} is empty."
+	},
+	"extension_system_required": {
+		"message": "拡張機能が必要です。",
+		"description": "Extension system required."
+	},
+	"invalid_chdir_result": {
+		"message": "chdir の結果が不正です。",
+		"description": "Invalid chdir result."
+	},
+	"cannot_change_current_directory_into_a_file": {
+		"message": "カレントディレクトリをファイルへは変更できません。",
+		"description": "Cannot change current directory into a file."
+	},
+	"unknown_drive_name": {
+		"message": "未知のドライブ名です。",
+		"description": "Unknown drive name."
+	},
+	"_abbreviations_": {
+		"message": "*** 略語展開 ***",
+		"description": "*** abbreviations ***"
+	},
+	"no_abbreviations_are_defined": {
+		"message": "略語は定義されていません。",
+		"description": "No abbreviations are defined."
+	},
+	"the_keyword_of_abbreviation_must_end_with_a_word_character": {
+		"message": "略語キーワードは単語を構成する文字で終了していなければなりません。",
+		"description": "The keyword of abbreviation must end with a word character."
+	},
+	"deleted_@0_line": {
+		"message": "{0} 行が削除されました。",
+		"description": "Deleted {0} {line:0}."
+	},
+	"file_is_modified_write_or_use_to_override": {
+		"message": "ファイルは編集されています（\"!\" 付加で上書きできます）。",
+		"description": "File is modified; write or use \"!\" to override."
+	},
+	"too_much_arguments": {
+		"message": "引数が多すぎます。",
+		"description": "Too much arguments."
+	},
+	"file_name_is_empty": {
+		"message": "ファイル名が空です。",
+		"description": "File name is empty."
+	},
+	"only_stand_alone_form_can_edit": {
+		"message": "edit はスタンドアロンフォームでのみ有効です。",
+		"description": "Only stand alone form can edit."
+	},
+	"only_stand_alone_form_can_rename": {
+		"message": "リネームはスタンドアロンフォームでのみ有効です。",
+		"description": "Only stand alone form can rename."
+	},
+	"default_file_system_@0": {
+		"message": "既定のファイルシステム: {0}",
+		"description": "default file system: {0}"
+	},
+	"_available_file_systems_": {
+		"message": "*** 使用可能なファイルシステム ***",
+		"description": "*** available file systems ***"
+	},
+	"no_available_file_systems": {
+		"message": "使用可能なファイルシステムはありません。",
+		"description": "no available file systems."
+	},
+	"command_not_specified": {
+		"message": "コマンドが指定されていません。",
+		"description": "Command not specified."
+	},
+	"unknown_command": {
+		"message": "未知のコマンドです。",
+		"description": "Unknown command."
+	},
+	"no_mappings_for_@0_mode_are_defined": {
+		"message": "{0} モードにはマップは定義されていません。",
+		"description": "No mappings for {0} mode are defined."
+	},
+	"key_@0_cannot_be_remapped": {
+		"message": "{0} キーは再マップできません。",
+		"description": "Key {0} cannot be remapped."
+	},
+	"destination_is_in_inside_source": {
+		"message": "移動先が移動元の中にあります。",
+		"description": "Destination is in inside source."
+	},
+	"moved_@0_line": {
+		"message": "{0} 行が移動されました。",
+		"description": "Moved {0} {line:0}."
+	},
+	"dont_know_how_to_open_options_page": {
+		"message": "オプションページを開けません。",
+		"description": "Don't know how to open options page."
+	},
+	"no_redo_item": {
+		"message": "これ以上リドゥできません。",
+		"description": "No redo item."
+	},
+	"@0_operation_have_executed_again": {
+		"message": "{0} 操作を再実行しました。",
+		"description": "{0} {operation:0} have executed again."
+	},
+	"@0_is_not_an_abbreviation": {
+		"message": "{0} は略語ではありません。",
+		"description": "{0} is not an abbreviation."
+	},
+	"no_undo_item": {
+		"message": "これ以上アンドゥできません。",
+		"description": "No undo item."
+	},
+	"@0_operation_have_reverted": {
+		"message": "{0} 操作を元に戻しました。",
+		"description": "{0} {operation:0} have reverted."
+	},
+	"@0_is_not_mapped": {
+		"message": "{0} はマップされていません。",
+		"description": "{0} is not mapped."
+	},
+	"invalid_paragraph_format_@0": {
+		"message": "段落の書式が不正: {0}",
+		"description": "Invalid paragraph format: {0}"
+	},
+	"invalid_section_format_@0": {
+		"message": "セクションの書式が不正: {0}",
+		"description": "Invalid section format: {0}"
+	},
+	"no_previous_substitution": {
+		"message": "前回の置換はありません。",
+		"description": "No previous substitution."
+	},
+	"internal_error_invalid_replace_function": {
+		"message": "内部エラー: 不正な置換関数",
+		"description": "Internal Error: invalid replace function"
+	},
+	"substitute_yes_no_quit": {
+		"message": "置き換えますか? ([y]はい、[n]いいえ、[q]終了)",
+		"description": "Substitute? ([y]es, [n]o, [q]uit)"
+	},
+	"@0_substitution_on_@1_line": {
+		"message": "{1} 行内を {0} 回置換しました。",
+		"description": "{0} {substitution:0} on {1} {line:1}."
+	},
+	"more": {
+		"message": "継続...",
+		"description": "More..."
+	},
+	"press_any_key_to_continue_or_enter_more_ex_command": {
+		"message": "何かキーを押すか、続きの ex コマンドを入力:",
+		"description": "Press any key to continue, or enter more ex command:"
+	},
+	"invalid_text_format": {
+		"message": "テキストの形式が不正です。",
+		"description": "Invalid text format."
+	},
+	"element_to_be_written_has_readonly_attribute_use_to_override": {
+		"message": "書き込み先要素は読み取り専用属性です (\"!\" 付加で上書きできます)。",
+		"description": "Element to be written has readonly attribute (use \"!\" to override)."
+	},
+	"element_to_be_written_has_disabled_attribute_use_to_override": {
+		"message": "書き込み先要素は選択不能属性です (\"!\" 付加で上書きできます)。",
+		"description": "Element to be written has disabled attribute (use \"!\" to override)."
+	},
+	"exception_while_saving_@0": {
+		"message": "保存中に例外が発生しました: {0}",
+		"description": "Exception while saving: {0}"
+	},
+	"internal_state_error": {
+		"message": "内部の状態エラーです。",
+		"description": "Internal state error."
+	},
+	"@0_unknown_error": {
+		"message": "{0}: 未知のエラーです。",
+		"description": "{0}: unknown error."
+	},
+	"@0_executed_in_synchronous_context": {
+		"message": "{0}: 同期的に実行されました。",
+		"description": "{0}: Executed in synchronous context."
+	},
+	"all": {
+		"message": "全て",
+		"description": "All"
+	},
+	"top": {
+		"message": "先頭",
+		"description": "Top"
+	},
+	"bot": {
+		"message": "末尾",
+		"description": "Bot"
+	},
+	"recording": {
+		"message": "[記録中]",
+		"description": "[RECORDING]"
+	},
+	"insert": {
+		"message": "--挿入モード--",
+		"description": "--INSERT--"
+	},
+	"overwrite": {
+		"message": "--上書きモード--",
+		"description": "--OVERWRITE--"
+	},
+	"bound": {
+		"message": "--範囲指定モード--",
+		"description": "--BOUND--"
+	},
+	"bound_line": {
+		"message": "--行範囲指定モード--",
+		"description": "--BOUND LINE--"
+	},
+	"@0_extra_range_specified": {
+		"message": "{0}: 余分な範囲が指定されました。",
+		"description": "{0}: extra range specified."
+	},
+	"@0_unknown_syntax_error": {
+		"message": "{0}: 不明な文法エラーです。",
+		"description": "{0}: unknown syntax error."
+	},
+	"cannot_use_the_global_or_v_command_recursively": {
+		"message": "global や v コマンドを入れ子で使うことはできません。",
+		"description": "Cannot use the global or v command recursively."
+	},
+	"cannot_use_the_multilined_script_interactively": {
+		"message": "複数行のスクリプトを対話的に入力することはできません。",
+		"description": "Cannot use the multi-lined script interactively."
+	},
+	"@0_unknown_command": {
+		"message": "{0}: 未知のコマンドです。",
+		"description": "{0}: unknown command."
+	},
+	"warning_changing_readonly_element": {
+		"message": "警告: 読み取り専用の要素を変更します。",
+		"description": "Warning: changing readonly element."
+	},
+	"untitled": {
+		"message": "*無名*",
+		"description": "*Untitled*"
+	},
+	"no_lines_in_buffer": {
+		"message": "--バッファに行がありません--",
+		"description": "--No lines in buffer--"
+	},
+	"line_@0_of_@1_@2": {
+		"message": "{1} 行中の {0} 行目 ({2}%)",
+		"description": "line {0} of {1} ({2}%)"
+	},
+	"ro": {
+		"message": "読専",
+		"description": "RO"
+	},
+	"new_file": {
+		"message": "新規ファイル",
+		"description": "New file"
+	},
+	"@0_line_@1_character": {
+		"message": "{0} 行、{1} 文字。",
+		"description": "{0} {line:0}, {1} {character:1}."
+	},
+	"modified": {
+		"message": "変更済み",
+		"description": "modified"
+	},
+	"readonly": {
+		"message": "読み取り専用",
+		"description": "readonly"
+	},
+	"@0_canceled": {
+		"message": "{0} がキャンセルされました。",
+		"description": "{0} canceled."
+	},
+	"in_command_mode": {
+		"message": "コマンドモードです。",
+		"description": "In command mode."
+	},
+	"top_of_line": {
+		"message": "行頭です。",
+		"description": "Top of line."
+	},
+	"tail_of_line": {
+		"message": "行末です。",
+		"description": "Tail of line."
+	},
+	"tail_of_text": {
+		"message": "最終行です。",
+		"description": "Tail of text."
+	},
+	"top_of_text": {
+		"message": "先頭行です。",
+		"description": "Top of text."
+	},
+	"next_search_target_not_found": {
+		"message": "次の検索対象が見つかりません。",
+		"description": "Next search target not found."
+	},
+	"previous_search_target_not_found": {
+		"message": "前の検索対象が見つかりません。",
+		"description": "Previous search target not found."
+	},
+	"search_wrapped": {
+		"message": "検索が折り返されました。",
+		"description": "Search wrapped."
+	},
+	"you_are_in_the_restricted_region": {
+		"message": "保護された領域内です。",
+		"description": "You are in the restricted region."
+	},
+	"shifted_@0_line": {
+		"message": "{0} 行が右シフトされました。",
+		"description": "Shifted {0} {line:0}."
+	},
+	"unshifted_@0_line": {
+		"message": "{0} 行が左シフトされました。",
+		"description": "Unshifted {0} {line:0}."
+	},
+	"yanked_@0_line": {
+		"message": "{0} 行がヤンクされました。",
+		"description": "Yanked {0} {line:0}."
+	},
+	"putting_data_is_empty": {
+		"message": "貼り付けるデータが空です。",
+		"description": "Putting data is empty."
+	},
+	"replace_count_too_large": {
+		"message": "置き換える文字数が多すぎます。",
+		"description": "Replace count too large."
+	},
+	"the_text_has_been_modified": {
+		"message": "テキストは変更されています。",
+		"description": "The text has been modified."
+	},
+	"obtaining_access_rights_@0": {
+		"message": "アクセス権を取得しています ({0})...",
+		"description": "Obtaining access rights ({0})..."
+	},
+	"buffered_@0": {
+		"message": "バッファ済み: {0}",
+		"description": "Buffered: {0}"
+	},
+	"writing_@0": {
+		"message": "書き込み中 ({0}%)",
+		"description": "Writing ({0}%)"
+	},
+	"written_@0": {
+		"message": "書き込み完了: {0}",
+		"description": "Written: {0}"
+	},
+	"reading_@0": {
+		"message": "読み込み中 ({0}%)",
+		"description": "Reading ({0}%)"
+	},
+	"invalid_read_handler": {
+		"message": "不正な読み込みハンドラです。",
+		"description": "Invalid read handler."
+	},
+	"@0_register_@1": {
+		"message": "{0}: レジスタ [{1}]",
+		"description": "{0}: register [{1}]"
+	},
+	"changing_@0_line": {
+		"message": "{0} 行を変更します。",
+		"description": "Changing {0} {line:0}."
+	},
+	"@0_return_to_mark": {
+		"message": "{0}: マークへ戻る",
+		"description": "{0}: return to mark"
+	},
+	"mark_@0_is_not_set": {
+		"message": "マーク {0} はセットされていません。",
+		"description": "Mark {0} is not set."
+	},
+	"@0_find_forward": {
+		"message": "{0}: 前方に検索",
+		"description": "{0}: find forward"
+	},
+	"@0_find_backward": {
+		"message": "{0}: 後方に検索",
+		"description": "{0}: find backward"
+	},
+	"@0_screen_adjustment": {
+		"message": "{0}: 画面の調節",
+		"description": "{0}: screen adjustment"
+	},
+	"unknown_adjust_command": {
+		"message": "未知の画面調節コマンドです。",
+		"description": "Unknown adjust command."
+	},
+	"last_inputted_position_is_undefined": {
+		"message": "最後の編集位置は未定義です。",
+		"description": "Last inputted position is undefined."
+	},
+	"last_bound_is_undefined": {
+		"message": "最後の選択範囲は未定義です。",
+		"description": "Last bound is undefined."
+	},
+	"unknown_gprefixed_command_@0": {
+		"message": "未知の g 始まりのコマンド: {0}",
+		"description": "Unknown g-prefixed command: {0}"
+	},
+	"@0_range_symbol": {
+		"message": "{0}: レンジシンボル",
+		"description": "{0}: range symbol"
+	},
+	"@0_mark": {
+		"message": "{0}: マーク",
+		"description": "{0}: mark"
+	},
+	"register_@0_is_not_exist": {
+		"message": "レジスタ {0} は存在しません。",
+		"description": "Register {0} is not exist."
+	},
+	"@0_record_strokes": {
+		"message": "{0}: キー入力の記録",
+		"description": "{0}: record strokes"
+	},
+	"@0_replace_a_char": {
+		"message": "{0}: 1 文字置き換え",
+		"description": "{0}: replace a char"
+	},
+	"last_inputted_text_is_undefined": {
+		"message": "最後の入力文字列は未定義です。",
+		"description": "Last inputted text is undefined."
+	},
+	"@0_literal_input": {
+		"message": "{0}: 文字の入力",
+		"description": "{0}: literal input"
+	},
+	"no_completions": {
+		"message": "補完候補はありません",
+		"description": "No completions"
+	},
+	"matched_@0_of_@1": {
+		"message": "{1} 個中の #{0} で補完",
+		"description": "matched #{0} of {1}"
+	},
+	"tail_of_history": {
+		"message": "履歴の末尾です。",
+		"description": "Tail of history."
+	},
+	"invalid_history_item": {
+		"message": "不正な履歴項目です。",
+		"description": "Invalid history item."
+	},
+	"top_of_history": {
+		"message": "履歴の先頭です。",
+		"description": "Top of history."
+	},
+	"file_not_found": {
+		"message": "ファイルが見つかりません。",
+		"description": "File not found."
+	},
+	"not_a_authentication_task_@0": {
+		"message": "認証タスクではありません: {0}",
+		"description": "Not a authentication task: {0}"
+	},
+	"unknown_file_system_error": {
+		"message": "不明なファイルシステムエラー",
+		"description": "Unknown file system error"
+	},
+	"invalid_authentication_state_frt_@0": {
+		"message": "不正な認証状態 (frt): {0}",
+		"description": "Invalid authentication state (frt): {0}"
+	},
+	"invalid_authentication_state_cua_@0": {
+		"message": "不正な認証状態 (cua): {0}",
+		"description": "Invalid authentication state (cua): {0}"
+	},
+	"invalid_authentication_state_wts_@0": {
+		"message": "不正な認証状態 (wts): {0}",
+		"description": "Invalid authentication state (wts): {0}"
+	},
+	"access_token_missmatch_@0": {
+		"message": "Access token missmatch: {0}",
+		"description": "Access token missmatch: {0}"
+	},
+	"invalid_authentication_state_fat_@0": {
+		"message": "不正な認証状態 (fat): {0}",
+		"description": "Invalid authentication state (fat): {0}"
+	},
+	"invalid_authentication_state_fai_@0": {
+		"message": "不正な認証状態 (fai): {0}",
+		"description": "Invalid authentication state (fai): {0}"
+	},
+	"user_unmatch": {
+		"message": "ユーザーが異なります。",
+		"description": "User unmatch."
+	},
+	"invalid_path": {
+		"message": "不正なパスです。",
+		"description": "Invalid path."
+	},
+	"cannot_edit_a_directory": {
+		"message": "ディレクトリは編集できません。",
+		"description": "Cannot edit a directory."
+	},
+	"unknown_mime_type_@0": {
+		"message": "不明な MIME タイプ: {0}",
+		"description": "Unknown MIME type: {0}"
+	},
+	"authentication_declined_@0": {
+		"message": "認証が拒否されました: {0}",
+		"description": "Authentication declined: {0}"
+	},
+	"invalid_status_code_@0": {
+		"message": "不正なステータスコード #{0}",
+		"description": "Invalid status code #{0}"
+	},
+	"invalid_authentication_state_vat_@0": {
+		"message": "不正な認証状態 (vat): {0}",
+		"description": "Invalid authentication state (vat): {0}"
+	},
+	"invalid_authentication_audience": {
+		"message": "不正な認証オーディエンス",
+		"description": "Invalid authentication audience"
+	},
+	"unable_to_download": {
+		"message": "ダウンロードできません。",
+		"description": "Unable to download."
+	},
+	"network_error": {
+		"message": "ネットワークエラー",
+		"description": "Network Error"
+	},
+	"cannot_overwrite_a_directory": {
+		"message": "ディレクトリは上書きできません。",
+		"description": "Cannot overwrite a directory."
+	},
+	"failed_to_save_@0": {
+		"message": "保存に失敗しました ({0})",
+		"description": "Failed to save ({0})"
+	}
+}

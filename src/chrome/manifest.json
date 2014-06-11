@@ -1,0 +1,66 @@
+{
+  "manifest_version": 2,
+  "name": "wasavi",
+  "short_name": "wasavi",
+  "version": "0.0.1",
+  "description": "__MSG_wasavi_desc__",
+  "default_locale": "en_US",
+  "icons": {
+     "16": "images/icon016.png",
+     "48": "images/icon048.png",
+    "128": "images/icon128.png"
+  },
+  "permissions": [
+    "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
+    "https://*.dropbox.com/*",
+    "https://*.googleusercontent.com/*"
+  ],
+  "background": {
+    "page": "backend/main.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "exclude_matches": [
+        "http://wasavi.appsweets.net/",
+        "https://ss1.xrea.com/wasavi.appsweets.net/"
+      ],
+      "js": [
+        "frontend/extension_wrapper.js",
+        "frontend/agent.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "http://wasavi.appsweets.net/",
+        "https://ss1.xrea.com/wasavi.appsweets.net/"
+      ],
+      "js": [
+        "frontend/extension_wrapper.js",
+        "frontend/init.js",
+        "frontend/utils.js",
+        "frontend/unicode_utils.js",
+        "frontend/classes.js",
+        "frontend/classes_ex.js",
+        "frontend/classes_undo.js",
+        "frontend/classes_subst.js",
+        "frontend/classes_search.js",
+        "frontend/classes_ui.js",
+        "frontend/wasavi.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    "wasavi_frame.html"
+  ],
+  "options_page": "options.html",
+  "homepage_url": "http://appsweets.net/",
+  "update_url":"https://github.com/akahuku/wasavi/raw/master/verinfo/chrome.xml"
+}
