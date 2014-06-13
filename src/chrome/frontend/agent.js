@@ -58,18 +58,20 @@ var shortcutCode;
 var fontFamily;
 var quickActivation;
 var devMode;
+var idCount = 0;
 
 var targetElement;
+var internalId;
 var wasaviFrame;
 var extraHeight;
 var isTestFrame;
 var isFullscreen;
-var stateClearTimer;
 var targetElementResizedTimer;
 var wasaviFrameTimeoutTimer;
-var keyStrokeLog = [];
 var mutationObserver;
 var getValueCallback;
+var stateClearTimer;
+var keyStrokeLog = [];
 
 function _ () {
 	return Array.prototype.slice.call(arguments);
@@ -82,6 +84,21 @@ function getUniqueClass () {
 	}
 	while (document.getElementsByClassName(result).length > 0);
 	return result;
+}
+
+function getUniqueId () {
+	var result = 'wasavi_frame'
+		+ '_' + idCount
+		+ '_' + Math.floor(Math.random() * 0x10000);
+	idCount = (idCount + 1) & 0x7fffffff;
+	return result;
+}
+
+function notifyToChild (wasaviFrame, payload) {
+	wasaviFrame.contentWindow.postMessage({
+		internalId:internalId,
+		payload:payload
+	}, '*');
 }
 
 function locate (iframe, target, isFullscreen, extraHeight) {
@@ -243,6 +260,7 @@ function runCore (element, frameSource, value) {
 		url:window.location.href,
 		testMode:isTestFrame,
 		id:element.id,
+		internalId:(internalId = getUniqueId()),
 		nodeName:element.nodeName,
 		nodePath:getNodePath(element),
 		isContentEditable:element.isContentEditable,
@@ -302,6 +320,7 @@ function cleanup (value, isImplicit) {
 	}
 	window.removeEventListener('resize', handleTargetResize, false);
 	extraHeight = 0;
+	internalId = undefined;
 }
 
 function focusToFrame (req) {
@@ -315,12 +334,8 @@ function focusToFrame (req) {
 		&& wasaviFrame.contentWindow.focus();
 	} catch (e) {}
 	try {
-		extension.postMessage({
-			type:'notify-to-child',
-			childTabId:req.childTabId,
-			payload:{
-				type:'focus-me-response'
-			}
+		notifyToChild(wasaviFrame, {
+			type:'focus-me-response'
 		});
 	} catch (e) {}
 }
@@ -991,29 +1006,15 @@ function handleResponseGetContent (e) {
 	}
 }
 
-/**
- * bootstrap
- * ----------------
+/*
+ * handler for messages comes from backend
  */
 
-extension = WasaviExtensionWrapper.create();
-
-if (WasaviExtensionWrapper.HOTKEY_ENABLED) {
-	createPageAgent(false);
-}
-else {
-	window.addEventListener('keydown', handleKeydown, true);
-	createPageAgent(true);
-	
-}
-
-extension.setMessageListener(function (req) {
+function handleBackendMessage (req) {
 	if (!req || !req.type) return;
 	console.log('wasavi agent: got a nondirectional message: ' + req.type);
+
 	switch (req.type) {
-	/*
-	 * messages from background
-	 */
 	case 'update-storage':
 		req.items.forEach(function (item) {
 			switch (item.key) {
@@ -1044,9 +1045,35 @@ extension.setMessageListener(function (req) {
 		handleRequestLaunch();
 		break;
 
-	/*
-	 * messages from wasavi iframe
-	 */
+	}
+}
+
+/*
+ * handler for messages comes from iframe
+ */
+
+function handleIframeMessage (e) {
+	var req = e.data;
+	if (!req || !req.type) {
+		if (devMode) {
+			if (!req) {
+				console.error('wasavi agent: got a invalid dom message (null req).');
+			}
+			else if (!req.type) {
+				console.error('wasavi agent: got a invalid dom message (null req.type).');
+			}
+		}
+		return;
+	}
+	if (req.internalId !== internalId) {
+		if (devMode) {
+			console.error('wasavi agent: GOT A INVALID INTERNAL ID.');
+		}
+		return;
+	}
+	console.log('wasavi agent: got a dom message: ' + req.type);
+
+	switch (req.type) {
 	case 'wasavi-initialized':
 		if (!wasaviFrame) break;
 		var currentHeight = wasaviFrame.offsetHeight;
@@ -1063,10 +1090,8 @@ extension.setMessageListener(function (req) {
 		}
 
 		try {
-			extension.postMessage({
-				type:'notify-to-child',
-				childTabId:req.childTabId,
-				payload:{type:'got-initialized'}
+			notifyToChild(wasaviFrame, {
+				type:'got-initialized'
 			});
 		} catch (e) {}
 		break;
@@ -1150,18 +1175,14 @@ extension.setMessageListener(function (req) {
 	case 'wasavi-read':
 		if (!wasaviFrame) break;
 		try {
-			extension.postMessage({
-				type:'notify-to-child',
-				childTabId:req.childTabId,
-				payload:{
-					type:'fileio-read-response',
-					state:'complete',
-					meta:{
-						path:'',
-						charLength:targetElement.value.length
-					},
-					content:targetElement.value
-				}
+			notifyToChild(wasaviFrame, {
+				type:'fileio-read-response',
+				state:'complete',
+				meta:{
+					path:'',
+					charLength:targetElement.value.length
+				},
+				content:targetElement.value
 			});
 		} catch (e) {}
 		break;
@@ -1184,11 +1205,7 @@ extension.setMessageListener(function (req) {
 			payload.error = _('Internal state error.');
 		}
 		try {
-			extension.postMessage({
-				type:'notify-to-child',
-				childTabId:req.childTabId,
-				payload:payload
-			});
+			notifyToChild(wasaviFrame, payload);
 		} catch (e) {}
 		break;
 
@@ -1263,10 +1280,11 @@ extension.setMessageListener(function (req) {
 		//log('command-completed: timer registered.', '', '');
 		break;
 	}
-});
+}
 
-extension.connect('init-agent', function (req) {
-	console.log('wasavi agent: got a init-response message.');
+function handleConnect (req) {
+	console.log('wasavi agent: got a init-response message, tabId: ' + req.tabId);
+	extension.tabId = req.tabId;
 	enableList = req.targets;
 	exrc = req.exrc;
 	shortcut = req.shortcut;
@@ -1276,19 +1294,29 @@ extension.connect('init-agent', function (req) {
 	extraHeight = 0;
 	devMode = req.devMode;
 
-	if (document.readyState == 'interactive' || document.readyState == 'complete') {
-		handleAgentInitialized(req);
-	}
-	else {
-		document.addEventListener('DOMContentLoaded', function handleDCL (e) {
-			document.removeEventListener(e.type, handleDCL, false);
-			handleAgentInitialized(req)
-		}, false);
-	}
-});
+	extension.ensureRun(handleAgentInitialized, req);
+}
 
+/**
+ * bootstrap
+ * ----------------
+ */
+
+extension = WasaviExtensionWrapper.create();
+
+if (WasaviExtensionWrapper.HOTKEY_ENABLED) {
+	createPageAgent(false);
+}
+else {
+	window.addEventListener('keydown', handleKeydown, true);
+	createPageAgent(true);
+}
+
+extension.setMessageListener(handleBackendMessage);
+window.addEventListener('message', handleIframeMessage, false);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
+extension.connect('init-agent', handleConnect);
 
 })(this);
 

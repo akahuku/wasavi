@@ -707,7 +707,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 		scrollTopDest = dest;
 		if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
 			buffer.scrollTop = dest;
-			app.low.fireNotifyKeydownEvent('', '', 'scroller exit (1)');
+			app.low.notifyKeydownEvent('', '', 'scroller exit (1)');
 			callback && callback();
 			return;
 		}
@@ -719,7 +719,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 			var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
 			if (!app.targetElement || !cursor || !modeLine) {
-				app.low.fireCommandCompleteEvent();
+				app.low.notifyCommandComplete();
 				running = false;
 				app.keyManager.sweep();
 				return;
@@ -732,7 +732,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 				cursor.ensureVisible();
 				cursor.update({visible:true});
 				modeLine.style.display == '' && app.low.showPrefixInput();
-				app.low.fireCommandCompleteEvent();
+				app.low.notifyCommandComplete();
 				running = false;
 				app.keyManager.sweep();
 			}

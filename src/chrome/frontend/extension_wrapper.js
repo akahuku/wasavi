@@ -139,6 +139,27 @@
 		},
 		getExtensionFileURL: function (path, callback) {
 			callback && callback();
+		},
+		ensureRun: function () {
+			var args = Array.prototype.slice.call(arguments);
+			var callback = args.shift();
+
+			if (document.readyState == 'interactive'
+			||  document.readyState == 'complete') {
+				callback.apply(null, args);
+				callback = args = null;
+			}
+			else {
+				document.addEventListener(
+					'DOMContentLoaded',
+					function handleDCL (e) {
+						document.removeEventListener(e.type, handleDCL, false);
+						callback.apply(null, args);
+						e = callback = args = null;
+					},
+					false
+				);
+			}
 		}
 	};
 
@@ -185,9 +206,6 @@
 		var onMessageHandler;
 
 		function handleMessage (req) {
-			if (e.data && e.data.type == 'init-response') {
-				theObj.tabId = e.data.tabId;
-			}
 			onMessageHandler && onMessageHandler(req);
 		}
 
@@ -230,9 +248,6 @@
 
 	function OperaExtensionWrapper () {
 		function handleMessage (e) {
-			if (e.data && e.data.type == 'init-response') {
-				theObj.tabId = e.data.tabId;
-			}
 			onMessageHandler && onMessageHandler(e.data);
 		};
 
@@ -387,9 +402,6 @@
 		};
 		this.doConnect = function () {
 			self.on('message', function (data) {
-				if (data && data.type == 'init-response') {
-					theObj.tabId = data.tabId;
-				}
 				if ('__messageId' in data) {
 					handleMessage(data);
 				}

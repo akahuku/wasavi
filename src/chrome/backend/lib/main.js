@@ -305,26 +305,13 @@
 		ext.openTabWithFile('options.html');
 	}
 
-	function handleNotifyToChild (command, data, sender, respond) {
-		var childTabId = data.childTabId;
-		//var childTabId = 'childTabId' in data ? data.childTabId : ext.lastRegisteredTab;
-		if (childTabId !== undefined && ext.isTabExist(childTabId)) {
-			if ('tabId' in data) {
-				data.payload.parentTabId = data.tabId;
-			}
-			ext.sendRequest(childTabId, data.payload);
-		}
-	}
-
-	function handleNotifyToParent (command, data, sender, respond) {
+	function handleNotifyToBackend (command, data, sender, respond) {
 		if (!('payload' in data)) return;
 
-		var needForward = true;
 		switch (data.payload.type) {
-		case 'wasavi-chdir':
+		case 'chdir':
 			if ('tabId' in data
 			&& 'path' in data.payload) {
-				needForward = false;
 				if (data.payload.path == '') {
 					ext.sendRequest(
 						data.tabId,
@@ -343,29 +330,30 @@
 							}
 							ext.sendRequest(
 								data.tabId,
-								{type:'fileio-chdir-response', data:data, error:error}
+								{
+									type:'fileio-chdir-response',
+									data:data, error:error
+								}
 							);
 						}
 					);
 				}
 			}
 			break;
-		case 'wasavi-read':
+		case 'read':
 			if ('tabId' in data
 			&& 'path' in data.payload
 			&& data.payload.path != '') {
-				needForward = false;
 				ext.fileSystem.read(
 					data.payload.path,
 					data.tabId
 				);
 			}
 			break;
-		case 'wasavi-saved':
+		case 'saved':
 			if ('tabId' in data
 			&& 'path' in data.payload
 			&& data.payload.path != '') {
-				needForward = false;
 				ext.fileSystem.write(
 					data.payload.path,
 					data.payload.value,
@@ -373,7 +361,7 @@
 				);
 			}
 			break;
-		case 'wasavi-terminated':
+		case 'terminated':
 			if ('url' in data.payload
 			&& 'nodePath' in data.payload
 			&& 'ros' in data.payload) {
@@ -387,19 +375,9 @@
 			&& 'tabId' in data
 			&& 'isTopFrame' in data.payload
 			&& data.payload.isTopFrame) {
-				needForward = false;
 				ext.closeTab(data.tabId);
 			}
 			break;
-		}
-
-		if (needForward
-		&& 'parentTabId' in data
-		&& data.parentTabId !== undefined) {
-			if ('tabId' in data) {
-				data.payload.childTabId = data.tabId;
-			}
-			ext.sendRequest(data.parentTabId, data.payload);
 		}
 	}
 
@@ -469,8 +447,7 @@
 			case 'set-storage':			handler = handleSetStorage; break;
 			case 'bell':				handler = handleBell; break;
 			case 'open-options-page':	handler = handleOpenOptionsPage; break;
-			case 'notify-to-child':		handler = handleNotifyToChild; break;
-			case 'notify-to-parent':	handler = handleNotifyToParent; break;
+			case 'notify-to-backend':	handler = handleNotifyToBackend; break;
 			case 'set-clipboard':		handler = handleSetClipboard; break;
 			case 'get-clipboard':		handler = handleGetClipboard; break;
 			case 'push-payload':		handler = handlePushPayload; break;

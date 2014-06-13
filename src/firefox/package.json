@@ -1,0 +1,17 @@
+{
+	"name": "wasavi",
+	"license": "Apache License, Version 2.0",
+	"author": "akahuku@gmail.com",
+	"version": "0.0.1",
+	"fullName": "wasavi",
+	"icon": "data/icon128.png",
+	"homepage": "http://appsweets.net/",
+	"id": "jid1-bmMwuNrx3u5hqQ",
+	"description": "vi editor for any web page.",
+	"preferences": [{
+		"type": "control",
+		"name": "optionsOpener",
+		"label": "Open Options Page",
+		"title": ""
+	}]
+}

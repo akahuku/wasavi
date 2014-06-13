@@ -795,12 +795,19 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	else {
 		content = content.replace(/\n/g, app.preferredNewline);
 	}
-	app.low.fireEvent('saved', {
-		type:'wasavi-saved',
+
+	var payload = {
 		path:pathRegalized,
 		isForce:a.flags.force,
 		value:content
-	});
+	};
+	if (payload.path != '') {
+		app.low.notifyToBackend('saved', payload);
+	}
+	else {
+		app.low.notifyToParent('saved', payload);
+	}
+
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
 		if (app.fileName == '') {
 			app.fileName = pathRegalized;
@@ -1036,14 +1043,14 @@ Wasavi.ExCommand.commands = [
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		app.low.notifyToBackend('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.fireEvent('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		app.low.notifyToBackend('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
@@ -1093,7 +1100,16 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 
-		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path, true) || app.fileName});
+		var payload = {
+			path:app.low.regalizeFilePath(path, true) || app.fileName
+		};
+		if (payload.path != '') {
+			app.low.notifyBackend('read', payload);
+		}
+		else {
+			app.low.notifyToParent('read', payload);
+		}
+
 		return undefined;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
@@ -1355,7 +1371,17 @@ Wasavi.ExCommand.commands = [
 		if (path == '' && app.fileName == '') {
 			return _('File name is empty.');
 		}
-		app.low.fireEvent('read', {path:app.low.regalizeFilePath(path, true) || app.fileName});
+
+		var payload = {
+			path:app.low.regalizeFilePath(path, true) || app.fileName
+		};
+		if (payload.path != '') {
+			app.low.notifyToBackend('read', payload);
+		}
+		else {
+			app.low.notifyToParent('read', payload);
+		}
+
 		return undefined;
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {

@@ -115,9 +115,11 @@
 			getFindRegex:getFindRegex,
 			getFileIoResultInfo:getFileIoResultInfo,
 			getFileInfo:getFileInfo,
-			fireEvent:fireEvent,
-			fireNotifyKeydownEvent:fireNotifyKeydownEvent,
-			fireCommandCompleteEvent:fireCommandCompleteEvent,
+			notifyToBackend:notifyToBackend,
+			notifyToParent:notifyToParent,
+			notifyToParents:notifyToParents,
+			notifyKeydownEvent:notifyKeydownEvent,
+			notifyCommandComplete:notifyCommandComplete,
 			setSubstituteWorker:setSubstituteWorker,
 			extractDriveName:extractDriveName,
 			getFileSystemIndex:getFileSystemIndex,
@@ -871,16 +873,17 @@ ime-mode:disabled; \
 	x.value = undefined;
 
 	/*
-	 * set up channels
+	 * set up message handlers
 	 */
 
-	extensionChannel && extensionChannel.setMessageListener(handleExtensionChannelMessage);
+	extensionChannel && extensionChannel.setMessageListener(handleBackendMessage);
+	window.addEventListener('message', handleAgentMessage, false);
 
 	/*
 	 * notify initialized event to agent
 	 */
 
-	fireEvent('initialized', {height:cnt.offsetHeight});
+	notifyToParent('initialized', {height:cnt.offsetHeight});
 	isStandAlone && runExrc();
 }
 function runExrc () {
@@ -913,7 +916,7 @@ function runExrc () {
 	 * final event
 	 */
 
-	fireEvent('ready');
+	notifyToParent('ready');
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
@@ -956,7 +959,7 @@ function uninstall (save, implicit) {
 		targetElement.isTopFrame = !!WasaviExtensionWrapper.IS_TOP_FRAME;
 		targetElement.isImplicit = !!implicit;
 		targetElement.ros = config.dumpScript(true).join('\n');
-		fireEvent('terminated', targetElement);
+		notifyToParents('terminated', targetElement);
 		extensionChannel = extensionChannel.disconnect();
 	}
 	targetElement = null;
@@ -1917,7 +1920,7 @@ function needBreakUndo (s, ch) {
 		|| unicodeUtils.isIdeograph(ch);
 }
 function execCommandMap (r, e, map, key, subkey, code, updateBound) {
-	fireCommandStartEvent();
+	notifyCommandStart();
 	lastMessage = '';
 	var ss = buffer.selectionStart;
 	var se = buffer.selectionEnd;
@@ -1986,7 +1989,7 @@ function execEditMap (r, e, key, subkey, code) {
 }
 function execLineInputEditMap (r, e, key, subkey, code) {
 	if (!lineInputEditMap[key]) return false;
-	fireCommandStartEvent();
+	notifyCommandStart();
 	if (execMap($(LINE_INPUT_ID), e, lineInputEditMap, key, subkey, code)) {
 		r.needEmitEvent = true;
 	}
@@ -2057,7 +2060,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			cursor.ensureVisible();
 			cursor.update({visible:true});
 		}
-		fireCommandCompleteEvent();
+		notifyCommandComplete();
 		return;
 
 	default:
@@ -2298,10 +2301,10 @@ function processInput (code, e, ignoreAbbreviation) {
 		}
 		if (result.needEmitEvent !== false) {
 			if (result.needEmitEvent === true) {
-				fireCommandCompleteEvent();
+				notifyCommandComplete();
 			}
 			else if (typeof result.needEmitEvent == 'string') {
-				fireCommandCompleteEvent(result.needEmitEvent);
+				notifyCommandComplete(result.needEmitEvent);
 			}
 		}
 	}
@@ -2460,37 +2463,47 @@ function getLogicalColumn () {
 	// TODO: use more trustworthy method
 	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
 }
-function fireEvent (eventName, payload) {
+function notifyToBackend (eventName, payload) {
 	if (!extensionChannel) return;
 	payload || (payload = {});
 	payload.type = 'wasavi-' + eventName;
-	var message = {type:'notify-to-parent', payload:payload};
-	if ('parentTabId' in targetElement) {
-		message.parentTabId = targetElement.parentTabId;
-	}
-	extensionChannel.postMessage(message);
+	extensionChannel.postMessage({
+		type:'notify-to-backend',
+		payload:payload
+	});
 }
-function fireNotifyKeydownEvent (code, key, note) {
+function notifyToParent (eventName, payload) {
+	if (!extensionChannel) return;
+	payload || (payload = {});
+	payload.type = 'wasavi-' + eventName;
+	payload.internalId = targetElement.internalId;
+	window.parent.postMessage(payload, '*');
+}
+function notifyToParents (eventName, payload) {
+	notifyToBackend(eventName, payload);
+	notifyToParent(eventName, payload);
+}
+function notifyKeydownEvent (code, key, note) {
 	if (!testMode) return;
-	fireEvent('notify-keydown', {
+	notifyToParent('notify-keydown', {
 		keyCode:code,
 		key:key,
 		eventType:note
 	});
 }
-function fireCommandStartEvent () {
+function notifyCommandStart () {
 	document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
 	if (!testMode) return;
-	fireEvent('command-start');
+	notifyToParent('command-start');
 }
-function fireCommandCompleteEvent (eventName) {
+function notifyCommandComplete (eventName) {
 	if (exCommandExecutor.commands.length) return;
 	document.documentElement.removeAttribute('data-wasavi-command-state');
 	document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
 	if (!testMode) return;
 	eventName || (eventName = 'command-completed');
 	var pt = new Position(getCurrentViewPositionIndices().top, 0);
-	fireEvent(eventName, {
+	notifyToParent(eventName, {
 		state:{
 			running:    !!targetElement,
 			state:      state,
@@ -4253,7 +4266,7 @@ function handleWindowResize (e) {
 
 // editor (document)
 function handleKeydownMain (code, e) {
-	fireNotifyKeydownEvent(e.code, e.fullIdentifier, '');
+	notifyKeydownEvent(e.code, e.fullIdentifier, '');
 	processInput(code, e);
 	if (clipboardReadingState == 2) {
 		clipboardReadingState = 0;
@@ -4279,7 +4292,7 @@ function handleKeydown (e) {
 				+ (clipboardReadingState ? 'clipboard reading' : '')
 				+ ')';
 			devMode && console.log(s);
-			fireNotifyKeydownEvent(e.code, e.fullIdentifier, s);
+			notifyKeydownEvent(e.code, e.fullIdentifier, s);
 		}
 		return;
 	}
@@ -4351,7 +4364,7 @@ function handleCoverMousedown (e) {
 	e.preventDefault();
 }
 function handleCoverClick (e) {
-	fireEvent('focus-me');
+	notifyToParent('focus-me');
 }
 function handleCoverMousewheel (e) {
 	e.preventDefault();
@@ -4375,9 +4388,35 @@ function handleCoverMousewheel (e) {
 	}
 }
 
-// message channel to extension background
-function handleExtensionChannelMessage (req) {
-	if (!req) return;
+// handler for message from agent
+function handleAgentMessage (e) {
+	if (!e || !e.data || !e.data.payload) {
+		if (devMode) {
+			if (!e) {
+				console.error('wasavi: got a invalid dom message (null e).');
+			}
+			else if (!e.data) {
+				console.error('wasavi: got a invalid dom message (null e.data).');
+			}
+			else if (!e.data.payload) {
+				console.error('wasavi: got a invalid dom message (null e.data.payload).');
+			}
+		}
+		return;
+	}
+	if (e.data.internalId !== targetElement.internalId) {
+		if (devMode) {
+			console.error('wasavi: GOT A INVALID INTERNAL ID.');
+		}
+		return;
+	}
+	handleBackendMessage(e.data.payload);
+}
+
+// handler for message from backend
+function handleBackendMessage (req) {
+	if (!req || !req.type) return;
+	console.log('wasavi: got a message from backend / agent: ' + req.type);
 
 	switch (req.type) {
 	case 'got-initialized':
@@ -4386,14 +4425,6 @@ function handleExtensionChannelMessage (req) {
 	case 'relocate':
 		targetElement.rect = req.rect;
 		setGeometory();
-		break;
-	case 'authorize-response':
-		if (req.error) {
-			exCommandExecutor.stop();
-			showMessage(_.apply(null, req.error), true, false);
-			break;
-		}
-		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
 		break;
 	case 'focus-me-response':
 		switch (state) {
@@ -4406,10 +4437,19 @@ function handleExtensionChannelMessage (req) {
 			break;
 		}
 		break;
+
+	case 'authorize-response':
+		if (req.error) {
+			exCommandExecutor.stop();
+			showMessage(_.apply(null, req.error), true, false);
+			break;
+		}
+		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+		break;
 	case 'fileio-write-response':
 		if (req.error) {
 			showMessage(_.apply(null, req.error), true, false);
-			fireCommandCompleteEvent();
+			notifyCommandComplete();
 			break;
 		}
 		switch (req.state) {
@@ -4421,7 +4461,7 @@ function handleExtensionChannelMessage (req) {
 			break;
 		case 'complete':
 			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.charLength)));
-			fireCommandCompleteEvent();
+			notifyCommandComplete();
 			break;
 		}
 		break;
@@ -4733,7 +4773,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['fullscreen', 'b', false, function (v) {
 			!isStandAlone &&
 			targetElement &&
-			fireEvent('window-state', {
+			notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
 				state:v ? 'maximized' : 'normal',
 				modelineHeight:$('wasavi_footer').offsetHeight
@@ -4936,7 +4976,7 @@ var commandMap = {
 
 	// tab
 	'\u0009'/*tab*/:function (c, o) {
-		quickActivation && fireEvent('focus-changed', {direction:o.e.shift ? -1 : 1});
+		quickActivation && notifyToParent('focus-changed', {direction:o.e.shift ? -1 : 1});
 	},
 
 	/*
@@ -6006,7 +6046,7 @@ var commandMap = {
 		if (!prefixInput.isEmptyOperation) {
 			return inputEscape(o.e.fullIdentifier);
 		}
-		fireEvent('blink-me');
+		notifyToParent('blink-me');
 	},
 	// display file information
 	'\u0007'/*^G*/:function (c, o) {
@@ -6989,7 +7029,7 @@ var lineInputEditMap = {
 					1000 * 3
 				);
 			}
-			fireCommandCompleteEvent();
+			notifyCommandComplete();
 		});
 	},
 	'\u000e'/*^N*/:function (c, o) {
@@ -7175,6 +7215,7 @@ if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
 	extensionChannel.connect('init', function (req) {
+		console.log('wasavi: got a init message, tabId: ' + req.tabId);
 		if (!req) return;
 		function run (callback) {
 			function doRun () {
@@ -7193,17 +7234,11 @@ if (global.WasaviExtensionWrapper
 				wasaviFrame = '';
 				callback();
 			}
-			if (document.readyState == 'interactive' || document.readyState == 'complete') {
-				doRun();
-			}
-			else {
-				document.addEventListener('DOMContentLoaded', function handleDCL (e) {
-					document.removeEventListener(e.type, handleDCL, false);
-					doRun();
-				}, false);
-			}
+
+			extensionChannel.ensureRun(doRun);
 		}
 
+		extensionChannel.tabId = req.tabId;
 		exrc = [req.exrc, req.ros];
 		fontFamily = req.fontFamily;
 		quickActivation = req.quickActivation;
