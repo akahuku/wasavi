@@ -1375,12 +1375,7 @@ Wasavi.ExCommand.commands = [
 		var payload = {
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		};
-		if (payload.path != '') {
-			app.low.notifyToBackend('read', payload);
-		}
-		else {
-			app.low.notifyToParent('read', payload);
-		}
+		app.low.notifyToBackend('read', payload);
 
 		return undefined;
 	}),

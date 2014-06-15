@@ -1045,6 +1045,8 @@ function handleBackendMessage (req) {
 		handleRequestLaunch();
 		break;
 
+	default:
+		devMode && console.log('wasavi agent: got a unknown type message: ' + req.type);
 	}
 }
 

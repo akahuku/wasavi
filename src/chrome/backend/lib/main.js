@@ -38,6 +38,7 @@
 	var payload;
 	var runtimeOverwriteSettings;
 	var hotkey;
+	var contextMenu;
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -202,7 +203,7 @@
 	}
 
 	function handleHotkeyPress (hotkey) {
-		ext.sendRequest({command:'request-run'});
+		ext.sendRequest({type:'request-run'});
 	}
 
 	/** {{{2 request handlers */
@@ -315,7 +316,10 @@
 				if (data.payload.path == '') {
 					ext.sendRequest(
 						data.tabId,
-						{type:'fileio-chdir-response', data:null}
+						{
+							type:'fileio-chdir-response',
+							data:null
+						}
 					);
 				}
 				else {
@@ -332,7 +336,8 @@
 								data.tabId,
 								{
 									type:'fileio-chdir-response',
-									data:data, error:error
+									data:data,
+									error:error
 								}
 							);
 						}
@@ -346,7 +351,18 @@
 			&& data.payload.path != '') {
 				ext.fileSystem.read(
 					data.payload.path,
-					data.tabId
+					data.tabId,
+					{
+						onresponse:function (data) {
+							console.log(JSON.stringify(data, null, ' '));
+							if (data.state == 'complete') {
+								debugger;
+							}
+						},
+						onerror:function (message) {
+							debugger;
+						}
+					}
 				);
 			}
 			break;
@@ -420,7 +436,7 @@
 	function handleRequest (command, data, sender, respond) {
 		if (!command || !data) return;
 
-		console.log('wasavi backend: handleRequest got a command: ' + command);
+		console.log('wasavi backend: handleRequest got ' + command + ' command from #' + sender + ' tab.');
 
 		var lateResponse = false;
 
@@ -470,6 +486,9 @@
 		window.removeEventListener && window.removeEventListener(e.type, handleLoad, false);
 		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 		hotkey = require('./kosian/Hotkey').Hotkey();
+		contextMenu = require('./ContextMenu').ContextMenu({
+			menu_id: MENU_EDIT_WITH_WASAVI
+		});
 
 		initWasaviFrame();
 		initHotkey();

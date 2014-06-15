@@ -110,11 +110,11 @@
 			}, callback);
 		},
 		connect: function (command, callback) {
+			this.doConnect();
 			this.sendRequest({
 				command:command || 'init',
 				data:{url:window.location.href}
 			}, callback);
-			this.doConnect();
 		},
 		doConnect: function () {},
 		disconnect: function () {
@@ -222,11 +222,13 @@
 			return chrome.i18n.getMessage(messageId);
 		};
 		this.doConnect = function () {
-			chrome.runtime.onMessage.addListener(handleMessage);
+			//chrome.runtime.onMessage.addListener(handleMessage);
+			chrome.extension.onRequest.addListener(handleMessage);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
-			chrome.runtime.onMessage.removeListener(handleMessage);
+			//chrome.runtime.onMessage.removeListener(handleMessage);
+			chrome.extension.onRequest.removeListener(handleMessage);
 		};
 		this.urlInfo = new UrlInfo(
 			'chrome-extension://' + extensionId + '/options.html',

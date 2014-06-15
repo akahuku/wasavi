@@ -2466,9 +2466,10 @@ function getLogicalColumn () {
 function notifyToBackend (eventName, payload) {
 	if (!extensionChannel) return;
 	payload || (payload = {});
-	payload.type = 'wasavi-' + eventName;
+	payload.type = eventName;
 	extensionChannel.postMessage({
 		type:'notify-to-backend',
+		tabId:extensionChannel.tabId,
 		payload:payload
 	});
 }
@@ -4503,6 +4504,9 @@ function handleBackendMessage (req) {
 		};
 		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
 		break;
+
+	default:
+		devMode && console.log('wasavi: got a unknown type message: ' + req.type);
 	}
 }
 

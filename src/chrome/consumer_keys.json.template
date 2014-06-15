@@ -1,0 +1,21 @@
+{
+	"dropbox": {
+		"key":      "INSERT-YOUR-DROPBOX-APP-KEY",
+		"secret":   "INSERT-YOUR-DROPBOX-APP-SECRET",
+		"callback": "https://ss1.xrea.com/appsweets.net/authorized.html?fs=dropbox",
+		"root":     "dropbox"
+	},
+	"gdrive": {
+		"key":      "INSERT-YOUR-GDRIVE-APP-KEY",
+		"secret":   "INSERT-YOUR-GDRIVE-APP-SECRET",
+		"callback": "http://appsweets.net/authorized.html?fs=gdrive",
+		"root":     ""
+	},
+	"onedrive": {
+		"key":      "INSERT-YOUR-ONEDRIVE-APP-KEY",
+		"secret":   "INSERT_YOUR-ONEDRIVE-APP-SECRET",
+		"callback": "http://appsweets.net/authorized.html",
+		"root":     ""
+	}
+}
+

@@ -2,9 +2,11 @@
 *~
 Thumbs.db
 desktop.ini
+Session.vim
+
 consumer_keys.json
 consumer_keys.bin
-Session.vim
+src/chrome/backend/oldlib/
 src/firefox/
 !src/firefox/package.json
 src/opera/
