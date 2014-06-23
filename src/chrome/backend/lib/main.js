@@ -28,17 +28,20 @@
 
 	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
 	var TEST_VERSION = '0.0.1';
-	var MENU_EDIT_WITH_WASAVI = 'edit_with_wasavi';
 
 	/* {{{1 variables */
-	var unicodeDictData;
-	var wasaviFrame;
-	var wasaviFrameData;
+
+	var wasaviFrameData, wasaviFrame;
+	initWasaviFrame();
+
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
+	var unicodeDictData;
 	var payload;
 	var runtimeOverwriteSettings;
 	var hotkey;
 	var contextMenu;
+	var storageUpdateTimer;
+	var storageUpdatePayload = {};
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -55,7 +58,17 @@
 			onedrive: {
 				enabled: true
 			}
-		}
+		},
+		/*
+		 * NOTE: The place which lists the front-end scripts is
+		 * different for every browser:
+		 *
+		 *   chrome:  manifest.json (app mode),
+		 *            wasavi_frame.html (textarea mode)
+		 *   opera:   a meta block in the each front-end script
+		 *   firefox: following object
+		 */
+		contentScripts: getContentScriptsSpec()
 	});
 
 	/* {{{1 functions */
@@ -63,19 +76,104 @@
 	/** {{{2 utilities */
 
 	function broadcastStorageUpdate (keys, originTabId) {
-		var items = [];
+		if (storageUpdateTimer) {
+			ext.utils.clearTimeout(storageUpdateTimer);
+		}
 
 		keys.forEach(function (key) {
-			items.push({
+			storageUpdatePayload[key] = {
 				key: key,
 				value: ext.storage.getItem(key)
-			});
+			};
 		});
 
-		ext.broadcast({
-			type: 'update-storage',
-			items: items
-		}, originTabId);
+		storageUpdateTimer = ext.utils.setTimeout(function (originTabId) {
+			ext.broadcast({
+				type: 'update-storage',
+				items: storageUpdatePayload
+			}, originTabId);
+			storageUpdatePayload = {};
+		}, 1000 * 3, originTabId);
+	}
+
+	/** {{{2 returns frontend script list for firefox */
+
+	function getContentScriptsSpec () {
+		var self = require('sdk/self');
+		if (!self) return null;
+
+		return [
+			{
+				name: 'agent',
+				matches: [
+					'http://*',
+					'https://*',
+					(function () {
+						var self = require('sdk/self');
+						return self.data.url('options.html') + '*';
+					})()
+				],
+				exclude_matches: [
+					'http://wasavi.appsweets.net/',
+					'https://ss1.xrea.com/wasavi.appsweets.net/',
+					function (url) {
+						return url.substring(0, 256) ==
+							wasaviFrameData.substring(0, 256);
+					}
+				],
+				js: [
+					'frontend/extension_wrapper.js',
+					'frontend/agent.js'
+				],
+				run_at: 'start'
+			},
+			{
+				name: 'wasavi',
+				matches: [
+					'http://wasavi.appsweets.net/',
+					'https://ss1.xrea.com/wasavi.appsweets.net/',
+					function (url) {
+						return url.substring(0, 256) ==
+							wasaviFrameData.substring(0, 256);
+					}
+				],
+				js: [
+					'frontend/extension_wrapper.js',
+					'frontend/init.js',
+					'frontend/utils.js',
+					'frontend/unicode_utils.js',
+					'frontend/classes.js',
+					'frontend/classes_ex.js',
+					'frontend/classes_undo.js',
+					'frontend/classes_subst.js',
+					'frontend/classes_search.js',
+					'frontend/classes_ui.js',
+					'frontend/wasavi.js'
+				],
+				run_at: 'start'
+			}
+		];
+	}
+
+	/** {{{2 init wasavi frame */
+
+	function initWasaviFrame () {
+		require('kosian/ResourceLoader')
+		.ResourceLoader(global)
+		.get('wasavi_frame.html', function (data) {
+			if (typeof data != 'string' || data == '') {
+				throw new Error('Invalid wasaviFrame');
+			}
+
+			wasaviFrameData = 'data:text/html;charset=UTF-8;base64,' +
+				require('kosian/Utils').Utils.btoa(data);
+
+			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
+				.exec(data)[1]
+				.replace(/\n/g, '')
+				.replace(/>\s+</g, '><')
+				.replace(/^\s+|\s+$/g, '');
+		}, {noCache:true, sync:true});
 	}
 
 	/** {{{2 storage initializer */
@@ -88,14 +186,14 @@
 
 		[
 			['targets', {
-				enableTextArea: true,
-				enableText: false,
-				enableSearch: false,
-				enableTel: false,
-				enableUrl: false,
-				enableEmail: false,
-				enablePassword: false,
-				enableNumber: false,
+				enableTextArea:       true,
+				enableText:           false,
+				enableSearch:         false,
+				enableTel:            false,
+				enableUrl:            false,
+				enableEmail:          false,
+				enablePassword:       false,
+				enableNumber:         false,
 				enableContentEditable:true
 			}],
 			['exrc', '" exrc for wasavi'],
@@ -105,8 +203,8 @@
 			}],
 			['fontFamily', defaultFont],
 			['fstab', {
-				dropbox: {isDefault:true, enabled:true},
-				gdrive: {enabled:true},
+				dropbox:  {enabled:true, isDefault:true},
+				gdrive:   {enabled:true},
 				onedrive: {enabled:true}
 			}],
 			['quickActivation', false]
@@ -146,20 +244,7 @@
 		});
 	}
 
-	/** {{{2 initialize main part of wasavi */
-
-	function initWasaviFrame () {
-		ext.resourceLoader.get('wasavi_frame.html', function (data) {
-			wasaviFrameData = 'data:text/html;charset=UTF-8;base64,' + btoa(data);
-			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
-				.exec(data)[1]
-				.replace(/\n/g, '')
-				.replace(/>\s+</g, '><')
-				.replace(/^\s+|\s+$/g, '');
-		}, {noCache:true});
-	}
-
-	/** {{{2 f/F/t/T dictionary */
+	/** {{{2 initialize f/F/t/T dictionary */
 
 	function initUnicodeDictData () {
 		unicodeDictData = {fftt:{}};
@@ -240,6 +325,12 @@
 	}
 
 	function handleInitOptions (command, data, sender, respond) {
+		ext.storage.clear();
+		ext.fileSystem.clearCredentials();
+		contextMenu.build(true);
+		initStorage();
+		broadcastStorageUpdate(
+			'targets exrc shortcut shortcutCode quickActivate'.split(' '));
 	}
 
 	function handleGetStorage (command, data, sender, respond) {
@@ -270,22 +361,26 @@
 		if (items) {
 			var keys = [];
 			items.forEach(function (item) {
-				if ('key' in item && 'value' in item) {
-					if (item.key == 'fontFamily') {
-						if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
-							item.value = defaultFont;
-						}
-					}
+				if (!('key' in item)) return;
+				if (!('value' in item)) return;
 
-					keys.push(item.key);
-					ext.storage.setItem(item.key, item.value);
-
-					if (item.key == 'shortcut') {
-						keys.push('shortcutCode');
-						ext.storage.setItem(
-							'shortcutCode',
-							hotkey.getObjectsForDOM(item.value));
+				if (item.key == 'fontFamily') {
+					if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
+						item.value = defaultFont;
 					}
+				}
+
+				keys.push(item.key);
+				ext.storage.setItem(item.key, item.value);
+
+				if (item.key == 'shortcut') {
+					keys.push('shortcutCode');
+					ext.storage.setItem(
+						'shortcutCode',
+						hotkey.getObjectsForDOM(item.value));
+				}
+				else if (item.key == 'fstab') {
+					ext.fileSystem.fstab = item.value;
 				}
 			});
 			broadcastStorageUpdate(keys);
@@ -351,18 +446,7 @@
 			&& data.payload.path != '') {
 				ext.fileSystem.read(
 					data.payload.path,
-					data.tabId,
-					{
-						onresponse:function (data) {
-							console.log(JSON.stringify(data, null, ' '));
-							if (data.state == 'complete') {
-								debugger;
-							}
-						},
-						onerror:function (message) {
-							debugger;
-						}
-					}
+					data.tabId
 				);
 			}
 			break;
@@ -436,8 +520,6 @@
 	function handleRequest (command, data, sender, respond) {
 		if (!command || !data) return;
 
-		console.log('wasavi backend: handleRequest got ' + command + ' command from #' + sender + ' tab.');
-
 		var lateResponse = false;
 
 		function res (arg) {
@@ -483,14 +565,11 @@
 	/** {{{2 bootstrap */
 
 	function handleLoad (e) {
-		window.removeEventListener && window.removeEventListener(e.type, handleLoad, false);
+		global.removeEventListener && global.removeEventListener(e.type, handleLoad, false);
 		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 		hotkey = require('./kosian/Hotkey').Hotkey();
-		contextMenu = require('./ContextMenu').ContextMenu({
-			menu_id: MENU_EDIT_WITH_WASAVI
-		});
+		contextMenu = require('./ContextMenu').ContextMenu();
 
-		initWasaviFrame();
 		initHotkey();
 		initStorage();
 		initUnicodeDictData();
@@ -499,8 +578,8 @@
 		ext.isDev && console.info('wasavi background: running.');
 	}
 
-	window.addEventListener ?
-		window.addEventListener('load', handleLoad, false) :
+	global.addEventListener ?
+		global.addEventListener('load', handleLoad, false) :
 		handleLoad();
 
 })(this);

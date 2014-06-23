@@ -366,7 +366,11 @@ function getLocalStorage (keyName, callback) {
 }
 function setLocalStorage (keyName, value) {
 	if (extensionChannel) {
-		extensionChannel.postMessage({type:'set-storage', key:keyName, value:value});
+		extensionChannel.postMessage({
+			type:'set-storage',
+			key:keyName,
+			value:value
+		});
 	}
 	else if (window.localStorage) {
 		localStorage.setItem(keyName, value);
@@ -926,6 +930,7 @@ function uninstall (save, implicit) {
 	}
 
 	// remove all event handlers
+	window.removeEventListener('message', handleAgentMessage, false);
 	setupEventHandlers(false);
 
 	// clear all objects
@@ -4389,26 +4394,45 @@ function handleCoverMousewheel (e) {
 	}
 }
 
-// handler for message from agent
+// handler for message from parent document
 function handleAgentMessage (e) {
-	if (!e || !e.data || !e.data.payload) {
-		if (devMode) {
+	if (!e || !e.data || typeof e.data != 'object'
+	|| !('internalId' in e.data)
+	|| !('payload' in e.data) || typeof e.data.payload != 'object') {
+		/*
+		 * This situation is not necessarily an error
+		 * because documents other than wasavi agent also use
+		 * cross-document message mechanism.
+		 * Therefore, wasavi should only ignore this message.
+		 */
+		if (false && devMode) {
+			var reason = '?';
 			if (!e) {
-				console.error('wasavi: got a invalid dom message (null e).');
+				reason = 'empty event object';
 			}
 			else if (!e.data) {
-				console.error('wasavi: got a invalid dom message (null e.data).');
+				reason = 'empty e.data';
 			}
-			else if (!e.data.payload) {
-				console.error('wasavi: got a invalid dom message (null e.data.payload).');
+			else if (typeof e.data != 'object') {
+				reason = 'invalid type of e.data, ' + (typeof e.data);
 			}
+			else if (!('internalId' in e.data)) {
+				reason = 'missing e.data.internalId';
+			}
+			else if (!('payload' in e.data)) {
+				reason = 'missing e.data.payload';
+			}
+			else if (typeof e.data.payload != 'object') {
+				reason = 'invalid type of e.data.payload, ' + (typeof e.data.payload);
+			}
+			console.log(
+				'wasavi: got a invalid dom message' +
+				' (' + reason + '): ' + JSON.stringify(e.data, null, ' '));
 		}
 		return;
 	}
 	if (e.data.internalId !== targetElement.internalId) {
-		if (devMode) {
-			console.error('wasavi: GOT A INVALID INTERNAL ID.');
-		}
+		devMode && console.error('wasavi: GOT A INVALID INTERNAL ID.');
 		return;
 	}
 	handleBackendMessage(e.data.payload);
@@ -4417,17 +4441,16 @@ function handleAgentMessage (e) {
 // handler for message from backend
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
-	console.log('wasavi: got a message from backend / agent: ' + req.type);
 
 	switch (req.type) {
-	case 'got-initialized':
+	case 'wasavi-got-initialized':
 		runExrc();
 		break;
-	case 'relocate':
+	case 'wasavi-relocate':
 		targetElement.rect = req.rect;
 		setGeometory();
 		break;
-	case 'focus-me-response':
+	case 'wasavi-focus-me-response':
 		switch (state) {
 		case 'normal':
 			cursor.update({focused:true, visible:!backlog.visible});
@@ -4436,6 +4459,20 @@ function handleBackendMessage (req) {
 			cursor.update({focused:false, visible:false});
 			$(LINE_INPUT_ID).focus();
 			break;
+		}
+		break;
+
+	case 'update-storage':
+		for (var i in req.items) {
+			var item = req.items[i];
+			switch (item.key) {
+			case lineInputHistories.storageKey:
+				console.log('wasavi[update-storage]: ' + item.key);
+				break;
+			case registers.storageKey:
+				console.log('wasavi[update-storage]: ' + item.key);
+				break;
+			}
 		}
 		break;
 
@@ -7219,7 +7256,6 @@ if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
 	extensionChannel.connect('init', function (req) {
-		console.log('wasavi: got a init message, tabId: ' + req.tabId);
 		if (!req) return;
 		function run (callback) {
 			function doRun () {

@@ -1,48 +1,61 @@
-#!/bin/bash
-
-pushd data
-ln -s ../../chrome/appsweets.png
-ln -s ../../chrome/beep.ogg.txt
-ln -s ../../chrome/consumer_keys.json
-ln -s ../../chrome/unicode
-ln -s ../../chrome/frontend
-ln -s ../../chrome/icon016.png
-ln -s ../../chrome/icon048.png
-ln -s ../../chrome/icon128.png
-ln -s ../../chrome/options.html
-ln -s ../../chrome/options.js
-ln -s ../../chrome/wasavi_frame_noscript.html wasavi_frame.html
-
-mkdir -p xlocale
-pushd xlocale
-ln -s ../../../chrome/_locales/locales.json
-ln -s ../../../chrome/_locales/en_US en-us
-ln -s ../../../chrome/_locales/ja
-popd
-
-popd
-
-
-mkdir -p lib
-pushd lib
-ln -s ../../chrome/libs/blowfish/blowfish.js
-ln -s ../../chrome/libs/jsOAuth/jsOAuth.js
-ln -s ../../chrome/background.js main.js
-ln -s ../../chrome/libs/sha1/sha1.js
-ln -s ../../chrome/libs/WasaviUtils.js
-ln -s ../../chrome/libs/ClipboardManager.js
-ln -s ../../chrome/libs/ResourceLoader.js
-ln -s ../../chrome/libs/TabWatcher.js
-ln -s ../../chrome/libs/FileSystem.js
-ln -s ../../chrome/libs/RuntimeOverwriteSettings.js
-ln -s ../../chrome/libs/SimilarityComputer.js
-ln -s ../../chrome/libs/StorageWrapper.js
-ln -s ../../chrome/libs/Hotkey.js
-popd
-
-ln -s ../LICENSE
-ln -s ../NOTICE
-ln -s ../README.md.en
-ln -s ../README.md.ja
-
-echo "done."
+#!/bin/sh
+ln -s ../../LICENSE
+mkdir -p data
+cd data
+  mkdir -p scripts
+  mkdir -p sounds
+  cd sounds
+    ln -s ../../../chrome/sounds/beep.ogg
+    ln -s ../../../chrome/sounds/beep.ogg.txt
+    ln -s ../../../chrome/sounds/beep.mp3.txt
+    ln -s ../../../chrome/sounds/beep.mp3
+  cd ..
+  ln -s ../../chrome/consumer_keys.json
+  mkdir -p xlocale
+  cd xlocale
+    ln -s ../../../chrome/_locales/locales.json
+    mkdir -p en-us
+    cd en-us
+      ln -s ../../../../chrome/_locales/en_US/messages.json
+    cd ..
+    mkdir -p ja
+    cd ja
+      ln -s ../../../../chrome/_locales/ja/messages.json
+    cd ..
+  cd ..
+  mkdir -p images
+  cd images
+    ln -s ../../../chrome/images/icon016.png
+    ln -s ../../../chrome/images/appsweets.png
+    ln -s ../../../chrome/images/icon048.png
+    ln -s ../../../chrome/images/icon128.png
+  cd ..
+  mkdir -p frontend
+  cd frontend
+    ln -s ../../../chrome/frontend/classes_undo.js
+    ln -s ../../../chrome/frontend/classes_search.js
+    ln -s ../../../chrome/frontend/init.js
+    ln -s ../../../chrome/frontend/utils.js
+    ln -s ../../../chrome/frontend/classes.js
+    ln -s ../../../chrome/frontend/extension_wrapper.js
+    ln -s ../../../chrome/frontend/unicode_utils.js
+    ln -s ../../../chrome/frontend/wasavi.js
+    ln -s ../../../chrome/frontend/classes_subst.js
+    ln -s ../../../chrome/frontend/classes_ui.js
+    ln -s ../../../chrome/frontend/agent.js
+    ln -s ../../../chrome/frontend/classes_ex.js
+  cd ..
+  ln -s ../../chrome/wasavi_frame_noscript.html wasavi_frame.html
+  mkdir -p unicode
+  cd unicode
+    ln -s ../../../chrome/unicode/fftt_general.dat
+    ln -s ../../../chrome/unicode/fftt_han_ja.dat
+    ln -s ../../../chrome/unicode/linebreak.dat
+  cd ..
+  ln -s ../../chrome/options.html
+cd ..
+ln -s ../../README.md.ja
+mkdir -p locale
+ln -s ../../NOTICE
+ln -s ../../README.md.en
+ln -s ../chrome/backend/lib

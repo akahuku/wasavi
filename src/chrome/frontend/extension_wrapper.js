@@ -222,12 +222,10 @@
 			return chrome.i18n.getMessage(messageId);
 		};
 		this.doConnect = function () {
-			//chrome.runtime.onMessage.addListener(handleMessage);
 			chrome.extension.onRequest.addListener(handleMessage);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
-			//chrome.runtime.onMessage.removeListener(handleMessage);
 			chrome.extension.onRequest.removeListener(handleMessage);
 		};
 		this.urlInfo = new UrlInfo(
@@ -237,8 +235,7 @@
 		);
 		this.getExtensionFileURL = function (path, callback) {
 			if (!callback) return;
-			var url = chrome.runtime.getURL(path);
-			callback(url);
+			callback(chrome.runtime.getURL(path));
 		};
 	}
 	ChromeExtensionWrapper.prototype = ExtensionWrapper.prototype;
@@ -249,13 +246,17 @@
 	 */
 
 	function OperaExtensionWrapper () {
-		function handleMessage (e) {
-			onMessageHandler && onMessageHandler(e.data);
-		};
-
-		var extensionId =  widget.preferences['widget-id'];
+		var extensionId = widget.preferences['widget-id'];
 		var theObj = this;
 		var onMessageHandler;
+
+		function handleMessage (e) {
+			if (e.data.type == 'opera-notify-tab-id') {
+				theObj.tabId = e.data.tabId;
+				return;
+			}
+			onMessageHandler && onMessageHandler(e.data);
+		};
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'opera-extension';
@@ -318,6 +319,17 @@
 	 */
 
 	function FirefoxJetpackExtensionWrapper () {
+		var extensionId = self.options.extensionId;
+		var extensionHostname = extensionId
+			.toLowerCase()
+			.replace(/@/g, '-at-')
+			.replace(/\./g, '-dot-');
+		var theObj = this;
+		var messageId = 0;
+		var callbacks = {};
+		var onMessageHandler;
+		var sweepTimer;
+
 		function MessageCallbackQueueItem (callback) {
 			this.callback = callback;
 			this.time = +new Date;
@@ -347,8 +359,8 @@
 			callbacks = {};
 
 			for (var i in callbacksCurrent) {
-				if (data && data.__messageId - i == 0) {
-					callbacksCurrent[i].run(data);
+				if (data && data.messageId - i == 0) {
+					callbacksCurrent[i].run(data.payload);
 				}
 				else if (now - callbacksCurrent[i].time < 60 * 1000) {
 					callbacksNext[i] = callbacksCurrent[i];
@@ -359,63 +371,35 @@
 			}
 		}
 
-		var extensionId = 'jid1-bmmwunrx3u5hqq@jetpack';
-		var extensionHostname = extensionId
-			.toLowerCase()
-			.replace(/@/g, '-at-')
-			.replace(/\./g, '-dot-');
-		var theObj = this;
-		var messageId = 0;
-		var callbacks = {};
-		var onMessageHandler;
-
 		this.constructor = ExtensionWrapper;
 		this.runType = 'firefox-jetpack-extension';
 		this.sendRequest = function (data, callback) {
-			var command;
-			var messageId;
-
-			data || (data = {});
-
-			if ('type' in data) {
-				command = data.type;
-				delete data.type;
-			}
-
-			var message = {
-				command:command || 'unknown-command',
-				data:data
-			};
-
-			if (this.tabId) {
-				message.tabId = this.tabId;
-			}
-
 			if (callback) {
 				var id = getNewMessageId();
 				callbacks[id] = new MessageCallbackQueueItem(callback);
-				message.__messageId = id;
+				data.messageId = id;
 			}
 
-			self.postMessage(message);
+			self.postMessage(data);
 		};
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
 		};
 		this.doConnect = function () {
 			self.on('message', function (data) {
-				if ('__messageId' in data) {
+				if ('messageId' in data) {
 					handleMessage(data);
 				}
 				else {
-					onMessageHandler && onMessageHandler(data);
+					onMessageHandler && onMessageHandler(data.payload);
 				}
 			});
-			setInterval(handleMessage, 1000 * 60 * 2);
+			sweepTimer = setInterval(handleMessage, 1000 * 60 * 2);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
 			self.on('message', null);
+			clearInterval(sweepTimer);
 		};
 		this.urlInfo = new UrlInfo(
 			'resource://' + extensionHostname + '/wasavi/data/options.html',

@@ -4,14 +4,14 @@
 	"author": "akahuku@gmail.com",
 	"version": "0.0.1",
 	"fullName": "wasavi",
-	"icon": "data/icon128.png",
+	"icon": "data/images/icon128.png",
 	"homepage": "http://appsweets.net/",
 	"id": "jid1-bmMwuNrx3u5hqQ",
 	"description": "vi editor for any web page.",
 	"preferences": [{
 		"type": "control",
 		"name": "optionsOpener",
-		"label": "Open Options Page",
-		"title": ""
+		"label": "Options",
+		"title": "Open Options Page with a new tab"
 	}]
 }

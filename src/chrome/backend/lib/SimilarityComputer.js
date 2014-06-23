@@ -107,7 +107,11 @@
 		}
 	};
 
-	exports.SimilarityComputer = SimilarityComputer;
+	function create (unitsize) {
+		return new SimilarityComputer(unitsize);
+	}
+
+	exports.SimilarityComputer = create;
 })();
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

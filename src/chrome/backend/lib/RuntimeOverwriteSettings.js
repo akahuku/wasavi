@@ -122,7 +122,11 @@
 		this.set = set;
 	}
 
-	exports.RuntimeOverwriteSettings = RuntimeOverwriteSettings;
+	function create () {
+		return new RuntimeOverwriteSettings();
+	}
+
+	exports.RuntimeOverwriteSettings = create;
 })(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

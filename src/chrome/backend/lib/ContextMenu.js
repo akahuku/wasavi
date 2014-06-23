@@ -9,8 +9,10 @@
 (function (global) {
 	'use strict';
 
+	var MENU_EDIT_WITH_WASAVI = 'edit_with_wasavi';
+
 	function ContextMenu (options) {
-		this.options = options;
+		this.options = options || {};
 		this.ext = require('./kosian/Kosian').Kosian();
 		this.init();
 		this.build();
@@ -38,7 +40,7 @@
 			chrome.contextMenus.removeAll(function () {
 				chrome.contextMenus.create({
 					contexts:['editable'],
-					title:chrome.i18n.getMessage(that.options.menu_id),
+					title:chrome.i18n.getMessage(MENU_EDIT_WITH_WASAVI),
 					onclick:function (info, tab) {
 						if (!info.editable) return;
 						chrome.tabs.sendRequest(
@@ -65,7 +67,7 @@
 			opera.contexts.menu.addItem(opera.contexts.menu.createItem({
 				contexts:['editable'],
 				icon:'images/icon016.png',
-				title:this.getMenuLabel(that.options.menu_id),
+				title:this.getMenuLabel(MENU_EDIT_WITH_WASAVI),
 				onclick:function (e) {
 					if (!e.isEditable) return;
 					e.source.postMessage(that.getRequestRunPayload());
@@ -79,20 +81,20 @@
 		ContextMenu.apply(this, arguments);
 	}
 	FirefoxContextMenu.prototype = Object.create(ContextMenu.prototype, {
-		build: {value: function () {
-			if (this._contextMenuInitialized) return;
-
+		build: {value: function (force) {
+			if (this._initialized && !force) return;
+			var self = require('sdk/self');
 			var cm = require('sdk/context-menu');
 			var that = this;
 			cm.Item({
 				context:cm.SelectorContext('input,textarea'),
 				image:self.data.url('images/icon016.png'),
 				label:'#',
-				contentScriptFile:self.data.url('backend/lib/context_menu.js'),
+				contentScriptFile:self.data.url('scripts/context_menu.js'),
 				onMessage:function (phase) {
 					switch (phase) {
 					case 1:
-						this.label = that.getMenuLabel(that.options.menu_id);
+						this.label = that.getMenuLabel(MENU_EDIT_WITH_WASAVI);
 						break;
 					case 2:
 						that.sendRequest(that.getRequestRunPayload());
@@ -100,7 +102,7 @@
 					}
 				}
 			});
-			this._contextMenuInitialized = true;
+			this._initialized = true;
 		}}
 	});
 	FirefoxContextMenu.prototype.constructor = ContextMenu;

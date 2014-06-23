@@ -58,7 +58,6 @@ var shortcutCode;
 var fontFamily;
 var quickActivation;
 var devMode;
-var idCount = 0;
 
 var targetElement;
 var internalId;
@@ -81,24 +80,25 @@ function getUniqueClass () {
 	var result;
 	do {
 		result = 'wasavi_tmp_' + Math.floor(Math.random() * 0x10000);
-	}
-	while (document.getElementsByClassName(result).length > 0);
+	} while (document.getElementsByClassName(result).length > 0);
 	return result;
 }
 
 function getUniqueId () {
-	var result = 'wasavi_frame'
-		+ '_' + idCount
+	return 'wasavi_frame'
+		+ '_' + Date.now()
 		+ '_' + Math.floor(Math.random() * 0x10000);
-	idCount = (idCount + 1) & 0x7fffffff;
-	return result;
 }
 
-function notifyToChild (wasaviFrame, payload) {
-	wasaviFrame.contentWindow.postMessage({
-		internalId:internalId,
-		payload:payload
-	}, '*');
+function notifyToChild (frame, payload) {
+	if (!frame) return;
+	try {
+		frame.contentWindow.postMessage({
+			internalId:internalId,
+			payload:payload
+		}, '*');
+	}
+	catch (e) {}
 }
 
 function locate (iframe, target, isFullscreen, extraHeight) {
@@ -333,11 +333,8 @@ function focusToFrame (req) {
 		&& wasaviFrame.contentWindow.focus
 		&& wasaviFrame.contentWindow.focus();
 	} catch (e) {}
-	try {
-		notifyToChild(wasaviFrame, {
-			type:'focus-me-response'
-		});
-	} catch (e) {}
+
+	notifyToChild(wasaviFrame, {type:'wasavi-focus-me-response'});
 }
 
 function blurFromFrame () {
@@ -712,7 +709,10 @@ function handleOptionsPageLoaded (req) {
 		['target_elements_desc', function (node, message) {
 			node.textContent = '';
 			var ul = node.appendChild(document.createElement('ul'));
-			message.replace(/^\s*\*\s*/, '').split(/\n\*\s*/).map(function (line) {
+			message
+			.replace(/^\s*\*\s*/, '')
+			.split(/\n\*\s*/)
+			.map(function (line) {
 				var li = ul.appendChild(document.createElement('li'));
 				li.textContent = line;
 			});
@@ -729,13 +729,18 @@ function handleOptionsPageLoaded (req) {
 		}
 
 		var messageId = 'option_' + key[0];
-		var callback = key[1] || function (node, message) {node.textContent = message};
+		var callback = key[1] || function (node, message) {
+			node.textContent = message;
+		};
 		var fallbackMessage = '(translated message not found)';
 		var message = req.messageCatalog ?
-			(messageId in req.messageCatalog ? req.messageCatalog[messageId].message : fallbackMessage) :
+			(messageId in req.messageCatalog ?
+				req.messageCatalog[messageId].message :
+				fallbackMessage) :
 			(extension.getMessage(messageId) || fallbackMessage);
 		var nodes = document.evaluate(
-			'//*[text()="__MSG_' + messageId + '__"]', document.documentElement, null,
+			'//*[text()="__MSG_' + messageId + '__"]',
+			document.documentElement, null,
 			window.XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
 
 		for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
@@ -750,9 +755,14 @@ function handleOptionsPageLoaded (req) {
 
 	// transition
 	var overlay = document.getElementById('overlay');
-	var tend = function (e) {e.target.parentNode && e.target.parentNode.removeChild(e.target)};
+	var tend = function (e) {
+		e.target.parentNode && e.target.parentNode.removeChild(e.target);
+	};
+
 	'transitionend webkitTransitionEnd oTransitionEnd msTransitionEnd'
-		.split(' ').forEach(function (p) {overlay.addEventListener(p, tend, false)});
+	.split(' ')
+	.forEach(function (p) {overlay.addEventListener(p, tend, false)});
+
 	overlay.className = 'overlay';
 }
 
@@ -763,19 +773,23 @@ function handleOptionsPageLoaded (req) {
 
 function handleOptionsSave () {
 	var items = [];
-	var tmpEnableList = {};
-	var count = 0;
 
-	for (var i in enableList) {
-		var el = document.getElementById(i);
-		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-			tmpEnableList[i] = el.checked;
-			count++;
+	(function () {
+		var tmpEnableList = {};
+		var count = 0;
+
+		for (var i in enableList) {
+			var el = document.getElementById(i);
+			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+				tmpEnableList[i] = el.checked;
+				count++;
+			}
 		}
-	}
-	if (count) {
-		items.push({key:'targets', value:tmpEnableList});
-	}
+
+		if (count) {
+			items.push({key:'targets', value:tmpEnableList});
+		}
+	})();
 
 	var el = document.getElementById('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
@@ -796,6 +810,28 @@ function handleOptionsSave () {
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'fontFamily', value:el.value});
 	}
+
+	(function () {
+		var tmpFstab = {
+			dropbox:  {enabled: false},
+			gdrive:   {enabled: false},
+			onedrive: {enabled: false}
+		};
+
+		for (var i in tmpFstab) {
+			var el = document.getElementById('pos-' + i);
+			if (el) {
+				if (!el.disabled) {
+					tmpFstab[i].enabled = true;
+				}
+				if (el.checked) {
+					tmpFstab[i].isDefault = true;
+				}
+			}
+		}
+
+		items.push({key:'fstab', value:tmpFstab});
+	})();
 
 	items.length && extension.postMessage(
 		{type:'set-storage', items:items},
@@ -894,7 +930,6 @@ function createPageAgent (doHook) {
 	// keyboard event hooking
 	if (doHook) {
 		code += " \
-var wasaviRunning = false; \
 function isHookEvent (en) {return en == 'keydown' || en == 'keypress'} \
 function getKey (en, uc) {return en + '_' + !!uc} \
 function hook (target) { \
@@ -937,6 +972,7 @@ hook(win.Node && win.Node.prototype); \
 
 	// launch event handlers and indirect content setter/getter
 	code += "\
+var wasaviRunning = false; \
 doc.addEventListener('WasaviStarting', function () {wasaviRunning = true}, false); \
 doc.addEventListener('WasaviTerminated', function () {wasaviRunning = false}, false); \
 doc.addEventListener('WasaviRequestGetContent', function (e) { \
@@ -972,7 +1008,7 @@ doc.addEventListener('WasaviRequestSetContent', function (e) { \
 	s.src = 'data:text/javascript;base64,' + window.btoa(
 		'!function(win,doc){' +
 		code +
-		'}(window, document);'
+		'}(window,document);'
 	);
 	parent.appendChild(s);
 }
@@ -1012,42 +1048,55 @@ function handleResponseGetContent (e) {
 
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
-	console.log('wasavi agent: got a nondirectional message: ' + req.type);
 
 	switch (req.type) {
 	case 'update-storage':
-		req.items.forEach(function (item) {
+		var log = [];
+		for (var i in req.items) {
+			var item = req.items[i];
 			switch (item.key) {
 			case 'targets':
 				enableList = item.value;
+				log.push(item.key);
 				break;
 
 			case 'exrc':
 				exrc = item.value;
+				log.push(item.key);
 				break;
 
 			case 'shortcut':
 				shortcut = item.value;
+				log.push(item.key);
 				break;
 
 			case 'shortcutCode':
 				shortcutCode = item.value;
+				log.push(item.key);
 				break;
 
 			case 'quickActivate':
 				quickActivation = item.value;
+				log.push(item.key);
 				break;
 			}
-		});
+		}
+		devMode && log.length && console.log(
+			'wasavi agent[update-storage]: consumed ' + log.join(', '));
 		break;
 
 	case 'request-run':
 		handleRequestLaunch();
 		break;
-
-	default:
-		devMode && console.log('wasavi agent: got a unknown type message: ' + req.type);
 	}
+
+	/*
+	Array.prototype.forEach.call(
+		document.getElementsByTagName('iframe'),
+		function (node) {notifyToChild(node, req)}
+	);
+	 */
+	notifyToChild(wasaviFrame, req);
 }
 
 /*
@@ -1055,25 +1104,44 @@ function handleBackendMessage (req) {
  */
 
 function handleIframeMessage (e) {
+	if (!e || !e.data || typeof e.data != 'object'
+	|| !('internalId' in e.data) || !('type' in e.data)) {
+		/*
+		 * This situation is not necessarily an error
+		 * because documents other than wasavi iframe also use
+		 * cross-document message mechanism.
+		 * Therefore, wasavi should only ignore this message.
+		 */
+		if (false && devMode) {
+			var reason = '?';
+			if (!e) {
+				reason = 'empty event object';
+			}
+			else if (!e.data) {
+				reason = 'empty e.data';
+			}
+			else if (typeof e.data != 'object') {
+				reason = 'invalid type of e.data, ' + (typeof e.data);
+			}
+			else if (!('internalId' in e.data)) {
+				reason = 'missing e.data.internalId';
+			}
+			else if (!('type' in e.data)) {
+				reason = 'missing e.data.type';
+			}
+			console.log(
+				'wasavi: got a invalid dom message' +
+				' (' + reason + '): ' + JSON.stringify(e.data, null, ' '));
+		}
+		return;
+	}
+
+	if (e.data.internalId !== internalId) {
+		devMode && console.error('wasavi agent: GOT A INVALID INTERNAL ID.');
+		return;
+	}
+
 	var req = e.data;
-	if (!req || !req.type) {
-		if (devMode) {
-			if (!req) {
-				console.error('wasavi agent: got a invalid dom message (null req).');
-			}
-			else if (!req.type) {
-				console.error('wasavi agent: got a invalid dom message (null req.type).');
-			}
-		}
-		return;
-	}
-	if (req.internalId !== internalId) {
-		if (devMode) {
-			console.error('wasavi agent: GOT A INVALID INTERNAL ID.');
-		}
-		return;
-	}
-	console.log('wasavi agent: got a dom message: ' + req.type);
 
 	switch (req.type) {
 	case 'wasavi-initialized':
@@ -1091,11 +1159,7 @@ function handleIframeMessage (e) {
 			document.getElementById('test-log').value = '';
 		}
 
-		try {
-			notifyToChild(wasaviFrame, {
-				type:'got-initialized'
-			});
-		} catch (e) {}
+		notifyToChild(wasaviFrame, {type:'wasavi-got-initialized'});
 		break;
 
 	case 'wasavi-ready':
@@ -1176,17 +1240,15 @@ function handleIframeMessage (e) {
 
 	case 'wasavi-read':
 		if (!wasaviFrame) break;
-		try {
-			notifyToChild(wasaviFrame, {
-				type:'fileio-read-response',
-				state:'complete',
-				meta:{
-					path:'',
-					charLength:targetElement.value.length
-				},
-				content:targetElement.value
-			});
-		} catch (e) {}
+		notifyToChild(wasaviFrame, {
+			type:'fileio-read-response',
+			state:'complete',
+			meta:{
+				path:'',
+				charLength:targetElement.value.length
+			},
+			content:targetElement.value
+		});
 		break;
 
 	case 'wasavi-saved':
@@ -1206,9 +1268,8 @@ function handleIframeMessage (e) {
 		else {
 			payload.error = _('Internal state error.');
 		}
-		try {
-			notifyToChild(wasaviFrame, payload);
-		} catch (e) {}
+
+		notifyToChild(wasaviFrame, payload);
 		break;
 
 	/*
@@ -1285,7 +1346,22 @@ function handleIframeMessage (e) {
 }
 
 function handleConnect (req) {
-	console.log('wasavi agent: got a init-response message, tabId: ' + req.tabId);
+	if (!req || !('tabId' in req) || !req.tabId) {
+		if (devMode) {
+			var missing = '?';
+			if (!req) {
+				missing = 'empty req object';
+			}
+			else if (!('tabId' in req)) {
+				missing = 'missing req.tabId';
+			}
+			console.error(
+				'wasavi agent: got init-response message' +
+				' (' + missing + ').');
+		}
+		return;
+	}
+
 	extension.tabId = req.tabId;
 	enableList = req.targets;
 	exrc = req.exrc;
