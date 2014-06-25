@@ -1,0 +1,89 @@
+#! /usr/bin/php
+<?php
+$dir = "";
+$outdir = "";
+$localedir = "";
+$ver = "";
+$update_url = "";
+
+foreach ($argv as $arg) {
+	if (preg_match('/^--indir=(.+)$/', $arg, $re)) {
+		$dir = $re[1];
+	}
+	elseif (preg_match('/^--ver=(.+)$/', $arg, $re)) {
+		$ver = $re[1];
+	}
+	elseif (preg_match('/^--outdir=(.+)$/', $arg, $re)) {
+		$outdir = $re[1];
+	}
+	elseif (preg_match('/^--localedir=(.+)$/', $arg, $re)) {
+		$localedir = $re[1];
+	}
+	elseif (preg_match('/^--update-url=(.+)$/', $arg, $re)) {
+		$update_url = $re[1];
+	}
+}
+
+if ($dir == "") {
+	echo "missing base directory.";
+	exit(1);
+}
+if ($ver == "") {
+	echo "missing version.";
+	exit(1);
+}
+
+$xml = new SimpleXMLElement($dir . "/config.xml", null, true);
+$xml->registerXPathNamespace("widget", "http://www.w3.org/ns/widgets");
+
+// set the version
+$xml->attributes()->version = $ver;
+
+// set languaged description elements
+if ($localedir == "") {
+	$localedir = $dir . "/locales";
+}
+if ($localedir != "") {
+	$metaInfos = array();
+	$h = opendir($localedir);
+	while (($file = readdir($h)) !== false) {
+		if (!is_dir($localedir . "/" .  $file)) continue;
+		if ($file == "." || $file == "..") continue;
+		$message = json_decode(file_get_contents($localedir . "/" . $file . "/messages.json"));
+
+		$localeCode = $file;
+		$localeCode = preg_replace('/_/', '-', $localeCode);
+		$localeCode = strtolower($localeCode);
+
+		$element = $xml->addChild("description", $message->wasavi_desc->message);
+		$element->addAttribute("xml:lang", $localeCode, "http://www.w3.org/XML/1998/namespace");
+	}
+	closedir($h);
+}
+
+// strip non-languaged description elements
+$languagedDesc = count($xml->xpath("//widget:description[@xml:lang]"));
+if ($languagedDesc) {
+	foreach ($xml->xpath("//widget:description[not(@xml:lang)]") as $node) {
+		unset($node[0]);
+	}
+}
+
+// append update url if specified
+if ($update_url != "") {
+	$xml->{"update-description"}->attributes()->href = $update_url;
+	echo "append updete_url (", $update_url , ")\n";
+}
+
+// output
+$doc = new DOMDocument("1.0");
+$doc->encoding = "UTF-8";
+$doc->preserveWhiteSpace = false;
+$doc->loadXML($xml->asXML());
+$doc->formatOutput = true;
+if ($outdir != "") {
+	file_put_contents($outdir . "/config.xml", $doc->saveXML());
+}
+else {
+	echo mb_convert_encoding($doc->saveXML(), "UTF-8", "UTF-8");
+}

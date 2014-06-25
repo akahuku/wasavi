@@ -19,5 +19,5 @@
 
 	<feature name="opera:contextmenus"/>
 
-	<update-description href="https://github.com/akahuku/wasavi/raw/master/verinfo/opera-presto.xml" />
+	<update-description href="https://github.com/akahuku/wasavi/raw/master/dist/opera.xml" />
 </widget>

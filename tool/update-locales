@@ -1,0 +1,33 @@
+#! /usr/bin/php
+<?php
+$dir = "";
+
+foreach ($argv as $arg) {
+	if (preg_match('/^--indir=(.+)$/', $arg, $re)) {
+		$dir = $re[1];
+	}
+}
+
+if ($dir == "") {
+	echo "missing base directory.";
+	exit(1);
+}
+
+$h = opendir($dir);
+if (!$h) {
+	echo "cannot open directory: ", $dir;
+	exit(1);
+}
+
+$locales = array();
+while (($file = readdir($h)) !== false) {
+	if ($file == "." || $file == "..") continue;
+	if (is_dir($dir . "/" . $file)) {
+		$locales[] = $file;
+	}
+}
+natcasesort($locales);
+closedir($h);
+
+$out = json_encode($locales, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+file_put_contents($dir . "/locales.json", $out);

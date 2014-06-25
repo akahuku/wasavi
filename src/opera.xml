@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <update-info
   xmlns="http://www.w3.org/ns/widgets"
-  src="https://github.com/akahuku/wasavi/raw/master/wasavi.oex"
-  version="0.5.442">
+  src="@location@"
+  version="@version@">
 </update-info>

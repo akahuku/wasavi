@@ -1,0 +1,44 @@
+#! /usr/bin/php
+<?php
+$dir = "";
+$outdir = "";
+$ver = "";
+
+foreach ($argv as $arg) {
+	if (preg_match('/^--indir=(.+)$/', $arg, $re)) {
+		$dir = $re[1];
+	}
+	elseif (preg_match('/^--outdir=(.+)$/', $arg, $re)) {
+		$outdir = $re[1];
+	}
+	elseif (preg_match('/^--ver=(.+)$/', $arg, $re)) {
+		$ver = $re[1];
+	}
+}
+
+if ($dir == "") {
+	echo "missing base directory.";
+	exit(1);
+}
+if ($ver == "") {
+	echo "missing version.";
+	exit(1);
+}
+
+$content = @file_get_contents($dir . "/package.json");
+if ($content === false) {
+	echo "cannot read manifest.json";
+	exit(1);
+}
+
+$content = json_decode($content, true);
+$content["version"] = $ver;
+$content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+if ($outdir != "") {
+    file_put_contents($outdir . "/package.json", $content);
+}
+else {
+    echo mb_convert_encoding($content, "UTF-8", "UTF-8");
+}
+

@@ -1,0 +1,40 @@
+#! /usr/bin/php
+<?php
+$dir = "";
+$localedir = "";
+
+foreach ($argv as $arg) {
+	if (preg_match('/^--indir=(.+)$/', $arg, $re)) {
+		$dir = $re[1];
+	}
+	elseif (preg_match('/^--localedir=(.+)$/', $arg, $re)) {
+		$localedir = $re[1];
+	}
+}
+
+if ($dir == "") {
+	echo "missing base directory.";
+	exit(1);
+}
+if ($localedir == "") {
+	echo "missing locale directory.";
+	exit(1);
+}
+
+$h = opendir($localedir);
+while (($file = readdir($h)) !== false) {
+	if ($file == "." || $file == "..") continue;
+    if (!is_dir($localedir . "/" .  $file)) continue;
+    $message = json_decode(file_get_contents($localedir . "/" . $file . "/messages.json"));
+    
+    $localeCode = $file;
+    $localeCode = preg_replace('/_/', '-', $localeCode);
+    //$localeCode = strtolower($localeCode);
+
+    file_put_contents(
+	$dir . "/locale/" . $localeCode . ".properties",
+	"# wasavi description\n"
+	. "wasavi_desc = " . $message->wasavi_desc->message . "\n"
+    );
+}
+closedir($h);

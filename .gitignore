@@ -6,11 +6,9 @@ Session.vim
 
 consumer_keys.json
 consumer_keys.bin
+wasavi.pem
+.embryo/
 src/chrome/backend/oldlib/
-src/firefox/
-!src/firefox/package.json
-src/opera/
-!src/opera/config.xml
 src/wd-tests/dst/
 src/wd-tests/libs/
 src/wd-tests/result.txt
