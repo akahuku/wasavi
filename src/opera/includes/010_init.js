@@ -1,0 +1,1 @@
+../../chrome/frontend/init.js

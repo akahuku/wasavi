@@ -1,0 +1,1 @@
+../../chrome/frontend/wasavi.js

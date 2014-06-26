@@ -10,8 +10,10 @@ wasavi.pem
 .embryo/
 src/chrome/backend/oldlib/
 src/wd-tests/dst/
-src/wd-tests/libs/
+src/wd-tests/lib/
+src/wd-tests/profile/
 src/wd-tests/result.txt
+src/wd-tests/config.xml
 src/unicode-tools/ucd/
 src/unicode-tools/unihan/
 src/unit-tests/LineBreakTest.txt

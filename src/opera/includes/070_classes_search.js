@@ -1,0 +1,1 @@
+../../chrome/frontend/classes_search.js

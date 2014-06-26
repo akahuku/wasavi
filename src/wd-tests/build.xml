@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="wasavi_test" basedir="." default="help">
+
+	<!-- imports -->
+	<import file="./config.xml" />
+
+	<!--
+		functionality tests via selenium
+		================================================================================
+	-->
+
+	<path id="classpath.test">
+		<!-- junit -->
+		<pathelement location="${JUNIT_JAR}" />
+
+		<!-- selenium core -->
+		<pathelement location="${SELENIUM_JAR}" />
+
+		<!-- libs for which selenium java client depends -->
+		<fileset dir="${SELENIUM_DIR}/libs">
+			<include name="*.jar" />
+		</fileset>
+
+		<!-- all tests -->
+		<pathelement location="${TEST_CLASS_DIR}" />
+	</path>
+
+	<target name="runtest-start-server">
+		<java jar="${SELENIUM_SERVER_JAR}"
+			fork="true" spawn="true">
+		</java>
+	</target>
+
+	<target name="runtest-stop-server">
+		<get taskname="selenium-shutdown"
+			src="http://localhost:4444/selenium-server/driver/?cmd=shutDownSeleniumServer"
+			dest=".stop-server-result" ignoreerrors="true" />
+		<echo taskname="selenium-shutdown" message="standalone-server stopped." />
+	</target>
+
+	<target name="runtest-compile">
+		<javac
+			srcdir="${TEST_SOURCE_DIR}"
+			destdir="${TEST_CLASS_DIR}"
+			includeantruntime="false">
+			<classpath refid="classpath.test"/>
+			<compilerarg value="-Xlint:deprecation" />
+		</javac>
+	</target>
+
+	<target name="runtest-junit" depends="runtest-compile">
+		<junit
+			haltonfailure="true"
+			showoutput="false"
+			fork="true"
+			forkmode="once">
+			<env key="LANG" value="C" />
+			<classpath refid="classpath.test" />
+
+			<sysproperty
+				key="wasavi.tests.browser"
+				value="${TEST_BROWSER}" />
+			<sysproperty
+				key="wasavi.tests.frame_url"
+				value="${TEST_FRAME_URL}" />
+
+			<sysproperty
+				key="webdriver.chrome.driver"
+				value="${CHROMEDRIVER_EXE}" />
+			<sysproperty
+				key="wasavi.tests.chrome.extension_path"
+				value="${TEST_CHROME_EXTENSION_PATH}" />
+			<sysproperty
+				key="wasavi.tests.chrome.profile_path"
+				value="${TEST_CHROME_PROFILE_PATH}" />
+
+			<sysproperty
+				key="wasavi.tests.firefox.profile_path"
+				value="${TEST_FIREFOX_PROFILE_PATH}" />
+			<sysproperty
+				key="wasavi.tests.firefox.extension_path"
+				value="${TEST_FIREFOX_EXTENSION_PATH}" />
+
+			<sysproperty
+				key="wasavi.tests.opera.executable"
+				value="${OPERA_EXECUTABLE}" />
+			<sysproperty
+				key="wasavi.tests.opera.profile_path"
+				value="${TEST_OPERA_PROFILE_PATH}" />
+
+			<formatter type="brief" usefile="true" />
+			<test
+				name="WasaviTest.AllTests"
+				todir="${TEST_BASE_DIR}"
+				outfile="result" />
+		</junit>
+	</target>
+
+	<target name="runtest">
+		<parallel>
+			<antcall target="runtest-start-server" />
+			<sequential>
+				<echo message="running standalone-server..." />
+				<waitfor maxwait="2" maxwaitunit="minute" checkevery="100">
+					<http url="http://localhost:4444/selenium-server/driver/?cmd=testComplete" />
+				</waitfor>
+				<antcall target="runtest-junit" />
+				<antcall target="runtest-stop-server" />
+				<delete file="chromedriver.log" />
+			</sequential>
+		</parallel>
+	</target>
+
+
+
+	<!--
+		public targets
+		================================================================================
+	-->
+
+	<target name="test-chrome">
+		<property name="TEST_BROWSER" value="chrome" />
+		<antcall target="runtest" />
+	</target>
+
+	<target name="test-opera">
+		<property name="TEST_BROWSER" value="opera" />
+		<antcall target="runtest" />
+	</target>
+
+	<target name="test-firefox">
+		<property name="TEST_BROWSER" value="firefox" />
+		<antcall target="runtest" />
+	</target>
+
+
+
+	<!--
+		help
+		================================================================================
+	-->
+
+	<target name="help">
+		<echo><![CDATA[this build script has following targets:
+
+  test-chrome         run test with chrome
+  test-opera          run test with opera
+  test-firefox        run test with firefox
+
+  help                show this message
+]]></echo>
+	</target>
+</project>
+<!-- vim:set ts=4 sw=4 fenc=utf8 ff=unix ft=ant : -->

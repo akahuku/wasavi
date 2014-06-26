@@ -3,6 +3,10 @@
 
 SHELL = /bin/sh
 
+CHROME = chromium-browser
+OPERA = opera
+FIREFOX = firefox
+
 ZIP = zip
 ZIP_OPT = -qr9
 UNZIP = unzip
@@ -12,8 +16,6 @@ RSYNC_OPT = -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
 	--exclude '.*' --exclude 'oldlib/' \
 	--exclude '$(CRYPT_SRC_FILE)*'
-
-CHROME = chromium-browser
 
 #
 
@@ -60,11 +62,13 @@ CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
 CHROME_SRC_PATH = $(SRC_DIR)/$(CHROME_SRC_DIR)
 CHROME_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(CHROME_SRC_DIR)
+CHROME_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/chrome
 
 OPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(OPERA_SUFFIX)
 OPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(OPERA_SUFFIX)
 OPERA_SRC_PATH = $(SRC_DIR)/$(OPERA_SRC_DIR)
 OPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(OPERA_SRC_DIR)
+OPERA_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/opera
 
 BLINKOPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(BLINKOPERA_SUFFIX)
 BLINKOPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(BLINKOPERA_SUFFIX)
@@ -75,6 +79,7 @@ FIREFOX_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX)
 FIREFOX_MTIME_PATH = $(EMBRYO_DIR)/.$(FIREFOX_SUFFIX)
 FIREFOX_SRC_PATH = $(SRC_DIR)/$(FIREFOX_SRC_DIR)
 FIREFOX_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(FIREFOX_SRC_DIR)
+FIREFOX_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/firefox
 
 # basic rules
 # ========================================
@@ -94,7 +99,10 @@ $(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT
 
 FORCE:
 
-.PHONY: all clean message FORCE
+.PHONY: all clean message \
+	test-chrome test-opera test-firefox \
+	run-chrome run-opera run-firefox \
+	FORCE
 
 #
 # rules to make wasavi.crx
@@ -327,5 +335,34 @@ message: FORCE
 		$(CHROME_SRC_PATH)/frontend/*.js \
 		$(CHROME_SRC_PATH)/backend/*.js \
 		$(CHROME_SRC_PATH)/backend/lib/kosian/*.js
+
+
+
+#
+# rules to test
+# ========================================
+#
+
+test-chrome: FORCE
+	cd $(SRC_DIR)/wd-tests && ant test-chrome
+
+test-opera: FORCE
+	cd $(SRC_DIR)/wd-tests && ant test-opera
+
+test-firefox: FORCE
+	cd $(SRC_DIR)/wd-tests && ant test-firefox
+
+run-chrome: FORCE
+	@mkdir -p $(CHROME_TEST_PROFILE_PATH)
+	$(CHROME) --start-maximized --lang=en \
+		--user-data-dir=$(CHROME_TEST_PROFILE_PATH)
+
+run-opera: FORCE
+	@mkdir -p $(OPERA_TEST_PROFILE_PATH)
+	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH)
+
+run-firefox: FORCE
+	@mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
+	$(FIREFOX) -profile $(FIREFOX_TEST_PROFILE_PATH)
 
 # end

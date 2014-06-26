@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="properties" basedir=".">
+	<property environment="env" />
+
+	<!-- some pathes for test (probably no need to change these) -->
+	<property name="TEST_BASE_DIR" value="." />
+	<property name="TEST_SOURCE_DIR" value="${TEST_BASE_DIR}/src" />
+	<property name="TEST_CLASS_DIR" value="${TEST_BASE_DIR}/dst" />
+
+	<!-- path to selenium libs -->
+	<property name="TEST_LIB_DIR" value="${TEST_BASE_DIR}/lib" />
+
+	<!-- paths to test library -->
+	<property name="JUNIT_JAR"         value="${TEST_LIB_DIR}/junit/junit-4.11.jar" />
+	<property name="CHROMEDRIVER_EXE"  value="${TEST_LIB_DIR}/chromedriver.exe" />
+	<property name="SELENIUM_DIR"      value="${TEST_LIB_DIR}/selenium-2.37.0" />
+	<property name="SELENIUM_JAR"      value="${SELENIUM_DIR}/selenium-java-2.37.0.jar" />
+	<property name="SELENIUM_SERVER_JAR"
+		value="${TEST_LIB_DIR}/selenium-server-standalone-2.37.0.jar" />
+
+	<!-- test url (probably no need to change these) -->
+	<property
+		name="TEST_FRAME_URL"
+		value="http://wasavi.appsweets.net/test_frame.html" />
+
+	<!-- parameters for test on chrome -->
+	<property
+		name="CHROME_EXECUTABLE"
+		value="${env.HOME}/AppData/Local/Google/Chrome/Application/chrome.exe" />
+	<property
+		name="TEST_CHROME_EXTENSION_PATH"
+		value="../chrome" />
+	<property
+		name="TEST_CHROME_PROFILE_PATH"
+		value="./profile/chrome" />
+
+	<!-- test parameters for test on firefox -->
+	<property
+		name="FIREFOX_EXECUTABLE"
+		value="C:/Program Files (x86)/Mozilla Firefox/firefox.exe" />
+	<property
+		name="CFX_EXECUTABLE"
+		value="${env.HOME}/LocalBin/addon-sdk/current/bin/cfx" />
+	<property
+		name="TEST_FIREFOX_EXTENSION_PATH"
+		value="../../dist/wasavi.xpi" />
+	<property
+		name="TEST_FIREFOX_PROFILE_PATH"
+		value="./profile/firefox" />
+
+	<!-- parameters for test on opera -->
+	<property
+		name="OPERA_EXECUTABLE"
+		value="C:/Program Files/Opera/Current/opera.exe" />
+	<property
+		name="TEST_OPERA_PROFILE_PATH"
+		value="${env.HOME}/Projects/wasavi/trunk/src/wd-tests/profile/opera" />
+
+</project>
