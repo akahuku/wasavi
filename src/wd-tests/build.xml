@@ -68,18 +68,12 @@
 				key="webdriver.chrome.driver"
 				value="${CHROMEDRIVER_EXE}" />
 			<sysproperty
-				key="wasavi.tests.chrome.extension_path"
-				value="${TEST_CHROME_EXTENSION_PATH}" />
-			<sysproperty
 				key="wasavi.tests.chrome.profile_path"
 				value="${TEST_CHROME_PROFILE_PATH}" />
 
 			<sysproperty
 				key="wasavi.tests.firefox.profile_path"
 				value="${TEST_FIREFOX_PROFILE_PATH}" />
-			<sysproperty
-				key="wasavi.tests.firefox.extension_path"
-				value="${TEST_FIREFOX_EXTENSION_PATH}" />
 
 			<sysproperty
 				key="wasavi.tests.opera.executable"

@@ -1,23 +1,26 @@
-# basic macros
+# application macros
 # ========================================
 
-SHELL = /bin/sh
+SHELL := /bin/sh
 
-CHROME = chromium-browser
-OPERA = opera
-FIREFOX = firefox
+CHROME := chromium-browser
+OPERA := opera
+FIREFOX := firefox
+CYGPATH := echo
 
-ZIP = zip
-ZIP_OPT = -qr9
-UNZIP = unzip
+ZIP := zip -qr9
+UNZIP := unzip
 
-RSYNC = rsync
-RSYNC_OPT = -rptL --delete \
+RSYNC := rsync
+RSYNC_OPT := -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
 	--exclude '.*' --exclude 'oldlib/' \
 	--exclude '$(CRYPT_SRC_FILE)*'
 
-#
+-include app.mk
+
+# basic macros
+# ========================================
 
 PRODUCT = wasavi
 DIST_DIR = dist
@@ -55,20 +58,20 @@ FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/fire
 # derived macros
 # ========================================
 
-VERSION = $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
+VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
 BINKEYS_PATH = $(EMBRYO_DIR)/$(CRYPT_DST_FILE)
 
 CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
 CHROME_SRC_PATH = $(SRC_DIR)/$(CHROME_SRC_DIR)
 CHROME_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(CHROME_SRC_DIR)
-CHROME_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/chrome
+CHROME_TEST_PROFILE_PATH := $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/chrome)
 
 OPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(OPERA_SUFFIX)
 OPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(OPERA_SUFFIX)
 OPERA_SRC_PATH = $(SRC_DIR)/$(OPERA_SRC_DIR)
 OPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(OPERA_SRC_DIR)
-OPERA_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/opera
+OPERA_TEST_PROFILE_PATH = $(chell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/opera)
 
 BLINKOPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(BLINKOPERA_SUFFIX)
 BLINKOPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(BLINKOPERA_SUFFIX)
@@ -79,7 +82,7 @@ FIREFOX_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX)
 FIREFOX_MTIME_PATH = $(EMBRYO_DIR)/.$(FIREFOX_SUFFIX)
 FIREFOX_SRC_PATH = $(SRC_DIR)/$(FIREFOX_SRC_DIR)
 FIREFOX_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(FIREFOX_SRC_DIR)
-FIREFOX_TEST_PROFILE_PATH = $(SRC_DIR)/wd-tests/profile/firefox
+FIREFOX_TEST_PROFILE_PATH := $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/firefox)
 
 # basic rules
 # ========================================
@@ -143,7 +146,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 #	build zip archive for google web store
 	rm -f $(DIST_DIR)/wasavi_chrome_web_store.zip
 	cd $(CHROME_EMBRYO_SRC_PATH) \
-		&& $(ZIP) $(ZIP_OPT) ../../$(DIST_DIR)/wasavi_chrome_web_store.zip .
+		&& $(ZIP) ../../$(DIST_DIR)/wasavi_chrome_web_store.zip .
 
 #	create update description file
 	sed -e 's/@appid@/$(CHROME_EXT_ID)/g' \
@@ -191,7 +194,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 
 #	zip it
 	rm -f $@
-	cd $(OPERA_EMBRYO_SRC_PATH) && $(ZIP) $(ZIP_OPT) ../../$@ .
+	cd $(OPERA_EMBRYO_SRC_PATH) && $(ZIP) ../../$@ .
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)

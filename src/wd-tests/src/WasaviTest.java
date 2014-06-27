@@ -649,8 +649,6 @@ public class WasaviTest {
 			options.addArguments(
 				"--start-maximized",
 				"--lang=en",
-				//"--load-extension="
-				//	+ System.getProperty("wasavi.tests.chrome.extension_path"),
 				"--user-data-dir="
 					+ System.getProperty("wasavi.tests.chrome.profile_path")
 			);

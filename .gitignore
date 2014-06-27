@@ -7,6 +7,7 @@ Session.vim
 consumer_keys.json
 consumer_keys.bin
 wasavi.pem
+app.mk
 .embryo/
 src/chrome/backend/oldlib/
 src/wd-tests/dst/
@@ -14,6 +15,7 @@ src/wd-tests/lib/
 src/wd-tests/profile/
 src/wd-tests/result.txt
 src/wd-tests/config.xml
+src/wd-tests/.stop-server-result
 src/unicode-tools/ucd/
 src/unicode-tools/unihan/
 src/unit-tests/LineBreakTest.txt
