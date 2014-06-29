@@ -115,9 +115,7 @@
 			getFindRegex:getFindRegex,
 			getFileIoResultInfo:getFileIoResultInfo,
 			getFileInfo:getFileInfo,
-			notifyToBackend:notifyToBackend,
 			notifyToParent:notifyToParent,
-			notifyToParents:notifyToParents,
 			notifyKeydownEvent:notifyKeydownEvent,
 			notifyCommandComplete:notifyCommandComplete,
 			setSubstituteWorker:setSubstituteWorker,
@@ -964,7 +962,13 @@ function uninstall (save, implicit) {
 		targetElement.isTopFrame = !!WasaviExtensionWrapper.IS_TOP_FRAME;
 		targetElement.isImplicit = !!implicit;
 		targetElement.ros = config.dumpScript(true).join('\n');
-		notifyToParents('terminated', targetElement);
+
+		extensionChannel.postMessage({
+			type:'terminated',
+			payload:targetElement
+		});
+		notifyToParent('terminated', targetElement);
+
 		extensionChannel = extensionChannel.disconnect();
 	}
 	targetElement = null;
@@ -2468,26 +2472,12 @@ function getLogicalColumn () {
 	// TODO: use more trustworthy method
 	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
 }
-function notifyToBackend (eventName, payload) {
-	if (!extensionChannel) return;
-	payload || (payload = {});
-	payload.type = eventName;
-	extensionChannel.postMessage({
-		type:'notify-to-backend',
-		tabId:extensionChannel.tabId,
-		payload:payload
-	});
-}
 function notifyToParent (eventName, payload) {
 	if (!extensionChannel) return;
 	payload || (payload = {});
 	payload.type = 'wasavi-' + eventName;
 	payload.internalId = targetElement.internalId;
 	window.parent.postMessage(payload, '*');
-}
-function notifyToParents (eventName, payload) {
-	notifyToBackend(eventName, payload);
-	notifyToParent(eventName, payload);
 }
 function notifyKeydownEvent (code, key, note) {
 	if (!testMode) return;
@@ -4476,7 +4466,7 @@ function handleBackendMessage (req) {
 		}
 		break;
 
-	case 'authorize-response':
+	case 'fileio-authorize-response':
 		if (req.error) {
 			exCommandExecutor.stop();
 			showMessage(_.apply(null, req.error), true, false);
@@ -4540,6 +4530,9 @@ function handleBackendMessage (req) {
 			return Wasavi.ExCommand.chdir(app, t, a, req.data);
 		};
 		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
+		break;
+
+	case 'ping':
 		break;
 
 	default:

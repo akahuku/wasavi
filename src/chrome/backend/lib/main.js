@@ -401,86 +401,6 @@
 		ext.openTabWithFile('options.html');
 	}
 
-	function handleNotifyToBackend (command, data, sender, respond) {
-		if (!('payload' in data)) return;
-
-		switch (data.payload.type) {
-		case 'chdir':
-			if ('tabId' in data
-			&& 'path' in data.payload) {
-				if (data.payload.path == '') {
-					ext.sendRequest(
-						data.tabId,
-						{
-							type:'fileio-chdir-response',
-							data:null
-						}
-					);
-				}
-				else {
-					ext.fileSystem.ls(
-						data.payload.path,
-						data.tabId,
-						function (data) {
-							var error = null;
-							if (data.error) {
-								error = data.error;
-								data = null;
-							}
-							ext.sendRequest(
-								data.tabId,
-								{
-									type:'fileio-chdir-response',
-									data:data,
-									error:error
-								}
-							);
-						}
-					);
-				}
-			}
-			break;
-		case 'read':
-			if ('tabId' in data
-			&& 'path' in data.payload
-			&& data.payload.path != '') {
-				ext.fileSystem.read(
-					data.payload.path,
-					data.tabId
-				);
-			}
-			break;
-		case 'saved':
-			if ('tabId' in data
-			&& 'path' in data.payload
-			&& data.payload.path != '') {
-				ext.fileSystem.write(
-					data.payload.path,
-					data.payload.value,
-					data.tabId
-				);
-			}
-			break;
-		case 'terminated':
-			if ('url' in data.payload
-			&& 'nodePath' in data.payload
-			&& 'ros' in data.payload) {
-				runtimeOverwriteSettings.set(
-					data.payload.url,
-					data.payload.nodePath,
-					data.payload.ros
-				);
-			}
-			if (!('parentTabId' in data)
-			&& 'tabId' in data
-			&& 'isTopFrame' in data.payload
-			&& data.payload.isTopFrame) {
-				ext.closeTab(data.tabId);
-			}
-			break;
-		}
-	}
-
 	function handleSetClipboard (command, data, sender, respond) {
 		if ('data' in data) {
 			ext.clipboard.set(data.data);
@@ -501,18 +421,100 @@
 
 	function handleFsCtl (command, data, sender, respond) {
 		var result = false;
+		var path = data.path || '';
 		switch (data.subtype) {
 		case 'reset':
 			ext.fileSystem.clearCredentials(data.name);
 			break;
+
 		case 'get-entries':
-			ext.fileSystem.ls(data.path, data.tabId, function (data) {
-				respond({data: data.contents});
-			});
+			ext.fileSystem.ls(
+				path, null,
+				{
+					onload: function (data) {
+						respond({data: data.contents});
+					}
+				}
+			);
 			result = true;
 			break;
+
+		case 'chdir':
+			if (path == '') {
+				ext.sendRequest(
+					sender,
+					{
+						type:'fileio-chdir-response',
+						data:null
+					}
+				);
+			}
+			else {
+				ext.fileSystem.ls(
+					path, sender,
+					{
+						onload: function (data) {
+							var error = null;
+							if (data.error) {
+								error = data.error;
+								data = null;
+							}
+							ext.sendRequest(
+								sender,
+								{
+									type:'fileio-chdir-response',
+									data:data,
+									error:error
+								}
+							);
+						}
+					}
+				);
+			}
+			break;
+
+		case 'read':
+			if (path != '') {
+				ext.fileSystem.read(
+					path, sender,
+					{
+						onresponse: function (d) {
+							if (d) {
+								d.internalId = data.internalId;
+							}
+						}
+					}
+				);
+			}
+			break;
+
+		case 'write':
+			if (path != '') {
+				ext.fileSystem.write(
+					path, data.value, sender
+				);
+			}
+			break;
 		}
+
 		return result;
+	}
+
+	function handleTerminated (command, data, sender, respond) {
+		var payload = data.payload || {};
+
+		if ('url' in payload
+		&& 'nodePath' in payload
+		&& 'ros' in payload) {
+			runtimeOverwriteSettings.set(
+				payload.url,
+				payload.nodePath,
+				payload.ros
+			);
+		}
+		if (payload.isTopFrame) {
+			ext.closeTab(sender);
+		}
 	}
 
 	/** {{{2 request handler entry */
@@ -545,12 +547,12 @@
 			case 'set-storage':			handler = handleSetStorage; break;
 			case 'bell':				handler = handleBell; break;
 			case 'open-options-page':	handler = handleOpenOptionsPage; break;
-			case 'notify-to-backend':	handler = handleNotifyToBackend; break;
 			case 'set-clipboard':		handler = handleSetClipboard; break;
 			case 'get-clipboard':		handler = handleGetClipboard; break;
 			case 'push-payload':		handler = handlePushPayload; break;
 			case 'request-wasavi-frame':handler = handleRequestWasaviFrame; break;
 			case 'fsctl':				handler = handleFsCtl; break;
+			case 'terminated':			handler = handleTerminated; break;
 			}
 
 			if (handler) {

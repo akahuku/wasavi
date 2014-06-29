@@ -60,7 +60,6 @@ var quickActivation;
 var devMode;
 
 var targetElement;
-var internalId;
 var wasaviFrame;
 var extraHeight;
 var isTestFrame;
@@ -84,17 +83,11 @@ function getUniqueClass () {
 	return result;
 }
 
-function getUniqueId () {
-	return 'wasavi_frame'
-		+ '_' + Date.now()
-		+ '_' + Math.floor(Math.random() * 0x10000);
-}
-
 function notifyToChild (frame, payload) {
 	if (!frame) return;
 	try {
 		frame.contentWindow.postMessage({
-			internalId:internalId,
+			internalId:extension.internalId,
 			payload:payload
 		}, '*');
 	}
@@ -260,7 +253,7 @@ function runCore (element, frameSource, value) {
 		url:window.location.href,
 		testMode:isTestFrame,
 		id:element.id,
-		internalId:(internalId = getUniqueId()),
+		internalId:extension.internalId,
 		nodeName:element.nodeName,
 		nodePath:getNodePath(element),
 		isContentEditable:element.isContentEditable,
@@ -320,7 +313,6 @@ function cleanup (value, isImplicit) {
 	}
 	window.removeEventListener('resize', handleTargetResize, false);
 	extraHeight = 0;
-	internalId = undefined;
 }
 
 function focusToFrame (req) {
@@ -1088,15 +1080,10 @@ function handleBackendMessage (req) {
 	case 'request-run':
 		handleRequestLaunch();
 		break;
-	}
 
-	/*
-	Array.prototype.forEach.call(
-		document.getElementsByTagName('iframe'),
-		function (node) {notifyToChild(node, req)}
-	);
-	 */
-	notifyToChild(wasaviFrame, req);
+	case 'ping':
+		break;
+	}
 }
 
 /*
@@ -1136,7 +1123,7 @@ function handleIframeMessage (e) {
 		return;
 	}
 
-	if (e.data.internalId !== internalId) {
+	if (e.data.internalId !== extension.internalId) {
 		devMode && console.error('wasavi agent: GOT A INVALID INTERNAL ID.');
 		return;
 	}
@@ -1251,7 +1238,7 @@ function handleIframeMessage (e) {
 		});
 		break;
 
-	case 'wasavi-saved':
+	case 'wasavi-write':
 		if (!wasaviFrame) break;
 		var result = setValue(targetElement, req.value, req.isForce);
 		var payload = {type:'fileio-write-response'};

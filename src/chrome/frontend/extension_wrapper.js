@@ -90,6 +90,7 @@
 	function ExtensionWrapper () {}
 	ExtensionWrapper.prototype = {
 		get name () {return EXTENSION_NAME},
+		internalId: '',
 		clipboardData: '',
 		setMessageListener: function (handler) {},
 		sendRequest: function (data, callback) {},
@@ -106,6 +107,7 @@
 			this.sendRequest({
 				command:command || 'unknown-command',
 				tabId:this.tabId,
+				internalId:this.internalId,
 				data:data
 			}, callback);
 		},
@@ -113,6 +115,7 @@
 			this.doConnect();
 			this.sendRequest({
 				command:command || 'init',
+				internalId:this.internalId,
 				data:{url:window.location.href}
 			}, callback);
 		},
@@ -121,6 +124,11 @@
 			this.doDisconnect();
 		},
 		doDisconnect: function () {},
+		getUniqueId: function () {
+			return this.name
+				+ '_' + Date.now()
+				+ '_' + Math.floor(Math.random() * 0x10000);
+		},
 		getMessage: function (messageId) {},
 		setClipboard: function (data) {
 			this.postMessage({command:'set-clipboard', data:data});
@@ -211,6 +219,7 @@
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'chrome-extension';
+		this.internalId = this.getUniqueId();
 		this.sendRequest = function (data, callback) {
 			callback ? chrome.runtime.sendMessage(data, callback) :
 					   chrome.runtime.sendMessage(data);
@@ -249,6 +258,8 @@
 		var extensionId = widget.preferences['widget-id'];
 		var theObj = this;
 		var onMessageHandler;
+		var port = null;
+		var internalId;
 
 		function handleMessage (e) {
 			if (e.data.type == 'opera-notify-tab-id') {
@@ -259,20 +270,33 @@
 		};
 
 		this.constructor = ExtensionWrapper;
+		this.internalId = internalId = this.getUniqueId();
 		this.runType = 'opera-extension';
 		this.sendRequest = function (data, callback) {
 			if (callback) {
 				var ch = new MessageChannel;
 				ch.port1.onmessage = function (e) {
 					callback && callback(e.data);
-					ch.port1.close();
+					if (port) {
+						ch.port1.close();
+					}
+					else {
+						port = ch.port1;
+						port.onmessage = handleMessage;
+						opera.extension.onmessage = null;
+					}
 					ch = null;
 				};
 				ch.port1.start();
 				opera.extension.postMessage(data, [ch.port2]);
 			}
 			else {
-				opera.extension.postMessage(data);
+				if (port) {
+					port.postMessage(data);
+				}
+				else {
+					opera.extension.postMessage(data);
+				}
 			}
 		};
 		this.setMessageListener = function (handler) {
@@ -284,6 +308,10 @@
 		this.doDisconnect = function () {
 			onMessageHandler = null;
 			opera.extension.onmessage = null;
+			if (this.port) {
+				this.port.close();
+				this.port = null;
+			}
 		};
 		this.urlInfo = new UrlInfo(
 			'widget://' + extensionId + '/options.html',
@@ -373,6 +401,7 @@
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'firefox-jetpack-extension';
+		this.internalId = this.getUniqueId();
 		this.sendRequest = function (data, callback) {
 			if (callback) {
 				var id = getNewMessageId();

@@ -802,10 +802,12 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 		value:content
 	};
 	if (payload.path != '') {
-		app.low.notifyToBackend('saved', payload);
+		payload.type = 'fsctl';
+		payload.subtype = 'write';
+		app.extensionChannel.postMessage(payload);
 	}
 	else {
-		app.low.notifyToParent('saved', payload);
+		app.low.notifyToParent('write', payload);
 	}
 
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
@@ -1043,14 +1045,22 @@ Wasavi.ExCommand.commands = [
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.notifyToBackend('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		app.extensionChannel.postMessage({
+			type:'fsctl',
+			subtype:'chdir',
+			path:app.low.regalizeFilePath(a.argv[0], true)
+		});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		if (!app.extensionChannel) {
 			return _('Extension system required.');
 		}
-		app.low.notifyToBackend('chdir', {path:app.low.regalizeFilePath(a.argv[0], true)});
+		app.extensionChannel.postMessage({
+			type:'fsctl',
+			subtype:'chdir',
+			path:app.low.regalizeFilePath(a.argv[0], true)
+		});
 		return undefined;
 	}),
 	new Wasavi.ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
@@ -1104,7 +1114,9 @@ Wasavi.ExCommand.commands = [
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		};
 		if (payload.path != '') {
-			app.low.notifyBackend('read', payload);
+			payload.type = 'fsctl';
+			payload.subtype = 'read';
+			app.extensionChannel.postMessage(payload);
 		}
 		else {
 			app.low.notifyToParent('read', payload);
@@ -1372,10 +1384,11 @@ Wasavi.ExCommand.commands = [
 			return _('File name is empty.');
 		}
 
-		var payload = {
+		app.extensionChannel.postMessage({
+			type:'fsctl',
+			subtype:'read',
 			path:app.low.regalizeFilePath(path, true) || app.fileName
-		};
-		app.low.notifyToBackend('read', payload);
+		});
 
 		return undefined;
 	}),
