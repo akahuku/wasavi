@@ -233,7 +233,7 @@
         "description": "No previous search pattern."
     },
     "invalid_regex_pattern": {
-        "message": "不正な不正表現パターンです。",
+        "message": "不正な正規表現パターンです。",
         "description": "Invalid regex pattern."
     },
     "pattern_not_found_@0": {
@@ -725,107 +725,107 @@
         "description": "Top of history."
     },
     "not_a_authentication_task_@0": {
-        "message": "Not a authentication task: {0}",
+        "message": "認証タスクではありません: {0}",
         "description": "Not a authentication task: {0}"
     },
     "unknown_file_system_error": {
-        "message": "Unknown file system error",
+        "message": "未知のファイルシステムエラー",
         "description": "Unknown file system error"
     },
     "invalid_authentication_state_fat_@0": {
-        "message": "Invalid authentication state (fat): {0}",
+        "message": "認証の状態が不正 (fat): {0}",
         "description": "Invalid authentication state (fat): {0}"
     },
     "invalid_authentication_state_wts_@0": {
-        "message": "Invalid authentication state (wts): {0}",
+        "message": "認証の状態が不正 (wts): {0}",
         "description": "Invalid authentication state (wts): {0}"
     },
     "authentication_declined_@0": {
-        "message": "Authentication declined: {0}",
+        "message": "認証が拒否されました: {0}",
         "description": "Authentication declined: {0}"
     },
     "invalid_authorization_response": {
-        "message": "Invalid authorization response",
+        "message": "認証のレスポンスが不正",
         "description": "Invalid authorization response"
     },
     "csrf_token_not_matched": {
-        "message": "CSRF Token not matched",
+        "message": "CSRF トークンが合致しません",
         "description": "CSRF Token not matched"
     },
     "invalid_authentication_state_eca_@0": {
-        "message": "Invalid authentication state (eca): {0}",
+        "message": "認証の状態が不正 (eca): {0}",
         "description": "Invalid authentication state (eca): {0}"
     },
     "invalid_status_code_@0": {
-        "message": "Invalid status code #{0}",
+        "message": "状態コード #{0} は不正です",
         "description": "Invalid status code #{0}"
     },
     "invalid_content_response_": {
-        "message": "Invalid content response: ",
+        "message": "不正な内容レスポンス: ",
         "description": "Invalid content response: "
     },
     "invalid_authentication_state_fai_@0": {
-        "message": "Invalid authentication state (fai): {0}",
+        "message": "認証の状態が不正 (fai): {0}",
         "description": "Invalid authentication state (fai): {0}"
     },
     "user_unmatch": {
-        "message": "User unmatch.",
+        "message": "ユーザーが一致しません。",
         "description": "User unmatch."
     },
     "file_not_found": {
-        "message": "File not found.",
+        "message": "ファイルが見つかりません。",
         "description": "File not found."
     },
     "invalid_path": {
-        "message": "Invalid path.",
+        "message": "不正なパスです。",
         "description": "Invalid path."
     },
     "cannot_read_a_directory_content": {
-        "message": "Cannot read a directory content.",
+        "message": "ディレクトリの内容を読むことはできません。",
         "description": "Cannot read a directory content."
     },
     "unknown_mime_type_@0": {
-        "message": "Unknown MIME type: {0}",
+        "message": "未知の MIME タイプ: {0}",
         "description": "Unknown MIME type: {0}"
     },
     "failed_to_save_@0": {
-        "message": "Failed to save ({0})",
+        "message": "保存に失敗しました ({0})",
         "description": "Failed to save ({0})"
     },
     "failed_to_retrieve_directory_id": {
-        "message": "Failed to retrieve directory id.",
+        "message": "ディレクトリ ID の取得に失敗しました。",
         "description": "Failed to retrieve directory id."
     },
     "failed_to_retrieve_path_metadata": {
-        "message": "Failed to retrieve path metadata.",
+        "message": "パスのメタ情報の取得に失敗しました。",
         "description": "Failed to retrieve path metadata."
     },
     "unable_to_download": {
-        "message": "Unable to download.",
+        "message": "ダウンロードできません。",
         "description": "Unable to download."
     },
     "network_error": {
-        "message": "Network Error",
+        "message": "ネットワークエラー",
         "description": "Network Error"
     },
     "cannot_overwrite_a_directory": {
-        "message": "Cannot overwrite a directory.",
+        "message": "ディレクトリに上書きはできません。",
         "description": "Cannot overwrite a directory."
     },
     "cannot_retrieve_path_metadata": {
-        "message": "Cannot retrieve path metadata",
+        "message": "パスのメタ情報を取得できません",
         "description": "Cannot retrieve path metadata"
     },
     "cannot_emulate_mkdir_p": {
-        "message": "Cannot emulate mkdir -p",
+        "message": "mkdir -p をエミュレートできません",
         "description": "Cannot emulate mkdir -p"
     },
     "failed_to_retrieve_metadata_of_children": {
-        "message": "Failed to retrieve metadata of children.",
+        "message": "子供のメタ情報の取得に失敗しました。",
         "description": "Failed to retrieve metadata of children."
     },
     "failed_to_retrieve_root_metadata": {
-        "message": "Failed to retrieve root metadata.",
+        "message": "ルートのメタ情報の取得に失敗しました。",
         "description": "Failed to retrieve root metadata."
     }
 }
