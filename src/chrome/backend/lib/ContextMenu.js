@@ -110,7 +110,7 @@
 						this.label = that.getMenuLabel(MENU_EDIT_WITH_WASAVI);
 						break;
 					case 2:
-						that.sendRequest(that.getRequestRunPayload());
+						that.ext.postMessage(that.getRequestRunPayload());
 						break;
 					}
 				}

@@ -1232,7 +1232,7 @@ function handleIframeMessage (e) {
 			state:'complete',
 			meta:{
 				path:'',
-				charLength:targetElement.value.length
+				bytes:targetElement.value.length
 			},
 			content:targetElement.value
 		});
@@ -1246,7 +1246,7 @@ function handleIframeMessage (e) {
 			payload.state = 'complete';
 			payload.meta = {
 				path:req.value.path,
-				charLength:result
+				bytes:result
 			};
 		}
 		else if (Object.prototype.toString.call(value) == '[object Array]') {

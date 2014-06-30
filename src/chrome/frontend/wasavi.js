@@ -4488,7 +4488,7 @@ function handleBackendMessage (req) {
 			showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
 			break;
 		case 'complete':
-			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.charLength)));
+			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
 			notifyCommandComplete();
 			break;
 		}
@@ -4508,9 +4508,11 @@ function handleBackendMessage (req) {
 			read.handler = function (app, t, a) {
 				switch (this.name) {
 				case 'read':
-					return Wasavi.ExCommand.read(app, t, a, req.content, req.meta);
+					return Wasavi.ExCommand.read(
+						app, t, a, req.content, req.meta, req.status);
 				case 'edit':
-					return Wasavi.ExCommand.edit(app, t, a, req.content, req.meta);
+					return Wasavi.ExCommand.edit(
+						app, t, a, req.content, req.meta, req.status);
 				}
 				return _('Invalid read handler.');
 			};

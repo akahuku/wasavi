@@ -286,7 +286,7 @@
 	}
 
 	function handleHotkeyPress (hotkey) {
-		ext.sendRequest({type:'request-run'});
+		ext.postMessage({type:'request-run'});
 	}
 
 	/** {{{2 request handlers */
@@ -420,6 +420,7 @@
 	function handleFsCtl (command, data, sender, respond) {
 		var result = false;
 		var path = data.path || '';
+
 		switch (data.subtype) {
 		case 'reset':
 			ext.fileSystem.clearCredentials(data.name);
@@ -439,13 +440,10 @@
 
 		case 'chdir':
 			if (path == '') {
-				ext.sendRequest(
-					sender,
-					{
-						type:'fileio-chdir-response',
-						data:null
-					}
-				);
+				ext.postMessage(sender, {
+					type:'fileio-chdir-response',
+					data:null
+				});
 			}
 			else {
 				ext.fileSystem.ls(
@@ -457,14 +455,11 @@
 								error = data.error;
 								data = null;
 							}
-							ext.sendRequest(
-								sender,
-								{
-									type:'fileio-chdir-response',
-									data:data,
-									error:error
-								}
-							);
+							ext.postMessage(sender, {
+								type:'fileio-chdir-response',
+								data:data,
+								error:error
+							});
 						}
 					}
 				);
@@ -488,9 +483,7 @@
 
 		case 'write':
 			if (path != '') {
-				ext.fileSystem.write(
-					path, data.value, sender
-				);
+				ext.fileSystem.write(path, sender, data.value);
 			}
 			break;
 		}
@@ -518,9 +511,6 @@
 	/** {{{2 request handler entry */
 
 	function handleRequest (command, data, sender, respond) {
-		if (!command || !data) return;
-
-		var lateResponse = false;
 
 		function res (arg) {
 			if (respond) {
@@ -533,7 +523,10 @@
 		}
 
 		try {
+			var lateResponse = false;
 			var handler;
+
+			if (!command || !data) return;
 
 			switch (command) {
 			case 'init':				// FALLTHRU
@@ -557,6 +550,7 @@
 		}
 		finally {
 			!lateResponse && res();
+			return lateResponse;
 		}
 	}
 
