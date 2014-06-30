@@ -1,7 +1,5 @@
 /**
  * wasavi: vi clone implemented in javascript
- * =============================================================================
- *
  *
  * @author akahuku@gmail.com
  */
@@ -529,9 +527,7 @@
 				try {
 					respond(arg);
 				}
-				catch (e) {
-					;
-				}
+				catch (e) {}
 				respond = null;
 			}
 		}
