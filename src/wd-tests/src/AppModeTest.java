@@ -43,7 +43,7 @@ public class AppModeTest extends WasaviTest {
 	@Test
 	public void appModeRead404 () {
 		Wasavi.send(":r noexist.txt\n");
-		assertEquals("#1-1", "read: Cannot open \"dropbox:/noexist.txt\".", Wasavi.getAppModeStatusLine());
+		assertEquals("#1-1", "read: Cannot open \"/noexist.txt\".", Wasavi.getAppModeStatusLine());
 	}
 
 	@Test

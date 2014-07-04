@@ -69,6 +69,18 @@ $extensionInfo = array(
 		"message" => "Are you sure?",
 		"description" => ""
 	),
+	"option_readme" => array(
+		"message" => "README",
+		"description" => ""
+	),
+	"option_license" => array(
+		"message" => "LICENSE",
+		"description" => ""
+	),
+	"option_notice" => array(
+		"message" => "NOTICE",
+		"description" => ""
+	),
 	"edit_with_wasavi" => array(
 		"message" => "Edit with wasavi",
 		"description" => "Edit with wasavi"

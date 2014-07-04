@@ -12,6 +12,7 @@
 	<content src="backend/main.html" encoding="UTF-8" type="text/html" />
 
 	<access origin="https://dropbox.com/" subdomains="true" />
+	<access origin="https://google.com/" subdomains="true" />
 	<access origin="https://googleapis.com/" subdomains="true" />
 	<access origin="https://googleusercontent.com/" subdomains="true" />
 	<access origin="https://login.live.com/"/>

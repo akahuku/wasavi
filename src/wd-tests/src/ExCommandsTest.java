@@ -1640,7 +1640,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("ifoobar\u001b");
 		Wasavi.send(":writ test/foobar\n");
 		Wasavi.waitCommandCompletion();
-		assertEquals("#1-1", "Written: \"dropbox:/test/foobar\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
+		assertEquals("#1-1", "Written: \"/test/foobar\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
 	}
 
 	@Test

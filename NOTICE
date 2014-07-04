@@ -1,15 +1,15 @@
 wasavi
 ======
 
-copyright 2012 akahuku, akahuku@gmail.com
+copyright 2012-2014 akahuku, akahuku@gmail.com
 
 
 
 This product includes the following libraries:
 
-* jsOAuth - JavaScript OAuth library
+* kosian - Library for abstracting browser extension
 
-  <https://github.com/bytespider/jsOAuth>
+  <https://github.com/akahuku/kosian>
 
 * blowfish - Javascript Blowfish Library
 

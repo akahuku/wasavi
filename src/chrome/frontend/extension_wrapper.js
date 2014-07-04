@@ -131,13 +131,13 @@
 		},
 		getMessage: function (messageId) {},
 		setClipboard: function (data) {
-			this.postMessage({command:'set-clipboard', data:data});
+			this.postMessage({type:'set-clipboard', data:data});
 		},
 		getClipboard: function () {
 			var self = this;
 			var args = Array.prototype.slice.call(arguments);
 			var callback = args.shift();
-			this.postMessage({command:'get-clipboard'}, function (req) {
+			this.postMessage({type:'get-clipboard'}, function (req) {
 				self.clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
 				if (callback) {
 					args.unshift(self.clipboardData);
@@ -283,7 +283,7 @@
 					else {
 						port = ch.port1;
 						port.onmessage = handleMessage;
-						opera.extension.onmessage = null;
+						//opera.extension.onmessage = null;
 					}
 					ch = null;
 				};

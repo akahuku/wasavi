@@ -256,11 +256,12 @@
 		}
 		function handler (name1, name2) {
 			return function (data) {
+				data = ensureBinaryString(data);
 				if (name1 && name2) {
-					unicodeDictData[name1][name2] = ensureBinaryString(data);
+					unicodeDictData[name1][name2] = data;
 				}
 				else if (name1) {
-					unicodeDictData[name1] = ensureBinaryString(data);
+					unicodeDictData[name1] = data;
 				}
 			};
 		}
@@ -449,15 +450,18 @@
 				ext.fileSystem.ls(
 					path, sender,
 					{
+						onresponse: function () {
+							return true;
+						},
 						onload: function (data) {
-							var error = null;
-							if (data.error) {
-								error = data.error;
-								data = null;
-							}
 							ext.postMessage(sender, {
 								type:'fileio-chdir-response',
-								data:data,
+								data:data
+							});
+						},
+						onerror: function (error) {
+							ext.postMessage(sender, {
+								type:'fileio-chdir-response',
 								error:error
 							});
 						}

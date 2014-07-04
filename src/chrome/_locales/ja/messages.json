@@ -65,6 +65,18 @@
         "message": "本当にいいですか？",
         "description": "Are you sure?"
     },
+    "option_readme": {
+        "message": "README",
+        "description": "README"
+    },
+    "option_license": {
+        "message": "ライセンス",
+        "description": "LICENSE"
+    },
+    "option_notice": {
+        "message": "通知",
+        "description": "NOTICE"
+    },
     "edit_with_wasavi": {
         "message": "wasavi で編集",
         "description": "Edit with wasavi"

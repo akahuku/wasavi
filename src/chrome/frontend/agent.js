@@ -691,6 +691,7 @@ function handleOptionsPageLoaded (req) {
 
 	[
 		'title',
+		'readme', 'license', 'notice',
 		'exrc_head',
 		'target_elements_head',
 		'starting_type_head',

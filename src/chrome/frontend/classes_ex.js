@@ -816,10 +816,12 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	}
 };
 Wasavi.ExCommand.read = function (app, t, a, content, meta, status) {
-	if (status == 404) {
+	if (typeof content != 'string' || status == 404) {
 		return _('Cannot open "{0}".', meta.path);
 	}
-	if (content == '') return;
+	if (content == '') {
+		return _('"{0}" has no content.', meta.path);
+	}
 	content = content.replace(/\r\n|\r/g, '\n');
 	var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
 	t.setSelectionRange(new Wasavi.Position(startLine, 0));
