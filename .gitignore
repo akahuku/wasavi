@@ -21,3 +21,6 @@ src/unicode-tools/unihan/
 src/unit-tests/LineBreakTest.txt
 src/unit-tests/qunit.css
 src/unit-tests/qunit.js
+dist/wasavi_amo.xpi
+dist/wasavi_amo_beta.xpi
+dist/wasavi_chrome_web_store.zip

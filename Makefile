@@ -59,7 +59,7 @@ FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/fire
 # ========================================
 
 VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
-BINKEYS_PATH = $(EMBRYO_DIR)/$(CRYPT_DST_FILE)
+BINKEY_PATH = $(EMBRYO_DIR)/$(CRYPT_DST_FILE)
 
 CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
@@ -94,8 +94,8 @@ all: $(CHROME_TARGET_PATH) \
 clean:
 	rm -rf ./$(EMBRYO_DIR)
 
-$(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
-	tool/make-binkeys \
+$(BINKEY_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
+	tool/make-binkey \
 		--key=$(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
 		--src=$(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
 		--dst=$@
@@ -113,13 +113,13 @@ FORCE:
 #
 
 # wasavi.crx
-$(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
+$(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
 	rsync $(RSYNC_OPT) --exclude 'wasavi_frame_noscript.html' \
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
-	cp $(BINKEYS_PATH) $(CHROME_EMBRYO_SRC_PATH)
+	cp $(BINKEY_PATH) $(CHROME_EMBRYO_SRC_PATH)
 	rm -f $(CHROME_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
 
 #	update manifest
@@ -171,7 +171,7 @@ $(CHROME_MTIME_PATH): FORCE
 #
 
 # wasavi.oex
-$(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
+$(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
 	rsync $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
@@ -183,7 +183,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 		--update-url=$(OPERA_UPDATE_LOCATION)
 
 #	create binary consumer keys, and remove its json source
-	cp $(BINKEYS_PATH) $(OPERA_EMBRYO_SRC_PATH)
+	cp $(BINKEY_PATH) $(OPERA_EMBRYO_SRC_PATH)
 	rm -f $(OPERA_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
 
 #	create update description file
@@ -213,13 +213,13 @@ $(OPERA_MTIME_PATH): FORCE
 #
 
 # wasavi.nex
-$(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
+$(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
 	rsync $(RSYNC_OPT) --exclude='wasavi_frame_noscript.html' \
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
-	cp $(BINKEYS_PATH) $(BLINKOPERA_EMBRYO_SRC_PATH)
+	cp $(BINKEY_PATH) $(BLINKOPERA_EMBRYO_SRC_PATH)
 	rm -f $(BLINKOPERA_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
 
 #	update manifest
@@ -260,13 +260,13 @@ $(BLINKOPERA_MTIME_PATH): FORCE
 #
 
 # wasavi.xpi
-$(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
+$(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
 	rsync $(RSYNC_OPT) \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
-	cp $(BINKEYS_PATH) $(FIREFOX_EMBRYO_SRC_PATH)/data
+	cp $(BINKEY_PATH) $(FIREFOX_EMBRYO_SRC_PATH)/data
 	rm -f $(FIREFOX_EMBRYO_SRC_PATH)/data/$(CRYPT_SRC_FILE)*
 
 #	update package
