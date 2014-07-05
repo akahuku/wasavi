@@ -580,6 +580,12 @@ counter-increment:n -1; \
 } \
 #wasavi_editor.r > div.current ~ div:before { \
 counter-increment:n 1; \
+} \
+@-webkit-keyframes blink { 25% {opacity:0} 75% {opacity:1} } \
+@keyframes blink { 25% {opacity:0} 75% {opacity:1} } \
+.blink { \
+-webkit-animation:blink 1s linear infinite; \
+animation:blink 1s linear infinite; \
 }',
 
 		(function () {
@@ -1200,7 +1206,8 @@ function showMessage (message, emphasis, pseudoCursor, volatile_) {
 		indf.textContent = message;
 	}
 	if (pseudoCursor) {
-		var blink = indf.appendChild(document.createElement('blink'));
+		var blink = indf.appendChild(document.createElement('span'));
+		blink.className = 'blink';
 		blink.textContent = '\u2588';
 	}
 	if (message != '' && !volatile_) {
