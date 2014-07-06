@@ -2481,6 +2481,7 @@ function getLogicalColumn () {
 }
 function notifyToParent (eventName, payload) {
 	if (!extensionChannel) return;
+	if (WasaviExtensionWrapper.IS_TOP_FRAME) return;
 	payload || (payload = {});
 	payload.type = 'wasavi-' + eventName;
 	payload.internalId = targetElement.internalId;
@@ -4479,7 +4480,7 @@ function handleBackendMessage (req) {
 			showMessage(_.apply(null, req.error), true, false);
 			break;
 		}
-		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+		notifier.show(_('Obtaining access rights ({0})...', req.phase || '-'));
 		break;
 	case 'fileio-write-response':
 		if (req.error) {
