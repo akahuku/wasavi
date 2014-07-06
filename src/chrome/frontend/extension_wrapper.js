@@ -259,7 +259,6 @@
 		var theObj = this;
 		var onMessageHandler;
 		var port = null;
-		var internalId;
 
 		function handleMessage (e) {
 			if (e.data.type == 'opera-notify-tab-id') {
@@ -270,8 +269,8 @@
 		};
 
 		this.constructor = ExtensionWrapper;
-		this.internalId = internalId = this.getUniqueId();
 		this.runType = 'opera-extension';
+		this.internalId = this.getUniqueId();
 		this.sendRequest = function (data, callback) {
 			if (callback) {
 				var ch = new MessageChannel;

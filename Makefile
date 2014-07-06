@@ -12,7 +12,7 @@ ZIP := zip -qr9
 UNZIP := unzip
 
 RSYNC := rsync
-RSYNC_OPT := -rptL --delete \
+RSYNC_OPT = -rptLv --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
 	--exclude '.*' --exclude 'oldlib/' \
 	--exclude '$(CRYPT_SRC_FILE)*'
@@ -115,7 +115,7 @@ FORCE:
 # wasavi.crx
 $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
-	rsync $(RSYNC_OPT) --exclude 'wasavi_frame_noscript.html' \
+	$(RSYNC) $(RSYNC_OPT) --exclude 'wasavi_frame_noscript.html' \
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
@@ -173,7 +173,7 @@ $(CHROME_MTIME_PATH): FORCE
 # wasavi.oex
 $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
-	rsync $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
+	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
 #	update the manifest file
 	tool/update-opera-config \
@@ -215,7 +215,7 @@ $(OPERA_MTIME_PATH): FORCE
 # wasavi.nex
 $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
-	rsync $(RSYNC_OPT) --exclude='wasavi_frame_noscript.html' \
+	$(RSYNC) $(RSYNC_OPT) --exclude='wasavi_frame_noscript.html' \
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
@@ -262,7 +262,7 @@ $(BLINKOPERA_MTIME_PATH): FORCE
 # wasavi.xpi
 $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 #	copy all of sources to embryo dir
-	rsync $(RSYNC_OPT) \
+	$(RSYNC) $(RSYNC_OPT) \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	create binary consumer keys, and remove its json source
