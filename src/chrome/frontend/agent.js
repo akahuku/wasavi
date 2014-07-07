@@ -903,7 +903,7 @@ function handleAgentInitialized (req) {
 	}
 
 	devMode
-	&& WasaviExtensionWrapper.IS_TOP_FRAME
+	&& extension.isTopFrame
 	&& document.querySelector('textarea')
 	&& console.info(
 		'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));

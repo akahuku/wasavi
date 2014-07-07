@@ -762,7 +762,7 @@ Wasavi.ExCommand.write = function (app, t, a, isCommand, isAppend, path) {
 	if (isCommand) {
 		return _('Command redirection is not implemented.');
 	}
-	if (path == '' && WasaviExtensionWrapper.IS_TOP_FRAME) {
+	if (path == '' && app.extensionChannel.isTopFrame) {
 		return _('No file name.');
 	}
 	if (isAppend) {
@@ -834,7 +834,7 @@ Wasavi.ExCommand.read = function (app, t, a, content, meta, status) {
 };
 Wasavi.ExCommand.edit = function (app, t, a, content, meta, status) {
 	var charCount = content.length;
-	if (WasaviExtensionWrapper.IS_TOP_FRAME) {
+	if (app.extensionChannel.isTopFrame) {
 		app.fileName = meta.path;
 		document.title = /[^\/]+$/.exec(app.fileName)[0] + ' - wasavi';
 		var empty = [];
@@ -1087,7 +1087,7 @@ Wasavi.ExCommand.commands = [
 			a.initCommand = '';
 		}
 
-		if (WasaviExtensionWrapper.IS_TOP_FRAME) {
+		if (app.extensionChannel.isTopFrame) {
 			if (path == '' && app.fileName == '') {
 				return _('File name is empty.');
 			}
@@ -1118,7 +1118,7 @@ Wasavi.ExCommand.commands = [
 			if (!app.extensionChannel) {
 				return _('Extension system required.');
 			}
-			if (!WasaviExtensionWrapper.IS_TOP_FRAME) {
+			if (!app.extensionChannel.isTopFrame) {
 				return _('Only stand alone form can rename.');
 			}
 

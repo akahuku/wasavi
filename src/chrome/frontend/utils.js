@@ -329,6 +329,22 @@ function stacktrace () {
 function getObjectType (a) {
     return Object.prototype.toString.call(a).replace(/^\[object\s+|\]$/g, '');
 }
+function isObject (a) {
+	return getObjectType(a) == 'Object';
+}
+function isString (a) {
+	return getObjectType(a) == 'String';
+}
+function isNumber (a) {
+	return getObjectType(a) == 'Number';
+}
+function isBoolean (a) {
+	return getObjectType(a) == 'Boolean';
+}
+function isArray (a) {
+	// TODO: accept ducktyping?
+	return getObjectType(a) == 'Array';
+}
 function publish () {
 	if (arguments.length < 1) return;
 	var target = arguments[0];

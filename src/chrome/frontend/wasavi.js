@@ -965,7 +965,7 @@ function uninstall (save, implicit) {
 		delete targetElement.getAttribute;
 		delete targetElement.setAttribute;
 		targetElement.tabId = extensionChannel.tabId;
-		targetElement.isTopFrame = !!WasaviExtensionWrapper.IS_TOP_FRAME;
+		targetElement.isTopFrame = !!extensionChannel.isTopFrame;
 		targetElement.isImplicit = !!implicit;
 		targetElement.ros = config.dumpScript(true).join('\n');
 
@@ -2378,7 +2378,7 @@ function getFindRegex (src) {
 }
 function getFileNameString (full) {
 	var result = '';
-	if (extensionChannel && WasaviExtensionWrapper.IS_TOP_FRAME) {
+	if (extensionChannel && extensionChannel.isTopFrame) {
 		if (fileName == '') {
 			result = _('*Untitled*');
 		}
@@ -2481,7 +2481,7 @@ function getLogicalColumn () {
 }
 function notifyToParent (eventName, payload) {
 	if (!extensionChannel) return;
-	if (WasaviExtensionWrapper.IS_TOP_FRAME) return;
+	if (extensionChannel.isTopFrame) return;
 	payload || (payload = {});
 	payload.type = 'wasavi-' + eventName;
 	payload.internalId = targetElement.internalId;
@@ -4317,7 +4317,7 @@ function handleKeydown (e) {
 }
 function handleBeforeUnload (e) {
 	try {
-		if (!WasaviExtensionWrapper.IS_TOP_FRAME) return;
+		if (!extensionChannel.isTopFrame) return;
 		if (!config.vars.modified) return;
 	}
 	catch (ex) {
@@ -4465,10 +4465,10 @@ function handleBackendMessage (req) {
 			var item = req.items[i];
 			switch (item.key) {
 			case lineInputHistories.storageKey:
-				console.log('wasavi[update-storage]: ' + item.key);
+				lineInputHistories.load(null, item.value);
 				break;
 			case registers.storageKey:
-				console.log('wasavi[update-storage]: ' + item.key);
+				registers.load(null, item.value);
 				break;
 			}
 		}
@@ -7295,7 +7295,7 @@ if (global.WasaviExtensionWrapper
 		fstab = req.fstab;
 		version = req.version;
 		document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));
-		if (WasaviExtensionWrapper.IS_TOP_FRAME) {
+		if (extensionChannel.isTopFrame) {
 			run(function() {
 				!targetElement && install({
 					id:extensionChannel.name,

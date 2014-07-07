@@ -73,7 +73,7 @@
 
 	/** {{{2 utilities */
 
-	function broadcastStorageUpdate (keys, originTabId) {
+	function broadcastStorageUpdate (keys) {
 		if (storageUpdateTimer) {
 			ext.utils.clearTimeout(storageUpdateTimer);
 		}
@@ -85,13 +85,14 @@
 			};
 		});
 
-		storageUpdateTimer = ext.utils.setTimeout(function (originTabId) {
+		storageUpdateTimer = ext.utils.setTimeout(function () {
 			ext.broadcast({
 				type: 'update-storage',
 				items: storageUpdatePayload
-			}, originTabId);
+			});
 			storageUpdatePayload = {};
-		}, 1000 * 3, originTabId);
+			storageUpdateTimer = null;
+		}, 1000 * 3);
 	}
 
 	/** {{{2 returns frontend script list for firefox */
@@ -433,6 +434,9 @@
 				{
 					onload: function (data) {
 						respond({data: data.contents});
+					},
+					onerror: function (error) {
+						respond({data: null});
 					}
 				}
 			);
@@ -471,24 +475,27 @@
 			break;
 
 		case 'read':
-			if (path != '') {
-				ext.fileSystem.read(
-					path, sender,
-					{
-						onresponse: function (d) {
-							if (d) {
-								d.internalId = data.internalId;
-							}
-						}
+			if (path == '') break;
+			ext.fileSystem.read(
+				path, sender,
+				{
+					onresponse: function (d) {
+						d && (d.internalId = data.internalId);
 					}
-				);
-			}
+				}
+			);
 			break;
 
 		case 'write':
-			if (path != '') {
-				ext.fileSystem.write(path, sender, data.value);
-			}
+			if (path == '') break;
+			ext.fileSystem.write(
+				path, sender, data.value,
+				{
+					onresponse: function (d) {
+						d && (d.internalId = data.internalId);
+					}
+				}
+			);
 			break;
 		}
 
@@ -498,9 +505,7 @@
 	function handleTerminated (command, data, sender, respond) {
 		var payload = data.payload || {};
 
-		if ('url' in payload
-		&& 'nodePath' in payload
-		&& 'ros' in payload) {
+		if ('url' in payload && 'nodePath' in payload && 'ros' in payload) {
 			runtimeOverwriteSettings.set(
 				payload.url,
 				payload.nodePath,

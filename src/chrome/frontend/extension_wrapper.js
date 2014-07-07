@@ -90,6 +90,7 @@
 	function ExtensionWrapper () {}
 	ExtensionWrapper.prototype = {
 		get name () {return EXTENSION_NAME},
+		get isTopFrame () {return window.self == window.top},
 		internalId: '',
 		clipboardData: '',
 		setMessageListener: function (handler) {},
@@ -191,16 +192,6 @@
 		|| global.opera && global.opera.extension
 		|| IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_JETPACK;
-	ExtensionWrapper.IS_TOP_FRAME = (function () {
-		if (IS_GECKO) {
-			var result = false;
-			try { result = !!!window.frameElement; } catch (e) {}
-			return result;
-		}
-		else {
-			return window.self == window.top;
-		}
-	})();
 	ExtensionWrapper.urlInfo = new UrlInfo;
 
 	/**
@@ -434,6 +425,13 @@
 			'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
 			true, false
 		);
+		Object.defineProperty(this, 'isTopFrame', {
+			get: function () {
+				var result = false;
+				try { result = !!!window.frameElement; } catch (e) {}
+				return result;
+			}
+		});
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
 

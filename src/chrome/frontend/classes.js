@@ -736,27 +736,27 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 	var s;
 	var name;
 	var storageKey = 'wasavi_lineinput_histories';
+	var isLatest = false;
 
 	function serialize () {
 		return JSON.stringify(serializeGeneral({s:s}));
 	}
 	function restore (src) {
-		src = unserializeGeneral(src);
-		if (!src || !(src instanceof Object)) return;
+		if (isString(src)) {
+			src = unserializeGeneral(src);
+		}
+		if (!isObject(src)) return;
 
 		var tmp = {};
-		if ('s' in src && src.s instanceof Object) {
+		if (isObject(src.s)) {
 			src = src.s;
 			for (var na in src) {
-				if (!(na in src)) continue;;
-				if (!(src[na] instanceof Object)) continue;;
-				if (!(src[na].lines instanceof Array)) continue;;
-				if (typeof src[na].current != 'number') continue;
+				if (!isObject(src[na])) continue;
+				if (!isArray(src[na].lines)) continue;
+				if (!isNumber(src[na].current)) continue;
 
 				tmp[na] = {};
-				tmp[na].lines = src[na].lines.filter(function (s) {
-					return typeof s == 'string';
-				}).slice(-maxSize);
+				tmp[na].lines = src[na].lines.filter(isString).slice(-maxSize);
 				tmp[na].current = Math.min(Math.max(-1, Math.floor(src[na].current)), tmp[na].lines.length - 1);
 			}
 		}
@@ -764,17 +764,23 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 	}
 	function save () {
 		app.low.setLocalStorage(storageKey, serialize());
+		isLatest = true;
 	}
-	function load (callback) {
-		s = {};
-		names.forEach(function (na) {
-			s[na] = {lines:[], current:-1};
-		});
-		app.low.getLocalStorage(storageKey, function (value) {
+	function load (callback, value) {
+		if (isLatest) {
+			isLatest = false;
+			return;
+		}
+
+		function doLoad (value) {
 			!ignoreStorage && restore(value || '');
 			callback && callback();
 			callback = null;
-		});
+		}
+
+		s = {};
+		names.forEach(function (na) {s[na] = {lines:[], current:-1}});
+		value ? doLoad(value) : app.low.getLocalStorage(storageKey, doLoad);
 	}
 	function push (line) {
 		line || (line = '');
@@ -1824,21 +1830,24 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 	var storageKey = 'wasavi_registers';
 	var writableRegex = /^[1-9a-zA-Z@]$/;
 	var readableRegex = /^["1-9a-z@.:*\/\^]$/;
+	var isLatest = false;
 
 	function serialize () {
 		return JSON.stringify(serializeGeneral({unnamed:unnamed, named:named}));
 	}
 	function restore (src) {
-		src = unserializeGeneral(src);
-		if (!src || (!src instanceof Object)) return;
-		if (!('unnamed' in src)) return;
-		if (!('named' in src) || !(src.named instanceof Object)) return;
+		if (isString(src)) {
+			src = unserializeGeneral(src);
+		}
+		if (!isObject(src)) return;
+		if (!isObject(src.unnamed)) return;
+		if (!isObject(src.named)) return;
 
 		function doRestore (k, v) {
 			if (!isReadable(k)) return;
-			if (!v || !(v instanceof Object)) return;
-			if (!('isLineOrient' in v) || typeof v.isLineOrient != 'boolean') return;
-			if (!('data' in v) || typeof v.data != 'string') return;
+			if (!isObject(v)) return;
+			if (!isBoolean(v.isLineOrient)) return;
+			if (!isString(v.data)) return;
 
 			findItem(k).set(v.data, v.isLineOrient);
 		}
@@ -1850,15 +1859,23 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 	}
 	function save () {
 		app.low.setLocalStorage(storageKey, serialize());
+		isLatest = true;
 	}
-	function load (callback) {
-		unnamed = new RegisterItem();
-		named = {};
-		app.low.getLocalStorage(storageKey, function (value) {
+	function load (callback, value) {
+		if (isLatest) {
+			isLatest = false;
+			return;
+		}
+
+		function doLoad (value) {
 			!ignoreStorage && restore(value || '');
 			callback && callback();
 			callback = null;
-		});
+		}
+
+		unnamed = new RegisterItem();
+		named = {};
+		value ? doLoad(value) : app.low.getLocalStorage(storageKey, doLoad);
 	}
 	function isWritable (name) {
 		return writableRegex.test(name);
