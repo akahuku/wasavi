@@ -30,16 +30,16 @@
 
 (function (global) {
 	/* {{{1 consts */
-	const EXTENSION_NAME = 'wasavi';
-	const IS_GECKO =
+	var EXTENSION_NAME = 'wasavi';
+	var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	const IS_FX_JETPACK =
+	var IS_FX_JETPACK =
 		 typeof global.getInterface == 'function'
 		 && /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' '));
-	const EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
-	const EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	var EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
+	var EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	/* }}} */
 
 	/**
@@ -376,8 +376,8 @@
 	function FirefoxJetpackExtensionWrapper () {
 		ExtensionWrapper.apply(this, arguments);
 
-		const CALLBACK_SWEEP_MSECS = 1000 * 60 * 2;
-		const CALLBACK_TIMEOUT_MSECS = 1000 * 60;
+		var CALLBACK_SWEEP_MSECS = 1000 * 60 * 2;
+		var CALLBACK_TIMEOUT_MSECS = 1000 * 60;
 
 		var that = this;
 		var callbacks = {};

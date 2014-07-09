@@ -101,7 +101,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 		undo: function (app, t, isClusterMember) {
 			if (!this._ensureValidPosition(t, this.position)) {
-				app.devMode && console.error(this.toString() + '#undo: bad position!');
+				app.low.error(this.toString() + '#undo: bad position!');
 				return 0;
 			}
 
@@ -117,7 +117,7 @@ Wasavi.EditLogger = function (app, max) {
 			}
 
 			if (t.getSelection(ss, se) != this.data) {
-				app.devMode && console.error([
+				app.low.error([
 					this.toString() + '#undo: bad consistency!',
 					' position: ' + this.position,
 					'position2: ' + (this.position2 || '(N/A)'),
@@ -141,7 +141,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 		redo: function (app, t, isClusterMember) {
 			if (!this._ensureValidPositionForAppend(t, this.position)) {
-				app.devMode && console.error([
+				app.low.error([
 					this.toString() + '#redo: bad position!',
 					'this.position: ' + this.position,
 					'  t.rowLength: ' + t.rowLength
@@ -299,7 +299,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 		undo: function (app, t, isClusterMember) {
 			if (!this._ensureValidRow(t, this.position)) {
-				app.devMode && console.error(this.toString() + '#undo: bad row position!');
+				app.low.error(this.toString() + '#undo: bad row position!');
 				return 0;
 			}
 			var s = this;
@@ -316,7 +316,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 		redo: function (app, t, isClusterMember) {
 			if (!this._ensureValidRow(t, this.position)) {
-				app.devMode && console.error(this.toString() + '#redo: bad row position!');
+				app.low.error(this.toString() + '#redo: bad row position!');
 				return 0;
 			}
 			var s = this;
@@ -500,7 +500,7 @@ Wasavi.EditLogger = function (app, max) {
 					currentPosition = logs.length - 1;
 				}
 				cluster = null;
-				//app.devMode && console.log('*** editLogger dump ***\n' + logs.dump());
+				//app.low.log('*** editLogger dump ***\n' + logs.dump());
 			}
 		}
 		else {

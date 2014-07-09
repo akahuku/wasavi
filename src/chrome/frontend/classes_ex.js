@@ -1558,7 +1558,7 @@ Wasavi.ExCommand.commands = [
 		app.lastRegexFindCommand.setPattern('');
 		app.lastSubstituteInfo.clear();
 		app.low.requestShowMessage('Whassup?');
-		app.devMode && console.log([
+		app.low.log([
 			'*** undo info ***',
 			app.editLogger.dump(),
 			'item length: ' + app.editLogger.logLength,

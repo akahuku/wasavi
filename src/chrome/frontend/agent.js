@@ -34,11 +34,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.urlInfo.isExternal
 && (function (global) {
 
-const EXTENSION_SPECIFIER = 'data-texteditor-extension';
-const EXTENSION_CURRENT = 'data-texteditor-extension-current';
-const FULLSCREEN_MARGIN = 8;
-const MIN_WIDTH_PIXELS = 320;
-const ACCEPTABLE_TYPES = {
+var EXTENSION_SPECIFIER = 'data-texteditor-extension';
+var EXTENSION_CURRENT = 'data-texteditor-extension-current';
+var FULLSCREEN_MARGIN = 8;
+var MIN_WIDTH_PIXELS = 320;
+var ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
 	search:   'enableSearch',

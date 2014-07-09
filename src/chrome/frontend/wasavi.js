@@ -100,6 +100,9 @@
 		 * low level methods
 		 */
 		low:Object.freeze({
+			log:log,
+			info:info,
+			error:error,
 			getLocalStorage:getLocalStorage,
 			setLocalStorage:setLocalStorage,
 			isEditing:isEditing,
@@ -352,6 +355,15 @@ ExCommandExecutor.prototype = {
  * ----------------
  */
 
+function log () {
+	devMode && console.log('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+}
+function info () {
+	devMode && console.info('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+}
+function error () {
+	devMode && console.error('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+}
 function getLocalStorage (keyName, callback) {
 	if (extensionChannel) {
 		extensionChannel.postMessage({type:'get-storage', key:keyName}, function (res) {
@@ -2307,7 +2319,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			if (requestedState.notice.message) {
 				lastMessage = toNativeControl(requestedState.notice.message);
-				devMode && console.log(requestedState.notice.message);
+				log(requestedState.notice.message);
 			}
 			requestedState.notice = null;
 			result.needEmitEvent = true;
@@ -4295,7 +4307,7 @@ function handleKeydown (e) {
 				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
 				+ (clipboardReadingState ? 'clipboard reading' : '')
 				+ ')';
-			devMode && console.log(s);
+			log(s);
 			notifyKeydownEvent(e.code, e.fullIdentifier, s);
 		}
 		return;
@@ -4430,7 +4442,7 @@ function handleAgentMessage (e) {
 		return;
 	}
 	if (e.data.internalId !== targetElement.internalId) {
-		devMode && console.error('wasavi: GOT A INVALID INTERNAL ID.');
+		error('wasavi: GOT A INVALID INTERNAL ID.');
 		return;
 	}
 	handleBackendMessage(e.data.payload);
@@ -4489,7 +4501,7 @@ function handleBackendMessage (req) {
 		break;
 
 	default:
-		devMode && console.log('wasavi: got a unknown type message: ' + JSON.stringify(req, null, ' '));
+		log('wasavi: got a unknown type message: ' + JSON.stringify(req, null, ' '));
 	}
 }
 
