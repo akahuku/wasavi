@@ -4444,10 +4444,12 @@ function handleBackendMessage (req) {
 	case 'wasavi-got-initialized':
 		runExrc();
 		break;
+
 	case 'wasavi-relocate':
 		targetElement.rect = req.rect;
 		setGeometory();
 		break;
+
 	case 'wasavi-focus-me-response':
 		switch (state) {
 		case 'normal':
@@ -4480,73 +4482,14 @@ function handleBackendMessage (req) {
 			showMessage(_.apply(null, req.error), true, false);
 			break;
 		}
-		notifier.show(_('Obtaining access rights ({0})...', req.phase || '-'));
-		break;
-	case 'fileio-write-response':
-		if (req.error) {
-			showMessage(_.apply(null, req.error), true, false);
-			notifyCommandComplete();
-			break;
-		}
-		switch (req.state) {
-		case 'buffered':
-			showMessage(_('Buffered: {0}', req.path));
-			break;
-		case 'writing':
-			showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
-			break;
-		case 'complete':
-			showMessage(_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
-			notifyCommandComplete();
-			break;
-		}
-		break;
-	case 'fileio-read-response':
-		if (req.error) {
-			exCommandExecutor.stop();
-			showMessage(_.apply(null, req.error), true, false);
-			break;
-		}
-		switch (req.state) {
-		case 'reading':
-			showMessage(_('Reading ({0}%)', req.progress.toFixed(2)));
-			break;
-		case 'complete':
-			var read = exCommandExecutor.lastCommandObj.clone();
-			read.handler = function (app, t, a) {
-				switch (this.name) {
-				case 'read':
-					return Wasavi.ExCommand.read(
-						app, t, a, req.content, req.meta, req.status);
-				case 'edit':
-					return Wasavi.ExCommand.edit(
-						app, t, a, req.content, req.meta, req.status);
-				}
-				return _('Invalid read handler.');
-			};
-			cursor.update({visible:false});
-			exCommandExecutor.runAsyncNext(read, exCommandExecutor.lastCommandArg);
-			break;
-		}
-		break;
-	case 'fileio-chdir-response':
-		if (req.error) {
-			exCommandExecutor.stop();
-			showMessage(_.apply(null, req.error), true, false);
-			break;
-		}
-		var chdir = exCommandExecutor.lastCommandObj.clone();
-		chdir.handler = function (app, t, a) {
-			return Wasavi.ExCommand.chdir(app, t, a, req.data);
-		};
-		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
+		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
 		break;
 
 	case 'ping':
 		break;
 
 	default:
-		devMode && console.log('wasavi: got a unknown type message: ' + req.type);
+		devMode && console.log('wasavi: got a unknown type message: ' + JSON.stringify(req, null, ' '));
 	}
 }
 

@@ -29,19 +29,21 @@
 'use strict';
 
 (function (global) {
-	/*const*/var EXTENSION_NAME = 'wasavi';
-	/*const*/var IS_GECKO =
+	/* {{{1 consts */
+	const EXTENSION_NAME = 'wasavi';
+	const IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	/*const*/var IS_FX_JETPACK =
+	const IS_FX_JETPACK =
 		 typeof global.getInterface == 'function'
 		 && /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' '));
-	/*const*/var EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
-	/*const*/var EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	const EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
+	const EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	/* }}} */
 
 	/**
-	 * url information class
+	 * {{{1 url information class
 	 * ----------------
 	 */
 
@@ -81,42 +83,54 @@
 			}
 		}
 	};
+	/* }}} */
 
 	/**
-	 * extension wrapper base class
+	 * {{{1 extension wrapper base class
 	 * ----------------
 	 */
 
-	function ExtensionWrapper () {}
+	function ExtensionWrapper () {
+		this.internalId = this.getUniqueId();
+		this.requestNumber = 0;
+		this.clipboardData = '';
+		this.preservedCallbacks = {};
+	}
 	ExtensionWrapper.prototype = {
 		get name () {return EXTENSION_NAME},
 		get isTopFrame () {return window.self == window.top},
-		internalId: '',
-		clipboardData: '',
-		setMessageListener: function (handler) {},
-		sendRequest: function (data, callback) {},
-		postMessage: function (data, callback) {
-			var command;
+		postMessage: function (data, callback, preserved) {
+			var type;
+			var requestNumber = this.getNewRequestNumber();
 
 			data || (data = {});
 
 			if ('type' in data) {
-				command = data.type;
+				type = data.type;
 				delete data.type;
 			}
 
-			this.sendRequest({
-				command:command || 'unknown-command',
+			if (callback && preserved) {
+				this.preservedCallbacks[requestNumber] = callback;
+			}
+
+			this.doPostMessage({
+				type:type || 'unknown-command',
 				tabId:this.tabId,
 				internalId:this.internalId,
+				requestNumber:requestNumber,
 				data:data
-			}, callback);
+			}, callback, preserved);
+
+			return requestNumber;
 		},
-		connect: function (command, callback) {
+		doPostMessage: function (data, callback, preserved) {},
+		connect: function (type, callback) {
 			this.doConnect();
-			this.sendRequest({
-				command:command || 'init',
+			this.doPostMessage({
+				type:type || 'init',
 				internalId:this.internalId,
+				requestNumber:this.getNewRequestNumber(),
 				data:{url:window.location.href}
 			}, callback);
 		},
@@ -125,10 +139,18 @@
 			this.doDisconnect();
 		},
 		doDisconnect: function () {},
+		setMessageListener: function (handler) {},
+		removeCallback: function (id) {
+			delete this.preservedCallbacks[id];
+		},
 		getUniqueId: function () {
 			return this.name
 				+ '_' + Date.now()
 				+ '_' + Math.floor(Math.random() * 0x10000);
+		},
+		getNewRequestNumber: function () {
+			this.requestNumber = (this.requestNumber + 1) & 0xffff;
+			return this.requestNumber;
 		},
 		getMessage: function (messageId) {},
 		setClipboard: function (data) {
@@ -173,18 +195,11 @@
 	};
 
 	ExtensionWrapper.create = function () {
-		if (window.chrome) {
-			return new ChromeExtensionWrapper;
-		}
-		else if (window.opera) {
-			return new OperaExtensionWrapper;
-		}
-		else if (IS_FX_JETPACK) {
-			return new FirefoxJetpackExtensionWrapper;
-		}
+		if (window.chrome) return new ChromeExtensionWrapper;
+		if (window.opera)  return new OperaExtensionWrapper;
+		if (IS_FX_JETPACK) return new FirefoxJetpackExtensionWrapper;
 		return new ExtensionWrapper;
 	};
-
 	ExtensionWrapper.IS_GECKO = IS_GECKO;
 	ExtensionWrapper.IS_FX_JETPACK = IS_FX_JETPACK;
 	ExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION =
@@ -193,33 +208,35 @@
 		|| IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.urlInfo = new UrlInfo;
+	/* }}} */
 
 	/**
-	 * extension wrapper class for chrome
+	 * {{{1 extension wrapper class for chrome
 	 * ----------------
 	 */
 
 	function ChromeExtensionWrapper () {
-		var extensionId = chrome.runtime.id;
-		var theObj = this;
+		ExtensionWrapper.apply(this, arguments);
+
+		var that = this;
 		var onMessageHandler;
 
 		function handleMessage (req) {
-			onMessageHandler && onMessageHandler(req);
+			if ('requestNumber' in req
+			&& req.requestNumber in that.preservedCallbacks) {
+				that.preservedCallbacks[req.requestNumber](req);
+			}
+			else {
+				onMessageHandler && onMessageHandler(req);
+			}
 		}
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'chrome-extension';
-		this.internalId = this.getUniqueId();
-		this.sendRequest = function (data, callback) {
-			callback ? chrome.runtime.sendMessage(data, callback) :
-					   chrome.runtime.sendMessage(data);
-		};
-		this.setMessageListener = function (handler) {
-			onMessageHandler = handler;
-		};
-		this.getMessage = function (messageId) {
-			return chrome.i18n.getMessage(messageId);
+		this.doPostMessage = function (data, callback, preserved) {
+			callback && !preserved ?
+				chrome.runtime.sendMessage(data, callback) :
+				chrome.runtime.sendMessage(data);
 		};
 		this.doConnect = function () {
 			chrome.extension.onRequest.addListener(handleMessage);
@@ -228,42 +245,58 @@
 			onMessageHandler = null;
 			chrome.extension.onRequest.removeListener(handleMessage);
 		};
-		this.urlInfo = new UrlInfo(
-			'chrome-extension://' + extensionId + '/options.html',
-			'chrome-extension://' + extensionId + '/wasavi_frame.html',
-			true, true
-		);
+		this.setMessageListener = function (handler) {
+			onMessageHandler = handler;
+		};
+		this.getMessage = function (messageId) {
+			return chrome.i18n.getMessage(messageId);
+		};
 		this.getExtensionFileURL = function (path, callback) {
-			if (!callback) return;
-			callback(chrome.runtime.getURL(path));
+			callback && callback(chrome.runtime.getURL(path));
+		};
+		this.urlInfo = new function () {
+			var extensionId = chrome.runtime.id;
+			return new UrlInfo(
+				'chrome-extension://' + extensionId + '/options.html',
+				'chrome-extension://' + extensionId + '/wasavi_frame.html',
+				true, true
+			);
 		};
 	}
 	ChromeExtensionWrapper.prototype = ExtensionWrapper.prototype;
+	/* }}} */
 
 	/**
-	 * extension wrapper class for opera
+	 * {{{1 extension wrapper class for opera
 	 * ----------------
 	 */
 
 	function OperaExtensionWrapper () {
-		var extensionId = widget.preferences['widget-id'];
-		var theObj = this;
+		ExtensionWrapper.apply(this, arguments);
+
+		var that = this;
 		var onMessageHandler;
 		var port = null;
 
 		function handleMessage (e) {
-			if (e.data.type == 'opera-notify-tab-id') {
-				theObj.tabId = e.data.tabId;
+			var req = e.data;
+			if (req.type == 'opera-notify-tab-id') {
+				that.tabId = req.tabId;
 				return;
 			}
-			onMessageHandler && onMessageHandler(e.data);
+			if ('requestNumber' in req
+			&& req.requestNumber in that.preservedCallbacks) {
+				that.preservedCallbacks[req.requestNumber](req);
+			}
+			else {
+				onMessageHandler && onMessageHandler(req);
+			}
 		};
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'opera-extension';
-		this.internalId = this.getUniqueId();
-		this.sendRequest = function (data, callback) {
-			if (callback) {
+		this.doPostMessage = function (data, callback, preserved) {
+			if (callback && !preserved) {
 				var ch = new MessageChannel;
 				ch.port1.onmessage = function (e) {
 					callback && callback(e.data);
@@ -289,9 +322,6 @@
 				}
 			}
 		};
-		this.setMessageListener = function (handler) {
-			onMessageHandler = handler;
-		};
 		this.doConnect = function () {
 			opera.extension.onmessage = handleMessage;
 		};
@@ -303,11 +333,9 @@
 				this.port = null;
 			}
 		};
-		this.urlInfo = new UrlInfo(
-			'widget://' + extensionId + '/options.html',
-			'widget://' + extensionId + '/wasavi_frame.html',
-			false, false
-		);
+		this.setMessageListener = function (handler) {
+			onMessageHandler = handler;
+		};
 		this.getExtensionFileURL = function (path, callback) {
 			if (!callback) return;
 
@@ -328,29 +356,37 @@
 			};
 			r.readAsDataURL(file);
 		};
+		this.urlInfo = new function () {
+			var extensionId = widget.preferences['widget-id'];
+			return new UrlInfo(
+				'widget://' + extensionId + '/options.html',
+				'widget://' + extensionId + '/wasavi_frame.html',
+				false, false
+			);
+		};
 	}
 	OperaExtensionWrapper.prototype = ExtensionWrapper.prototype;
+	/* }}} */
 
 	/**
-	 * extension wrapper class for firefox (Add-on SDK)
+	 * {{{1 extension wrapper class for firefox (Add-on SDK)
 	 * ----------------
 	 */
 
 	function FirefoxJetpackExtensionWrapper () {
-		var extensionId = self.options.extensionId;
-		var extensionHostname = extensionId
-			.toLowerCase()
-			.replace(/@/g, '-at-')
-			.replace(/\./g, '-dot-');
-		var theObj = this;
-		var messageId = 0;
+		ExtensionWrapper.apply(this, arguments);
+
+		const CALLBACK_SWEEP_MSECS = 1000 * 60 * 2;
+		const CALLBACK_TIMEOUT_MSECS = 1000 * 60;
+
+		var that = this;
 		var callbacks = {};
 		var onMessageHandler;
 		var sweepTimer;
 
 		function MessageCallbackQueueItem (callback) {
 			this.callback = callback;
-			this.time = +new Date;
+			this.time = Date.now();
 		}
 		MessageCallbackQueueItem.prototype = {
 			toString:function () {
@@ -364,23 +400,18 @@
 			}
 		};
 
-		function getNewMessageId () {
-			messageId = (messageId + 1) & 0xffff;
-			return messageId;
-		}
-
 		function handleMessage (data) {
-			var now = +new Date;
+			var now = Date.now();
 			var callbacksCurrent = callbacks;
 			var callbacksNext = {};
 
 			callbacks = {};
 
 			for (var i in callbacksCurrent) {
-				if (data && data.messageId - i == 0) {
+				if (data && data.callbackNumber - i == 0) {
 					callbacksCurrent[i].run(data.payload);
 				}
-				else if (now - callbacksCurrent[i].time < 60 * 1000) {
+				else if (now - callbacksCurrent[i].time < CALLBACK_TIMEOUT_MSECS) {
 					callbacksNext[i] = callbacksCurrent[i];
 				}
 			}
@@ -391,40 +422,52 @@
 
 		this.constructor = ExtensionWrapper;
 		this.runType = 'firefox-jetpack-extension';
-		this.internalId = this.getUniqueId();
-		this.sendRequest = function (data, callback) {
-			if (callback) {
-				var id = getNewMessageId();
+		this.doPostMessage = function (data, callback, preserved) {
+			if (callback && !preserved) {
+				var id = data.requestNumber;
 				callbacks[id] = new MessageCallbackQueueItem(callback);
-				data.messageId = id;
+				data.callbackNumber = id;
 			}
 
 			self.postMessage(data);
 		};
-		this.setMessageListener = function (handler) {
-			onMessageHandler = handler;
-		};
 		this.doConnect = function () {
 			self.on('message', function (data) {
-				if ('messageId' in data) {
+				var payload = data.payload;
+
+				if ('requestNumber' in payload
+				&& payload.requestNumber in that.preservedCallbacks) {
+					that.preservedCallbacks[payload.requestNumber](payload);
+				}
+				else if ('callbackNumber' in data) {
 					handleMessage(data);
 				}
 				else {
-					onMessageHandler && onMessageHandler(data.payload);
+					onMessageHandler && onMessageHandler(payload);
 				}
 			});
-			sweepTimer = setInterval(handleMessage, 1000 * 60 * 2);
+			sweepTimer = setInterval(handleMessage, CALLBACK_SWEEP_MSECS);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
 			self.on('message', null);
 			clearInterval(sweepTimer);
 		};
-		this.urlInfo = new UrlInfo(
-			'resource://' + extensionHostname + '/wasavi/data/options.html',
-			'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
-			true, false
-		);
+		this.setMessageListener = function (handler) {
+			onMessageHandler = handler;
+		};
+		this.urlInfo = new function () {
+			var extensionId = self.options.extensionId;
+			var extensionHostname = extensionId
+				.toLowerCase()
+				.replace(/@/g, '-at-')
+				.replace(/\./g, '-dot-');
+			return new UrlInfo(
+				'resource://' + extensionHostname + '/wasavi/data/options.html',
+				'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
+				true, false
+			);
+		};
 		Object.defineProperty(this, 'isTopFrame', {
 			get: function () {
 				var result = false;
@@ -434,11 +477,13 @@
 		});
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
+	/* }}} */
 
-	//
+	/* {{{1 bootstrap */
 	ExtensionWrapper.urlInfo.isExternal &&
 		document.documentElement.setAttribute('data-wasavi-present', 1);
 	global.WasaviExtensionWrapper = ExtensionWrapper;
+	/* }}} */
 
 })(this);
 

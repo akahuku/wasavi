@@ -255,7 +255,7 @@ Wasavi.Bell = function (app, loadCallback) {
 		}
 
 		if (app.extensionChannel) {
-			app.extensionChannel.postMessage({type:'bell', file:'sounds/' + src + '.txt'}, function (res) {
+			app.extensionChannel.postMessage({type:'request-bell', file:'sounds/' + src + '.txt'}, function (res) {
 				if (res && res.data != '') {
 					a.src = prefix + res.data;
 					enabled = true;

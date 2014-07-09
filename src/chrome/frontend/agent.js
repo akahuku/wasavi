@@ -34,11 +34,11 @@ typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.urlInfo.isExternal
 && (function (global) {
 
-/*const*/var EXTENSION_SPECIFIER = 'data-texteditor-extension';
-/*const*/var EXTENSION_CURRENT = 'data-texteditor-extension-current';
-/*const*/var FULLSCREEN_MARGIN = 8;
-/*const*/var MIN_WIDTH_PIXELS = 320;
-/*const*/var ACCEPTABLE_TYPES = {
+const EXTENSION_SPECIFIER = 'data-texteditor-extension';
+const EXTENSION_CURRENT = 'data-texteditor-extension-current';
+const FULLSCREEN_MARGIN = 8;
+const MIN_WIDTH_PIXELS = 320;
+const ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
 	search:   'enableSearch',
@@ -50,7 +50,8 @@ typeof WasaviExtensionWrapper != 'undefined'
 };
 
 var extension;
-
+var isTestFrame;
+var isOptionsPage;
 var enableList;
 var exrc;
 var shortcut;
@@ -62,7 +63,6 @@ var devMode;
 var targetElement;
 var wasaviFrame;
 var extraHeight;
-var isTestFrame;
 var isFullscreen;
 var targetElementResizedTimer;
 var wasaviFrameTimeoutTimer;
@@ -841,14 +841,14 @@ function handleOptionsSave () {
 }
 
 /**
- * init button handler
+ * reset button handler
  * ----------------
  */
 
 function handleOptionsInit () {
 	var message = document.getElementById('opt-init-confirm').textContent;
 	window.confirm(message) && extension.postMessage(
-		{type:'init-options'},
+		{type:'reset-options'},
 		function () {
 			location.reload();
 		}
@@ -891,9 +891,7 @@ function matchWithShortcut (e) {
  */
 
 function handleAgentInitialized (req) {
-	isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
-
-	if (window.location.href == extension.urlInfo.optionsUrl) {
+	if (isOptionsPage) {
 		handleOptionsPageLoaded(req);
 	}
 
@@ -1011,7 +1009,7 @@ doc.addEventListener('WasaviRequestSetContent', function (e) { \
  */
 
 function handleRequestLaunch () {
-	if (wasaviFrame || targetElement) return;
+	if (wasaviFrame || targetElement || !enableList) return;
 	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
 	var target = document.activeElement;
@@ -1369,6 +1367,8 @@ function handleConnect (req) {
  */
 
 extension = WasaviExtensionWrapper.create();
+isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
+isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
 if (WasaviExtensionWrapper.HOTKEY_ENABLED) {
 	createPageAgent(false);
@@ -1382,7 +1382,11 @@ extension.setMessageListener(handleBackendMessage);
 window.addEventListener('message', handleIframeMessage, false);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
-extension.connect('init-agent', handleConnect);
+
+extension.connect(
+	isOptionsPage ? 'init-options' : 'init-agent',
+	handleConnect
+);
 
 })(this);
 

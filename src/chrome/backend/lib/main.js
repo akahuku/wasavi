@@ -294,9 +294,8 @@
 	/** {{{2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
-		var isInit = command == 'init';
+		var isInit = command.type == 'init';
 		respond({
-			command: 'init-response',
 			extensionId: ext.id,
 			tabId: sender,
 			version: ext.version,
@@ -315,7 +314,8 @@
 			fontFamily: ext.storage.getItem('fontFamily'),
 			quickActivation: ext.storage.getItem('quickActivation') == '1',
 
-			messageCatalog: ext.messageCatalog,
+			messageCatalog: command.type != 'init-agent' ?
+				ext.messageCatalog : null,
 			wasaviFrame: isInit ? wasaviFrame : null,
 			fstab: isInit ? ext.fileSystem.getInfo() : null,
 			unicodeDictData: isInit ? unicodeDictData : null,
@@ -324,7 +324,7 @@
 		payload = null;
 	}
 
-	function handleInitOptions (command, data, sender, respond) {
+	function handleResetOptions (command, data, sender, respond) {
 		ext.storage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
@@ -387,7 +387,7 @@
 		}
 	}
 
-	function handleBell (command, data, sender, respond) {
+	function handleRequestBell (command, data, sender, respond) {
 		if ('file' in data) {
 			ext.resourceLoader.get(data.file, function (data) {
 				respond({
@@ -397,7 +397,7 @@
 		}
 	}
 
-	function handleOpenOptionsPage (command, data, sender, respond) {
+	function handleOpenOptions (command, data, sender, respond) {
 		ext.openTabWithFile('options.html');
 	}
 
@@ -480,7 +480,11 @@
 				path, sender,
 				{
 					onresponse: function (d) {
-						d && (d.internalId = data.internalId);
+						if (!d) return;
+						d.internalId = command.internalId;
+						if (d.type == 'fileio-read-response') {
+							d.requestNumber = command.requestNumber;
+						}
 					}
 				}
 			);
@@ -492,7 +496,11 @@
 				path, sender, data.value,
 				{
 					onresponse: function (d) {
-						d && (d.internalId = data.internalId);
+						if (!d) return;
+						d.internalId = command.internalId;
+						if (d.type == 'fileio-write-response') {
+							d.requestNumber = command.requestNumber;
+						}
 					}
 				}
 			);
@@ -519,6 +527,23 @@
 
 	/** {{{2 request handler entry */
 
+	var commandMap = {
+		'init-agent':			handleInit,
+		'init-options':			handleInit,
+		'init':					handleInit,
+		'get-storage':			handleGetStorage,
+		'set-storage':			handleSetStorage,
+		'push-payload':			handlePushPayload,
+		'request-wasavi-frame':	handleRequestWasaviFrame,
+		'request-bell':			handleRequestBell,
+		'set-clipboard':		handleSetClipboard,
+		'get-clipboard':		handleGetClipboard,
+		'reset-options':		handleResetOptions,
+		'open-options':			handleOpenOptions,
+		'fsctl':				handleFsCtl,
+		'terminated':			handleTerminated
+	};
+
 	function handleRequest (command, data, sender, respond) {
 
 		function res (arg) {
@@ -533,28 +558,12 @@
 
 		try {
 			var lateResponse = false;
-			var handler;
 
-			if (!command || !data) return;
-
-			switch (command) {
-			case 'init':				// FALLTHRU
-			case 'init-agent':			handler = handleInit; break;
-			case 'init-options':		handler = handleInitOptions; break;
-			case 'get-storage':			handler = handleGetStorage; break;
-			case 'set-storage':			handler = handleSetStorage; break;
-			case 'bell':				handler = handleBell; break;
-			case 'open-options-page':	handler = handleOpenOptionsPage; break;
-			case 'set-clipboard':		handler = handleSetClipboard; break;
-			case 'get-clipboard':		handler = handleGetClipboard; break;
-			case 'push-payload':		handler = handlePushPayload; break;
-			case 'request-wasavi-frame':handler = handleRequestWasaviFrame; break;
-			case 'fsctl':				handler = handleFsCtl; break;
-			case 'terminated':			handler = handleTerminated; break;
-			}
-
-			if (handler) {
-				lateResponse = handler(command, data, sender, res);
+			if (command && data) {
+				var handler = commandMap[command.type];
+				if (handler) {
+					lateResponse = handler(command, data, sender, res);
+				}
 			}
 		}
 		finally {
@@ -576,7 +585,13 @@
 		initUnicodeDictData();
 
 		ext.receive(handleRequest);
-		ext.isDev && console.info('wasavi background: running.');
+		ext.isDev && console.info(
+			'wasavi backend: running with following filesystems: ' +
+			ext.fileSystem.getInfo()
+				.filter(function (f) {return f.enabled})
+				.map(function (f) {return f.name})
+				.join(', ')
+		);
 	}
 
 	global.addEventListener ?
