@@ -38,12 +38,28 @@ Wasavi.EditLogger = function (app, max) {
 	EditLogItemBase.prototype = {
 		type: 'Base',
 		_init: function (p, d) {
-			if (p != undefined) this.position = p.clone();
-			if (d != undefined) this.data = d.replace(
-				// /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, function (a) {
-				/[\u0000-\u0008\u000b-\u001f\u007f]/g, function (a) {
-					return toVisibleControl(a.charCodeAt(0));
-				});
+			if (p != undefined) {
+				this.position = p.clone();
+			}
+
+			if (d != undefined) {
+				// aaabbb^H^H^Hccc -> aaaccc
+				var re;
+				while ((re = /[^\u0008]\u0008/.exec(d))) {
+					d = d.substring(0, re.index)
+						+ d.substring(re.index + re[0].length);
+				}
+
+				// convert control chars
+				d = d.replace(
+					/[\u0000-\u0008\u000b-\u001f\u007f]/g,
+					function (a) {
+						return toVisibleControl(a.charCodeAt(0));
+					}
+				);
+
+				this.data = d;
+			}
 		},
 		_dump: function (depth) {
 			return multiply(' ', depth) +
@@ -475,37 +491,36 @@ Wasavi.EditLogger = function (app, max) {
 		return self;
 	}
 	function write (type) {
-		var item;
-		if (cluster && pool[type]) {
-			var args = Array.prototype.slice.call(arguments, 1);
-			item = new pool[type];
-			item.init.apply(item, args);
-			cluster.push(item);
-		}
-		else {
+		if (!cluster || !pool[type]) {
 			throw new Error('EditLogger: invalid undo item type');
 		}
+
+		var item = new pool[type];
+		item.init.apply(item, Array.prototype.slice.call(arguments, 1));
+		cluster.push(item);
+		//console.log('undo item pushed:' + item.dump());
+
 		return item;
 	}
 	function close () {
-		if (cluster) {
-			if (--cluster.nestLevel < 0) {
-				var tag = cluster.tag;
-				var representer = cluster.representer;
-				if (representer) {
-					representer.tag = tag;
-					logs.items.length = currentPosition + 1;
-					logs.push(representer);
-					logs.trim(max);
-					currentPosition = logs.length - 1;
-				}
-				cluster = null;
-				//app.low.log('*** editLogger dump ***\n' + logs.dump());
-			}
-		}
-		else {
+		if (!cluster) {
 			throw new Error('EditLogger: edit logger doesn\'t open');
 		}
+
+		if (--cluster.nestLevel < 0) {
+			var tag = cluster.tag;
+			var representer = cluster.representer;
+			if (representer) {
+				representer.tag = tag;
+				logs.items.length = currentPosition + 1;
+				logs.push(representer);
+				logs.trim(max);
+				currentPosition = logs.length - 1;
+			}
+			cluster = null;
+			//app.low.log('*** editLogger dump ***\n', logs.dump());
+		}
+
 		return self;
 	}
 	function undo () {

@@ -230,7 +230,12 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			case 'r':
 				return (function (v) {
 					return function () {
-						return app.low.getFindRegex(v.nativeValue);
+						return app.low.getFindRegex({
+							pattern: v.nativeValue,
+							csOverride: '',
+							globalOverride: '',
+							multilineOverride: ''
+						});
 					}
 				})(this);
 			default:
@@ -3574,7 +3579,7 @@ Wasavi.InputHandler.prototype = {
 			result = result.replace(/\u0016[\s\S]|[\s\S]/g, function (a) {
 				return a.charAt(a.length == 2 ? 1 : 0);
 			});
-			result = result.replace(/[\u0008\u007f]/g, '');
+			//result = result.replace(/[\u0008\u007f]/g, '');
 			return result;
 		}
 		var s;

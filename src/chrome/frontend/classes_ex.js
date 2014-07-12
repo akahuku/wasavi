@@ -815,36 +815,71 @@ Wasavi.ExCommand.chdirCore = function (app, t, a, data) {
 Wasavi.ExCommand.commands = [
 	new Wasavi.ExCommand('abbreviate', 'ab', 'wN', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
-			var maxWidth = 0;
-			var count = 0;
+			var MIN_WIDTH = 3;
+			var PAD_WIDTH = 4;
+
+			var maxWidth = MIN_WIDTH;
+			var list = [];
+
 			for (var i in ab) {
-				if (i.length > maxWidth) {
-					maxWidth = i.length;
+				var tmp = toVisibleString(i);
+				list.push([tmp, i]);
+				if (tmp.length > maxWidth) {
+					maxWidth = tmp.length;
 				}
-				count++;
 			}
-			if (count) {
-				var list = [_('*** abbreviations ***')];
-				for (var i in ab) {
-					list.push(
-						i + multiply(' ', maxWidth - i.length) +
-						'\t' + toVisibleString(app.abbrevs[i])
-					);
-				}
-				list.sort();
+			if (list.length) {
+				list = list.map(function (l) {
+					return l[0] +
+						multiply(' ', maxWidth - l[0].length + PAD_WIDTH) +
+						toVisibleString(app.abbrevs[l[1]]);
+				}).sort();
+
+				list.unshift(
+					_('*** abbreviations ***'),
+
+					'LHS' +
+					multiply(' ', maxWidth - MIN_WIDTH + PAD_WIDTH) +
+					'RHS',
+
+					multiply('-', MIN_WIDTH) +
+					multiply(' ', maxWidth - MIN_WIDTH + PAD_WIDTH) +
+					multiply('-', MIN_WIDTH));
+
 				app.backlog.push(list);
 			}
 			else {
 				app.backlog.push(_('No abbreviations are defined.'));
 			}
 		}
-		switch (a.argv.length) {
+		function parseArgs (s) {
+			var result = [];
+
+			while ((s = s.replace(/^\s+/, '')) != '') {
+				if (result.length == 2) {
+					result.push(s);
+					s = '';
+				}
+				else {
+					var re = /(?:\u0016.|\S)*/.exec(s);
+					result.push(re[0]);
+					s = s.substring(re[0].length);
+				}
+			}
+
+			result.shift();
+			return result;
+		}
+
+		var argv = parseArgs(a.args);
+
+		switch (argv.length) {
 		case 0:
 			dispAbbrev(app.abbrevs);
 			break;
 
 		case 1:
-			var lhs = a.argv[0];
+			var lhs = argv[0];
 			if (lhs == '[clear]') {
 				app.abbrevs.clear();
 			}
@@ -858,12 +893,12 @@ Wasavi.ExCommand.commands = [
 			break;
 
 		default:
-			var lhs = a.argv[0];
-			var rhs = a.argv[1];
+			var lhs = argv[0];
+			var rhs = argv[1];
 			if (!app.config.vars.iskeyword.test(lhs.substr(-1))) {
 				return _('The keyword of abbreviation must end with a word character.');
 			}
-			app.abbrevs[lhs] = rhs;
+			app.abbrevs[lhs] = app.keyManager.insertFnKeyHeader(rhs);
 			break;
 		}
 	}),

@@ -1819,42 +1819,65 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		if (inputHandler.text.length < 2) return;
 		target = inputHandler.text.substring(0, inputHandler.text.length - 1);
 		last = inputHandler.text.substr(-1);
-		if (!(regex.test(target.substr(-1)) && !regex.test(last))) return;
+		if (!regex.test(target.substr(-1))) return;
+		if (regex.test(last)) return;
 	}
 
-	for (var i in abbrevs) {
-		if (target.substr(-i.length) != i) continue;
+	for (var abbrev in abbrevs) {
+		if (target.substr(-abbrev.length) != abbrev) continue;
 
 		var canTransit = false;
-		if (regex.test(i.charAt(0))) {
-			if (i.length == 1) {
-				if (buffer.selectionStartCol - i.length <= 1
-				||  target.length - i.length <= 0
-				||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
+		if (regex.test(abbrev.charAt(0))) {
+			if (abbrev.length == 1) {
+				if (buffer.selectionStartCol - abbrev.length <= 1
+				||  target.length - abbrev.length <= 0
+				||  /[ \t]/.test(target.substr(-(abbrev.length + 1), 1))) {
 					canTransit = true;
 				}
 			}
 			else {
-				if (buffer.selectionStartCol - i.length <= 1
-				||  target.length - i.length <= 0
-				||  !regex.test(target.substr(-(i.length + 1), 1))) {
+				if (buffer.selectionStartCol - abbrev.length <= 1
+				||  target.length - abbrev.length <= 0
+				||  !regex.test(target.substr(-(abbrev.length + 1), 1))) {
 					canTransit = true;
 				}
 			}
 		}
 		else {
-			if (buffer.selectionStartCol - i.length <= 1
-			||  target.length - i.length <= 0
-			||  regex.test(target.substr(-(i.length + 1), 1))
-			||  /[ \t]/.test(target.substr(-(i.length + 1), 1))) {
+			if (buffer.selectionStartCol - abbrev.length <= 1
+			||  target.length - abbrev.length <= 0
+			||  regex.test(target.substr(-(abbrev.length + 1), 1))
+			||  /[ \t]/.test(target.substr(-(abbrev.length + 1), 1))) {
 				canTransit = true;
 			}
 		}
 		if (!canTransit) continue;
 
-		inputHandler.text = target + multiply('\u0008', i.length) + abbrevs[i] + last;
-		deleteCharsBackward(i.length + last.length);
-		(inputMode == 'edit' ? insert : overwrite)(abbrevs[i] + last);
+		/*
+		var a = inputHandler.text;
+		var a2 = inputHandler.textFragment;
+
+		inputHandler.text = target
+			+ multiply('\u0008', abbrev.length)
+			+ abbrevs[abbrev]
+			+ last;
+		inputHandler.textFragment = inputHandler
+			.textFragment
+			.substring(0, inputHandler.textFragment.length - 1)
+			+ multiply('\u0008', abbrev.length)
+			+ abbrevs[abbrev]
+			+ last;
+
+		deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
+		(inputMode == 'edit' ? insert : overwrite)(abbrevs[abbrev] + last);
+		 */
+
+		inputHandler.text = inputHandler.text
+			.substring(0, inputHandler.text.length - abbrev.length - 1);
+		inputHandler.textFragment = inputHandler.textFragment
+			.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
+		deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
+		keyManager.pushSweep(abbrevs[abbrev] + last);
 		break;
 	}
 }
@@ -2352,6 +2375,8 @@ function getFindRegex (src) {
 	var result;
 	var pattern = '';
 	var caseSensibility = false;
+	var global = 'g';
+	var multiline = 'm';
 	var magic = false;
 	if (src instanceof RegExp) {
 		return src;
@@ -2362,6 +2387,12 @@ function getFindRegex (src) {
 	else if (typeof src == 'object') {
 		if ('csOverride' in src) {
 			caseSensibility = src.csOverride;
+		}
+		if ('globalOverride' in src) {
+			global = src.globalOverride;
+		}
+		if ('multilineOverride' in src) {
+			multiline = src.multilineOverride;
 		}
 		if ('magicOverride' in src) {
 			magic = src.magicOverride;
@@ -2381,7 +2412,7 @@ function getFindRegex (src) {
 	try {
 		result = new RegExp(
 			magic ? pattern : regexConverter.toJsRegexString(pattern),
-			caseSensibility + 'gm');
+			caseSensibility + global + multiline);
 	}
 	catch (e) {
 		result = null;
@@ -3630,7 +3661,7 @@ function deleteSelection (isSubseq) {
 					position && (deleteMarksDest[name] = position.clone());
 				}
 				!buffer.isLineOrientSelection && foldedMarkRegisterer(fragment);
-				editLogger.write(
+				!isSubseq && editLogger.write(
 					Wasavi.EditLogger.ITEM_TYPE.DELETE,
 					buffer.selectionStart, content,
 					buffer.selectionEnd, buffer.isLineOrientSelection,
