@@ -1854,6 +1854,8 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		if (!canTransit) continue;
 
 		/*
+		 *  noremapped abbreviation
+		 *
 		var a = inputHandler.text;
 		var a2 = inputHandler.textFragment;
 

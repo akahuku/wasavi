@@ -312,6 +312,7 @@ function cleanup (value, isImplicit) {
 		stateClearTimer = null;
 	}
 	window.removeEventListener('resize', handleTargetResize, false);
+	window.removeEventListener('beforeunload', handleBeforeUnload, false);
 	extraHeight = 0;
 }
 
@@ -871,6 +872,18 @@ function handleTargetResize (e) {
 }
 
 /**
+ * beforeunload handler
+ * ----------------
+ *
+ */
+
+function handleBeforeUnload (e) {
+	if (targetElement && wasaviFrame) {
+		return e.returnValue = 'wasavi: Unexpected closing. Are you sure?';
+	}
+}
+
+/**
  * shortcut key tester
  * ----------------
  */
@@ -1139,6 +1152,7 @@ function handleIframeMessage (e) {
 		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
 		window.addEventListener('resize', handleTargetResize, false);
+		window.addEventListener('beforeunload', handleBeforeUnload, false);
 
 		if (isTestFrame) {
 			wasaviFrame.id = 'wasavi_frame';
