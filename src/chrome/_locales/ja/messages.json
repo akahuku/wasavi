@@ -26,8 +26,8 @@
         "description": "when a key combination is entered"
     },
     "option_target_elements_desc": {
-        "message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace、bs、tab、enter、return、ret、pageup、pagedown、end、home、left、up、right、down、insert、ins、delete、del、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
-        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
+        "message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ]、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
+        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ], f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
     },
     "option_save": {
         "message": "保存",

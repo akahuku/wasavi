@@ -26,8 +26,8 @@
         "description": "when a key combination is entered"
     },
     "option_target_elements_desc": {
-        "message": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used.",
-        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
+        "message": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ], f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used.",
+        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ], f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
     },
     "option_save": {
         "message": "Save",
