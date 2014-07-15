@@ -652,211 +652,6 @@ function handleTargetFocus (e) {
 }
 
 /**
- * DOMContentLoaded handler on options page
- * ----------------
- */
-
-function handleOptionsPageLoaded (req) {
-	for (var i in enableList) {
-		var el = document.getElementById(i);
-		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-			el.checked = enableList[i];
-		}
-	}
-
-	var el;
-	el = document.getElementById('exrc');
-	if (el && el.nodeName == 'TEXTAREA') {
-		el.value = exrc;
-	}
-
-	el = document.getElementById('shortcut');
-	if (el && el.nodeName == 'INPUT') {
-		el.value = shortcut;
-	}
-
-	el = document.getElementById('font-family');
-	if (el && el.nodeName == 'INPUT') {
-		el.value = fontFamily;
-	}
-
-	el = document.getElementById('save');
-	if (el) {
-		el.addEventListener('click', handleOptionsSave, false);
-	}
-
-	el = document.getElementById('opt-init');
-	if (el) {
-		el.addEventListener('click', handleOptionsInit, false);
-	}
-
-	[
-		'title',
-		'readme', 'license', 'notice',
-		'exrc_head',
-		'target_elements_head',
-		'starting_type_head',
-		'font_family_head',
-		'exrc_desc',
-		'quick_activation_on',
-		'quick_activation_off',
-		['target_elements_desc', function (node, message) {
-			node.textContent = '';
-			var ul = node.appendChild(document.createElement('ul'));
-			message
-			.replace(/^\s*\*\s*/, '')
-			.split(/\n\*\s*/)
-			.map(function (line) {
-				var li = ul.appendChild(document.createElement('li'));
-				li.textContent = line;
-			});
-		}],
-		'preferred_storage_head',
-		'init_head',
-		'init_desc',
-		'init_confirm',
-		'save'
-	]
-	.forEach(function (key) {
-		if (Object.prototype.toString.call(key) != '[object Array]') {
-			key = [key];
-		}
-
-		var messageId = 'option_' + key[0];
-		var callback = key[1] || function (node, message) {
-			node.textContent = message;
-		};
-		var fallbackMessage = '(translated message not found)';
-		var message = req.messageCatalog ?
-			(messageId in req.messageCatalog ?
-				req.messageCatalog[messageId].message :
-				fallbackMessage) :
-			(extension.getMessage(messageId) || fallbackMessage);
-		var nodes = document.evaluate(
-			'//*[text()="__MSG_' + messageId + '__"]',
-			document.documentElement, null,
-			window.XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
-
-		for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
-			callback(nodes.snapshotItem(i), message);
-		}
-	});
-
-	document.evaluate(
-		'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
-		document.body, null,
-		window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
-
-	// transition
-	var overlay = document.getElementById('overlay');
-	var tend = function (e) {
-		e.target.parentNode && e.target.parentNode.removeChild(e.target);
-	};
-
-	'transitionend webkitTransitionEnd oTransitionEnd msTransitionEnd'
-	.split(' ')
-	.forEach(function (p) {overlay.addEventListener(p, tend, false)});
-
-	overlay.className = 'overlay';
-}
-
-/**
- * save button handler
- * ----------------
- */
-
-function handleOptionsSave () {
-	var items = [];
-
-	(function () {
-		var tmpEnableList = {};
-		var count = 0;
-
-		for (var i in enableList) {
-			var el = document.getElementById(i);
-			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-				tmpEnableList[i] = el.checked;
-				count++;
-			}
-		}
-
-		if (count) {
-			items.push({key:'targets', value:tmpEnableList});
-		}
-	})();
-
-	var el = document.getElementById('exrc');
-	if (el && el.nodeName == 'TEXTAREA') {
-		items.push({key:'exrc', value:el.value});
-	}
-
-	var el = document.querySelector('input[name="quick-activation"]:checked');
-	if (el) {
-		items.push({key:'quickActivation', value:el.value == '1' ? '1' : '0'});
-	}
-
-	var el = document.getElementById('shortcut');
-	if (el) {
-		items.push({key:'shortcut', value:el.value});
-	}
-
-	var el = document.getElementById('font-family');
-	if (el && el.nodeName == 'INPUT') {
-		items.push({key:'fontFamily', value:el.value});
-	}
-
-	(function () {
-		var tmpFstab = {
-			dropbox:  {enabled: false},
-			gdrive:   {enabled: false},
-			onedrive: {enabled: false}
-		};
-
-		for (var i in tmpFstab) {
-			var el = document.getElementById('pos-' + i);
-			if (el) {
-				if (!el.disabled) {
-					tmpFstab[i].enabled = true;
-				}
-				if (el.checked) {
-					tmpFstab[i].isDefault = true;
-				}
-			}
-		}
-
-		items.push({key:'fstab', value:tmpFstab});
-	})();
-
-	items.length && extension.postMessage(
-		{type:'set-storage', items:items},
-		function () {
-			var saveResult = document.getElementById('save-result');
-			if (saveResult) {
-				saveResult.textContent = 'saved.';
-				setTimeout(function () {
-					saveResult.textContent = '';
-				}, 1000 * 2);
-			}
-		}
-	);
-}
-
-/**
- * reset button handler
- * ----------------
- */
-
-function handleOptionsInit () {
-	var message = document.getElementById('opt-init-confirm').textContent;
-	window.confirm(message) && extension.postMessage(
-		{type:'reset-options'},
-		function () {
-			location.reload();
-		}
-	);
-}
-
-/**
  * resize handler for target element
  * ----------------
  */
@@ -889,7 +684,7 @@ function handleBeforeUnload (e) {
  */
 
 function matchWithShortcut (e) {
-	return shortcutCode.some(function (code) {
+	return shortcutCode && shortcutCode.some(function (code) {
 		for (var i in code) {
 			if (!(i in e)) return false;
 			if (e[i] !== code[i]) return false;
@@ -905,7 +700,9 @@ function matchWithShortcut (e) {
 
 function handleAgentInitialized (req) {
 	if (isOptionsPage) {
-		handleOptionsPageLoaded(req);
+		window.WasaviOptions.extension = extension;
+		window.WasaviOptions.initPage(
+			req, enableList, exrc, shortcut, fontFamily, quickActivation);
 	}
 
 	if (quickActivation) {
@@ -929,79 +726,9 @@ function createPageAgent (doHook) {
 	var parent = document.head || document.body || document.documentElement;
 	if (!parent) return;
 
-	var code = '';
-
-	// keyboard event hooking
 	if (doHook) {
-		code += " \
-function isHookEvent (en) {return en == 'keydown' || en == 'keypress'} \
-function getKey (en, uc) {return en + '_' + !!uc} \
-function hook (target) { \
-	if (!target || !target.addEventListener || !target.removeEventListener) return; \
-	var addOriginal = target.addEventListener, \
-		removeOriginal = target.removeEventListener, \
-		listeners = []; \
-	target.addEventListener = function (en, fn, uc) { \
-		if (!isHookEvent(en)) { \
-			addOriginal.call(this, en, fn, uc); \
-			return; \
-		} \
-		var key = getKey(en, uc); \
-		!listeners[key] && (listeners[key] = []); \
-		if (!listeners[key].some(function (o) {return o[0] == fn})) { \
-			var wrappedListener = function (e) {!wasaviRunning && fn && fn(e)}; \
-			listeners[key].push([fn, wrappedListener]); \
-			addOriginal.call(this, en, wrappedListener, uc); \
-		} \
-	}; \
-	target.removeEventListener = function (en, fn, uc) { \
-		if (!isHookEvent(en)) { \
-			removeOriginal.call(this, en, fn, uc); \
-			return; \
-		} \
-		var key = getKey(en, uc); \
-		if (!listeners[key]) return; \
-		listeners[key] = listeners[key].filter(function (o) { \
-			if (o[0] != fn) return true; \
-			removeOriginal.call(this, en, o[1], uc); \
-			return false; \
-		}, this); \
-	}; \
-} \
-hook(win.HTMLInputElement && win.HTMLInputElement.prototype); \
-hook(win.HTMLTextAreaElement && win.HTMLTextAreaElement.prototype); \
-hook(win.Node && win.Node.prototype); \
-";
+		window.addEventListener('keydown', handleKeydown, true);
 	}
-
-	// launch event handlers and indirect content setter/getter
-	code += "\
-var wasaviRunning = false; \
-doc.addEventListener('WasaviStarting', function () {wasaviRunning = true}, false); \
-doc.addEventListener('WasaviTerminated', function () {wasaviRunning = false}, false); \
-doc.addEventListener('WasaviRequestGetContent', function (e) { \
-	var node = doc.getElementsByClassName(e.detail.className)[0]; \
-	if (!node) return; \
-	var result = ''; \
-	node.classList.remove(e.detail.className); \
-	if (node.CodeMirror) \
-		try {result = node.CodeMirror.getValue()} catch (ex) {result = ''} \
-	else if (node.classList.contains('ace_editor') && win.ace) \
-		try {result = win.ace.edit(node).getValue()} catch(ex) {result = ''} \
-	var ev = doc.createEvent('CustomEvent'); \
-	ev.initCustomEvent('WasaviResponseGetContent', false, false, result); \
-	doc.dispatchEvent(ev); \
-}, false); \
-doc.addEventListener('WasaviRequestSetContent', function (e) { \
-	var node = doc.getElementsByClassName(e.detail.className)[0]; \
-	if (!node) return; \
-	node.classList.remove(e.detail.className); \
-	if (node.CodeMirror) \
-		try {node.CodeMirror.setValue(e.detail.content)} catch (ex) {} \
-	else if (node.classList.contains('ace_editor') && win.ace) \
-		try {win.ace.edit(node).setValue(e.detail.content)} catch(ex) {} \
-}, false); \
-";
 
 	var s = document.createElement('script');
 	s.onload = function () {
@@ -1009,11 +736,7 @@ doc.addEventListener('WasaviRequestSetContent', function (e) { \
 		this.parentNode.removeChild(this);
 	};
 	s.type = 'text/javascript';
-	s.src = 'data:text/javascript;base64,' + window.btoa(
-		'!function(win,doc){' +
-		code +
-		'}(window,document);'
-	);
+	s.src = extension.getKeyHookScriptSrc();
 	parent.appendChild(s);
 }
 
@@ -1111,7 +834,8 @@ function handleIframeMessage (e) {
 		 * cross-document message mechanism.
 		 * Therefore, wasavi should only ignore this message.
 		 */
-		if (false && devMode) {
+		/*
+		if (devMode) {
 			var reason = '?';
 			if (!e) {
 				reason = 'empty event object';
@@ -1129,9 +853,10 @@ function handleIframeMessage (e) {
 				reason = 'missing e.data.type';
 			}
 			console.log(
-				'wasavi: got a invalid dom message' +
+				'wasavi agent: got a invalid dom message' +
 				' (' + reason + '): ' + JSON.stringify(e.data, null, ' '));
 		}
+		 */
 		return;
 	}
 
@@ -1384,14 +1109,7 @@ extension = WasaviExtensionWrapper.create();
 isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
 isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
-if (WasaviExtensionWrapper.HOTKEY_ENABLED) {
-	createPageAgent(false);
-}
-else {
-	window.addEventListener('keydown', handleKeydown, true);
-	createPageAgent(true);
-}
-
+createPageAgent(!WasaviExtensionWrapper.HOTKEY_ENABLED);
 extension.setMessageListener(handleBackendMessage);
 window.addEventListener('message', handleIframeMessage, false);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);

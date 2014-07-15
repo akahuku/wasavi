@@ -57,13 +57,31 @@
 				enabled: true
 			}
 		},
+
+		/*
+		 * NOTE: The referencing way of key-hook script is
+		 * different for every browser:
+		 *
+		 *   chrome:  scripts/key_hook.js, referenced via
+		 *            chrome.runtime.getURL()
+		 *
+		 *   opera:   scripts/key_hook.js, referenced via
+		 *            widget.preferences['keyHookScript']
+		 *
+		 *   firefox: data/scripts/key_hook.js,
+		 *            keyHookScript property of following object
+		 */
+		contentScriptOptions: getContentScriptOptions(),
+
 		/*
 		 * NOTE: The place which lists the front-end scripts is
 		 * different for every browser:
 		 *
 		 *   chrome:  manifest.json (app mode),
 		 *            wasavi_frame.html (textarea mode)
+		 *
 		 *   opera:   a meta block in the each front-end script
+		 *
 		 *   firefox: following object
 		 */
 		contentScripts: getContentScriptsSpec()
@@ -95,7 +113,34 @@
 		}, 1000 * 3);
 	}
 
+	function getShrinkedCode (src) {
+		// strip head comment
+		var blankLine = src.indexOf('\n\n');
+		if (blankLine >= 0) {
+			src = src.substring(blankLine + 2);
+		}
+
+		// remove all newlines
+		src = src.replace(/\n[\n\s]*/g, ' ');
+
+		return src;
+	}
+
 	/** {{{2 returns frontend script list for firefox */
+
+	function getContentScriptOptions () {
+		var self = require('sdk/self');
+		if (!self) return null;
+
+		var base64 = require('sdk/base64');
+
+		return {
+			keyHookScript: 'data:text/javascript;base64,' +
+				base64.encode(
+					getShrinkedCode(
+						self.data.load('scripts/key_hook.js')))
+		};
+	}
 
 	function getContentScriptsSpec () {
 		var self = require('sdk/self');
@@ -106,15 +151,12 @@
 				name: 'agent',
 				matches: [
 					'http://*',
-					'https://*',
-					(function () {
-						var self = require('sdk/self');
-						return self.data.url('options.html') + '*';
-					})()
+					'https://*'
 				],
 				exclude_matches: [
 					'http://wasavi.appsweets.net/',
 					'https://ss1.xrea.com/wasavi.appsweets.net/',
+					self.data.url('options.html') + '*',
 					function (url) {
 						return url.substring(0, 256) ==
 							wasaviFrameData.substring(0, 256);
@@ -148,6 +190,18 @@
 					'frontend/classes_search.js',
 					'frontend/classes_ui.js',
 					'frontend/wasavi.js'
+				],
+				run_at: 'start'
+			},
+			{
+				name: 'options',
+				matches: [
+					self.data.url('options.html') + '*'
+				],
+				js: [
+					'frontend/extension_wrapper.js',
+					'frontend/agent.js',
+					'scripts/options-core.js'
 				],
 				run_at: 'start'
 			}
@@ -307,8 +361,7 @@
 			ros: payload && payload.url != TEST_MODE_URL ?
 				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
 				'',
-			shortcut: hotkey.canProcess ?
-				null : ext.storage.getItem('shortcut'),
+			shortcut: ext.storage.getItem('shortcut'),
 			shortcutCode: hotkey.canProcess ?
 				null : hotkey.getObjectsForDOM(ext.storage.getItem('shortcut')),
 			fontFamily: ext.storage.getItem('fontFamily'),
@@ -576,6 +629,17 @@
 
 	function handleLoad (e) {
 		global.removeEventListener && global.removeEventListener(e.type, handleLoad, false);
+
+		switch (ext.kind) {
+		case 'Opera':
+			ext.resource('scripts/key_hook.js', function (data) {
+				widget.preferences['keyHookScript'] =
+					'data:text/javascript;base64,' +
+					btoa(getShrinkedCode(data));
+			}, {noCache:true});
+			break;
+		}
+
 		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 		hotkey = require('./kosian/Hotkey').Hotkey();
 		contextMenu = require('./ContextMenu').ContextMenu();

@@ -168,8 +168,8 @@
 				}
 			});
 		},
-		getExtensionFileURL: function (path, callback) {
-			callback && callback();
+		getKeyHookScriptSrc: function (path) {
+			return '';
 		},
 		ensureRun: function () {
 			var args = Array.prototype.slice.call(arguments);
@@ -251,8 +251,8 @@
 		this.getMessage = function (messageId) {
 			return chrome.i18n.getMessage(messageId);
 		};
-		this.getExtensionFileURL = function (path, callback) {
-			callback && callback(chrome.runtime.getURL(path));
+		this.getKeyHookScriptSrc = function () {
+			return chrome.runtime.getURL('scripts/key_hook.js');
 		};
 		this.urlInfo = new function () {
 			var extensionId = chrome.runtime.id;
@@ -336,25 +336,8 @@
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
 		};
-		this.getExtensionFileURL = function (path, callback) {
-			if (!callback) return;
-
-			var file = opera.extension.getFile(path);
-			if (!file) {
-				callback();
-				return;
-			}
-
-			var r = new FileReader();
-			r.onload = function (e) {
-				callback(r.result)
-				file = r = callback = null;
-			};
-			r.onerror = function (e) {
-				callback()
-				file = r = callback = null;
-			};
-			r.readAsDataURL(file);
+		this.getKeyHookScriptSrc = function () {
+			return widget.preferences['keyHookScript'];
 		};
 		this.urlInfo = new function () {
 			var extensionId = widget.preferences['widget-id'];
@@ -455,6 +438,9 @@
 		};
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
+		};
+		this.getKeyHookScriptSrc = function () {
+			return self.options.keyHookScript;
 		};
 		this.urlInfo = new function () {
 			var extensionId = self.options.extensionId;

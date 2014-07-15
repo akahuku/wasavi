@@ -269,6 +269,11 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 	cp $(BINKEY_PATH) $(FIREFOX_EMBRYO_SRC_PATH)/data
 	rm -f $(FIREFOX_EMBRYO_SRC_PATH)/data/$(CRYPT_SRC_FILE)*
 
+#	strip script tag from options.html
+	sed -e 's/<script[^>]*><\/script>//g' \
+		$(FIREFOX_SRC_PATH)/data/options.html \
+		> $(FIREFOX_EMBRYO_SRC_PATH)/data/options.html
+
 #	update package
 	tool/update-firefox-package \
 		--indir=$(FIREFOX_SRC_PATH) \
