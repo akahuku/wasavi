@@ -43,11 +43,19 @@ wasavi の作成は継続中です。バグレポートや機能の要請はど�
 
 * [Firefox addon](https://addons.mozilla.org/ja/firefox/addon/wasavi/)
 
-ソースコードと最新の開発版は [Github](https://github.com/akahuku/wasavi) で管理しています。
+ソースコードと最新の開発版は [Github](https://github.com/akahuku/wasavi) で管理しています:
+
+* [Chrome 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.crx)
+
+* [Presto Opera 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.oex)
+
+* [Blink Opera 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.nex)
+
+* [Firefox 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi)
 
 ### Opera ユーザへの注意
 
-Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。
+Presto ベースの Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。
 
 よく聞かれる質問
 ================

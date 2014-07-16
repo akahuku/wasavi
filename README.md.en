@@ -43,11 +43,19 @@ Currently, wasavi is available for following browsers only. Select your browser 
 
 * [Firefox addon](https://addons.mozilla.org/en-US/firefox/addon/wasavi/)
 
-Source code and latest development releases are hosted at [Github](https://github.com/akahuku/wasavi).
+Source code and latest development releases are hosted at [Github](https://github.com/akahuku/wasavi):
+
+* [Latest and unstable version of wasavi for Chrome](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.crx)
+
+* [Latest and unstable version of wasavi for Presto Opera](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.oex)
+
+* [Latest and unstable version of wasavi for Blink Opera](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.nex)
+
+* [Latest and unstable version of wasavi for Firefox](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi)
 
 ### A note for Opera users
 
-Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed.
+Presto based Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed.
 
 Frequently Asked Questions
 ==========================
