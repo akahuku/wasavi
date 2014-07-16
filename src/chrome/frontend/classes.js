@@ -9,10 +9,9 @@
  *
  *
  * @author akahuku@gmail.com
- * @version $Id: classes.js 441 2013-11-07 12:53:33Z akahuku $
  */
 /**
- * Copyright 2012 akahuku, akahuku@gmail.com
+ * Copyright 2012-2014 akahuku, akahuku@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
