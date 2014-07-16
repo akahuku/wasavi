@@ -33,6 +33,10 @@
         "message": "保存",
         "description": "Save"
     },
+    "option_saved": {
+        "message": "保存しました。",
+        "description": "saved."
+    },
     "option_exrc_head": {
         "message": "exrc",
         "description": "exrc"

@@ -21,6 +21,8 @@
 
 (function (global) {
 
+var SAVED_MESSAGE_VISIBLE_SECS = 2;
+
 var extension;
 var enableList;
 
@@ -91,7 +93,8 @@ function initPage (
 		'init_head',
 		'init_desc',
 		'init_confirm',
-		'save'
+		'save',
+		'saved'
 	]
 	.forEach(function (key) {
 		if (Object.prototype.toString.call(key) != '[object Array]') {
@@ -208,10 +211,10 @@ function handleOptionsSave () {
 		function () {
 			var saveResult = document.getElementById('save-result');
 			if (saveResult) {
-				saveResult.textContent = 'saved.';
+				saveResult.style.visibility = 'visible';
 				setTimeout(function () {
-					saveResult.textContent = '';
-				}, 1000 * 2);
+					saveResult.style.visibility = '';
+				}, 1000 * SAVED_MESSAGE_VISIBLE_SECS);
 			}
 		}
 	);

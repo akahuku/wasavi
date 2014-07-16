@@ -37,6 +37,10 @@ $extensionInfo = array(
 		"message" => "Save",
 		"description" => ""
 	),
+	"option_saved" => array(
+		"message" => "saved.",
+		"description" => ""
+	),
 	"option_exrc_head" => array(
 		"message" => "exrc",
 		"description" => ""

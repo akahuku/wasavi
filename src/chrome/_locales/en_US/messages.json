@@ -33,6 +33,10 @@
         "message": "Save",
         "description": "Save"
     },
+    "option_saved": {
+        "message": "saved.",
+        "description": "saved."
+    },
     "option_exrc_head": {
         "message": "exrc",
         "description": "exrc"
