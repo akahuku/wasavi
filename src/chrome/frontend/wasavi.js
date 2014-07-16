@@ -77,6 +77,13 @@
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
 		get notifier () {return notifier},
+		get pendingRequestId () {return pendingRequestId},
+		set pendingRequestId (v) {
+			if (pendingRequestId != undefined) {
+				throw new Error('Already in a pending state.');
+			}
+			pendingRequestId = v;
+		},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -124,7 +131,8 @@
 			extractDriveName:extractDriveName,
 			getFileSystemIndex:getFileSystemIndex,
 			splitPath:splitPath,
-			regalizeFilePath:regalizeFilePath
+			regalizeFilePath:regalizeFilePath,
+			releasePending:releasePending
 		}),
 
 		/*
@@ -307,6 +315,7 @@ ExCommandExecutor.prototype = {
 	},
 	run:function () {
 		if (this.commands.length == 0) return true;
+		if (this.running) return true;
 
 		if (this.isAsync && this.isRoot && isInteractive) {
 			if (this.editLogLevel == 0) {
@@ -745,12 +754,31 @@ outline:none; \
 } \
 #wasavi_cover { \
 position:fixed; \
+display:flex; \
 left:0; top:0; right:0; bottom:0; \
 background-color:rgba(0,0,0,0.0) \
+flex-direction:row; \
+justify-content:center; \
+align-items:center; \
 } \
 #wasavi_cover.dim { \
-' + (CSS_PREFIX ? CSS_PREFIX + 'transition:background-color 0.5s linear 0s;' : '') + ' \
+' + (CSS_PREFIX ? CSS_PREFIX + 'transition:background-color .5s linear 0s;' : '') + ' \
 background-color:rgba(0,0,0,0.25); \
+} \
+#wasavi_cover #wasavi_cover_button { \
+padding:4px; \
+color:#fff; \
+background-color:rgba(0,0,0,0.75); \
+border-radius:6px; \
+font-family:' + fontFamily + '; \
+font-size:10pt; \
+line-height:1; \
+text-shadow:1px 1px #000; \
+opacity:0; \
+} \
+#wasavi_cover.dim #wasavi_cover_button { \
+' + (CSS_PREFIX ? CSS_PREFIX + 'transition:opacity .5s linear 5s;' : '') + ' \
+opacity:1; \
 } \
 #wasavi_focus_holder { \
 position:fixed; \
@@ -1013,6 +1041,7 @@ function setupEventHandlers (install) {
 		cover[method]('click', handleCoverClick, false);
 		cover[method]('mousewheel', handleCoverMousewheel, false);
 	}
+	$('wasavi_cover_button').textContent = _('Press ^C to interrupt.');
 
 	cursor.setupEventHandlers(method);
 }
@@ -2667,6 +2696,13 @@ function regalizeFilePath (path, completeDriveName) {
 	path = drive + path;
 
 	return path;
+}
+function releasePending () {
+	if (pendingRequestId == undefined) return;
+	extensionChannel.interruptCallback(pendingRequestId, {
+		error:[_('The ex command was interrupted.')]
+	});
+	pendingRequestId = undefined;
 }
 
 /*
@@ -4330,6 +4366,11 @@ function handleKeydown (e) {
 	|| completer.running
 	|| isBulkInputting && !e.isCompositioned
 	|| clipboardReadingState == 1) {
+		if (exCommandExecutor.running && e.code == 3) {
+			releasePending();
+			bell.play();
+			return;
+		}
 		keyManager.push(e);
 		if (testMode) {
 			var s = 'busy now('
@@ -4950,6 +4991,7 @@ var recordedStrokes;
 var literalInput;
 var notifier;
 var clipboardReadingState; // 0:free 1:reading 2:ready
+var pendingRequestId;
 
 var isEditCompleted;
 var isVerticalMotion;

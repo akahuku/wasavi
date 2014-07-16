@@ -929,6 +929,7 @@ Wasavi.ExCommand.commands = [
 			},
 			true
 		);
+		app.pendingRequestId = id;
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		return Wasavi.ExCommand.find('cd').handler.apply(this, arguments);
@@ -1022,6 +1023,7 @@ Wasavi.ExCommand.commands = [
 					break;
 
 				case 'complete':
+					break;
 					var read = app.exCommandExecutor.lastCommandObj.clone();
 					read.handler = function (app, t, a) {
 						return Wasavi.ExCommand.editCore(
@@ -1036,6 +1038,7 @@ Wasavi.ExCommand.commands = [
 			},
 			true
 		);
+		app.pendingRequestId = id;
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
@@ -1477,6 +1480,7 @@ Wasavi.ExCommand.commands = [
 					break;
 
 				case 'complete':
+					break;
 					var read = app.exCommandExecutor.lastCommandObj.clone();
 					read.handler = function (app, t, a) {
 						return Wasavi.ExCommand.readCore(
@@ -1491,6 +1495,7 @@ Wasavi.ExCommand.commands = [
 			},
 			true
 		);
+		app.pendingRequestId = id;
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();

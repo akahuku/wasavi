@@ -143,6 +143,11 @@
 		removeCallback: function (id) {
 			delete this.preservedCallbacks[id];
 		},
+		interruptCallback: function (id, data) {
+			if (!(id in this.preservedCallbacks)) return;
+			this.preservedCallbacks[id](data);
+			this.removeCallback(id);
+		},
 		getUniqueId: function () {
 			return this.name
 				+ '_' + Date.now()

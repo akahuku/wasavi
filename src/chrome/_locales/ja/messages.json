@@ -26,8 +26,8 @@
         "description": "when a key combination is entered"
     },
     "option_target_elements_desc": {
-        "message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ]、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
-        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period / slash [ \\ backslash ], f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
+        "message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます: backspace bs tab enter return ret pageup pagedown end home left up right down insert ins delete del , comma . dot period \/ slash [ \\ backslash ]、f1 から f12、a から z、そして 0 から 9。\n* 以下のキーを修飾子として使用できます: s (シフトキー)、c (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",
+        "description": "* Format is <[modifier-]key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used: backspace, bs, tab, enter, return, ret, pageup, pagedown, end, home, left, up, right, down, insert, ins, delete, del, f1 to f12, a to z, and 0 to 9.\n* Following keys can be used as modifier:s (for SHIFT), c (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used."
     },
     "option_save": {
         "message": "保存",
@@ -268,22 +268,6 @@
         "message": "{0}: 範囲外です。",
         "description": "{0}: Out of range."
     },
-    "pattern_found_in_every_line_@0": {
-        "message": "各行でパターンが見つかりました: {0}",
-        "description": "Pattern found in every line: {0}"
-    },
-    "mark_names_must_be_a_single_character": {
-        "message": "マーク名は 1 文字でなければなりません。",
-        "description": "Mark names must be a single character."
-    },
-    "copied_@0_line": {
-        "message": "{0} 行がコピーされました。",
-        "description": "Copied {0} {line:0}."
-    },
-    "the_text_has_been_modified_use_quit_to_discard_any_changes": {
-        "message": "テキストは変更されています; 変更を破棄するには :quit! としてください。",
-        "description": "The text has been modified; use :quit! to discard any changes."
-    },
     "command_redirection_is_not_implemented": {
         "message": "コマンドへのリダイレクトは実装されていません。",
         "description": "Command redirection is not implemented."
@@ -300,25 +284,25 @@
         "message": "Readonly オプションがセットされています (\"!\" 付加で上書きできます)。",
         "description": "Readonly option is set (use \"!\" to override)."
     },
+    "buffered_@0": {
+        "message": "バッファ済み: {0}",
+        "description": "Buffered: {0}"
+    },
+    "writing_@0": {
+        "message": "書き込み中 ({0}%)",
+        "description": "Writing ({0}%)"
+    },
+    "written_@0": {
+        "message": "書き込み完了: {0}",
+        "description": "Written: {0}"
+    },
     "cannot_open_@0": {
         "message": "\"{0}\" を開けません。",
         "description": "Cannot open \"{0}\"."
     },
-    "no_previous_execution": {
-        "message": "前回の実行レジスタはありません。",
-        "description": "No previous execution."
-    },
-    "invalid_register_name_@0": {
-        "message": "不正なレジスタ名: {0}",
-        "description": "Invalid register name: {0}"
-    },
-    "register_@0_is_empty": {
-        "message": "レジスタ {0} は空です。",
-        "description": "Register {0} is empty."
-    },
-    "extension_system_required": {
-        "message": "拡張機能が必要です。",
-        "description": "Extension system required."
+    "@0_has_no_content": {
+        "message": "\"{0}\" は内容が空です。",
+        "description": "\"{0}\" has no content."
     },
     "invalid_chdir_result": {
         "message": "chdir の結果が不正です。",
@@ -344,6 +328,14 @@
         "message": "略語キーワードは単語を構成する文字で終了していなければなりません。",
         "description": "The keyword of abbreviation must end with a word character."
     },
+    "extension_system_required": {
+        "message": "拡張機能が必要です。",
+        "description": "Extension system required."
+    },
+    "copied_@0_line": {
+        "message": "{0} 行がコピーされました。",
+        "description": "Copied {0} {line:0}."
+    },
     "deleted_@0_line": {
         "message": "{0} 行が削除されました。",
         "description": "Deleted {0} {line:0}."
@@ -363,6 +355,10 @@
     "only_stand_alone_form_can_edit": {
         "message": "edit はスタンドアロンフォームでのみ有効です。",
         "description": "Only stand alone form can edit."
+    },
+    "reading_@0": {
+        "message": "読み込み中 ({0}%)",
+        "description": "Reading ({0}%)"
     },
     "only_stand_alone_form_can_rename": {
         "message": "リネームはスタンドアロンフォームでのみ有効です。",
@@ -388,6 +384,10 @@
         "message": "未知のコマンドです。",
         "description": "Unknown command."
     },
+    "pattern_found_in_every_line_@0": {
+        "message": "各行でパターンが見つかりました: {0}",
+        "description": "Pattern found in every line: {0}"
+    },
     "no_mappings_for_@0_mode_are_defined": {
         "message": "{0} モードにはマップは定義されていません。",
         "description": "No mappings for {0} mode are defined."
@@ -395,6 +395,10 @@
     "key_@0_cannot_be_remapped": {
         "message": "{0} キーは再マップできません。",
         "description": "Key {0} cannot be remapped."
+    },
+    "mark_names_must_be_a_single_character": {
+        "message": "マーク名は 1 文字でなければなりません。",
+        "description": "Mark names must be a single character."
     },
     "destination_is_in_inside_source": {
         "message": "移動先が移動元の中にあります。",
@@ -407,6 +411,14 @@
     "dont_know_how_to_open_options_page": {
         "message": "オプションページを開けません。",
         "description": "Don't know how to open options page."
+    },
+    "register_@0_is_empty": {
+        "message": "レジスタ {0} は空です。",
+        "description": "Register {0} is empty."
+    },
+    "the_text_has_been_modified_use_quit_to_discard_any_changes": {
+        "message": "テキストは変更されています; 変更を破棄するには :quit! としてください。",
+        "description": "The text has been modified; use :quit! to discard any changes."
     },
     "no_redo_item": {
         "message": "これ以上リドゥできません。",
@@ -431,6 +443,14 @@
     "@0_is_not_mapped": {
         "message": "{0} はマップされていません。",
         "description": "{0} is not mapped."
+    },
+    "no_previous_execution": {
+        "message": "前回の実行レジスタはありません。",
+        "description": "No previous execution."
+    },
+    "invalid_register_name_@0": {
+        "message": "不正なレジスタ名: {0}",
+        "description": "Invalid register name: {0}"
     },
     "invalid_paragraph_format_@0": {
         "message": "段落の書式が不正: {0}",
@@ -471,6 +491,10 @@
     "@0_executed_in_synchronous_context": {
         "message": "{0}: 同期的に実行されました。",
         "description": "{0}: Executed in synchronous context."
+    },
+    "press_c_to_interrupt": {
+        "message": "中断するには ^C を押してください。",
+        "description": "Press ^C to interrupt."
     },
     "all": {
         "message": "全て",
@@ -560,6 +584,10 @@
         "message": "読み取り専用",
         "description": "readonly"
     },
+    "the_ex_command_was_interrupted": {
+        "message": "ex コマンドは中断されました。",
+        "description": "The ex command was interrupted."
+    },
     "@0_canceled": {
         "message": "{0} がキャンセルされました。",
         "description": "{0} canceled."
@@ -627,26 +655,6 @@
     "obtaining_access_rights_@0": {
         "message": "アクセス権を取得しています ({0})...",
         "description": "Obtaining access rights ({0})..."
-    },
-    "buffered_@0": {
-        "message": "バッファ済み: {0}",
-        "description": "Buffered: {0}"
-    },
-    "writing_@0": {
-        "message": "書き込み中 ({0}%)",
-        "description": "Writing ({0}%)"
-    },
-    "written_@0": {
-        "message": "書き込み完了: {0}",
-        "description": "Written: {0}"
-    },
-    "reading_@0": {
-        "message": "読み込み中 ({0}%)",
-        "description": "Reading ({0}%)"
-    },
-    "invalid_read_handler": {
-        "message": "不正な読み込みハンドラです。",
-        "description": "Invalid read handler."
     },
     "@0_register_@1": {
         "message": "{0}: レジスタ [{1}]",
