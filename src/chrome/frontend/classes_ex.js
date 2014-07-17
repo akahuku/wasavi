@@ -831,7 +831,7 @@ Wasavi.ExCommand.commands = [
 				list = list.map(function (l) {
 					return l[0] +
 						multiply(' ', maxWidth - l[0].length + PAD_WIDTH) +
-						toVisibleString(app.abbrevs[l[1]]);
+						toVisibleString(ab[l[1]].value);
 				}).sort();
 
 				list.unshift(
@@ -853,52 +853,75 @@ Wasavi.ExCommand.commands = [
 		}
 		function parseArgs (s) {
 			var result = [];
+			var state = 0;
 
 			while ((s = s.replace(/^\s+/, '')) != '') {
-				if (result.length == 2) {
-					result.push(s);
-					s = '';
-				}
-				else {
-					var re = /(?:\u0016.|\S)*/.exec(s);
+				var re = /(?:\u0016.|\S)*/.exec(s);
+				switch (state) {
+				case 0:
+					s = s.substring(re[0].length);
+					state = 1;
+					break;
+				case 1:
+					if (/^\[.+\]$/.test(re[0])) {
+						result.push(re[0]);
+						s = s.substring(re[0].length);
+						state = 2;
+						break;
+					}
+					// FALLTHRU
+				case 2:
 					result.push(re[0]);
 					s = s.substring(re[0].length);
+					state = 3;
+					break;
+				case 3:
+					result.push(s);
+					s = '';
+					break;
 				}
 			}
 
-			result.shift();
 			return result;
 		}
 
 		var argv = parseArgs(a.args);
+		var lhs, rhs, option;
+		lhs = argv.shift();
+		if (/^\[.+\]$/.test(lhs)) {
+			option = lhs;
+			lhs = argv.shift();
+		}
+		rhs = argv.shift();
 
-		switch (argv.length) {
-		case 0:
+		// prior option
+		switch (option) {
+		case '[clear]':
+			app.abbrevs.clear();
+			return;
+		}
+
+		// no args: display all abbreviations currently defined
+		if (lhs == undefined && rhs == undefined) {
 			dispAbbrev(app.abbrevs);
-			break;
+		}
 
-		case 1:
-			var lhs = argv[0];
-			if (lhs == '[clear]') {
-				app.abbrevs.clear();
-			}
-			else {
-				var tmp = {};
-				if (lhs in app.abbrevs) {
-					tmp[lhs] = app.abbrevs[lhs];
-				}
-				dispAbbrev(tmp);
-			}
-			break;
+		// one arg: display abbreviaion which corresponds to lhs
+		else if (lhs != undefined && rhs == undefined) {
+			// TODO: forward match?
+			dispAbbrev(lhs in app.abbrevs ? {lhs:app.abbrevs[lhs]} : {});
+		}
 
-		default:
-			var lhs = argv[0];
-			var rhs = argv[1];
+		// two args: define new abbreviation
+		else if (lhs != undefined && rhs != undefined) {
 			if (!app.config.vars.iskeyword.test(lhs.substr(-1))) {
 				return _('The keyword of abbreviation must end with a word character.');
 			}
-			app.abbrevs[lhs] = app.keyManager.insertFnKeyHeader(rhs);
-			break;
+
+			app.abbrevs[lhs] = {
+				noremap: option == '[noremap]',
+				value: app.keyManager.insertFnKeyHeader(rhs)
+			};
 		}
 	}),
 	new Wasavi.ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {

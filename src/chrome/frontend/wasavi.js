@@ -1836,7 +1836,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 	if (ignoreAbbreviation) return;
 
 	var regex = config.vars.iskeyword;
-	var target, last;
+	var target, last, abbrev, noremap;
 
 	if (force) {
 		if (inputHandler.text.length < 1) return;
@@ -1851,7 +1851,10 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		if (regex.test(last)) return;
 	}
 
-	for (var abbrev in abbrevs) {
+	for (var i in abbrevs) {
+		abbrev = abbrevs[i].value;
+		noremap = abbrevs[i].noremap;
+
 		if (target.substr(-abbrev.length) != abbrev) continue;
 
 		var canTransit = false;
@@ -1881,33 +1884,35 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		}
 		if (!canTransit) continue;
 
-		/*
-		 *  noremapped abbreviation
-		 *
-		var a = inputHandler.text;
-		var a2 = inputHandler.textFragment;
+		// noremapped abbreviation
+		if (noremap) {
+			var a = inputHandler.text;
+			var a2 = inputHandler.textFragment;
 
-		inputHandler.text = target
-			+ multiply('\u0008', abbrev.length)
-			+ abbrevs[abbrev]
-			+ last;
-		inputHandler.textFragment = inputHandler
-			.textFragment
-			.substring(0, inputHandler.textFragment.length - 1)
-			+ multiply('\u0008', abbrev.length)
-			+ abbrevs[abbrev]
-			+ last;
+			inputHandler.text = target
+				+ multiply('\u0008', abbrev.length)
+				+ abbrevs[abbrev]
+				+ last;
+			inputHandler.textFragment = inputHandler
+				.textFragment
+				.substring(0, inputHandler.textFragment.length - 1)
+				+ multiply('\u0008', abbrev.length)
+				+ abbrevs[abbrev]
+				+ last;
 
-		deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-		(inputMode == 'edit' ? insert : overwrite)(abbrevs[abbrev] + last);
-		 */
+			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
+			(inputMode == 'edit' ? insert : overwrite)(abbrevs[abbrev] + last);
+		}
 
-		inputHandler.text = inputHandler.text
-			.substring(0, inputHandler.text.length - abbrev.length - 1);
-		inputHandler.textFragment = inputHandler.textFragment
-			.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
-		deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-		keyManager.pushSweep(abbrevs[abbrev] + last);
+		// remapped abbreviation
+		else {
+			inputHandler.text = inputHandler.text
+				.substring(0, inputHandler.text.length - abbrev.length - 1);
+			inputHandler.textFragment = inputHandler.textFragment
+				.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
+			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
+			keyManager.pushSweep(abbrevs[abbrev] + last);
+		}
 		break;
 	}
 }
