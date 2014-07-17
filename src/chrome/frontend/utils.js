@@ -29,7 +29,7 @@
 'use strict';
 
 /*
- * prototype extension {{{ 1
+ * prototype extension
  * ----------------
  */
 
@@ -43,8 +43,7 @@ Object.defineProperty(Array.prototype, 'lastItem', {
 });
 
 /*
-/*
- * utility functions {{{1
+ * utility functions
  * ----------------
  */
 
@@ -246,26 +245,6 @@ function emptyNodeContents (node) {
 	r.deleteContents();
 	r.detach();
 }
-function addClass (elem) {
-	elem = $(elem);
-	if (!elem) return;
-	elem.className = (elem.className || '')
-		.replace(/^\s+|\s+$/g, '')
-		.split(/\s+/)
-		.concat(Array.prototype.slice.call(arguments, 1))
-		.reduce(function (r, v) {r.indexOf(v) < 0 && r.push(v); return r;}, [])
-		.join(' ');
-}
-function removeClass (elem) {
-	elem = $(elem);
-	if (!elem) return;
-	elem.className = (elem.className || '')
-		.replace(/^\s+|\s+$/g, '')
-		.split(/\s+/)
-		.filter(function (v) {return this.indexOf(v) < 0;},
-			Array.prototype.slice.call(arguments, 1))
-		.join(' ');
-}
 function insertToLineInput (t, ch) {
 	var ss = t.selectionStart;
 	t.value = t.value.substring(0, t.selectionStart) + ch + t.value.substring(t.selectionEnd);
@@ -361,14 +340,14 @@ function publish () {
 		case 'Object':
 			for (var j in arguments[i]) {
 				switch (getObjectType(arguments[i][j])) {
-					case 'Function':
+				case 'Function':
 					Object.defineProperty(target, j, {
 						get:arguments[i][j],
 						configurable:false,
 						enumerable:false
 					});
 					break;
-					case 'Array':
+				case 'Array':
 					Object.defineProperty(target, j, {
 						get:arguments[i][j][0],
 						set:arguments[i][j][1],
@@ -376,7 +355,7 @@ function publish () {
 						enumerable:false
 					});
 					break;
-					case 'Object':
+				case 'Object':
 					Object.defineProperty(target, j, arguments[i][j]);
 					break;
 				}

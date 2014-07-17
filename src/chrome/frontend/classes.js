@@ -884,6 +884,19 @@ Wasavi.KeyManager = function () {
 		'f5':116, 'f6': 117, 'f7': 118, 'f8': 119,
 		'f9':120, 'f10':121, 'f11':122, 'f12':123
 	};
+	/*const*/var SPECIAL_KEY_ALIASES = {
+		'backspace': 'bs',
+		'nl':        'enter',
+		'newline':   'enter',
+		'linefeed':  'enter',
+		'return':    'enter',
+		'escape':    'esc',
+		'ins':       'insert',
+		'del':       'delete',
+		'space':     32,
+		'bar':       124,
+		'bslash':    92
+	};
 	/*const*/var ENABLE_LOG = false;
 
 	var target;
@@ -1421,6 +1434,20 @@ Wasavi.KeyManager = function () {
 
 			name = parts[0];
 
+			if (name in SPECIAL_KEY_ALIASES) {
+				if (isNumber(SPECIAL_KEY_ALIASES[name])) {
+					return {
+						code:SPECIAL_KEY_ALIASES[name],
+						name:name,
+						shift:shift,
+						ctrl:ctrl
+					};
+				}
+				else {
+					name = SPECIAL_KEY_ALIASES[name];
+				}
+			}
+
 			for (var i in SPECIAL_KEYS) {
 				if (SPECIAL_KEYS[i] == name) {
 					return {
@@ -1431,6 +1458,7 @@ Wasavi.KeyManager = function () {
 					};
 				}
 			}
+
 			return null;
 		}
 		if (typeof desc == 'number') {
