@@ -670,6 +670,7 @@ Wasavi.ExCommand.writeCore = function (app, t, a, isCommand, isAppend, path) {
 		content = content.replace(/\n/g, app.preferredNewline);
 	}
 
+	var requestId;
 	var payload = {
 		path:pathRegalized,
 		isForce:a.flags.force,
@@ -677,13 +678,14 @@ Wasavi.ExCommand.writeCore = function (app, t, a, isCommand, isAppend, path) {
 	};
 	if (payload.path == '') {
 		app.low.notifyToParent('write', payload);
+		requestId = app.extensionChannel.getNewRequestNumber();
 	}
 	else {
 		payload.type = 'fsctl';
 		payload.subtype = 'write';
-		var id = app.extensionChannel.postMessage(payload, true, true);
-		app.low.registerPending(id, 'write');
+		requestId = app.extensionChannel.postMessage(payload, true, true);
 	}
+	app.low.registerMultiplexCallback(requestId, 'write');
 
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
 		if (app.fileName == '') {
@@ -911,12 +913,12 @@ Wasavi.ExCommand.commands = [
 			return _('Extension system required.');
 		}
 
-		var id = app.extensionChannel.postMessage({
+		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'chdir',
 			path:app.low.regalizeFilePath(a.argv[0], true)
 		}, true, true);
-		app.low.registerPending(id, 'chdir');
+		app.low.registerMultiplexCallback(requestId, 'chdir');
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		return Wasavi.ExCommand.find('cd').handler.apply(this, arguments);
@@ -983,18 +985,20 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 
+		var requestId;
 		var payload = {
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		};
 		if (payload.path == '') {
 			app.low.notifyToParent('read', payload);
-			return;
+			requestId = app.extensionChannel.getNewRequestNumber();
 		}
-
-		payload.type = 'fsctl';
-		payload.subtype = 'read';
-		var id = app.extensionChannel.postMessage(payload, true, true);
-		app.low.registerPending(id, 'edit');
+		else {
+			payload.type = 'fsctl';
+			payload.subtype = 'read';
+			requestId = app.extensionChannel.postMessage(payload, true, true);
+		}
+		app.low.registerMultiplexCallback(requestId, 'edit');
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
@@ -1415,12 +1419,12 @@ Wasavi.ExCommand.commands = [
 			return _('File name is empty.');
 		}
 
-		var id = app.extensionChannel.postMessage({
+		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'read',
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		}, true, true);
-		app.low.registerPending(id, 'read');
+		app.low.registerMultiplexCallback(requestId, 'read');
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();

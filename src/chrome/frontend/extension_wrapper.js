@@ -145,6 +145,7 @@
 			delete this.preservedCallbacks[id];
 		},
 		interruptCallback: function (id, data) {
+			if (typeof id != 'number') return;
 			if (!(id in this.preservedCallbacks)) return;
 			this.runCallback(this.preservedCallbacks[id], data);
 			this.removeCallback(id);

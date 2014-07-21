@@ -125,9 +125,9 @@
 			getFileSystemIndex:getFileSystemIndex,
 			splitPath:splitPath,
 			regalizeFilePath:regalizeFilePath,
-			registerPending:registerPending,
-			removePending:removePending,
-			interruptPending:interruptPending
+			registerMultiplexCallback:registerMultiplexCallback,
+			removeMultiplexCallback:removeMultiplexCallback,
+			interruptMultiplexCallback:interruptMultiplexCallback
 		}),
 
 		/*
@@ -2694,8 +2694,8 @@ function regalizeFilePath (path, completeDriveName) {
 
 	return path;
 }
-function registerPending (id, callback) {
-	if (pendingRequestId != undefined) {
+function registerMultiplexCallback (id, callback) {
+	if (multiplexCallbackId != undefined) {
 		throw new Error(_('Already in a pending state.'));
 	}
 	if (isString(callback)) {
@@ -2717,32 +2717,30 @@ function registerPending (id, callback) {
 	if (isFunction(callback)) {
 		extensionChannel.preservedCallbacks[id] = callback;
 	}
-	pendingRequestId = id;
+	multiplexCallbackId = id;
 }
-function removePending (id) {
-	if (pendingRequestId == undefined) {
-		throw new Error(_('Not in a pending state.'));
+function removeMultiplexCallback (id) {
+	if (multiplexCallbackId) {
+		if (id != multiplexCallbackId) {
+			throw new Error(_('Pending Request ID mismatch.'));
+		}
+		extensionChannel.removeCallback(multiplexCallbackId);
 	}
-	if (id != pendingRequestId) {
-		throw new Error(_('Pending Request ID mismatch.'));
-	}
-	extensionChannel.removeCallback(pendingRequestId);
-	pendingRequestId = undefined;
+	multiplexCallbackId = undefined;
 }
-function interruptPending () {
-	if (pendingRequestId == undefined) {
-		throw new Error(_('Not in a pending state.'));
+function interruptMultiplexCallback () {
+	if (multiplexCallbackId) {
+		extensionChannel.interruptCallback(multiplexCallbackId, {
+			error:[_('The ex command was interrupted.')]
+		});
 	}
-	extensionChannel.interruptCallback(pendingRequestId, {
-		error:[_('The ex command was interrupted.')]
-	});
-	pendingRequestId = undefined;
+	multiplexCallbackId = undefined;
 }
 function getReadHandler (id) {
 	return function (req) {
 		if (req.error) {
 			exCommandExecutor.stop();
-			removePending(id);
+			removeMultiplexCallback(id);
 			showMessage(_.apply(null, req.error), true, false);
 			return;
 		}
@@ -2756,21 +2754,30 @@ function getReadHandler (id) {
 		case 'complete':
 			var read = exCommandExecutor.lastCommandObj.clone();
 			read.handler = function (app, t, a) {
-				return Wasavi.ExCommand.readCore(
-					app, t, a, req.content, req.meta, req.status);
+				switch (this.name) {
+				case 'read':
+					return Wasavi.ExCommand.readCore(
+						app, t, a, req.content, req.meta, req.status);
+				case 'edit':
+					return Wasavi.ExCommand.editCore(
+						app, t, a, req.content, req.meta, req.status);
+				}
 			};
 			cursor.update({visible:false});
 			exCommandExecutor.runAsyncNext(
 				read, exCommandExecutor.lastCommandArg);
-			removePending(id);
+			removeMultiplexCallback(id);
 			break;
 		}
 	};
 }
+function getEditHandler (id) {
+	return getReadHandler(id);
+}
 function getWriteHandler (id) {
 	return function (req) {
 		if (req.error) {
-			removePending(id);
+			removeMultiplexCallback(id);
 			showMessage(_.apply(null, req.error), true, false);
 			notifyCommandComplete();
 			return;
@@ -2789,36 +2796,7 @@ function getWriteHandler (id) {
 			showMessage(
 				_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
 			notifyCommandComplete();
-			removePending(id);
-			break;
-		}
-	};
-}
-function getEditHandler (id) {
-	return function (req) {
-		if (req.error) {
-			exCommandExecutor.stop();
-			removePending(id);
-			showMessage(_.apply(null, req.error), true, false);
-			return;
-		}
-
-		switch (req.state) {
-		case 'reading':
-			showMessage(
-				_('Reading ({0}%)', req.progress.toFixed(2)));
-			break;
-
-		case 'complete':
-			var read = exCommandExecutor.lastCommandObj.clone();
-			read.handler = function (app, t, a) {
-				return Wasavi.ExCommand.editCore(
-					app, t, a, req.content, req.meta, req.status);
-			};
-			cursor.update({visible:false});
-			exCommandExecutor.runAsyncNext(
-				read, exCommandExecutor.lastCommandArg);
-			removePending(id);
+			removeMultiplexCallback(id);
 			break;
 		}
 	};
@@ -2827,7 +2805,7 @@ function getChdirHandler (id) {
 	return function (req) {
 		if (req.error) {
 			exCommandExecutor.stop();
-			removePending(id);
+			removeMultiplexCallback(id);
 			showMessage(_.apply(null, req.error), true, false);
 			return;
 		}
@@ -2837,7 +2815,7 @@ function getChdirHandler (id) {
 			return Wasavi.ExCommand.chdirCore(app, t, a, req.data);
 		};
 		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
-		removePending(id);
+		removeMultiplexCallback(id);
 	};
 }
 
@@ -4503,7 +4481,7 @@ function handleKeydown (e) {
 	|| isBulkInputting && !e.isCompositioned
 	|| clipboardReadingState == 1) {
 		if (exCommandExecutor.running && e.code == 3) {
-			interruptPending();
+			interruptMultiplexCallback();
 			bell.play();
 			return;
 		}
@@ -5135,7 +5113,7 @@ var recordedStrokes;
 var literalInput;
 var notifier;
 var clipboardReadingState; // 0:free 1:reading 2:ready
-var pendingRequestId;
+var multiplexCallbackId;
 
 var isEditCompleted;
 var isVerticalMotion;

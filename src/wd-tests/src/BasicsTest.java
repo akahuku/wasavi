@@ -68,8 +68,12 @@ public class BasicsTest extends WasaviTest {
 
 	@Test
 	public void launchAppMode () {
+		Wasavi.sendNoWait(":q\n");
+		sleep(1000);
+
 		driver.navigate().to("http://wasavi.appsweets.net/");
 		assertEquals("#1-1", "http://wasavi.appsweets.net/", driver.getCurrentUrl());
+
 		WebElement a = driver.findElement(By.tagName("html"));
 		assertEquals("#1-2", "1", a.getAttribute("data-wasavi-present"));
 	}
