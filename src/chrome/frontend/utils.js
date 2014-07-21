@@ -323,6 +323,9 @@ function isArray (a) {
 	// TODO: accept ducktyping?
 	return getObjectType(a) == 'Array';
 }
+function isFunction (a) {
+	return getObjectType(a) == 'Function';
+}
 function publish () {
 	if (arguments.length < 1) return;
 	var target = arguments[0];

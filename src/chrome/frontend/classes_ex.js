@@ -681,35 +681,8 @@ Wasavi.ExCommand.writeCore = function (app, t, a, isCommand, isAppend, path) {
 	else {
 		payload.type = 'fsctl';
 		payload.subtype = 'write';
-		var id = app.extensionChannel.postMessage(
-			payload,
-			function (req) {
-				if (req.error) {
-					app.extensionChannel.removeCallback(id);
-					app.low.showMessage(_.apply(null, req.error), true, false);
-					app.low.notifyCommandComplete();
-					return;
-				}
-
-				switch (req.state) {
-				case 'buffered':
-					app.low.showMessage(
-						_('Buffered: {0}', req.path));
-					break;
-				case 'writing':
-					app.low.showMessage(
-						_('Writing ({0}%)', req.progress.toFixed(2)));
-					break;
-				case 'complete':
-					app.low.showMessage(
-						_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
-					app.low.notifyCommandComplete();
-					app.extensionChannel.removeCallback(id);
-					break;
-				}
-			},
-			true
-		);
+		var id = app.extensionChannel.postMessage(payload, true, true);
+		app.low.registerPending(id, 'write');
 	}
 
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
@@ -908,8 +881,17 @@ Wasavi.ExCommand.commands = [
 
 		// one arg: display abbreviaion which corresponds to lhs
 		else if (lhs != undefined && rhs == undefined) {
-			// TODO: forward match?
-			dispAbbrev(lhs in app.abbrevs ? {lhs:app.abbrevs[lhs]} : {});
+			var tmp = {};
+			var tmpLhs = lhs.substr(-1) == '*' ? lhs.substring(0, lhs.length - 1) : null;
+
+			for (var i in app.abbrevs) {
+				if (tmpLhs && i.indexOf(tmpLhs) == 0
+				||  !tmpLhs && i == lhs) {
+					tmp[i] = app.abbrevs[i];
+				}
+			}
+
+			dispAbbrev(tmp);
 		}
 
 		// two args: define new abbreviation
@@ -929,30 +911,12 @@ Wasavi.ExCommand.commands = [
 			return _('Extension system required.');
 		}
 
-		var id = app.extensionChannel.postMessage(
-			{
-				type:'fsctl',
-				subtype:'chdir',
-				path:app.low.regalizeFilePath(a.argv[0], true)
-			},
-			function (req) {
-				if (req.error) {
-					app.exCommandExecutor.stop();
-					app.extensionChannel.removeCallback(id);
-					app.low.showMessage(_.apply(null, req.error), true, false);
-					return;
-				}
-
-				var chdir = exCommandExecutor.lastCommandObj.clone();
-				chdir.handler = function (app, t, a) {
-					return Wasavi.ExCommand.chdirCore(app, t, a, req.data);
-				};
-				app.exCommandExecutor.runAsyncNext(chdir, app.exCommandExecutor.lastCommandArg);
-				app.extensionChannel.removeCallback(id);
-			},
-			true
-		);
-		app.pendingRequestId = id;
+		var id = app.extensionChannel.postMessage({
+			type:'fsctl',
+			subtype:'chdir',
+			path:app.low.regalizeFilePath(a.argv[0], true)
+		}, true, true);
+		app.low.registerPending(id, 'chdir');
 	}),
 	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		return Wasavi.ExCommand.find('cd').handler.apply(this, arguments);
@@ -1029,39 +993,8 @@ Wasavi.ExCommand.commands = [
 
 		payload.type = 'fsctl';
 		payload.subtype = 'read';
-		var id = app.extensionChannel.postMessage(
-			payload,
-			function (req) {
-				if (req.error) {
-					app.exCommandExecutor.stop();
-					app.extensionChannel.removeCallback(id);
-					app.low.showMessage(_.apply(null, req.error), true, false);
-					return;
-				}
-
-				switch (req.state) {
-				case 'reading':
-					app.low.showMessage(
-						_('Reading ({0}%)', req.progress.toFixed(2)));
-					break;
-
-				case 'complete':
-					break;
-					var read = app.exCommandExecutor.lastCommandObj.clone();
-					read.handler = function (app, t, a) {
-						return Wasavi.ExCommand.editCore(
-							app, t, a, req.content, req.meta, req.status);
-					};
-					app.cursor.update({visible:false});
-					app.exCommandExecutor.runAsyncNext(
-						read, app.exCommandExecutor.lastCommandArg);
-					app.extensionChannel.removeCallback(id);
-					break;
-				}
-			},
-			true
-		);
-		app.pendingRequestId = id;
+		var id = app.extensionChannel.postMessage(payload, true, true);
+		app.low.registerPending(id, 'edit');
 	}),
 	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
@@ -1482,43 +1415,12 @@ Wasavi.ExCommand.commands = [
 			return _('File name is empty.');
 		}
 
-		var id = app.extensionChannel.postMessage(
-			{
-				type:'fsctl',
-				subtype:'read',
-				path:app.low.regalizeFilePath(path, true) || app.fileName
-			},
-			function (req) {
-				if (req.error) {
-					app.exCommandExecutor.stop();
-					app.extensionChannel.removeCallback(id);
-					app.low.showMessage(_.apply(null, req.error), true, false);
-					return;
-				}
-
-				switch (req.state) {
-				case 'reading':
-					app.low.showMessage(
-						_('Reading ({0}%)', req.progress.toFixed(2)));
-					break;
-
-				case 'complete':
-					break;
-					var read = app.exCommandExecutor.lastCommandObj.clone();
-					read.handler = function (app, t, a) {
-						return Wasavi.ExCommand.readCore(
-							app, t, a, req.content, req.meta, req.status);
-					};
-					app.cursor.update({visible:false});
-					app.exCommandExecutor.runAsyncNext(
-						read, app.exCommandExecutor.lastCommandArg);
-					app.extensionChannel.removeCallback(id);
-					break;
-				}
-			},
-			true
-		);
-		app.pendingRequestId = id;
+		var id = app.extensionChannel.postMessage({
+			type:'fsctl',
+			subtype:'read',
+			path:app.low.regalizeFilePath(path, true) || app.fileName
+		}, true, true);
+		app.low.registerPending(id, 'read');
 	}),
 	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();

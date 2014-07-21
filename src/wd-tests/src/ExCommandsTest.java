@@ -282,50 +282,84 @@ public class ExCommandsTest extends WasaviTest {
 	@Test
 	public void testAbbreviate () {
 		Wasavi.send(":abbreviate [clear]\n");
+
+		//
 		Wasavi.send(":abbreviate\n");
 		assertEquals("#1-1", "No abbreviations are defined.", Wasavi.getLastMessage());
 
+		//
 		Wasavi.send(":abbreviat test\n");
 		assertEquals("#2-1", "No abbreviations are defined.", Wasavi.getLastMessage());
 
+		//
 		Wasavi.send(":abbrevia foo? bar\n");
 		assertEquals("#3-1",
 			"abbreviate: The keyword of abbreviation must end with a word character.", 
 			Wasavi.getLastMessage());
+	}
 
+	@Test
+	public void testAbbreviateRegstering () {
+		Wasavi.send(":abbreviate [clear]\n");
+
+		//
 		Wasavi.send(":abbrevi foo bar\n");
 		assertTrue("#4-1", "".equals(Wasavi.getLastMessage()));
 		Wasavi.send(":abbre\n");
 		assertEquals("#4-2", join("\n",
 			"*** abbreviations ***",
-			"foo\tbar"
+			"LHS    RHS",
+			"---    ---",
+			"foo    bar"
 		), Wasavi.getLastMessage());
 
+		//
 		Wasavi.send(":abbr bar BAZ\n");
+		Wasavi.send(":abb  baz B A Z\n");
+
 		Wasavi.send(":abbr foo\n");
 		assertEquals("#5-1", join("\n",
 			"*** abbreviations ***",
-			"foo\tbar"
+			"LHS    RHS",
+			"---    ---",
+			"foo    bar"
 		), Wasavi.getLastMessage());
+
 		Wasavi.send(":abbr\n");
 		assertEquals("#5-2", join("\n",
 			"*** abbreviations ***",
-			"bar\tBAZ",
-			"foo\tbar"
+			"LHS    RHS",
+			"---    ---",
+			"bar    BAZ",
+			"baz    B A Z",
+			"foo    bar"
 		), Wasavi.getLastMessage());
 
+		//
 		Wasavi.send(":abb [clear]\n");
 		Wasavi.send(":ab\n");
 		assertEquals("#6-1", "No abbreviations are defined.", Wasavi.getLastMessage());
 	}
 
 	@Test
-	public void testAbbreviateAction () {
+	public void testAbbreviateExpandRemapped () {
+		Wasavi.send(":ab [clear]\n");
+
 		Wasavi.send(":ab foo FOO\n");
-		Wasavi.send("ifoo bar foo\u001b");
+		Wasavi.send("ccfoo bar foo\u001b");
 		assertValue("#1-1", "FOO bar FOO");
 
-		Wasavi.send(":unab foo\n");
+		// space
+		Wasavi.send(":ab foo FOO  BAR\n");
+		Wasavi.send("ccfoo bar foo\u001b");
+		assertValue("#2-1", "FOO  BAR bar FOO  BAR");
+
+		// newline
+		Wasavi.send(":ab foo FOO<newline>BAR\n");
+		Wasavi.send("ccfoo bar foo\u001b");
+		assertValue("#3-1", "FOO\nBAR bar FOO\nBAR");
+
+		Wasavi.send(":ab [clear]\n");
 	}
 
 	@Test
@@ -1519,7 +1553,9 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":ab foo bar\n:ab\n");
 		assertEquals("#1-1", join("\n",
 			"*** abbreviations ***",
-			"foo\tbar"
+			"LHS    RHS",
+			"---    ---",
+			"foo    bar"
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":unabbreviate\n");

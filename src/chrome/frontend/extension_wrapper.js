@@ -141,12 +141,21 @@
 		doDisconnect: function () {},
 		setMessageListener: function (handler) {},
 		removeCallback: function (id) {
+			if (typeof id != 'number') return;
 			delete this.preservedCallbacks[id];
 		},
 		interruptCallback: function (id, data) {
 			if (!(id in this.preservedCallbacks)) return;
-			this.preservedCallbacks[id](data);
+			this.runCallback(this.preservedCallbacks[id], data);
 			this.removeCallback(id);
+		},
+		runCallback: function () {
+			var args = Array.prototype.slice.call(arguments);
+			var callback = args.shift();
+			if (typeof callback != 'function') {
+				return;
+			}
+			return callback.apply(null, args);
 		},
 		getUniqueId: function () {
 			return this.name
@@ -229,7 +238,7 @@
 		function handleMessage (req) {
 			if ('requestNumber' in req
 			&& req.requestNumber in that.preservedCallbacks) {
-				that.preservedCallbacks[req.requestNumber](req);
+				that.runCallback(that.preservedCallbacks[req.requestNumber], req);
 			}
 			else {
 				onMessageHandler && onMessageHandler(req);
@@ -291,7 +300,7 @@
 			}
 			if ('requestNumber' in req
 			&& req.requestNumber in that.preservedCallbacks) {
-				that.preservedCallbacks[req.requestNumber](req);
+				that.runCallback(that.preservedCallbacks[req.requestNumber], req);
 			}
 			else {
 				onMessageHandler && onMessageHandler(req);
@@ -425,7 +434,7 @@
 
 				if ('requestNumber' in payload
 				&& payload.requestNumber in that.preservedCallbacks) {
-					that.preservedCallbacks[payload.requestNumber](payload);
+					that.runCallback(that.preservedCallbacks[payload.requestNumber], payload);
 				}
 				else if ('callbackNumber' in data) {
 					handleMessage(data);

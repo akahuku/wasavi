@@ -29,6 +29,9 @@ public class BasicsTest extends WasaviTest {
 
 	@Test
 	public void runtimeOverrideSettings () {
+		Wasavi.sendNoWait(":q\n");
+		sleep(1000);
+
 		String currentUrl = driver.getCurrentUrl();
 		driver.navigate().to(currentUrl + "?ros-test");
 

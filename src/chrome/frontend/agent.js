@@ -966,7 +966,7 @@ function handleIframeMessage (e) {
 	case 'wasavi-read':
 		if (!wasaviFrame) break;
 		notifyToChild(wasaviFrame, {
-			type:'fileio-read-response',
+			type:'wasavi-read-response',
 			state:'complete',
 			meta:{
 				path:'',
@@ -979,7 +979,7 @@ function handleIframeMessage (e) {
 	case 'wasavi-write':
 		if (!wasaviFrame) break;
 		var result = setValue(targetElement, req.value, req.isForce);
-		var payload = {type:'fileio-write-response'};
+		var payload = {type:'wasavi-write-response'};
 		if (typeof result == 'number') {
 			payload.state = 'complete';
 			payload.meta = {

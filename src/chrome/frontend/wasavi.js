@@ -77,13 +77,6 @@
 		get exCommandExecutor () {return exCommandExecutor},
 		get recordedStrokes () {return recordedStrokes},
 		get notifier () {return notifier},
-		get pendingRequestId () {return pendingRequestId},
-		set pendingRequestId (v) {
-			if (pendingRequestId != undefined) {
-				throw new Error('Already in a pending state.');
-			}
-			pendingRequestId = v;
-		},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -132,7 +125,9 @@
 			getFileSystemIndex:getFileSystemIndex,
 			splitPath:splitPath,
 			regalizeFilePath:regalizeFilePath,
-			releasePending:releasePending
+			registerPending:registerPending,
+			removePending:removePending,
+			interruptPending:interruptPending
 		}),
 
 		/*
@@ -1836,7 +1831,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 	if (ignoreAbbreviation) return;
 
 	var regex = config.vars.iskeyword;
-	var target, last, abbrev, noremap;
+	var target, last;
 
 	if (force) {
 		if (inputHandler.text.length < 1) return;
@@ -1851,10 +1846,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		if (regex.test(last)) return;
 	}
 
-	for (var i in abbrevs) {
-		abbrev = abbrevs[i].value;
-		noremap = abbrevs[i].noremap;
-
+	for (var abbrev in abbrevs) {
 		if (target.substr(-abbrev.length) != abbrev) continue;
 
 		var canTransit = false;
@@ -1885,23 +1877,23 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		if (!canTransit) continue;
 
 		// noremapped abbreviation
-		if (noremap) {
+		if (abbrevs[abbrev].noremap) {
 			var a = inputHandler.text;
 			var a2 = inputHandler.textFragment;
 
 			inputHandler.text = target
 				+ multiply('\u0008', abbrev.length)
-				+ abbrevs[abbrev]
+				+ abbrevs[abbrev].value
 				+ last;
 			inputHandler.textFragment = inputHandler
 				.textFragment
 				.substring(0, inputHandler.textFragment.length - 1)
 				+ multiply('\u0008', abbrev.length)
-				+ abbrevs[abbrev]
+				+ abbrevs[abbrev].value
 				+ last;
 
 			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-			(inputMode == 'edit' ? insert : overwrite)(abbrevs[abbrev] + last);
+			(inputMode == 'edit' ? insert : overwrite)(abbrevs[abbrev].value + last);
 		}
 
 		// remapped abbreviation
@@ -1911,7 +1903,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 			inputHandler.textFragment = inputHandler.textFragment
 				.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
 			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-			keyManager.pushSweep(abbrevs[abbrev] + last);
+			keyManager.pushSweep(abbrevs[abbrev].value + last);
 		}
 		break;
 	}
@@ -2702,12 +2694,151 @@ function regalizeFilePath (path, completeDriveName) {
 
 	return path;
 }
-function releasePending () {
-	if (pendingRequestId == undefined) return;
+function registerPending (id, callback) {
+	if (pendingRequestId != undefined) {
+		throw new Error(_('Already in a pending state.'));
+	}
+	if (isString(callback)) {
+		switch (callback) {
+		case 'read':
+			callback = getReadHandler(id);
+			break;
+		case 'write':
+			callback = getWriteHandler(id);
+			break;
+		case 'edit':
+			callback = getEditHandler(id);
+			break;
+		case 'chdir':
+			callback = getChdirHandler(id);
+			break;
+		}
+	}
+	if (isFunction(callback)) {
+		extensionChannel.preservedCallbacks[id] = callback;
+	}
+	pendingRequestId = id;
+}
+function removePending (id) {
+	if (pendingRequestId == undefined) {
+		throw new Error(_('Not in a pending state.'));
+	}
+	if (id != pendingRequestId) {
+		throw new Error(_('Pending Request ID mismatch.'));
+	}
+	extensionChannel.removeCallback(pendingRequestId);
+	pendingRequestId = undefined;
+}
+function interruptPending () {
+	if (pendingRequestId == undefined) {
+		throw new Error(_('Not in a pending state.'));
+	}
 	extensionChannel.interruptCallback(pendingRequestId, {
 		error:[_('The ex command was interrupted.')]
 	});
 	pendingRequestId = undefined;
+}
+function getReadHandler (id) {
+	return function (req) {
+		if (req.error) {
+			exCommandExecutor.stop();
+			removePending(id);
+			showMessage(_.apply(null, req.error), true, false);
+			return;
+		}
+
+		switch (req.state) {
+		case 'reading':
+			showMessage(
+				_('Reading ({0}%)', req.progress.toFixed(2)));
+			break;
+
+		case 'complete':
+			var read = exCommandExecutor.lastCommandObj.clone();
+			read.handler = function (app, t, a) {
+				return Wasavi.ExCommand.readCore(
+					app, t, a, req.content, req.meta, req.status);
+			};
+			cursor.update({visible:false});
+			exCommandExecutor.runAsyncNext(
+				read, exCommandExecutor.lastCommandArg);
+			removePending(id);
+			break;
+		}
+	};
+}
+function getWriteHandler (id) {
+	return function (req) {
+		if (req.error) {
+			removePending(id);
+			showMessage(_.apply(null, req.error), true, false);
+			notifyCommandComplete();
+			return;
+		}
+
+		switch (req.state) {
+		case 'buffered':
+			showMessage(
+				_('Buffered: {0}', req.path));
+			break;
+		case 'writing':
+			showMessage(
+				_('Writing ({0}%)', req.progress.toFixed(2)));
+			break;
+		case 'complete':
+			showMessage(
+				_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
+			notifyCommandComplete();
+			removePending(id);
+			break;
+		}
+	};
+}
+function getEditHandler (id) {
+	return function (req) {
+		if (req.error) {
+			exCommandExecutor.stop();
+			removePending(id);
+			showMessage(_.apply(null, req.error), true, false);
+			return;
+		}
+
+		switch (req.state) {
+		case 'reading':
+			showMessage(
+				_('Reading ({0}%)', req.progress.toFixed(2)));
+			break;
+
+		case 'complete':
+			var read = exCommandExecutor.lastCommandObj.clone();
+			read.handler = function (app, t, a) {
+				return Wasavi.ExCommand.editCore(
+					app, t, a, req.content, req.meta, req.status);
+			};
+			cursor.update({visible:false});
+			exCommandExecutor.runAsyncNext(
+				read, exCommandExecutor.lastCommandArg);
+			removePending(id);
+			break;
+		}
+	};
+}
+function getChdirHandler (id) {
+	return function (req) {
+		if (req.error) {
+			exCommandExecutor.stop();
+			removePending(id);
+			showMessage(_.apply(null, req.error), true, false);
+			return;
+		}
+
+		var chdir = exCommandExecutor.lastCommandObj.clone();
+		chdir.handler = function (app, t, a) {
+			return Wasavi.ExCommand.chdirCore(app, t, a, req.data);
+		};
+		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
+		removePending(id);
+	};
 }
 
 /*
@@ -4372,7 +4503,7 @@ function handleKeydown (e) {
 	|| isBulkInputting && !e.isCompositioned
 	|| clipboardReadingState == 1) {
 		if (exCommandExecutor.running && e.code == 3) {
-			releasePending();
+			interruptPending();
 			bell.play();
 			return;
 		}
@@ -4550,6 +4681,14 @@ function handleBackendMessage (req) {
 			$(LINE_INPUT_ID).focus();
 			break;
 		}
+		break;
+
+	case 'wasavi-read-response':
+		getReadHandler()(req);
+		break;
+
+	case 'wasavi-write-response':
+		getWriteHandler()(req);
 		break;
 
 	case 'update-storage':

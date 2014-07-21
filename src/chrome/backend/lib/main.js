@@ -500,6 +500,8 @@
 			if (path == '') {
 				ext.postMessage(sender, {
 					type:'fileio-chdir-response',
+					internalId:command.internalId,
+					requestNumber:command.requestNumber,
 					data:null
 				});
 			}
@@ -513,12 +515,16 @@
 						onload: function (data) {
 							ext.postMessage(sender, {
 								type:'fileio-chdir-response',
+								internalId:command.internalId,
+								requestNumber:command.requestNumber,
 								data:data
 							});
 						},
 						onerror: function (error) {
 							ext.postMessage(sender, {
 								type:'fileio-chdir-response',
+								internalId:command.internalId,
+								requestNumber:command.requestNumber,
 								error:error
 							});
 						}
