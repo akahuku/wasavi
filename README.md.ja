@@ -55,7 +55,13 @@ wasavi の作成は継続中です。バグレポートや機能の要請はど�
 
 ### Opera ユーザへの注意
 
-Presto ベースの Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。
+Presto ベースの Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。Presto ベースの Opera は拡張に対してシステムクリップボード捜査を許していません。したがって Opera ではレジスタ `*` は使用できません。
+
+### Chrome ユーザへの注意
+
+Chrome は Ctrl+T や Ctrl+W などの基本的なショートカットを予約しています。これらのキーは wasavi から使用することができません。
+
+
 
 よく聞かれる質問
 ================

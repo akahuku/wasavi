@@ -55,7 +55,13 @@ Source code and latest development releases are hosted at [Github](https://githu
 
 ### A note for Opera users
 
-Presto based Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed.
+Presto based Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed. Presto based Opera does not allow extension to manipulate system clipboard, so the register `*` is not unavailable on Opera.
+
+### A note for Chrome users
+
+Chrome has reserved some fundamental shortcuts, such as Ctrl+T, Ctrl+W. These keys cannot be used in wasavi.
+
+
 
 Frequently Asked Questions
 ==========================
