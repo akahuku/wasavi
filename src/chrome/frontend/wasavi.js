@@ -4662,11 +4662,11 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'wasavi-read-response':
-		getReadHandler()(req);
+		getReadHandler(multiplexCallbackId)(req);
 		break;
 
 	case 'wasavi-write-response':
-		getWriteHandler()(req);
+		getWriteHandler(multiplexCallbackId)(req);
 		break;
 
 	case 'update-storage':

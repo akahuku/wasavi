@@ -284,18 +284,6 @@
         "message": "Readonly オプションがセットされています (\"!\" 付加で上書きできます)。",
         "description": "Readonly option is set (use \"!\" to override)."
     },
-    "buffered_@0": {
-        "message": "バッファ済み: {0}",
-        "description": "Buffered: {0}"
-    },
-    "writing_@0": {
-        "message": "書き込み中 ({0}%)",
-        "description": "Writing ({0}%)"
-    },
-    "written_@0": {
-        "message": "書き込み完了: {0}",
-        "description": "Written: {0}"
-    },
     "cannot_open_@0": {
         "message": "\"{0}\" を開けません。",
         "description": "Cannot open \"{0}\"."
@@ -355,10 +343,6 @@
     "only_stand_alone_form_can_edit": {
         "message": "edit はスタンドアロンフォームでのみ有効です。",
         "description": "Only stand alone form can edit."
-    },
-    "reading_@0": {
-        "message": "読み込み中 ({0}%)",
-        "description": "Reading ({0}%)"
     },
     "only_stand_alone_form_can_rename": {
         "message": "リネームはスタンドアロンフォームでのみ有効です。",
@@ -584,9 +568,33 @@
         "message": "読み取り専用",
         "description": "readonly"
     },
+    "already_in_a_pending_state": {
+        "message": "すでにペンディング状態です。",
+        "description": "Already in a pending state."
+    },
+    "pending_request_id_mismatch": {
+        "message": "ペンディングリクエスト ID の不整合。",
+        "description": "Pending Request ID mismatch."
+    },
     "the_ex_command_was_interrupted": {
         "message": "ex コマンドは中断されました。",
         "description": "The ex command was interrupted."
+    },
+    "reading_@0": {
+        "message": "読み込み中 ({0}%)",
+        "description": "Reading ({0}%)"
+    },
+    "buffered_@0": {
+        "message": "バッファ済み: {0}",
+        "description": "Buffered: {0}"
+    },
+    "writing_@0": {
+        "message": "書き込み中 ({0}%)",
+        "description": "Writing ({0}%)"
+    },
+    "written_@0": {
+        "message": "書き込み完了: {0}",
+        "description": "Written: {0}"
     },
     "@0_canceled": {
         "message": "{0} がキャンセルされました。",
