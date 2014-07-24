@@ -62,6 +62,7 @@ var devMode;
 
 var targetElement;
 var wasaviFrame;
+var wasaviFrameInternalId;
 var extraHeight;
 var isFullscreen;
 var targetElementResizedTimer;
@@ -70,6 +71,16 @@ var mutationObserver;
 var getValueCallback;
 var stateClearTimer;
 var keyStrokeLog = [];
+
+function log () {
+	devMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+}
+function info () {
+	devMode && console.info('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+}
+function error () {
+	devMode && console.error('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+}
 
 function _ () {
 	return Array.prototype.slice.call(arguments);
@@ -83,15 +94,13 @@ function getUniqueClass () {
 	return result;
 }
 
-function notifyToChild (frame, payload) {
-	if (!frame) return;
-	try {
-		frame.contentWindow.postMessage({
-			internalId:extension.internalId,
-			payload:payload
-		}, '*');
-	}
-	catch (e) {}
+function notifyToChild (id, payload) {
+	if (!id) return;
+	extension.postMessage({
+		type: 'transfer',
+		to: id,
+		payload: payload
+	});
 }
 
 function locate (iframe, target, isFullscreen, extraHeight) {
@@ -209,7 +218,7 @@ function runCore (element, frameSource, value) {
 	 *     |       "init-response"    |
 	 *     |              |           |
 	 *     |              |<----------|
-	 *     |              |"wasavi-initialized"
+	 *     |              |"initialized"
 	 *     |              |           |
 	 *
 	 */
@@ -250,10 +259,10 @@ function runCore (element, frameSource, value) {
 	extension.postMessage({
 		type:'push-payload',
 		parentTabId:extension.tabId,
+		parentInternalId:extension.internalId,
 		url:window.location.href,
 		testMode:isTestFrame,
 		id:element.id,
-		internalId:extension.internalId,
 		nodeName:element.nodeName,
 		nodePath:getNodePath(element),
 		isContentEditable:element.isContentEditable,
@@ -327,7 +336,7 @@ function focusToFrame (req) {
 		&& wasaviFrame.contentWindow.focus();
 	} catch (e) {}
 
-	notifyToChild(wasaviFrame, {type:'wasavi-focus-me-response'});
+	notifyToChild(wasaviFrameInternalId, {type:'focus-me-response'});
 }
 
 function blurFromFrame () {
@@ -369,7 +378,7 @@ function getFocusables () {
 	return ordered.concat(unordered);
 }
 
-function log (eventType, keyCode, key) {
+function keylog (eventType, keyCode, key) {
 	keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
 }
 
@@ -587,7 +596,7 @@ function handleWasaviFrameMutation (records) {
 function handleWasaviFrameRemoved (e) {
 	wasaviFrame = null;
 	cleanup();
-	devMode && console.error('wasavi terminated abnormally.');
+	error('wasavi terminated abnormally.');
 }
 
 /**
@@ -710,11 +719,11 @@ function handleAgentInitialized (req) {
 		window.removeEventListener('keydown', handleKeydown, true);
 	}
 
-	devMode
-	&& extension.isTopFrame
+	extension.isTopFrame
 	&& document.querySelector('textarea')
-	&& console.info(
-		'wasavi agent: running on ' + window.location.href.replace(/[#?].*$/, ''));
+	&& info(
+		'wasavi agent: running on ',
+		window.location.href.replace(/[#?].*$/, ''));
 }
 
 /**
@@ -777,101 +786,14 @@ function handleBackendMessage (req) {
 	if (!req || !req.type) return;
 
 	switch (req.type) {
-	case 'update-storage':
-		var log = [];
-		for (var i in req.items) {
-			var item = req.items[i];
-			switch (item.key) {
-			case 'targets':
-				enableList = item.value;
-				log.push(item.key);
-				break;
-
-			case 'exrc':
-				exrc = item.value;
-				log.push(item.key);
-				break;
-
-			case 'shortcut':
-				shortcut = item.value;
-				log.push(item.key);
-				break;
-
-			case 'shortcutCode':
-				shortcutCode = item.value;
-				log.push(item.key);
-				break;
-
-			case 'quickActivate':
-				quickActivation = item.value;
-				log.push(item.key);
-				break;
-			}
-		}
-		devMode && log.length && console.log(
-			'wasavi agent[update-storage]: consumed ' + log.join(', '));
-		break;
-
-	case 'request-run':
-		handleRequestLaunch();
-		break;
-
-	case 'ping':
-		break;
-	}
-}
-
-/*
- * handler for messages comes from iframe
- */
-
-function handleIframeMessage (e) {
-	if (!e || !e.data || typeof e.data != 'object'
-	|| !('internalId' in e.data) || !('type' in e.data)) {
-		/*
-		 * This situation is not necessarily an error
-		 * because documents other than wasavi iframe also use
-		 * cross-document message mechanism.
-		 * Therefore, wasavi should only ignore this message.
-		 */
-		/*
-		if (devMode) {
-			var reason = '?';
-			if (!e) {
-				reason = 'empty event object';
-			}
-			else if (!e.data) {
-				reason = 'empty e.data';
-			}
-			else if (typeof e.data != 'object') {
-				reason = 'invalid type of e.data, ' + (typeof e.data);
-			}
-			else if (!('internalId' in e.data)) {
-				reason = 'missing e.data.internalId';
-			}
-			else if (!('type' in e.data)) {
-				reason = 'missing e.data.type';
-			}
-			console.log(
-				'wasavi agent: got a invalid dom message' +
-				' (' + reason + '): ' + JSON.stringify(e.data, null, ' '));
-		}
-		 */
-		return;
-	}
-
-	if (e.data.internalId !== extension.internalId) {
-		devMode && console.error('wasavi agent: GOT A INVALID INTERNAL ID.');
-		return;
-	}
-
-	var req = e.data;
-
-	switch (req.type) {
-	case 'wasavi-initialized':
+	/*
+	 * messages transferred from wasavi
+	 */
+	case 'initialized':
 		if (!wasaviFrame) break;
 		var currentHeight = wasaviFrame.offsetHeight;
 		var newHeight = req.height || targetElement.offsetHeight;
+		wasaviFrameInternalId = req.childInternalId;
 		extraHeight = newHeight - currentHeight;
 		wasaviFrame.style.height = newHeight + 'px';
 		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
@@ -884,21 +806,21 @@ function handleIframeMessage (e) {
 			document.getElementById('test-log').value = '';
 		}
 
-		notifyToChild(wasaviFrame, {type:'wasavi-got-initialized'});
+		notifyToChild(wasaviFrameInternalId, {type:'got-initialized'});
 		break;
 
-	case 'wasavi-ready':
+	case 'ready':
 		if (!wasaviFrame) break;
 		document.activeElement != wasaviFrame && focusToFrame(req);
 		wasaviFrame.style.visibility = 'visible';
-		devMode && console.info('wasavi started');
+		info('wasavi started');
 		fireCustomEvent('WasaviStarted', 0);
 
 		clearTimeout(wasaviFrameTimeoutTimer);
 		wasaviFrameTimeoutTimer = null;
 		break;
 
-	case 'wasavi-window-state':
+	case 'window-state':
 		if (!wasaviFrame) break;
 		switch (req.state) {
 		case 'maximized':
@@ -909,12 +831,12 @@ function handleIframeMessage (e) {
 		}
 		break;
 
-	case 'wasavi-focus-me':
+	case 'focus-me':
 		if (!wasaviFrame) break;
 		focusToFrame(req);
 		break;
 
-	case 'wasavi-focus-changed':
+	case 'focus-changed':
 		if (!wasaviFrame || !targetElement) break;
 		var focusables = getFocusables();
 		var index = focusables.indexOf(targetElement);
@@ -940,7 +862,7 @@ function handleIframeMessage (e) {
 		catch (e) {}
 		break;
 
-	case 'wasavi-blink-me':
+	case 'blink-me':
 		if (!wasaviFrame) break;
 		wasaviFrame.style.visibility = 'hidden';
 		wasaviFrame && setTimeout(function () {
@@ -949,7 +871,7 @@ function handleIframeMessage (e) {
 		}, 500);
 		break;
 
-	case 'wasavi-terminated':
+	case 'terminated':
 		if (!wasaviFrame) break;
 		if (isTestFrame) {
 			if (stateClearTimer) {
@@ -959,14 +881,14 @@ function handleIframeMessage (e) {
 			document.querySelector('h1').style.color = '';
 		}
 		cleanup(req.value, req.isImplicit);
-		devMode && console.info('wasavi terminated');
+		info('wasavi terminated');
 		fireCustomEvent('WasaviTerminated', 0);
 		break;
 
-	case 'wasavi-read':
+	case 'read':
 		if (!wasaviFrame) break;
-		notifyToChild(wasaviFrame, {
-			type:'wasavi-read-response',
+		notifyToChild(wasaviFrameInternalId, {
+			type:'read-response',
 			state:'complete',
 			meta:{
 				path:'',
@@ -976,10 +898,10 @@ function handleIframeMessage (e) {
 		});
 		break;
 
-	case 'wasavi-write':
+	case 'write':
 		if (!wasaviFrame) break;
 		var result = setValue(targetElement, req.value, req.isForce);
-		var payload = {type:'wasavi-write-response'};
+		var payload = {type:'write-response'};
 		if (typeof result == 'number') {
 			payload.state = 'complete';
 			payload.meta = {
@@ -994,33 +916,78 @@ function handleIframeMessage (e) {
 			payload.error = _('Internal state error.');
 		}
 
-		notifyToChild(wasaviFrame, payload);
+		notifyToChild(wasaviFrameInternalId, payload);
+		break;
+
+	/*
+	 * messages from backend
+	 */
+	case 'update-storage':
+		var logbuf = [];
+		for (var i in req.items) {
+			var item = req.items[i];
+			switch (item.key) {
+			case 'targets':
+				enableList = item.value;
+				logbuf.push(item.key);
+				break;
+
+			case 'exrc':
+				exrc = item.value;
+				logbuf.push(item.key);
+				break;
+
+			case 'shortcut':
+				shortcut = item.value;
+				logbuf.push(item.key);
+				break;
+
+			case 'shortcutCode':
+				shortcutCode = item.value;
+				logbuf.push(item.key);
+				break;
+
+			case 'quickActivate':
+				quickActivation = item.value;
+				logbuf.push(item.key);
+				break;
+			}
+		}
+		logbuf.length && log(
+			'update-storage: consumed ', logbuf.join(', '));
+		break;
+
+	case 'request-run':
+		handleRequestLaunch();
+		break;
+
+	case 'ping':
 		break;
 
 	/*
 	 * following cases are for functionality test.
 	 * available only on http://wasavi.appsweets.net/test_frame.html
 	 */
-	case 'wasavi-notify-keydown':
+	case 'notify-keydown':
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
 			stateClearTimer = null;
-			//log('notify-keydown: timer cleared', '', '');
+			//keylog('notify-keydown: timer cleared', '', '');
 		}
-		log(req.eventType, req.keyCode, req.key);
+		keylog(req.eventType, req.keyCode, req.key);
 		break;
 
-	case 'wasavi-command-start':
+	case 'command-start':
 		if (!isTestFrame) break;
 		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
 			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
-			log('command-start', '', '');
+			keylog('command-start', '', '');
 		}
 		document.querySelector('h1').style.color = 'red';
 		break;
 
-	case 'wasavi-notify-state':
+	case 'notify-state':
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
@@ -1031,12 +998,12 @@ function handleIframeMessage (e) {
 
 			stateClearTimer = null;
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
-			log('notify-state', '', '');
+			keylog('notify-state', '', '');
 		}, 100);
-		//log('notify-state: timer registered.', '', '');
+		//keylog('notify-state: timer registered.', '', '');
 		break;
 
-	case 'wasavi-command-completed':
+	case 'command-completed':
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
@@ -1046,7 +1013,7 @@ function handleIframeMessage (e) {
 			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
 			wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
 
-			log('command-completed', '', '');
+			keylog('command-completed', '', '');
 			keyStrokeLog.unshift('*** sequence point ***');
 			document.querySelector('h1').style.color = '';
 			document.getElementById('test-log').value =
@@ -1065,7 +1032,7 @@ function handleIframeMessage (e) {
 			//wasaviFrame.setAttribute('data-wasavi-command-state', 'done');
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
 		}, 100);
-		//log('command-completed: timer registered.', '', '');
+		//keylog('command-completed: timer registered.', '', '');
 		break;
 	}
 }
@@ -1080,8 +1047,8 @@ function handleConnect (req) {
 			else if (!('tabId' in req)) {
 				missing = 'missing req.tabId';
 			}
-			console.error(
-				'wasavi agent: got init-response message' +
+			error(
+				'wasavi agent: got init-response message',
 				' (' + missing + ').');
 		}
 		return;
@@ -1111,7 +1078,6 @@ isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
 createPageAgent(!WasaviExtensionWrapper.HOTKEY_ENABLED);
 extension.setMessageListener(handleBackendMessage);
-window.addEventListener('message', handleIframeMessage, false);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
 

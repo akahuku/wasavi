@@ -235,6 +235,7 @@
 
 		var that = this;
 		var onMessageHandler;
+		var port = null;
 
 		function handleMessage (req) {
 			if ('requestNumber' in req
@@ -249,16 +250,31 @@
 		this.constructor = ExtensionWrapper;
 		this.runType = 'chrome-extension';
 		this.doPostMessage = function (data, callback, preserved) {
-			callback && !preserved ?
-				chrome.runtime.sendMessage(data, callback) :
-				chrome.runtime.sendMessage(data);
+			if (callback && !preserved) {
+				chrome.runtime.sendMessage(data, callback);
+			}
+			else {
+				if (port) {
+					port.postMessage(data);
+				}
+				else {
+					chrome.runtime.sendMessage(data);
+				}
+			}
 		};
 		this.doConnect = function () {
+			port = chrome.runtime.connect({
+				name: this.internalId
+			});
+			port.onMessage.addListener(handleMessage);
 			chrome.extension.onRequest.addListener(handleMessage);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
 			chrome.extension.onRequest.removeListener(handleMessage);
+			port.onMessage.removeListener(handleMessage);
+			port.disconnect();
+			port = null;
 		};
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;

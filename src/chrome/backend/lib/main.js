@@ -377,6 +377,10 @@
 		payload = null;
 	}
 
+	function handleTransfer (command, data, sender, respond) {
+		ext.postMessage(data.to, data.payload);
+	}
+
 	function handleResetOptions (command, data, sender, respond) {
 		ext.storage.clear();
 		ext.fileSystem.clearCredentials();
@@ -584,12 +588,24 @@
 		}
 	}
 
+	function handleDumpInternalIds (command, data, sender, respond) {
+		if (!ext.isDev) return;
+		var log =  ext.dumpInternalIds();
+		log.push(
+			'',
+			'sender id: #' + sender,
+			'  command: ' + JSON.stringify(command),
+			'     data: ' + JSON.stringify(data));
+		respond({log: log.join('\n')});
+	}
+
 	/** {{{2 request handler entry */
 
 	var commandMap = {
 		'init-agent':			handleInit,
 		'init-options':			handleInit,
 		'init':					handleInit,
+		'transfer':				handleTransfer,
 		'get-storage':			handleGetStorage,
 		'set-storage':			handleSetStorage,
 		'push-payload':			handlePushPayload,
@@ -600,7 +616,8 @@
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
 		'fsctl':				handleFsCtl,
-		'terminated':			handleTerminated
+		'terminated':			handleTerminated,
+		'dump-internal-ids':	handleDumpInternalIds
 	};
 
 	function handleRequest (command, data, sender, respond) {

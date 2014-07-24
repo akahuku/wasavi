@@ -919,13 +919,15 @@ ime-mode:disabled; \
 	 */
 
 	extensionChannel && extensionChannel.setMessageListener(handleBackendMessage);
-	window.addEventListener('message', handleAgentMessage, false);
 
 	/*
 	 * notify initialized event to agent
 	 */
 
-	notifyToParent('initialized', {height:cnt.offsetHeight});
+	notifyToParent('initialized', {
+		height: cnt.offsetHeight,
+		childInternalId: extensionChannel && extensionChannel.internalId || undefined
+	});
 	isStandAlone && runExrc();
 }
 function runExrc () {
@@ -968,7 +970,6 @@ function uninstall (save, implicit) {
 	}
 
 	// remove all event handlers
-	window.removeEventListener('message', handleAgentMessage, false);
 	setupEventHandlers(false);
 
 	// clear all objects
@@ -2553,9 +2554,12 @@ function notifyToParent (eventName, payload) {
 	if (!extensionChannel) return;
 	if (extensionChannel.isTopFrame) return;
 	payload || (payload = {});
-	payload.type = 'wasavi-' + eventName;
-	payload.internalId = targetElement.internalId;
-	window.parent.postMessage(payload, '*');
+	payload.type = eventName;
+	extensionChannel.postMessage({
+		type: 'transfer',
+		to: targetElement.parentInternalId,
+		payload: payload
+	});
 }
 function notifyKeydownEvent (code, key, note) {
 	if (!testMode) return;
@@ -4591,65 +4595,24 @@ function handleCoverMousewheel (e) {
 	}
 }
 
-// handler for message from parent document
-function handleAgentMessage (e) {
-	if (!e || !e.data || typeof e.data != 'object'
-	|| !('internalId' in e.data)
-	|| !('payload' in e.data) || typeof e.data.payload != 'object') {
-		/*
-		 * This situation is not necessarily an error
-		 * because documents other than wasavi agent also use
-		 * cross-document message mechanism.
-		 * Therefore, wasavi should only ignore this message.
-		 */
-		if (false && devMode) {
-			var reason = '?';
-			if (!e) {
-				reason = 'empty event object';
-			}
-			else if (!e.data) {
-				reason = 'empty e.data';
-			}
-			else if (typeof e.data != 'object') {
-				reason = 'invalid type of e.data, ' + (typeof e.data);
-			}
-			else if (!('internalId' in e.data)) {
-				reason = 'missing e.data.internalId';
-			}
-			else if (!('payload' in e.data)) {
-				reason = 'missing e.data.payload';
-			}
-			else if (typeof e.data.payload != 'object') {
-				reason = 'invalid type of e.data.payload, ' + (typeof e.data.payload);
-			}
-			console.log(
-				'wasavi: got a invalid dom message' +
-				' (' + reason + '): ' + JSON.stringify(e.data, null, ' '));
-		}
-		return;
-	}
-	if (e.data.internalId !== targetElement.internalId) {
-		error('wasavi: GOT A INVALID INTERNAL ID.');
-		return;
-	}
-	handleBackendMessage(e.data.payload);
-}
-
 // handler for message from backend
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
 
 	switch (req.type) {
-	case 'wasavi-got-initialized':
+	/*
+	 * messages transferred from agent
+	 */
+	case 'got-initialized':
 		runExrc();
 		break;
 
-	case 'wasavi-relocate':
+	case 'relocate':
 		targetElement.rect = req.rect;
 		setGeometory();
 		break;
 
-	case 'wasavi-focus-me-response':
+	case 'focus-me-response':
 		switch (state) {
 		case 'normal':
 			cursor.update({focused:true, visible:!backlog.visible});
@@ -4661,14 +4624,17 @@ function handleBackendMessage (req) {
 		}
 		break;
 
-	case 'wasavi-read-response':
+	case 'read-response':
 		getReadHandler(multiplexCallbackId)(req);
 		break;
 
-	case 'wasavi-write-response':
+	case 'write-response':
 		getWriteHandler(multiplexCallbackId)(req);
 		break;
 
+	/*
+	 * messages from backend
+	 */
 	case 'update-storage':
 		for (var i in req.items) {
 			var item = req.items[i];
@@ -4699,7 +4665,6 @@ function handleBackendMessage (req) {
 		log('wasavi: got a unknown type message: ' + JSON.stringify(req, null, ' '));
 	}
 }
-
 
 /*
  * variables {{{1

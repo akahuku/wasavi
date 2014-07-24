@@ -1533,6 +1533,19 @@ Wasavi.ExCommand.commands = [
 			'current pos: ' + app.editLogger.currentPosition
 		].join('\n'));
 	}),
+	new Wasavi.ExCommand('sashimi', 'sashimi', '', 0, function (app, t, a) {
+		app.low.requestShowMessage('Soy sauce!');
+		app.extensionChannel.postMessage(
+			{
+				type:'dump-internal-ids',
+				parentTabId: app.targetElement.parentTabId,
+				parentTabIdInternal: app.targetElement.internalId
+			},
+			function (req) {
+				req && req.log && console.log(req.log);
+			}
+		);
+	}),
 	new Wasavi.ExCommand('registers', 'reg', '', 0, function (app, t, a) {
 		app.backlog.push(app.registers.dump());
 	}),
