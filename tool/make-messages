@@ -73,6 +73,14 @@ $extensionInfo = array(
 		"message" => "Are you sure?",
 		"description" => ""
 	),
+	"option_debug_head" => array(
+		"message" => "Debug",
+		"description" => ""
+	),
+	"option_log_desc" => array(
+		"message" => "Enable logging",
+		"description" => ""
+	),
 	"option_readme" => array(
 		"message" => "README",
 		"description" => ""

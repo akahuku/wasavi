@@ -69,6 +69,14 @@
         "message": "本当にいいですか？",
         "description": "Are you sure?"
     },
+	"option_debug_head": {
+		"message": "デバッグ",
+		"description": "Debug"
+	},
+	"option_log_desc": {
+		"message": "ログを有効",
+		"description": "Enable logging"
+	},
     "option_readme": {
         "message": "README",
         "description": "README"

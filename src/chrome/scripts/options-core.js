@@ -32,8 +32,12 @@ var enableList;
  */
 
 function initPage (
-	req, aEnableList, exrc, shortcut, fontFamily, quickActivation
+	req, aEnableList, exrc, shortcut, fontFamily, quickActivation, logMode
 ) {
+	/*
+	 * initialize form elements
+	 */
+
 	enableList = aEnableList;
 	for (var i in enableList) {
 		var el = document.getElementById(i);
@@ -58,6 +62,11 @@ function initPage (
 		el.value = fontFamily;
 	}
 
+	el = document.getElementById('log-mode');
+	if (el && el.nodeName == 'INPUT') {
+		el.checked = logMode;
+	}
+
 	el = document.getElementById('save');
 	if (el) {
 		el.addEventListener('click', handleOptionsSave, false);
@@ -68,16 +77,23 @@ function initPage (
 		el.addEventListener('click', handleOptionsInit, false);
 	}
 
+	document.evaluate(
+		'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
+		document.body, null,
+		window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
+
+	/*
+	 * replace all message ids to translated one
+	 */
+
 	[
 		'title',
 		'readme', 'license', 'notice',
-		'exrc_head',
+		'exrc_head', 'exrc_desc',
 		'target_elements_head',
 		'starting_type_head',
 		'font_family_head',
-		'exrc_desc',
-		'quick_activation_on',
-		'quick_activation_off',
+		'quick_activation_on', 'quick_activation_off',
 		['target_elements_desc', function (node, message) {
 			node.textContent = '';
 			var ul = node.appendChild(document.createElement('ul'));
@@ -90,11 +106,9 @@ function initPage (
 			});
 		}],
 		'preferred_storage_head',
-		'init_head',
-		'init_desc',
-		'init_confirm',
-		'save',
-		'saved'
+		'init_head', 'init_desc', 'init_confirm',
+		'debug_head', 'log_desc',
+		'save', 'saved'
 	]
 	.forEach(function (key) {
 		if (Object.prototype.toString.call(key) != '[object Array]') {
@@ -121,12 +135,10 @@ function initPage (
 		}
 	});
 
-	document.evaluate(
-		'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
-		document.body, null,
-		window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
+	/*
+	 * transition
+	 */
 
-	// transition
 	var overlay = document.getElementById('overlay');
 	var tend = function (e) {
 		e.target.parentNode && e.target.parentNode.removeChild(e.target);
@@ -146,6 +158,7 @@ function initPage (
 
 function handleOptionsSave () {
 	var items = [];
+	var el;
 
 	(function () {
 		var tmpEnableList = {};
@@ -164,24 +177,29 @@ function handleOptionsSave () {
 		}
 	})();
 
-	var el = document.getElementById('exrc');
+	el = document.getElementById('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		items.push({key:'exrc', value:el.value});
 	}
 
-	var el = document.querySelector('input[name="quick-activation"]:checked');
+	el = document.querySelector('input[name="quick-activation"]:checked');
 	if (el) {
-		items.push({key:'quickActivation', value:el.value == '1' ? '1' : '0'});
+		items.push({key:'quickActivation', value:el.value == '1'});
 	}
 
-	var el = document.getElementById('shortcut');
+	el = document.getElementById('shortcut');
 	if (el) {
 		items.push({key:'shortcut', value:el.value});
 	}
 
-	var el = document.getElementById('font-family');
+	el = document.getElementById('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'fontFamily', value:el.value});
+	}
+
+	el = document.getElementById('log-mode');
+	if (el && el.nodeName == 'INPUT') {
+		items.push({key:'logMode', value:el.checked});
 	}
 
 	(function () {

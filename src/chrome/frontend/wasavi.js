@@ -359,13 +359,13 @@ ExCommandExecutor.prototype = {
  */
 
 function log () {
-	devMode && console.log('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.log('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function info () {
-	devMode && console.info('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.info('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function error () {
-	devMode && console.error('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.error('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function getLocalStorage (keyName, callback) {
 	if (extensionChannel) {
@@ -4599,6 +4599,8 @@ function handleCoverMousewheel (e) {
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
 
+	logMode && log('got a message from backend:', JSON.stringify(req).substring(0, 200));
+
 	switch (req.type) {
 	/*
 	 * messages transferred from agent
@@ -4683,6 +4685,7 @@ var fontFamily = 'monospace';
 var quickActivation;
 var testMode;
 var devMode;
+var logMode;
 var fstab;
 var substituteWorker;
 var resizeHandlerInvokeTimer;
@@ -7405,6 +7408,7 @@ if (global.WasaviExtensionWrapper
 		global._ = l10n.getTranslator();
 		testMode = req.testMode;
 		devMode = req.devMode;
+		logMode = req.logMode;
 		wasaviFrame = req.wasaviFrame;
 		ffttDictionary = new unicodeUtils.FfttDictionary(req.unicodeDictData.fftt);
 		lineBreaker = new unicodeUtils.LineBreaker(req.unicodeDictData.LineBreak);

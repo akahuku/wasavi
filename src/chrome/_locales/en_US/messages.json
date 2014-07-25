@@ -69,6 +69,14 @@
         "message": "Are you sure?",
         "description": "Are you sure?"
     },
+	"option_debug_head": {
+		"message": "Debug",
+		"description": "Debug"
+	},
+	"option_log_desc": {
+		"message": "Enable logging",
+		"description": "Enable logging"
+	},
     "option_readme": {
         "message": "README",
         "description": "README"

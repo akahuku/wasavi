@@ -35,6 +35,7 @@
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var unicodeDictData;
 	var payload;
+	var config;
 	var runtimeOverwriteSettings;
 	var hotkey;
 	var contextMenu;
@@ -86,6 +87,162 @@
 		 */
 		contentScripts: getContentScriptsSpec()
 	});
+
+	var configInfo = {
+		targets: {
+			def: {
+				enableTextArea:       true,
+				enableText:           false,
+				enableSearch:         false,
+				enableTel:            false,
+				enableUrl:            false,
+				enableEmail:          false,
+				enablePassword:       false,
+				enableNumber:         false,
+				enableContentEditable:true
+			}
+		},
+		exrc: {
+			def: '" exrc for wasavi'
+		},
+		shortcut: {
+			def: function () {
+				return hotkey.defaultHotkeysDesc;
+			},
+			set: function (value) {
+				this.set(
+					'shortcutCode',
+					hotkey.getObjectsForDOM(value));
+				return value;
+			}
+		},
+		shortcutCode: {
+			def: function () {
+				return hotkey.getObjectsForDOM(this.get('shortcut'));
+			}
+		},
+		fontFamily: {
+			def: defaultFont,
+			set: function (value) {
+				if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(value)) {
+					value = defaultFont;
+				}
+				return value;
+			}
+		},
+		fstab: {
+			def: {
+				dropbox:  {enabled:true, isDefault:true},
+				gdrive:   {enabled:true},
+				onedrive: {enabled:true}
+			},
+			set: function (value) {
+				ext.fileSystem.setInfo(value);
+				return value;
+			},
+			setOnInit: true
+		},
+		quickActivation: {
+			def: false
+		},
+		logMode: {
+			def: false,
+			set: function (value) {
+				ext.setLogMode(value);
+				return value;
+			},
+			setOnInit: true
+		}
+	};
+
+	/* {{{1 classes */
+
+	function Config (info) {
+		Object.defineProperty(this, 'info', {value:info});
+		this.usedKeys_ = {};
+		this.init();
+	}
+
+	Config.prototype = {
+		init: function () {
+			debugger;
+			for (var key in this.info) {
+				var item = this.info[key];
+				var defaultValue = this.getDefaultValue(key);
+				var currentValue = this.get(key);
+
+				if (currentValue === undefined) {
+					this.set(key, defaultValue);
+					continue;
+				}
+
+				var defaultType = ext.utils.objectType(defaultValue);
+				var currentType = ext.utils.objectType(currentValue);
+
+				if (defaultType != currentType) {
+					this.set(key, defaultValue);
+					continue;
+				}
+
+				if (defaultType != 'Object') {
+					if (item.setOnInit && item.set) {
+						item.set.call(this, currentValue);
+					}
+					continue;
+				}
+
+				if (currentType == 'Object') {
+					Object.keys(currentValue).forEach(function (key) {
+						if (!(key in defaultValue)) {
+							delete currentValue[key];
+						}
+					});
+				}
+				else {
+					currentType = {};
+				}
+
+				Object.keys(defaultValue).forEach(function (key) {
+					if (!(key in currentValue)) {
+						currentValue[key] = defaultValue[key];
+					}
+				});
+
+				this.set(key, currentValue);
+			}
+		},
+		getDefaultValue: function (name) {
+			var item = this.info[name];
+			if (!item) return undefined;
+			if (typeof item.def == 'function') {
+				return item.def.call(this);
+			}
+			return item.def;
+		},
+		get: function (name) {
+			var result = ext.storage.getItem(name);
+
+			if (name in this.info && this.info[name].get) {
+				result = this.info[name].get.call(this, result);
+			}
+		
+			return result;
+		},
+		set: function (name, value) {
+			if (name in this.info && this.info[name].set) {
+				value = this.info[name].set.call(this, value);
+			}
+
+			this.usedKeys_[name] = 1;
+			ext.storage.setItem(name, value);
+		},
+		clearUsedKeys: function () {
+			this.usedKeys_ = {};
+		},
+		get usedKeys () {
+			return Object.keys(this.usedKeys_);
+		}
+	};
 
 	/* {{{1 functions */
 
@@ -229,74 +386,6 @@
 		}, {noCache:true, sync:true});
 	}
 
-	/** {{{2 storage initializer */
-
-	function initStorage () {
-		ext.storage.setItem(
-			'start_at',
-			(new Date).toLocaleDateString() + ' ' + (new Date).toLocaleTimeString()
-		);
-
-		[
-			['targets', {
-				enableTextArea:       true,
-				enableText:           false,
-				enableSearch:         false,
-				enableTel:            false,
-				enableUrl:            false,
-				enableEmail:          false,
-				enablePassword:       false,
-				enableNumber:         false,
-				enableContentEditable:true
-			}],
-			['exrc', '" exrc for wasavi'],
-			['shortcut', hotkey.defaultHotkeysDesc],
-			['shortcutCode', function () {
-				return hotkey.getObjectsForDOM(ext.storage.getItem('shortcut'));
-			}],
-			['fontFamily', defaultFont],
-			['fstab', {
-				dropbox:  {enabled:true, isDefault:true},
-				gdrive:   {enabled:true},
-				onedrive: {enabled:true}
-			}],
-			['quickActivation', false]
-		]
-		.forEach(function (item) {
-			var key = item[0];
-			var defaultValue = typeof item[1] == 'function' ? item[1]() : item[1];
-			var currentValue = ext.storage.getItem(key);
-
-			if (currentValue === undefined) {
-				ext.storage.setItem(key, defaultValue);
-			}
-			else {
-				var defaultType = ext.utils.objectType(defaultValue);
-				var currentType = ext.utils.objectType(currentValue);
-				switch (defaultType) {
-				case 'Object':
-					if (currentType == 'Object') {
-						Object.keys(currentValue).forEach(function (key) {
-							if (!(key in defaultValue)) {
-								delete currentValue[key];
-							}
-						});
-					}
-					else {
-						currentType = {};
-					}
-					Object.keys(defaultValue).forEach(function (key) {
-						if (!(key in currentValue)) {
-							currentValue[key] = defaultValue[key];
-						}
-					});
-					ext.storage.setItem(key, currentValue);
-					break;
-				}
-			}
-		});
-	}
-
 	/** {{{2 initialize f/F/t/T dictionary */
 
 	function initUnicodeDictData () {
@@ -354,6 +443,7 @@
 			tabId: sender,
 			version: ext.version,
 			devMode: ext.isDev,
+			logMode: ext.logMode,
 			testMode: data.url == TEST_MODE_URL,
 
 			targets: ext.storage.getItem('targets'),
@@ -365,7 +455,7 @@
 			shortcutCode: hotkey.canProcess ?
 				null : hotkey.getObjectsForDOM(ext.storage.getItem('shortcut')),
 			fontFamily: ext.storage.getItem('fontFamily'),
-			quickActivation: ext.storage.getItem('quickActivation') == '1',
+			quickActivation: ext.storage.getItem('quickActivation'),
 
 			messageCatalog: command.type != 'init-agent' ?
 				ext.messageCatalog : null,
@@ -385,7 +475,7 @@
 		ext.storage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
-		initStorage();
+		config.init();
 		broadcastStorageUpdate(
 			'targets exrc shortcut shortcutCode quickActivate'.split(' '));
 	}
@@ -416,31 +506,13 @@
 		}
 
 		if (items) {
-			var keys = [];
+			config.clearUsedKeys();
 			items.forEach(function (item) {
 				if (!('key' in item)) return;
 				if (!('value' in item)) return;
-
-				if (item.key == 'fontFamily') {
-					if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(item.value)) {
-						item.value = defaultFont;
-					}
-				}
-
-				keys.push(item.key);
-				ext.storage.setItem(item.key, item.value);
-
-				if (item.key == 'shortcut') {
-					keys.push('shortcutCode');
-					ext.storage.setItem(
-						'shortcutCode',
-						hotkey.getObjectsForDOM(item.value));
-				}
-				else if (item.key == 'fstab') {
-					ext.fileSystem.fstab = item.value;
-				}
+				config.set(item.key, item.value);
 			});
-			broadcastStorageUpdate(keys);
+			broadcastStorageUpdate(config.usedKeys);
 		}
 	}
 
@@ -589,7 +661,7 @@
 	}
 
 	function handleDumpInternalIds (command, data, sender, respond) {
-		if (!ext.isDev) return;
+		if (!ext.logMode) return;
 		var log =  ext.dumpInternalIds();
 		log.push(
 			'',
@@ -651,7 +723,7 @@
 	/** {{{2 bootstrap */
 
 	function handleLoad (e) {
-		global.removeEventListener && global.removeEventListener(e.type, handleLoad, false);
+		e && global.removeEventListener && global.removeEventListener(e.type, handleLoad, false);
 
 		switch (ext.kind) {
 		case 'Opera':
@@ -668,12 +740,13 @@
 		contextMenu = require('./ContextMenu').ContextMenu();
 
 		initHotkey();
-		initStorage();
 		initUnicodeDictData();
 
+		config = new Config(configInfo);
+
 		ext.receive(handleRequest);
-		ext.isDev && console.info(
-			'wasavi backend: running with following filesystems: ' +
+		ext.isDev && ext.log(
+			'!INFO: running with following filesystems: ',
 			ext.fileSystem.getInfo()
 				.filter(function (f) {return f.enabled})
 				.map(function (f) {return f.name})

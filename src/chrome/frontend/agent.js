@@ -59,6 +59,7 @@ var shortcutCode;
 var fontFamily;
 var quickActivation;
 var devMode;
+var logMode;
 
 var targetElement;
 var wasaviFrame;
@@ -73,13 +74,13 @@ var stateClearTimer;
 var keyStrokeLog = [];
 
 function log () {
-	devMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function info () {
-	devMode && console.info('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.info('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function error () {
-	devMode && console.error('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.error('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 
 function _ () {
@@ -711,7 +712,8 @@ function handleAgentInitialized (req) {
 	if (isOptionsPage) {
 		window.WasaviOptions.extension = extension;
 		window.WasaviOptions.initPage(
-			req, enableList, exrc, shortcut, fontFamily, quickActivation);
+			req, enableList, exrc, shortcut, fontFamily, quickActivation,
+			logMode);
 	}
 
 	if (quickActivation) {
@@ -721,9 +723,7 @@ function handleAgentInitialized (req) {
 
 	extension.isTopFrame
 	&& document.querySelector('textarea')
-	&& info(
-		'wasavi agent: running on ',
-		window.location.href.replace(/[#?].*$/, ''));
+	&& info('running on ', window.location.href.replace(/[#?].*$/, ''));
 }
 
 /**
@@ -784,6 +784,8 @@ function handleResponseGetContent (e) {
 
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
+
+	logMode && log('got a message from backend:', JSON.stringify(req).substring(0, 200));
 
 	switch (req.type) {
 	/*
@@ -1039,7 +1041,7 @@ function handleBackendMessage (req) {
 
 function handleConnect (req) {
 	if (!req || !('tabId' in req) || !req.tabId) {
-		if (devMode) {
+		if (logMode) {
 			var missing = '?';
 			if (!req) {
 				missing = 'empty req object';
@@ -1063,6 +1065,7 @@ function handleConnect (req) {
 	quickActivation = req.quickActivation;
 	extraHeight = 0;
 	devMode = req.devMode;
+	logMode = req.logMode;
 
 	extension.ensureRun(handleAgentInitialized, req);
 }
