@@ -53,7 +53,7 @@ FIREFOX_SUFFIX = xpi
 FIREFOX_SRC_DIR = firefox
 FIREFOX_EXT_ID =
 FIREFOX_EXT_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi
-FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/firefox.rdf
+FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/update.rdf
 
 # derived macros
 # ========================================
