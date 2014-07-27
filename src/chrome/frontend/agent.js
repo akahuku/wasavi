@@ -491,7 +491,11 @@ function toPlainText (input) {
 	}
 
 	function newBlock (nodeName) {
-		t.push({text:'', display:'', nodeName:nodeName || ''});
+		var text = '';
+		if (t.length && !/\n$/.test(t[t.length - 1].text)) {
+			text = '\n';
+		}
+		t.push({text:text, display:'', nodeName:nodeName || ''});
 	}
 
 	function loop (node) {
@@ -527,7 +531,9 @@ function toPlainText (input) {
 				t[last].text += nodeValue;
 			}
 			else if (c.nodeName == 'BR') {
-				newBlock(c.nodeName);
+				if (!/\n$/.test(t[t.length - 1])) {
+					t[t.length - 1].text += '\n';
+				}
 			}
 			else if (c.childNodes.length) {
 				loop(c);
@@ -540,29 +546,21 @@ function toPlainText (input) {
 		t.forEach(function (b, i) {
 			if (/pre/.test(b.whiteSpace)) {
 				b.text = b.text
-					.replace(/^[\n ]+|[\n ]+$/g, '');
+					.replace(/^\s+|\s+$/g, '');
 			}
 			else {
 				b.text = b.text
-					.replace(/^[\n ]+|[\n ]+$/g, '')
-					.replace(/\s+/g, ' ');
+					.replace(/^[\t ]+|[\t ]+$/g, '')
+					.replace(/[\t ]+/g, ' ');
 			}
-
-			/*if (b.text != '' && b.display == 'block') {
-				if (i > 0 && t[i - 1].nodeName != 'BR') {
-					b.text = '\n' + b.text;
-				}
-				if (i < t.length - 1 && t[i + 1].nodeName != 'BR') {
-					b.text = b.text + '\n';
-				}
-			}*/
 		});
 	}
 
 	function getResult () {
-		var result = [];
-		t.forEach(function (b) {b.text != '' && result.push(b.text)});
-		result = result.join('\n').replace(/\n\n+/g, '\n\n');
+		var result = t
+			.map(function (b) {return b.text})
+			.join('')
+			.replace(/^\s+|\s+$/g, '');
 		return result;
 	}
 
