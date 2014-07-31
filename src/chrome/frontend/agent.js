@@ -116,6 +116,17 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		}
 		return isFixed;
 	}
+
+	function assign () {
+		for (var i = 0, goal = arguments.length; i < goal; i += 2) {
+			var styleName = arguments[i];
+			var value = arguments[i + 1];
+			if (iframe.style[styleName] != value) {
+				iframe.style[styleName] = value;
+			}
+		}
+	}
+
 	if (isFullscreen) {
 		var div = document.body.appendChild(document.createElement('div'));
 		div.style.position = 'fixed';
@@ -124,10 +135,12 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		var rect = div.getBoundingClientRect();
 		div.parentNode.removeChild(div);
 
-		iframe.style.position = 'fixed';
-		iframe.style.left = iframe.style.top = FULLSCREEN_MARGIN + 'px';
-		iframe.style.width = rect.width + 'px';
-		iframe.style.height = rect.height + 'px';
+		assign(
+			'position', 'fixed',
+			'left', FULLSCREEN_MARGIN + 'px',
+			'top', FULLSCREEN_MARGIN + 'px',
+			'width', rect.width + 'px',
+			'height', rect.height + 'px');
 
 		return rect;
 	}
@@ -153,11 +166,27 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 			height: rect.height
 		};
 
-		iframe.style.position = position;
-		iframe.style.left = result.left + 'px';
-		iframe.style.top = result.top + 'px';
-		iframe.style.width = widthAdjusted + 'px';
-		iframe.style.height = heightAdjusted + 'px';
+		var cover = document.body.appendChild(document.createElement('div'));
+		cover.style.position = 'fixed';
+		cover.style.left = cover.style.top =
+		cover.style.right = cover.style.bottom = '0';
+		var crect = cover.getBoundingClientRect();
+
+		if (result.width > crect.width) result.width = crect.width;
+		if (heightAdjusted > crect.height) heightAdjusted = crect.height;
+
+		if (result.left < crect.left) result.left = crect.left;
+		if (result.top  < crect.top ) result.top  = crect.top;
+		if (result.left + result.width > crect.right) result.left = crect.right - result.width;
+		if (result.top + heightAdjusted > crect.bottom) result.top = crect.bottom - heightAdjusted;
+		cover.parentNode.removeChild(cover);
+
+		assign(
+			'position', position,
+			'left', result.left + 'px',
+			'top', result.top + 'px',
+			'width', result.width + 'px',
+			'height', heightAdjusted + 'px');
 
 		return result;
 	}
@@ -812,6 +841,7 @@ function handleBackendMessage (req) {
 	case 'ready':
 		if (!wasaviFrame) break;
 		document.activeElement != wasaviFrame && focusToFrame(req);
+		locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
 		wasaviFrame.style.visibility = 'visible';
 		info('wasavi started');
 		fireCustomEvent('WasaviStarted', 0);

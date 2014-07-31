@@ -165,7 +165,6 @@
 
 	Config.prototype = {
 		init: function () {
-			debugger;
 			for (var key in this.info) {
 				var item = this.info[key];
 				var defaultValue = this.getDefaultValue(key);
@@ -745,6 +744,13 @@
 		config = new Config(configInfo);
 
 		ext.receive(handleRequest);
+		if (ext.version != ext.storage.getItem('version')) {
+			ext.openTabWithUrl(
+				'http://appsweets.net/wasavi/' +
+				'?currentVersion=' + ext.storage.getItem('version') +
+				'&newVersion=' + ext.version);
+			ext.storage.setItem('version', ext.version);
+		}
 		ext.isDev && ext.log(
 			'!INFO: running with following filesystems: ',
 			ext.fileSystem.getInfo()
