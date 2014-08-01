@@ -644,6 +644,10 @@
 		return result;
 	}
 
+	function handleQueryShortcut (command, data, sender, respond) {
+		respond({result: hotkey.validateKeyCode(data.data)});
+	}
+
 	function handleTerminated (command, data, sender, respond) {
 		var payload = data.payload || {};
 
@@ -687,6 +691,7 @@
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
 		'fsctl':				handleFsCtl,
+		'query-shortcut':		handleQueryShortcut,
 		'terminated':			handleTerminated,
 		'dump-internal-ids':	handleDumpInternalIds
 	};

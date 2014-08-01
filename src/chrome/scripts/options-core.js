@@ -26,6 +26,10 @@ var SAVED_MESSAGE_VISIBLE_SECS = 2;
 var extension;
 var enableList;
 
+function $ (arg) {
+	return typeof arg == 'string' ? document.getElementById(arg) : arg;
+}
+
 /**
  * page initializer
  * ----------------
@@ -40,41 +44,31 @@ function initPage (
 
 	enableList = aEnableList;
 	for (var i in enableList) {
-		var el = document.getElementById(i);
+		var el = $(i);
 		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
 			el.checked = enableList[i];
 		}
 	}
 
 	var el;
-	el = document.getElementById('exrc');
+	el = $('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		el.value = exrc;
 	}
 
-	el = document.getElementById('shortcut');
+	el = $('shortcut');
 	if (el && el.nodeName == 'INPUT') {
 		el.value = shortcut;
 	}
 
-	el = document.getElementById('font-family');
+	el = $('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		el.value = fontFamily;
 	}
 
-	el = document.getElementById('log-mode');
+	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
 		el.checked = logMode;
-	}
-
-	el = document.getElementById('save');
-	if (el) {
-		el.addEventListener('click', handleOptionsSave, false);
-	}
-
-	el = document.getElementById('opt-init');
-	if (el) {
-		el.addEventListener('click', handleOptionsInit, false);
 	}
 
 	document.evaluate(
@@ -108,6 +102,7 @@ function initPage (
 		'preferred_storage_head',
 		'init_head', 'init_desc', 'init_confirm',
 		'debug_head', 'log_desc',
+		'capture_normal', 'capture_wait',
 		'save', 'saved'
 	]
 	.forEach(function (key) {
@@ -136,10 +131,29 @@ function initPage (
 	});
 
 	/*
+	 * init event handlers
+	 */
+
+	el = $('capture');
+	if (el) {
+		el.addEventListener('click', handleCapture, false);
+	}
+
+	el = $('save');
+	if (el) {
+		el.addEventListener('click', handleOptionsSave, false);
+	}
+
+	el = $('opt-init');
+	if (el) {
+		el.addEventListener('click', handleOptionsInit, false);
+	}
+
+	/*
 	 * transition
 	 */
 
-	var overlay = document.getElementById('overlay');
+	var overlay = $('overlay');
 	var tend = function (e) {
 		e.target.parentNode && e.target.parentNode.removeChild(e.target);
 	};
@@ -149,6 +163,66 @@ function initPage (
 	.forEach(function (p) {overlay.addEventListener(p, tend, false)});
 
 	overlay.className = 'overlay';
+}
+
+/**
+ * capture button handler
+ * ----------------
+ */
+
+function handleKeydown (e) {
+	if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) {
+		var codes = [];
+		e.shiftKey && codes.push('s');
+		e.ctrlKey && codes.push('c');
+		$('capture-wait').textContent =
+			$('capture-wait-buffer').textContent +
+			' <' + codes.join('-') + '- >';
+		return;
+	}
+
+	e.preventDefault();
+	$('capture').disabled = true;
+	extension.postMessage(
+		{
+			type: 'query-shortcut',
+			data: {
+				shiftKey: e.shiftKey,
+				ctrlKey: e.ctrlKey,
+				keyCode: e.keyCode
+			}
+		},
+		function (res) {
+			if (res.result) {
+				var shortcut = $('shortcut');
+				shortcut.value +=
+					(shortcut.value.length ? ', ' : '') +
+					res.result;
+			}
+
+			$('capture').disabled = false;
+			$('capture').click();
+		}
+	);
+}
+
+function handleKeyup (e) {
+	$('capture-wait').textContent = $('capture-wait-buffer').textContent;
+}
+
+function handleCapture (e) {
+	if (e.target.classList.contains('wait')) {
+		e.target.classList.remove('wait');
+		document.body.removeEventListener('keydown', handleKeydown, true);
+		document.body.removeEventListener('keyup', handleKeyup, true);
+
+	}
+	else {
+		e.target.classList.add('wait');
+		$('capture-wait').textContent = $('capture-wait-buffer').textContent;
+		document.body.addEventListener('keydown', handleKeydown, true);
+		document.body.addEventListener('keyup', handleKeyup, true);
+	}
 }
 
 /**
@@ -165,7 +239,7 @@ function handleOptionsSave () {
 		var count = 0;
 
 		for (var i in enableList) {
-			var el = document.getElementById(i);
+			var el = $(i);
 			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
 				tmpEnableList[i] = el.checked;
 				count++;
@@ -177,7 +251,7 @@ function handleOptionsSave () {
 		}
 	})();
 
-	el = document.getElementById('exrc');
+	el = $('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		items.push({key:'exrc', value:el.value});
 	}
@@ -187,17 +261,17 @@ function handleOptionsSave () {
 		items.push({key:'quickActivation', value:el.value == '1'});
 	}
 
-	el = document.getElementById('shortcut');
+	el = $('shortcut');
 	if (el) {
 		items.push({key:'shortcut', value:el.value});
 	}
 
-	el = document.getElementById('font-family');
+	el = $('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'fontFamily', value:el.value});
 	}
 
-	el = document.getElementById('log-mode');
+	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'logMode', value:el.checked});
 	}
@@ -210,7 +284,7 @@ function handleOptionsSave () {
 		};
 
 		for (var i in tmpFstab) {
-			var el = document.getElementById('pos-' + i);
+			var el = $('pos-' + i);
 			if (el) {
 				if (!el.disabled) {
 					tmpFstab[i].enabled = true;
@@ -227,7 +301,7 @@ function handleOptionsSave () {
 	items.length && extension.postMessage(
 		{type:'set-storage', items:items},
 		function () {
-			var saveResult = document.getElementById('save-result');
+			var saveResult = $('save-result');
 			if (saveResult) {
 				saveResult.style.visibility = 'visible';
 				setTimeout(function () {
@@ -244,7 +318,7 @@ function handleOptionsSave () {
  */
 
 function handleOptionsInit () {
-	var message = document.getElementById('opt-init-confirm').textContent;
+	var message = $('opt-init-confirm').textContent;
 	window.confirm(message) && extension.postMessage(
 		{type:'reset-options'},
 		function () {

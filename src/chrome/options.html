@@ -126,6 +126,21 @@
 				font-size:18pt;
 				font-weight:bold;
 			}
+			button#capture {
+				font-size:12pt;
+			}
+			button#capture .normal {
+				display:inline;
+			}
+			button#capture .wait {
+				display:none;
+			}
+			button#capture.wait .normal {
+				display:none;
+			}
+			button#capture.wait .wait {
+				display:inline;
+			}
 			span#save-result {
 				visibility:hidden;
 				color:#dd0000;
@@ -171,6 +186,11 @@
 			<label><input type="radio" name="quick-activation" value="0"><span>__MSG_option_quick_activation_off__</span></label>
 			<div class="opt-unit-inner">
 				<label><input type="text" id="shortcut"></label>
+				<button id="capture"
+					><span id="capture-normal" class="normal">__MSG_option_capture_normal__</span
+					><span id="capture-wait" class="wait"></span
+					><span id="capture-wait-buffer" class="hidden">__MSG_option_capture_wait__</span
+				></button>
 				<div class="tips">__MSG_option_target_elements_desc__</div>
 			</div>
 		</div>
