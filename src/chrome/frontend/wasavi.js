@@ -409,15 +409,11 @@ function install (x) {
 				appProxy, config.vars.history, ['/', ':'], handleLoaded, testMode
 			);
 		});
-		load(function () {
-			bell = new Wasavi.Bell(appProxy, handleLoaded);
-		});
 	}
 	else {
 		registers = new Wasavi.Registers(appProxy);
 		lineInputHistories = new Wasavi.LineInputHistories(
 			appProxy, config.vars.history, ['/', ':']);
-		bell = new Wasavi.Bell;
 		installCore(x);
 	}
 }
@@ -4694,6 +4690,7 @@ var keyManager = new Wasavi.KeyManager;
 var regexConverter = new Wasavi.RegexConverter(appProxy);
 var mapManager = new Wasavi.MapManager(appProxy);
 var theme = new Wasavi.Theme(appProxy);
+var bell = new Wasavi.Bell(appProxy);
 var completer = new Wasavi.Completer(appProxy,
 	[
 		// ex command completion
@@ -5044,7 +5041,6 @@ var isStandAlone = (function () {
 // extension depend objects
 var registers;
 var lineInputHistories;
-var bell;
 var l10n;
 var ffttDictionary;
 var lineBreaker;

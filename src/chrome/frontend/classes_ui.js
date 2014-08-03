@@ -229,71 +229,18 @@ Wasavi.Theme = function (app) {
 	);
 };
 
-Wasavi.Bell = function (app, loadCallback) {
-	var a = new window.Audio();
-	var src = '';
-	var prefix = '';
-	var enabled = false;
-
-	function load (callback) {
-		if (a.canPlayType('audio/ogg')) {
-			src = 'beep.ogg';
-			prefix = 'data:audio/ogg;base64,';
-		}
-		else if (a.canPlayType('audio/mpeg')) {
-			src = 'beep.mp3';
-			prefix = 'data:audio/mpeg;base64,';
-		}
-		else {
-			src = prefix = '';
-		}
-
-		if (src == '') {
-			enabled = false;
-			return;
-		}
-
-		if (app.extensionChannel) {
-			app.extensionChannel.postMessage({type:'request-bell', file:'sounds/' + src + '.txt'}, function (res) {
-				if (res && res.data != '') {
-					a.src = prefix + res.data;
-					enabled = true;
-					callback && callback();
-					callback = null;
-				}
-			});
-		}
-		else {
-			a.src = src;
-			enabled = true;
-			callback && callback();
-			callback = null;
-		}
+Wasavi.Bell = function (app) {
+	function play (key) {
+		app.extensionChannel.postMessage({
+			type: 'play-sound',
+			key: key || 'beep',
+			opts: {
+				volume: app.config.vars.bellvolume
+			}
+		});
 	}
 
-	a.addEventListener('load', function handleBellLoaded () {
-		a.removeEventListener('load', handleBellLoaded, false);
-		enabled = true;
-	}, false);
-
-	this.play = function () {
-		if (src == '' || !enabled) return;
-		var vol = Math.max(0, Math.min(app.config.vars.bellvolume, 100));
-		if (vol > 0) {
-			try {
-				!a.ended && a.pause();
-				a.loop = false;
-				a.volume = vol / 100;
-				a.currentTime = 0;
-				a.play();
-			}
-			catch (e) {}
-		}
-	};
-	this.load = load;
-
-	load(loadCallback);
-	loadCallback = null;
+	publish(this, play);
 };
 
 Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {

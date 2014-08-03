@@ -515,14 +515,8 @@
 		}
 	}
 
-	function handleRequestBell (command, data, sender, respond) {
-		if ('file' in data) {
-			ext.resourceLoader.get(data.file, function (data) {
-				respond({
-					data: data || ''
-				});
-			}, {sync:true});
-		}
+	function handlePlaySound (command, data, sender, respond) {
+		ext.sound.play(data.key, data.opts);
 	}
 
 	function handleOpenOptions (command, data, sender, respond) {
@@ -685,7 +679,7 @@
 		'set-storage':			handleSetStorage,
 		'push-payload':			handlePushPayload,
 		'request-wasavi-frame':	handleRequestWasaviFrame,
-		'request-bell':			handleRequestBell,
+		'play-sound':			handlePlaySound,
 		'set-clipboard':		handleSetClipboard,
 		'get-clipboard':		handleGetClipboard,
 		'reset-options':		handleResetOptions,
