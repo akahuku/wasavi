@@ -264,7 +264,7 @@ ExCommandExecutor.prototype = {
 		}
 	},
 	_isClipboardAccess:function (args) {
-		return extensionChannel && args.flags.register && args.register == '*';
+		return args.flags.register && args.register == '*';
 	},
 	clear:function () {
 		this.commands.length = 0;
@@ -368,56 +368,21 @@ function error () {
 	logMode && console.error('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
 }
 function getLocalStorage (keyName, callback) {
-	if (extensionChannel) {
-		extensionChannel.postMessage({type:'get-storage', key:keyName}, function (res) {
+	extensionChannel.postMessage(
+		{type:'get-storage', key:keyName},
+		function (res) {
 			callback && callback(res.value);
-		});
-	}
-	else if (window.localStorage) {
-		callback && callback(window.localStorage.getItem(keyName));
-	}
+		}
+	);
 }
 function setLocalStorage (keyName, value) {
-	if (extensionChannel) {
-		extensionChannel.postMessage({
-			type:'set-storage',
-			key:keyName,
-			value:value
-		});
-	}
-	else if (window.localStorage) {
-		localStorage.setItem(keyName, value);
-	}
+	extensionChannel.postMessage({
+		type:'set-storage',
+		key:keyName,
+		value:value
+	});
 }
 function install (x) {
-	var count = 0;
-	function load (loader) {
-		loader();
-		loader = null;
-		++count;
-	}
-	function handleLoaded () {
-		--count;
-		count == 0 && installCore(x);
-	}
-	if (extensionChannel) {
-		load(function () {
-			registers = new Wasavi.Registers(appProxy, handleLoaded, testMode);
-		});
-		load(function () {
-			lineInputHistories = new Wasavi.LineInputHistories(
-				appProxy, config.vars.history, ['/', ':'], handleLoaded, testMode
-			);
-		});
-	}
-	else {
-		registers = new Wasavi.Registers(appProxy);
-		lineInputHistories = new Wasavi.LineInputHistories(
-			appProxy, config.vars.history, ['/', ':']);
-		installCore(x);
-	}
-}
-function installCore (x) {
 	/*
 	 * DOM structure:
 	 *
@@ -914,7 +879,7 @@ ime-mode:disabled; \
 	 * set up message handlers
 	 */
 
-	extensionChannel && extensionChannel.setMessageListener(handleBackendMessage);
+	extensionChannel.setMessageListener(handleBackendMessage);
 
 	/*
 	 * notify initialized event to agent
@@ -922,7 +887,7 @@ ime-mode:disabled; \
 
 	notifyToParent('initialized', {
 		height: cnt.offsetHeight,
-		childInternalId: extensionChannel && extensionChannel.internalId || undefined
+		childInternalId: extensionChannel.internalId
 	});
 	isStandAlone && runExrc();
 }
@@ -992,22 +957,20 @@ function uninstall (save, implicit) {
 	completer = completer.dispose();
 
 	//
-	if (extensionChannel) {
-		delete targetElement.getAttribute;
-		delete targetElement.setAttribute;
-		targetElement.tabId = extensionChannel.tabId;
-		targetElement.isTopFrame = !!extensionChannel.isTopFrame;
-		targetElement.isImplicit = !!implicit;
-		targetElement.ros = config.dumpScript(true).join('\n');
+	delete targetElement.getAttribute;
+	delete targetElement.setAttribute;
+	targetElement.tabId = extensionChannel.tabId;
+	targetElement.isTopFrame = !!extensionChannel.isTopFrame;
+	targetElement.isImplicit = !!implicit;
+	targetElement.ros = config.dumpScript(true).join('\n');
 
-		extensionChannel.postMessage({
-			type:'terminated',
-			payload:targetElement
-		});
-		notifyToParent('terminated', targetElement);
+	extensionChannel.postMessage({
+		type:'terminated',
+		payload:targetElement
+	});
+	notifyToParent('terminated', targetElement);
 
-		extensionChannel = extensionChannel.disconnect();
-	}
+	extensionChannel = extensionChannel.disconnect();
 	targetElement = null;
 }
 function setupEventHandlers (install) {
@@ -2445,7 +2408,7 @@ function getFindRegex (src) {
 }
 function getFileNameString (full) {
 	var result = '';
-	if (extensionChannel && extensionChannel.isTopFrame) {
+	if (extensionChannel.isTopFrame) {
 		if (fileName == '') {
 			result = _('*Untitled*');
 		}
@@ -2547,7 +2510,6 @@ function getLogicalColumn () {
 	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
 }
 function notifyToParent (eventName, payload) {
-	if (!extensionChannel) return;
 	if (extensionChannel.isTopFrame) return;
 	payload || (payload = {});
 	payload.type = eventName;
@@ -4500,7 +4462,7 @@ function handleKeydown (e) {
 		return;
 	}
 
-	if (extensionChannel && prefixInput.toString() == '"*' && clipboardReadingState != 2) {
+	if (prefixInput.toString() == '"*' && clipboardReadingState != 2) {
 		clipboardReadingState = 1;
 		keyManager.push(e);
 		extensionChannel.getClipboard(handleClipboardRead);
@@ -4638,10 +4600,10 @@ function handleBackendMessage (req) {
 			var item = req.items[i];
 			switch (item.key) {
 			case lineInputHistories.storageKey:
-				lineInputHistories.load(null, item.value);
+				lineInputHistories.load(item.value);
 				break;
 			case registers.storageKey:
-				registers.load(null, item.value);
+				registers.load(item.value);
 				break;
 			}
 		}
@@ -4782,11 +4744,6 @@ var completer = new Wasavi.Completer(appProxy,
 			],
 			3,
 			function (prefix, notifyCandidates, line) {
-				if (!extensionChannel) {
-					notifyCandidates([]);
-					return;
-				}
-
 				var drive = '', pathRegalized, pathInput;
 
 				pathRegalized = pathInput = extractDriveName(prefix, function (d) {drive = d});
@@ -7406,8 +7363,15 @@ if (global.WasaviExtensionWrapper
 		devMode = req.devMode;
 		logMode = req.logMode;
 		wasaviFrame = req.wasaviFrame;
-		ffttDictionary = new unicodeUtils.FfttDictionary(req.unicodeDictData.fftt);
-		lineBreaker = new unicodeUtils.LineBreaker(req.unicodeDictData.LineBreak);
+		registers = new Wasavi.Registers(
+			appProxy, testMode ? null : req.registers);
+		lineInputHistories = new Wasavi.LineInputHistories(
+			appProxy, config.vars.history, ['/', ':'],
+			testMode ? null : req.lineInputHistories);
+		ffttDictionary = new unicodeUtils.FfttDictionary(
+			req.unicodeDictData.fftt);
+		lineBreaker = new unicodeUtils.LineBreaker(
+			req.unicodeDictData.LineBreak);
 		fstab = req.fstab;
 		version = req.version;
 		document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));

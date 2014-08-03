@@ -736,7 +736,7 @@ Wasavi.RegexFinderInfo = function () {
 	);
 };
 
-Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreStorage) {
+Wasavi.LineInputHistories = function (app, maxSize, names, value) {
 	var s;
 	var name;
 	var storageKey = 'wasavi_lineinput_histories';
@@ -770,21 +770,15 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 		app.low.setLocalStorage(storageKey, serialize());
 		isLatest = true;
 	}
-	function load (callback, value) {
+	function load (value) {
 		if (isLatest) {
 			isLatest = false;
 			return;
 		}
 
-		function doLoad (value) {
-			!ignoreStorage && restore(value || '');
-			callback && callback();
-			callback = null;
-		}
-
 		s = {};
 		names.forEach(function (na) {s[na] = {lines:[], current:-1}});
-		value ? doLoad(value) : app.low.getLocalStorage(storageKey, doLoad);
+		restore(value || '');
 	}
 	function push (line) {
 		line || (line = '');
@@ -838,8 +832,8 @@ Wasavi.LineInputHistories = function (app, maxSize, names, loadCallback, ignoreS
 			storageKey:function () {return storageKey}
 		}
 	);
-	load(loadCallback);
-	loadCallback = null;
+	load(value);
+	value = null;
 };
 
 Wasavi.KeyManager = function () {
@@ -1805,7 +1799,7 @@ Wasavi.MapManager = function (app) {
 	);
 };
 
-Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
+Wasavi.Registers = function (app, value) {
 	/*
 	 * available registers:
 	 *
@@ -1893,21 +1887,15 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 		app.low.setLocalStorage(storageKey, serialize());
 		isLatest = true;
 	}
-	function load (callback, value) {
+	function load (value) {
 		if (isLatest) {
 			isLatest = false;
 			return;
 		}
 
-		function doLoad (value) {
-			!ignoreStorage && restore(value || '');
-			callback && callback();
-			callback = null;
-		}
-
 		unnamed = new RegisterItem();
 		named = {};
-		value ? doLoad(value) : app.low.getLocalStorage(storageKey, doLoad);
+		restore(value || '');
 	}
 	function isWritable (name) {
 		return writableRegex.test(name);
@@ -2037,8 +2025,8 @@ Wasavi.Registers = function (app, loadCallback, ignoreStorage) {
 			}
 		}
 	);
-	load(loadCallback);
-	loadCallback = null;
+	load(value);
+	value = null;
 };
 
 Wasavi.Marks = function (app, ignoreStorage) {

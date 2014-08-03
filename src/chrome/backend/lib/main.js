@@ -461,6 +461,10 @@
 			wasaviFrame: isInit ? wasaviFrame : null,
 			fstab: isInit ? ext.fileSystem.getInfo() : null,
 			unicodeDictData: isInit ? unicodeDictData : null,
+			lineInputHistories: isInit ?
+				ext.storage.getItem('wasavi_lineinput_histories') : null,
+			registers: isInit ?
+				ext.storage.getItem('wasavi_registers') : null,
 			payload: payload || null
 		});
 		payload = null;

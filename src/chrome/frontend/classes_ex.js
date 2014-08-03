@@ -909,10 +909,6 @@ Wasavi.ExCommand.commands = [
 		}
 	}),
 	new Wasavi.ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
-		if (!app.extensionChannel) {
-			return _('Extension system required.');
-		}
-
 		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'chdir',
@@ -956,9 +952,6 @@ Wasavi.ExCommand.commands = [
 		app.isEditCompleted = true;
 	}),
 	new Wasavi.ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (app, t, a) {
-		if (!app.extensionChannel) {
-			return _('Extension system required.');
-		}
 		if (!a.flags.force && app.isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
@@ -1005,9 +998,6 @@ Wasavi.ExCommand.commands = [
 			return _('Too much arguments.');
 		}
 		if (a.argv.length == 1) {
-			if (!app.extensionChannel) {
-				return _('Extension system required.');
-			}
 			if (!app.extensionChannel.isTopFrame) {
 				return _('Only stand alone form can rename.');
 			}
@@ -1364,15 +1354,9 @@ Wasavi.ExCommand.commands = [
 		app.isEditCompleted = true;
 	}),
 	new Wasavi.ExCommand('options', 'opt', '', 0, function (app, t, a) {
-		if (!app.extensionChannel) {
-			return app.low.requestRegisterNotice(_('Don\'t know how to open options page.'));
-		}
 		app.extensionChannel.postMessage({type:'open-options'});
 	}),
 	new Wasavi.ExCommand('pwd', 'pw', '', 0, function (app, t, a) {
-		if (!app.extensionChannel) {
-			return _('Extension system required.');
-		}
 		app.low.requestShowMessage(
 			app.fstab[app.fileSystemIndex].name +
 			':' +
@@ -1410,10 +1394,6 @@ Wasavi.ExCommand.commands = [
 		}
 	}),
 	new Wasavi.ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
-		if (!app.extensionChannel) {
-			return _('Extension system required.');
-		}
-
 		var path = a.argv[0] || '';
 		if (path == '' && app.fileName == '') {
 			return _('File name is empty.');
