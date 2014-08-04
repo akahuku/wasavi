@@ -196,34 +196,38 @@ function run (element) {
 	var isPseudoTextarea = false;
 	for (var e = element; e; e = e.parentNode) {
 		if (!e.classList) continue;
-		if (e.classList.contains('CodeMirror') || e.classList.contains('ace_editor')) {
+		if (e.classList.contains('CodeMirror')
+		||  e.classList.contains('ace_editor')) {
 			element = e;
 			isPseudoTextarea = true;
 			break;
 		}
 	}
-	extension.postMessage({type:'request-wasavi-frame'}, function (res) {
-		if (isPseudoTextarea) {
-			if (getValueCallback) {
-				runCore(element, res.data, '');
-				return;
-			}
-			getValueCallback = function (value) {runCore(element, res.data, value)};
-			var className = getUniqueClass();
-			element.classList.add(className);
-			setTimeout(function () {
-				getValueCallback = null;
-				element.classList.remove(className);
-			}, 1000 * 5);
-			fireCustomEvent('WasaviRequestGetContent', {className:className});
+
+	if (isPseudoTextarea) {
+		if (getValueCallback) {
+			runCore(element, extension.urlInfo.frameSource, '');
+			return;
 		}
-		else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-			runCore(element, res.data, element.value);
-		}
-		else if (element.isContentEditable) {
-			runCore(element, res.data, toPlainText(element));
-		}
-	});
+
+		getValueCallback = function (value) {
+			runCore(element, extension.urlInfo.frameSource, value);
+		};
+
+		var className = getUniqueClass();
+		element.classList.add(className);
+		setTimeout(function () {
+			getValueCallback = null;
+			element.classList.remove(className);
+		}, 1000 * 5);
+		fireCustomEvent('WasaviRequestGetContent', {className:className});
+	}
+	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
+		runCore(element, extension.urlInfo.frameSource, element.value);
+	}
+	else if (element.isContentEditable) {
+		runCore(element, extension.urlInfo.frameSource, toPlainText(element));
+	}
 }
 
 function runCore (element, frameSource, value) {
@@ -979,6 +983,11 @@ function handleBackendMessage (req) {
 
 			case 'quickActivate':
 				quickActivation = item.value;
+				logbuf.push(item.key);
+				break;
+
+			case 'logMode':
+				logMode = item.value;
 				logbuf.push(item.key);
 				break;
 			}

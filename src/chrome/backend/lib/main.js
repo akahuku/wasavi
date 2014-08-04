@@ -29,7 +29,24 @@
 
 	/* {{{1 variables */
 
-	var wasaviFrameData, wasaviFrame;
+	/*
+	 * wasaviFrameSource is data scheme expression of iframe
+	 * source, which is used on Firefox.
+	 *
+	 * Other platforms, iframe sources are as follows:
+	 *
+	 * chrome:  literal "chrome-extension://.../wasavi_frame.html"
+	 * opera:   literal "http://wasavi.appsweets.net/" or
+	 *          literal "https://ss1.xrea.com/wasavi.appsweets.net"
+	 */
+	var wasaviFrameSource;
+
+	/*
+	 * wasaviFrameContent is content of body in wasavi frame.
+	 */
+	var wasaviFrameContent;
+
+	// initialize immediately
 	initWasaviFrame();
 
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
@@ -294,7 +311,8 @@
 			keyHookScript: 'data:text/javascript;base64,' +
 				base64.encode(
 					getShrinkedCode(
-						self.data.load('scripts/key_hook.js')))
+						self.data.load('scripts/key_hook.js'))),
+			wasaviFrameSource: wasaviFrameSource
 		};
 	}
 
@@ -315,7 +333,7 @@
 					self.data.url('options.html') + '*',
 					function (url) {
 						return url.substring(0, 256) ==
-							wasaviFrameData.substring(0, 256);
+							wasaviFrameSource.substring(0, 256);
 					}
 				],
 				js: [
@@ -331,7 +349,7 @@
 					'https://ss1.xrea.com/wasavi.appsweets.net/',
 					function (url) {
 						return url.substring(0, 256) ==
-							wasaviFrameData.substring(0, 256);
+							wasaviFrameSource.substring(0, 256);
 					}
 				],
 				js: [
@@ -374,14 +392,18 @@
 				throw new Error('Invalid wasaviFrame');
 			}
 
-			wasaviFrameData = 'data:text/html;charset=UTF-8;base64,' +
-				require('kosian/Utils').Utils.btoa(data);
-
-			wasaviFrame = /<body[^>]*>([\s\S]+)<\/body>/
-				.exec(data)[1]
+			data = data
 				.replace(/\n/g, '')
+				.replace(/<!--.*?-->/g, '')
 				.replace(/>\s+</g, '><')
 				.replace(/^\s+|\s+$/g, '');
+
+			wasaviFrameSource = data
+				.replace(/(<body[^>]*>).+?(<\/body>)/g, '$1$2');
+			wasaviFrameSource = 'data:text/html;charset=UTF-8;base64,' +
+				require('kosian/Utils').Utils.btoa(wasaviFrameSource);
+
+			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1]
 		}, {noCache:true, sync:true});
 	}
 
@@ -438,6 +460,7 @@
 	function handleInit (command, data, sender, respond) {
 		var isInit = command.type == 'init';
 		respond({
+			// basic variables
 			extensionId: ext.id,
 			tabId: sender,
 			version: ext.version,
@@ -447,18 +470,20 @@
 
 			targets: ext.storage.getItem('targets'),
 			exrc: ext.storage.getItem('exrc'),
-			ros: payload && payload.url != TEST_MODE_URL ?
-				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
-				'',
 			shortcut: ext.storage.getItem('shortcut'),
 			shortcutCode: hotkey.canProcess ?
-				null : hotkey.getObjectsForDOM(ext.storage.getItem('shortcut')),
+				null :
+				hotkey.getObjectsForDOM(ext.storage.getItem('shortcut')),
 			fontFamily: ext.storage.getItem('fontFamily'),
 			quickActivation: ext.storage.getItem('quickActivation'),
 
+			// for wasavi
 			messageCatalog: command.type != 'init-agent' ?
 				ext.messageCatalog : null,
-			wasaviFrame: isInit ? wasaviFrame : null,
+			ros: isInit && payload && payload.url != TEST_MODE_URL ?
+				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
+				'',
+			wasaviFrame: isInit ? wasaviFrameContent : null,
 			fstab: isInit ? ext.fileSystem.getInfo() : null,
 			unicodeDictData: isInit ? unicodeDictData : null,
 			lineInputHistories: isInit ?
@@ -539,10 +564,6 @@
 
 	function handlePushPayload (command, data, sender, respond) {
 		payload = data;
-	}
-
-	function handleRequestWasaviFrame (command, data, sender, respond) {
-		respond({data: wasaviFrameData});
 	}
 
 	function handleFsCtl (command, data, sender, respond) {
@@ -682,7 +703,6 @@
 		'get-storage':			handleGetStorage,
 		'set-storage':			handleSetStorage,
 		'push-payload':			handlePushPayload,
-		'request-wasavi-frame':	handleRequestWasaviFrame,
 		'play-sound':			handlePlaySound,
 		'set-clipboard':		handleSetClipboard,
 		'get-clipboard':		handleGetClipboard,

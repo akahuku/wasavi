@@ -47,19 +47,18 @@
 	 * ----------------
 	 */
 
-	function UrlInfo (optionsUrl, internalUrl, canUseInternal, canUseExtensionContent) {
-		this.externalUrl = EXTERNAL_FRAME_URL;
-		this.externalSecureUrl = EXTERNAL_SECURE_FRAME_URL;
-
+	function UrlInfo (optionsUrl, internalUrl) {
 		this.optionsUrl = optionsUrl;
 		this.internalUrl = internalUrl;
-		this.canUseInternal = canUseInternal;
-		this.canUseExtensionContent = canUseExtensionContent;
 	}
 
 	UrlInfo.prototype = {
+		externalUrl: EXTERNAL_FRAME_URL,
+		externalSecureUrl: EXTERNAL_SECURE_FRAME_URL,
+
 		eq: function (u1, u2) {
-			return u1.replace(/\?.*/, '') == u2.replace(/\?.*/, '');
+			return (u1 || '').replace(/\?.*/, '')
+				== (u2 || '').replace(/\?.*/, '');
 		},
 		get isInternal () {
 			return this.eq(window.location.href, this.internalUrl)
@@ -73,9 +72,8 @@
 			return this.isInternal || this.isExternal;
 		},
 		get frameSource () {
-			if (this.canUseInternal) {
-				return this.canUseExtensionContent ?
-					this.internalUrl : false;
+			if (this.internalUrl) {
+				return this.internalUrl;
 			}
 			else {
 				return window.location.protocol == 'https:' ?
@@ -289,8 +287,7 @@
 			var extensionId = chrome.runtime.id;
 			return new UrlInfo(
 				'chrome-extension://' + extensionId + '/options.html',
-				'chrome-extension://' + extensionId + '/wasavi_frame.html',
-				true, true
+				'chrome-extension://' + extensionId + '/wasavi_frame.html'
 			);
 		};
 	}
@@ -374,8 +371,7 @@
 			var extensionId = widget.preferences['widget-id'];
 			return new UrlInfo(
 				'widget://' + extensionId + '/options.html',
-				'widget://' + extensionId + '/wasavi_frame.html',
-				false, false
+				null
 			);
 		};
 	}
@@ -474,15 +470,13 @@
 			return self.options.keyHookScript;
 		};
 		this.urlInfo = new function () {
-			var extensionId = self.options.extensionId;
-			var extensionHostname = extensionId
+			var extensionHostname = self.options.extensionId
 				.toLowerCase()
 				.replace(/@/g, '-at-')
 				.replace(/\./g, '-dot-');
 			return new UrlInfo(
 				'resource://' + extensionHostname + '/wasavi/data/options.html',
-				'resource://' + extensionHostname + '/wasavi/data/wasavi_frame.html',
-				true, false
+				self.options.wasaviFrameSource
 			);
 		};
 		Object.defineProperty(this, 'isTopFrame', {

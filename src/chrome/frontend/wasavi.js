@@ -4605,6 +4605,9 @@ function handleBackendMessage (req) {
 			case registers.storageKey:
 				registers.load(item.value);
 				break;
+			case 'logMode':
+				logMode = item.value;
+				break;
 			}
 		}
 		break;
@@ -4636,7 +4639,6 @@ function handleBackendMessage (req) {
 var appProxy = new AppProxy;
 var Position = Wasavi.Position;
 var extensionChannel;
-var wasaviFrame;
 var version;
 var exrc;
 var fontFamily = 'monospace';
@@ -7343,10 +7345,9 @@ if (global.WasaviExtensionWrapper
 				 * from the outside.
 				 * Thus we leave innerHTML.
 				 */
-				if (/^https?:$/.test(window.location.protocol)) {
-					document.body.innerHTML = wasaviFrame;
+				if (!/^chrome-extension:/.test(window.location.protocol)) {
+					document.body.innerHTML = req.wasaviFrame;
 				}
-				wasaviFrame = '';
 				callback();
 			}
 
@@ -7362,7 +7363,6 @@ if (global.WasaviExtensionWrapper
 		testMode = req.testMode;
 		devMode = req.devMode;
 		logMode = req.logMode;
-		wasaviFrame = req.wasaviFrame;
 		registers = new Wasavi.Registers(
 			appProxy, testMode ? null : req.registers);
 		lineInputHistories = new Wasavi.LineInputHistories(
