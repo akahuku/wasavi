@@ -139,7 +139,7 @@ function get_id ($message)
 	return $message;
 }
 
-function doit ($file)
+function build_base_locale_message ($file)
 {
 	global $messages;
 	$result = true;
@@ -250,20 +250,23 @@ function main ($argv)
 
 	foreach ($argv as $arg) {
 		echo "reading: ", realpath($arg), "\n";
-		if (!doit($arg)) {
+		if (!build_base_locale_message($arg)) {
 			$messages = null;
 			break;
 		}
 	}
 
 	if (is_array($messages)) {
+		ksort($messages);
 		$messages = $extensionInfo + $pluralRule + $plurals + $messages;
 		foreach ($messages as $key => $message) {
 			if (isset($message["description"])) {
 				$messages[$key]["description"] = $messages[$key]["message"];
 			}
 		}
+
 		update_localized_messages($messages);
+
 		$messages = json_encode(
 			$messages, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
@@ -318,9 +321,8 @@ function parse_args ($argv) {
 	}
 
 	if (count($result) == 0) {
-		$result = array(
-			$basedir . "frontend/wasavi.js"
-		);
+		echo "file not specified. stop.";
+		exit(1);
 	}
 
 	return $result;
