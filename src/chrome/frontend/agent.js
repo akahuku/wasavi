@@ -171,6 +171,14 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		cover.style.left = cover.style.top =
 		cover.style.right = cover.style.bottom = '0';
 		var crect = cover.getBoundingClientRect();
+		crect = {
+			left:   crect.left   + offsetLeft,
+			top:    crect.top    + offsetTop,
+			right:  crect.right  + offsetLeft,
+			bottom: crect.bottom + offsetTop,
+			width:  crect.width,
+			height: crect.height
+		}
 
 		if (result.width > crect.width) result.width = crect.width;
 		if (heightAdjusted > crect.height) heightAdjusted = crect.height;
