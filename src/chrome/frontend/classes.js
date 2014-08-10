@@ -1052,11 +1052,13 @@ Wasavi.KeyManager = function () {
 		var baseKeyName;
 		var logicalCharCode;
 		var isSpecial = false;
+		var shiftKey = e.shiftKey;
+		var ctrlKey = e.ctrlKey;
 
 		if (specialKeyName) {
 			if (isPasteKeyStroke(e)) return;
-			e.shiftKey && c.push('s');
-			e.ctrlKey  && c.push('c');
+			shiftKey && c.push('s');
+			ctrlKey  && c.push('c');
 			baseKeyName = specialKeyName;
 			c.push(specialKeyName);
 			logicalCharCode = specialKeyCode;
@@ -1065,13 +1067,23 @@ Wasavi.KeyManager = function () {
 		else {
 			var keyCode = e.keyCode || e.charCode;
 
+			// very very spceial behavior for Opera 12.16 on Linux:
+			// translate invalid plus sign (+) to equal sign (=).
+			// TODO: It is bad idea to patch strange browser behavior
+			// by the following code.
+			if (window.opera && window.navigator.platform == 'Linux'
+			&& !shiftKey && !ctrlKey && keyCode == 43) {
+				keyCode = 61;
+				shiftKey = ctrlKey = false;
+			}
+
 			// ctrl code shortcuts: ctrl + *
-			if (e.ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
+			if (ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
 				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
 				c.push(baseKeyName);
 				logicalCharCode = keyCode & 0x1f;
 			}
-			else if (e.ctrlKey && keyCode == 32) {
+			else if (ctrlKey && keyCode == 32) {
 				baseKeyName = '^@';
 				c.push(baseKeyName);
 				logicalCharCode = 0;
@@ -1100,8 +1112,8 @@ Wasavi.KeyManager = function () {
 			code:             logicalCharCode,
 			identifier:       baseKeyName,
 			fullIdentifier:   c.join('-'),
-			shift:            e.shiftKey,
-			ctrl:             e.ctrlKey,
+			shift:            shiftKey,
+			ctrl:             ctrlKey,
 			isSpecial:        isSpecial
 		});
 	}
