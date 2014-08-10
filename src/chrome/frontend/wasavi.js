@@ -825,6 +825,9 @@ ime-mode:disabled; \
 	 */
 
 	targetElement = x;
+	targetElement.dataset = {};
+	targetElement.getAttribute = function (name) {return this.dataset[name];};
+	targetElement.setAttribute = function (name, value) {this.dataset[name] = value;};
 	fileName = '';
 	fstab.forEach(function (fs, i) {
 		if (fs.isDefault && fileSystemIndex === undefined) {
@@ -894,7 +897,7 @@ ime-mode:disabled; \
 		height: cnt.offsetHeight,
 		childInternalId: extensionChannel.internalId
 	});
-	isStandAlone && runExrc();
+	extensionChannel.isTopFrame && runExrc();
 }
 function runExrc () {
 	/*
@@ -1035,7 +1038,7 @@ function setGeometory (target) {
 
 	var rect = target.rect;
 
-	if (isStandAlone) {
+	if (extensionChannel.isTopFrame) {
 		rect.height -= footer.offsetHeight;
 	}
 
@@ -4414,12 +4417,12 @@ function handleWindowResize (e) {
 				document.documentElement.clientWidth;
 			targetElement.rect.height =
 				document.documentElement.clientHeight -
-				(isStandAlone ? 0 : $('wasavi_footer').offsetHeight);
+				(extensionChannel.isTopFrame ? 0 : $('wasavi_footer').offsetHeight);
 			setGeometory();
 		}
 		resizeHandlerInvokeTimer = null;
 	}
-	if (isStandAlone) {
+	if (extensionChannel.isTopFrame) {
 		if (!resizeHandlerInvokeTimer) {
 			resizeHandlerInvokeTimer = setTimeout(relocate, 100);
 		}
@@ -4884,7 +4887,8 @@ var config = new Wasavi.Configurator(appProxy,
 		['history', 'i', 20],
 		['monospace', 'i', 20],
 		['fullscreen', 'b', false, function (v) {
-			!isStandAlone &&
+			extensionChannel &&
+			!extensionChannel.isTopFrame &&
 			targetElement &&
 			notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
@@ -7358,6 +7362,12 @@ if (global.WasaviExtensionWrapper
 			extensionChannel.ensureRun(doRun);
 		}
 
+		l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
+		ffttDictionary = new unicodeUtils.FfttDictionary(
+			req.unicodeDictData.fftt);
+		lineBreaker = new unicodeUtils.LineBreaker(
+			req.unicodeDictData.LineBreak);
+
 		extensionChannel.tabId = req.tabId;
 		exrc = [req.exrc, req.ros];
 		fontFamily = req.fontFamily;
@@ -7365,44 +7375,38 @@ if (global.WasaviExtensionWrapper
 		global._ = l10n.getTranslator();
 		devMode = req.devMode;
 		logMode = req.logMode;
-		l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
-		ffttDictionary = new unicodeUtils.FfttDictionary(
-			req.unicodeDictData.fftt);
-		lineBreaker = new unicodeUtils.LineBreaker(
-			req.unicodeDictData.LineBreak);
 		fstab = req.fstab;
 		version = req.version;
-		document.documentElement.setAttribute('lang', l10n.getMessage('wasavi_locale_code'));
+
+		document.documentElement.setAttribute(
+			'lang', l10n.getMessage('wasavi_locale_code'));
+
 		if (extensionChannel.isTopFrame) {
 			run(function() {
 				!targetElement && install({
+					// parentTabId
+					// parentInternalId
+					// url
+					// testMode
 					id:extensionChannel.name,
 					nodeName:'textarea',
-					value:'',
-					selectionStart:0,
-					selectionEnd:0,
-					scrollTop:0,
-					scrollLeft:0,
+					// nodePath
+					isContentEditable:false,
+					elementType:'textarea',
+					selectionStart:0, selectionEnd:0,
+					scrollTop:0, scrollLeft:0,
 					readOnly:false,
-					type:'textarea',
+					value:'',
 					rect:{
 						width:document.documentElement.clientWidth,
 						height:document.documentElement.clientHeight
 					},
-					fontStyle:'normal normal normal medium/1 "Consolas"',
-					borderStyle:'',
-					paddingStyle:'0',
-					dataset:{},
-					getAttribute:function (name) {return this.dataset[name];},
-					setAttribute:function (name, value) {this.dataset[name] = value;}
+					fontStyle:'normal normal normal medium/1 ' + fontFamily
 				});
 			});
 		}
 		else if (req.payload) {
 			testMode = req.payload.testMode;
-			req.payload.dataset = {};
-			req.payload.getAttribute = function (name) {return this.dataset[name];};
-			req.payload.setAttribute = function (name, value) {this.dataset[name] = value;};
 			run(function() {install(req.payload);});
 		}
 	});
