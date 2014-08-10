@@ -857,6 +857,11 @@ ime-mode:disabled; \
 	buffer.selectionStart = x.selectionStart || 0;
 	buffer.selectionEnd = x.selectionEnd || 0;
 
+	registers = new Wasavi.Registers(
+		appProxy, testMode ? null : req.registers);
+	lineInputHistories = new Wasavi.LineInputHistories(
+		appProxy, config.vars.history, ['/', ':'],
+		testMode ? null : req.lineInputHistories);
 	inputHandler = new Wasavi.InputHandler(appProxy);
 	marks = new Wasavi.Marks(appProxy, testMode);
 	cursor = new Wasavi.CursorUI(appProxy, cc, ec, footerInput, focusHolder);
@@ -4634,21 +4639,8 @@ function handleBackendMessage (req) {
  * ----------------
  */
 
-// persistent variables
-
 var appProxy = new AppProxy;
 var Position = Wasavi.Position;
-var extensionChannel;
-var version;
-var exrc;
-var fontFamily = 'monospace';
-var quickActivation;
-var testMode;
-var devMode;
-var logMode;
-var fstab;
-var substituteWorker;
-var resizeHandlerInvokeTimer;
 var abbrevs = new Collection;
 var keyManager = new Wasavi.KeyManager;
 var regexConverter = new Wasavi.RegexConverter(appProxy);
@@ -4656,6 +4648,7 @@ var mapManager = new Wasavi.MapManager(appProxy);
 var theme = new Wasavi.Theme(appProxy);
 var bell = new Wasavi.Bell(appProxy);
 var completer = new Wasavi.Completer(appProxy,
+// completer {{{2
 	[
 		// ex command completion
 		[
@@ -4826,7 +4819,9 @@ var completer = new Wasavi.Completer(appProxy,
 		]
 	]
 );
+// }}}
 var config = new Wasavi.Configurator(appProxy,
+// configuration object {{{2
 	[
 		/* defined by POSIX */
 		['autoindent', 'b', true],
@@ -4989,6 +4984,7 @@ var config = new Wasavi.Configurator(appProxy,
 		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab'
 	}
 );
+// }}}
 var isStandAlone = (function () {
 	try {
 		return window.chrome ? window.parent == window : !!!window.frameElement;
@@ -4997,14 +4993,20 @@ var isStandAlone = (function () {
 	}
 })();
 
-// extension depend objects
-var registers;
-var lineInputHistories;
+var extensionChannel;
+var version;
+var exrc;
+var fontFamily = 'monospace';
+var quickActivation;
+var testMode;
+var devMode;
+var logMode;
+var fstab;
+var substituteWorker;
+var resizeHandlerInvokeTimer;
 var l10n;
 var ffttDictionary;
 var lineBreaker;
-
-// instance variables
 var targetElement;
 var buffer;
 var fileName;
@@ -5014,6 +5016,8 @@ var terminated;
 var writeOnTermination;
 var state;
 var runLevel;
+var registers;
+var lineInputHistories;
 var marks;
 var cursor;
 var scroller;
@@ -7358,16 +7362,10 @@ if (global.WasaviExtensionWrapper
 		exrc = [req.exrc, req.ros];
 		fontFamily = req.fontFamily;
 		quickActivation = req.quickActivation;
-		l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
 		global._ = l10n.getTranslator();
-		testMode = req.testMode;
 		devMode = req.devMode;
 		logMode = req.logMode;
-		registers = new Wasavi.Registers(
-			appProxy, testMode ? null : req.registers);
-		lineInputHistories = new Wasavi.LineInputHistories(
-			appProxy, config.vars.history, ['/', ':'],
-			testMode ? null : req.lineInputHistories);
+		l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
 		ffttDictionary = new unicodeUtils.FfttDictionary(
 			req.unicodeDictData.fftt);
 		lineBreaker = new unicodeUtils.LineBreaker(

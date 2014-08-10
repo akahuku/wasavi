@@ -38,6 +38,7 @@ var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 var EXTENSION_CURRENT = 'data-texteditor-extension-current';
 var FULLSCREEN_MARGIN = 8;
 var MIN_WIDTH_PIXELS = 320;
+var BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
 var ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
@@ -337,7 +338,7 @@ function runCore (element, frameSource, value) {
 	wasaviFrameTimeoutTimer = setTimeout(function () {
 		wasaviFrame.parentNode.removeChild(wasaviFrame);
 		wasaviFrameTimeoutTimer = null;
-	}, 1000 * 5);
+	}, BOOT_WAIT_TIMEOUT_MSECS);
 }
 
 function cleanup (value, isImplicit) {
