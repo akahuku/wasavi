@@ -382,7 +382,7 @@ function setLocalStorage (keyName, value) {
 		value:value
 	});
 }
-function install (x) {
+function install (x, req) {
 	/*
 	 * DOM structure:
 	 *
@@ -828,6 +828,26 @@ ime-mode:disabled; \
 	targetElement.dataset = {};
 	targetElement.getAttribute = function (name) {return this.dataset[name];};
 	targetElement.setAttribute = function (name, value) {this.dataset[name] = value;};
+
+	l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
+	ffttDictionary = new unicodeUtils.FfttDictionary(
+		req.unicodeDictData.fftt);
+	lineBreaker = new unicodeUtils.LineBreaker(
+		req.unicodeDictData.LineBreak);
+
+	document.documentElement.setAttribute(
+		'lang', l10n.getMessage('wasavi_locale_code'));
+
+	extensionChannel.tabId = req.tabId;
+	exrc = [req.exrc, req.ros];
+	fontFamily = req.fontFamily;
+	quickActivation = req.quickActivation;
+	global._ = l10n.getTranslator();
+	devMode = req.devMode;
+	logMode = req.logMode;
+	fstab = req.fstab;
+	version = req.version;
+
 	fileName = '';
 	fstab.forEach(function (fs, i) {
 		if (fs.isDefault && fileSystemIndex === undefined) {
@@ -7362,25 +7382,6 @@ if (global.WasaviExtensionWrapper
 			extensionChannel.ensureRun(doRun);
 		}
 
-		l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
-		ffttDictionary = new unicodeUtils.FfttDictionary(
-			req.unicodeDictData.fftt);
-		lineBreaker = new unicodeUtils.LineBreaker(
-			req.unicodeDictData.LineBreak);
-
-		extensionChannel.tabId = req.tabId;
-		exrc = [req.exrc, req.ros];
-		fontFamily = req.fontFamily;
-		quickActivation = req.quickActivation;
-		global._ = l10n.getTranslator();
-		devMode = req.devMode;
-		logMode = req.logMode;
-		fstab = req.fstab;
-		version = req.version;
-
-		document.documentElement.setAttribute(
-			'lang', l10n.getMessage('wasavi_locale_code'));
-
 		if (extensionChannel.isTopFrame) {
 			run(function() {
 				!targetElement && install({
@@ -7402,12 +7403,12 @@ if (global.WasaviExtensionWrapper
 						height:document.documentElement.clientHeight
 					},
 					fontStyle:'normal normal normal medium/1 ' + fontFamily
-				});
+				}, req);
 			});
 		}
 		else if (req.payload) {
 			testMode = req.payload.testMode;
-			run(function() {install(req.payload);});
+			run(function() {install(req.payload, req);});
 		}
 	});
 }
