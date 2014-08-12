@@ -175,7 +175,7 @@
 		sounds: {
 			def: {
 				launch: true,
-				bell: true
+				beep: true
 			},
 			set: function (value) {
 				sounds = value;

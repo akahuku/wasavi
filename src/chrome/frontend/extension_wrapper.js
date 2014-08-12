@@ -249,15 +249,18 @@
 		this.runType = 'chrome-extension';
 		this.doPostMessage = function (data, callback, preserved) {
 			if (callback && !preserved) {
-				chrome.runtime.sendMessage(data, callback);
+				try {
+					chrome.runtime.sendMessage(data, callback);
+				}
+				catch (e) {}
 			}
 			else {
-				if (port) {
-					port.postMessage(data);
+				try {
+					port ?
+						port.postMessage(data) :
+						chrome.runtime.sendMessage(data);
 				}
-				else {
-					chrome.runtime.sendMessage(data);
-				}
+				catch (e) {}
 			}
 		};
 		this.doConnect = function () {
@@ -338,16 +341,19 @@
 					}
 					ch = null;
 				};
-				ch.port1.start();
-				opera.extension.postMessage(data, [ch.port2]);
+				try {
+					ch.port1.start();
+					opera.extension.postMessage(data, [ch.port2]);
+				}
+				catch (e) {}
 			}
 			else {
-				if (port) {
-					port.postMessage(data);
+				try {
+					port ?
+						port.postMessage(data) :
+						opera.extension.postMessage(data);
 				}
-				else {
-					opera.extension.postMessage(data);
-				}
+				catch (e) {}
 			}
 		};
 		this.doConnect = function () {
@@ -439,7 +445,10 @@
 				data.callbackNumber = id;
 			}
 
-			self.postMessage(data);
+			try {
+				self.postMessage(data);
+			}
+			catch (e) {}
 		};
 		this.doConnect = function () {
 			self.on('message', function (data) {

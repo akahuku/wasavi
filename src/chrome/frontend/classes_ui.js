@@ -233,10 +233,7 @@ Wasavi.Bell = function (app) {
 	function play (key) {
 		app.extensionChannel.postMessage({
 			type: 'play-sound',
-			key: key || 'beep',
-			opts: {
-				volume: app.config.vars.bellvolume
-			}
+			key: key || 'beep'
 		});
 	}
 

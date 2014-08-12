@@ -97,7 +97,7 @@ $extensionInfo = array(
 		"message" => "On launching",
 		"description" => ""
 	),
-	"option_sound_bell" => array(
+	"option_sound_beep" => array(
 		"message" => "On error",
 		"description" => ""
 	),

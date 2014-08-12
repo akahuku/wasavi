@@ -93,7 +93,7 @@
         "message": "起動時",
         "description": "On launching"
     },
-    "option_sound_bell": {
+    "option_sound_beep": {
         "message": "エラー時",
         "description": "On error"
     },
