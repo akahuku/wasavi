@@ -109,7 +109,10 @@
 				white-space:pre-line;
 			}
 			hr {
-				visibility:hidden;
+				margin:2em 100px 2em 100px;
+				height:0;
+				border:none;
+				border-top:1px solid #e0e0e0;
 			}
 			textarea#exrc {
 				width:640px;
@@ -159,7 +162,7 @@
 				| <a href="LICENSE">__MSG_option_license__</a>
 				| <a href="NOTICE">__MSG_option_notice__</a>
 			</div>
-			<img src="images/icon048.png"><span>__MSG_option_title__</span>
+			<img src="images/icon048.png">__MSG_option_title__
 		</h1>
 		<h2>__MSG_option_exrc_head__</h2>
 		<div class="opt-unit">
@@ -168,7 +171,7 @@
 		</div>
 		<hr>
 		<h2>__MSG_option_target_elements_head__</h2>
-		<div class="opt-unit">
+		<div class="opt-unit" id="targets-container">
 			<label><input type="checkbox" id="enableTextArea">textarea</label>
 			<label><input type="checkbox" id="enableText"    >input[type=text]</label>
 			<label><input type="checkbox" id="enableSearch"  >input[type=search]</label>
@@ -182,8 +185,8 @@
 		<hr>
 		<h2>__MSG_option_starting_type_head__</h2>
 		<div class="opt-unit">
-			<label><input type="radio" name="quick-activation" value="1"><span>__MSG_option_quick_activation_on__</span></label>
-			<label><input type="radio" name="quick-activation" value="0"><span>__MSG_option_quick_activation_off__</span></label>
+			<label><input type="radio" name="quick-activation" value="1">__MSG_option_quick_activation_on__</label>
+			<label><input type="radio" name="quick-activation" value="0">__MSG_option_quick_activation_off__</label>
 			<div class="opt-unit-inner">
 				<label><input type="text" id="shortcut"></label>
 				<button id="capture"
@@ -200,11 +203,19 @@
 			<label><input type="text" id="font-family"></label>
 		</div>
 		<hr>
+		<h2>__MSG_option_sounds_head__</h2>
+		<div class="opt-unit" id="sounds-container">
+			<label><input type="checkbox" id="sound-launch">__MSG_option_sound_launch__</label>
+			<label><input type="checkbox" id="sound-bell"  >__MSG_option_sound_bell__</label>
+			<br>
+			<label><span>__MSG_option_sound_volume__</span>: <input type="number" id="sound-volume" required="required" min="0" max="100"> %</label>
+		</div>
+		<hr>
 		<h2>__MSG_option_preferred_storage_head__</h2>
-		<div class="opt-unit">
-			<label><input type="radio" name="pos" id="pos-dropbox" checked="checked" value="dropbox"><span>Dropbox</span></label>
-			<label><input type="radio" name="pos" id="pos-gdrive" value="gdrive"><span>Google Drive</span></label>
-			<label><input type="radio" name="pos" id="pos-onedrive" value="onedrive"><span>Microsoft OneDrive</span></label>
+		<div class="opt-unit" id="fstab-container">
+			<label><input type="radio" name="fstab" id="fstab-dropbox" checked="checked" value="dropbox">Dropbox</label>
+			<label><input type="radio" name="fstab" id="fstab-gdrive" value="gdrive">Google Drive</label>
+			<label><input type="radio" name="fstab" id="fstab-onedrive" value="onedrive">Microsoft OneDrive</label>
 		</div>
 		<hr>
 		<h2>__MSG_option_init_head__</h2>
@@ -215,7 +226,7 @@
 		<hr>
 		<h2>__MSG_option_debug_head__</h2>
 		<div class="opt-unit">
-			<label><input type="checkbox" id="log-mode"><span>__MSG_option_log_desc__</span></label>
+			<label><input type="checkbox" id="log-mode">__MSG_option_log_desc__</label>
 		</div>
 		<div class="bottom">
 		</div>

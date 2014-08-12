@@ -24,7 +24,6 @@
 var SAVED_MESSAGE_VISIBLE_SECS = 2;
 
 var extension;
-var enableList;
 
 function $ (arg) {
 	return typeof arg == 'string' ? document.getElementById(arg) : arg;
@@ -35,60 +34,86 @@ function $ (arg) {
  * ----------------
  */
 
-function initPage (
-	req, aEnableList, exrc, shortcut, fontFamily, quickActivation, logMode
-) {
+function initPage (req) {
 	/*
 	 * initialize form elements
 	 */
 
-	enableList = aEnableList;
-	for (var i in enableList) {
-		var el = $(i);
+	var el;
+
+	// exrc
+	el = $('exrc');
+	if (el && el.nodeName == 'TEXTAREA') {
+		el.value = req.exrc;
+	}
+
+	// targets
+	for (var i in req.targets) {
+		el = $(i);
 		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-			el.checked = enableList[i];
+			el.checked = req.targets[i];
 		}
 	}
 
-	var el;
-	el = $('exrc');
-	if (el && el.nodeName == 'TEXTAREA') {
-		el.value = exrc;
+	// quick activation
+	el = document.querySelector([
+		'input',
+		'[name="quick-activation"]',
+		'[value="' + (req.quickActivation ? '1' : '0') + '"]'
+	].join(''));
+	if (el) {
+		el.checked = true;
 	}
 
+	// shortcut
 	el = $('shortcut');
 	if (el && el.nodeName == 'INPUT') {
-		el.value = shortcut;
+		el.value = req.shortcut;
 	}
 
+	// font family
 	el = $('font-family');
 	if (el && el.nodeName == 'INPUT') {
-		el.value = fontFamily;
+		el.value = req.fontFamily;
 	}
 
+	// sounds
+	for (var i in req.sounds) {
+		el = $('sound-' + i);
+		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+			el.checked = req.sounds[i];
+		}
+	}
+	el = $('sound-volume');
+	if (el && el.nodeName == 'INPUT') {
+		el.value = req.soundVolume;
+	}
+
+	// fstab
+	var defaultFs = req.fstab
+		.filter(function (fs) {return fs.isDefault})[0];
+	el = document.querySelector([
+		'input',
+		'[name="fstab"]',
+		'[value="' + (defaultFs ? defaultFs.name : '') + '"]'
+	].join(''));
+	if (el) {
+		el.checked = true;
+	}
+
+	// log mode
 	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
-		el.checked = logMode;
+		el.checked = req.logMode;
 	}
-
-	document.evaluate(
-		'//*[@name="quick-activation"][@value="' + (quickActivation ? 1 : 0) + '"]',
-		document.body, null,
-		window.XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.checked = true;
 
 	/*
 	 * replace all message ids to translated one
 	 */
 
-	[
-		'title',
-		'readme', 'license', 'notice',
-		'exrc_head', 'exrc_desc',
-		'target_elements_head',
-		'starting_type_head',
-		'font_family_head',
-		'quick_activation_on', 'quick_activation_off',
-		['target_elements_desc', function (node, message) {
+	var converter = {
+		option_target_elements_desc: function (node, message) {
+			node = node.parentNode;
 			node.textContent = '';
 			var ul = node.appendChild(document.createElement('ul'));
 			message
@@ -98,36 +123,38 @@ function initPage (
 				var li = ul.appendChild(document.createElement('li'));
 				li.textContent = line;
 			});
-		}],
-		'preferred_storage_head',
-		'init_head', 'init_desc', 'init_confirm',
-		'debug_head', 'log_desc',
-		'capture_normal', 'capture_wait',
-		'save', 'saved'
-	]
-	.forEach(function (key) {
-		if (Object.prototype.toString.call(key) != '[object Array]') {
-			key = [key];
+		}
+	};
+	var iter = document.createNodeIterator(
+		document, window.NodeFilter.SHOW_TEXT, null, false);
+	var defaultConverter = function (node, message) {
+		node.nodeValue = message;
+	};
+
+	var texts = [];
+	for (var node = iter.nextNode(); node; node = iter.nextNode()) {
+		var re = /^\s*__MSG_(.+)__\s*$/.exec(node.textContent);
+		re && texts.push([node, re[1]]);
+	}
+
+	texts.forEach(function (text) {
+		var node = text[0];
+		var id = text[1];
+
+		var message;
+		if (req.messageCatalog) {
+			if (id in req.messageCatalog) {
+				message = req.messageCatalog[id].message;
+			}
+			else {
+				message = id;
+			}
+		}
+		else {
+			message = extension.getMessage(id) || id;
 		}
 
-		var messageId = 'option_' + key[0];
-		var callback = key[1] || function (node, message) {
-			node.textContent = message;
-		};
-		var fallbackMessage = '(translated message not found)';
-		var message = req.messageCatalog ?
-			(messageId in req.messageCatalog ?
-				req.messageCatalog[messageId].message :
-				fallbackMessage) :
-			(extension.getMessage(messageId) || fallbackMessage);
-		var nodes = document.evaluate(
-			'//*[text()="__MSG_' + messageId + '__"]',
-			document.documentElement, null,
-			window.XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
-
-		for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
-			callback(nodes.snapshotItem(i), message);
-		}
+		(converter[id] || defaultConverter)(node, message);
 	});
 
 	/*
@@ -234,69 +261,99 @@ function handleOptionsSave () {
 	var items = [];
 	var el;
 
-	(function () {
-		var tmpEnableList = {};
-		var count = 0;
-
-		for (var i in enableList) {
-			var el = $(i);
-			if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-				tmpEnableList[i] = el.checked;
-				count++;
-			}
-		}
-
-		if (count) {
-			items.push({key:'targets', value:tmpEnableList});
-		}
-	})();
-
+	// exrc
 	el = $('exrc');
 	if (el && el.nodeName == 'TEXTAREA') {
 		items.push({key:'exrc', value:el.value});
 	}
 
+	// targets
+	(function () {
+		var targets = {};
+		Array.prototype.forEach.call(
+			document.querySelectorAll(
+				'#targets-container input[type="checkbox"]'),
+			function (node) {
+				var re = /^enable\w+/.exec(node.id);
+				if (!re) return;
+
+				targets[re[0]] = node.checked;
+			}
+		);
+
+		items.push({key:'targets', value:targets});
+	})();
+
+	// quick activation
 	el = document.querySelector('input[name="quick-activation"]:checked');
 	if (el) {
 		items.push({key:'quickActivation', value:el.value == '1'});
 	}
 
+	// shortcut
 	el = $('shortcut');
 	if (el) {
 		items.push({key:'shortcut', value:el.value});
 	}
 
+	// font family
 	el = $('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'fontFamily', value:el.value});
 	}
 
+	// sounds
+	(function () {
+		var sounds = {};
+		Array.prototype.forEach.call(
+			document.querySelectorAll(
+				'#sounds-container input[type="checkbox"]'),
+			function (node) {
+				var re = /^sound-(\w+)/.exec(node.id);
+				if (!re) return;
+
+				sounds[re[1]] = node.checked;
+			}
+		);
+
+		items.push({key:'sounds', value:sounds});
+	})();
+
+	el = $('sound-volume');
+	if (el && el.nodeName == 'INPUT') {
+		items.push({key:'soundVolume', value:el.value - 0 || 0});
+	}
+
+	// fstab
+	(function () {
+		var fstab = {};
+		Array.prototype.forEach.call(
+			document.querySelectorAll(
+				'#fstab-container input[type="radio"][name="fstab"]'),
+			function (node) {
+				fstab[node.value] = {enabled: false};
+
+				if (!node.disabled) {
+					fstab[node.value].enabled = true;
+				}
+				if (node.checked) {
+					fstab[node.value].isDefault = true;
+				}
+			}
+		);
+
+		items.push({key:'fstab', value:fstab});
+	})();
+
+	// log mode
 	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'logMode', value:el.checked});
 	}
 
-	(function () {
-		var tmpFstab = {
-			dropbox:  {enabled: false},
-			gdrive:   {enabled: false},
-			onedrive: {enabled: false}
-		};
-
-		for (var i in tmpFstab) {
-			var el = $('pos-' + i);
-			if (el) {
-				if (!el.disabled) {
-					tmpFstab[i].enabled = true;
-				}
-				if (el.checked) {
-					tmpFstab[i].isDefault = true;
-				}
-			}
-		}
-
-		items.push({key:'fstab', value:tmpFstab});
-	})();
+	/*
+	 * post
+	 */
 
 	items.length && extension.postMessage(
 		{type:'set-storage', items:items},

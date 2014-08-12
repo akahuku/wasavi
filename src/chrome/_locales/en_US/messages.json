@@ -85,6 +85,22 @@
         "message": "Press your favorite shortcut key...",
         "description": "Press your favorite shortcut key..."
     },
+    "option_sounds_head": {
+        "message": "Sounds",
+        "description": "Sounds"
+    },
+    "option_sound_launch": {
+        "message": "On launching",
+        "description": "On launching"
+    },
+    "option_sound_bell": {
+        "message": "On error",
+        "description": "On error"
+    },
+    "option_sound_volume": {
+        "message": "Volume",
+        "description": "Volume"
+    },
     "option_readme": {
         "message": "README",
         "description": "README"

@@ -58,6 +58,8 @@
 	var contextMenu;
 	var storageUpdateTimer;
 	var storageUpdatePayload = {};
+	var sounds;
+	var soundVolume;
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -169,6 +171,24 @@
 				return value;
 			},
 			setOnInit: true
+		},
+		sounds: {
+			def: {
+				launch: true,
+				bell: true
+			},
+			set: function (value) {
+				sounds = value;
+				return value;
+			},
+			setOnInit: true
+		},
+		soundVolume: {
+			def: 25,
+			set: function (value) {
+				return soundVolume = Math.max(0, Math.min(value, 100));
+			},
+			setOnInit: true
 		}
 	};
 
@@ -272,7 +292,7 @@
 		keys.forEach(function (key) {
 			storageUpdatePayload[key] = {
 				key: key,
-				value: ext.storage.getItem(key)
+				value: config.get(key)
 			};
 		});
 
@@ -297,6 +317,12 @@
 		src = src.replace(/\n[\n\s]*/g, ' ');
 
 		return src;
+	}
+
+	function playSound (key) {
+		if (key in sounds && sounds[key]) {
+			ext.sound.play(key, {volume: soundVolume});
+		}
 	}
 
 	/** {{{2 returns frontend script list for firefox */
@@ -447,7 +473,7 @@
 	/** {{{2 hotkey */
 
 	function initHotkey () {
-		hotkey.register(ext.storage.getItem('shortcut'));
+		hotkey.register(config.get('shortcut'));
 		hotkey.onPress = handleHotkeyPress;
 	}
 
@@ -459,6 +485,9 @@
 
 	function handleInit (command, data, sender, respond) {
 		var isInit = command.type == 'init';
+		var isAgent = command.type == 'init-agent';
+		var isOptions = command.type == 'init-options';
+
 		respond({
 			// basic variables
 			extensionId: ext.id,
@@ -468,28 +497,32 @@
 			logMode: ext.logMode,
 			testMode: data.url == TEST_MODE_URL,
 
-			targets: ext.storage.getItem('targets'),
-			exrc: ext.storage.getItem('exrc'),
-			shortcut: ext.storage.getItem('shortcut'),
+			targets: config.get('targets'),
+			shortcut: config.get('shortcut'),
 			shortcutCode: hotkey.canProcess ?
 				null :
-				hotkey.getObjectsForDOM(ext.storage.getItem('shortcut')),
-			fontFamily: ext.storage.getItem('fontFamily'),
-			quickActivation: ext.storage.getItem('quickActivation'),
+				hotkey.getObjectsForDOM(config.get('shortcut')),
+			fontFamily: config.get('fontFamily'),
+			quickActivation: config.get('quickActivation'),
+			
+			// for options
+			sounds: isOptions ? config.get('sounds') : null,
+			soundVolume: isOptions ? config.get('soundVolume') : null,
+
+			// for wasavi and options
+			exrc: isAgent ? null : config.get('exrc'),
+			messageCatalog: isAgent ? null : ext.messageCatalog,
+			fstab: isAgent ? null : ext.fileSystem.getInfo(),
 
 			// for wasavi
-			messageCatalog: command.type != 'init-agent' ?
-				ext.messageCatalog : null,
 			ros: isInit && payload && payload.url != TEST_MODE_URL ?
 				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
 				'',
 			wasaviFrame: isInit ? wasaviFrameContent : null,
-			fstab: isInit ? ext.fileSystem.getInfo() : null,
 			unicodeDictData: isInit ? unicodeDictData : null,
-			lineInputHistories: isInit ?
-				ext.storage.getItem('wasavi_lineinput_histories') : null,
-			registers: isInit ?
-				ext.storage.getItem('wasavi_registers') : null,
+			lineInputHistories: isInit ? config.get('wasavi_lineinput_histories') : null,
+			registers: isInit ? config.get('wasavi_registers') : null,
+
 			payload: payload || null
 		});
 		payload = null;
@@ -512,7 +545,7 @@
 		if ('key' in data) {
 			respond({
 				key: data.key,
-				value: ext.storage.getItem(data.key)
+				value: config.get(data.key)
 			});
 		}
 		else {
@@ -545,7 +578,7 @@
 	}
 
 	function handlePlaySound (command, data, sender, respond) {
-		ext.sound.play(data.key, data.opts);
+		playSound(data.key);
 	}
 
 	function handleOpenOptions (command, data, sender, respond) {
@@ -564,6 +597,7 @@
 
 	function handlePushPayload (command, data, sender, respond) {
 		payload = data;
+		playSound('launch');
 	}
 
 	function handleFsCtl (command, data, sender, respond) {
@@ -761,16 +795,16 @@
 		hotkey = require('./kosian/Hotkey').Hotkey();
 		contextMenu = require('./ContextMenu').ContextMenu();
 
+		config = new Config(configInfo);
+
 		initHotkey();
 		initUnicodeDictData();
 
-		config = new Config(configInfo);
-
 		ext.receive(handleRequest);
-		if (ext.version != ext.storage.getItem('version')) {
+		if (ext.version != config.get('version')) {
 			ext.openTabWithUrl(
 				'http://appsweets.net/wasavi/' +
-				'?currentVersion=' + ext.storage.getItem('version') +
+				'?currentVersion=' + config.get('version') +
 				'&newVersion=' + ext.version);
 			ext.storage.setItem('version', ext.version);
 		}

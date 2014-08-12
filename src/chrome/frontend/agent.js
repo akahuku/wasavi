@@ -54,8 +54,6 @@ var extension;
 var isTestFrame;
 var isOptionsPage;
 var enableList;
-var exrc;
-var shortcut;
 var shortcutCode;
 var fontFamily;
 var quickActivation;
@@ -751,9 +749,7 @@ function matchWithShortcut (e) {
 function handleAgentInitialized (req) {
 	if (isOptionsPage) {
 		window.WasaviOptions.extension = extension;
-		window.WasaviOptions.initPage(
-			req, enableList, exrc, shortcut, fontFamily, quickActivation,
-			logMode);
+		window.WasaviOptions.initPage(req);
 	}
 
 	if (quickActivation) {
@@ -975,16 +971,6 @@ function handleBackendMessage (req) {
 				logbuf.push(item.key);
 				break;
 
-			case 'exrc':
-				exrc = item.value;
-				logbuf.push(item.key);
-				break;
-
-			case 'shortcut':
-				shortcut = item.value;
-				logbuf.push(item.key);
-				break;
-
 			case 'shortcutCode':
 				shortcutCode = item.value;
 				logbuf.push(item.key);
@@ -1104,8 +1090,6 @@ function handleConnect (req) {
 
 	extension.tabId = req.tabId;
 	enableList = req.targets;
-	exrc = req.exrc;
-	shortcut = req.shortcut;
 	shortcutCode = req.shortcutCode;
 	fontFamily = req.fontFamily;
 	quickActivation = req.quickActivation;

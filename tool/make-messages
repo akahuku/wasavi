@@ -89,6 +89,22 @@ $extensionInfo = array(
 		"message" => "Press your favorite shortcut key...",
 		"description" => ""
 	),
+	"option_sounds_head" => array(
+		"message" => "Sounds",
+		"description" => ""
+	),
+	"option_sound_launch" => array(
+		"message" => "On launching",
+		"description" => ""
+	),
+	"option_sound_bell" => array(
+		"message" => "On error",
+		"description" => ""
+	),
+	"option_sound_volume" => array(
+		"message" => "Volume",
+		"description" => ""
+	),
 	"option_readme" => array(
 		"message" => "README",
 		"description" => ""
