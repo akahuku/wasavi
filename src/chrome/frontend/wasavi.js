@@ -514,7 +514,7 @@ visibility:hidden \
 position:fixed; \
 padding:0; \
 border:none; \
-font-family:' + fontFamily + '; \
+font-family:' + req.fontFamily + '; \
 font-size:10pt; \
 left:0; \
 top:0; \
@@ -586,7 +586,7 @@ animation:blink 1s linear infinite; \
 
 '#wasavi_footer { \
 padding:2px 2px 1px 2px; \
-font-family:' + fontFamily + '; \
+font-family:' + req.fontFamily + '; \
 font-size:10pt; \
 line-height:1; \
 overflow:hidden; \
@@ -638,7 +638,7 @@ margin:0; \
 padding:0; \
 border:none; \
 outline:none; \
-font-family:' + fontFamily + '; \
+font-family:' + req.fontFamily + '; \
 font-size:10pt; \
 line-height:1; \
 width:100%; \
@@ -671,7 +671,7 @@ border:none; \
 outline:none; \
 background-color:transparent; \
 width:100%; \
-font-family:' + fontFamily + '; \
+font-family:' + req.fontFamily + '; \
 font-size:10pt; \
 overflow-y:hidden; \
 white-space:pre-wrap; \
@@ -726,7 +726,7 @@ padding:4px; \
 color:#fff; \
 background-color:rgba(0,0,0,0.75); \
 border-radius:6px; \
-font-family:' + fontFamily + '; \
+font-family:' + req.fontFamily + '; \
 font-size:10pt; \
 line-height:1; \
 text-shadow:1px 1px #000; \
@@ -840,7 +840,6 @@ ime-mode:disabled; \
 
 	extensionChannel.tabId = req.tabId;
 	exrc = [req.exrc, req.ros];
-	fontFamily = req.fontFamily;
 	quickActivation = req.quickActivation;
 	global._ = l10n.getTranslator();
 	devMode = req.devMode;
@@ -5020,7 +5019,6 @@ var isStandAlone = (function () {
 var extensionChannel;
 var version;
 var exrc;
-var fontFamily = 'monospace';
 var quickActivation;
 var testMode;
 var devMode;
@@ -7402,7 +7400,7 @@ if (global.WasaviExtensionWrapper
 						width:document.documentElement.clientWidth,
 						height:document.documentElement.clientHeight
 					},
-					fontStyle:'normal normal normal medium/1 ' + fontFamily
+					fontStyle:'normal normal normal medium/1 ' + req.fontFamily
 				}, req);
 			});
 		}
