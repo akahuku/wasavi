@@ -4627,10 +4627,10 @@ function handleBackendMessage (req) {
 			var item = req.items[i];
 			switch (item.key) {
 			case lineInputHistories.storageKey:
-				lineInputHistories.load(item.value);
+				!testMode && lineInputHistories.load(item.value);
 				break;
 			case registers.storageKey:
-				registers.load(item.value);
+				!testMode && registers.load(item.value);
 				break;
 			case 'logMode':
 				logMode = item.value;
