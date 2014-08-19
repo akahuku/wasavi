@@ -743,12 +743,9 @@ Wasavi.LineInputHistories = function (app, maxSize, names, value) {
 	var isLatest = false;
 
 	function serialize () {
-		return JSON.stringify(serializeGeneral({s:s}));
+		return {s:s};
 	}
 	function restore (src) {
-		if (isString(src)) {
-			src = unserializeGeneral(src);
-		}
 		if (!isObject(src)) return;
 
 		var tmp = {};
@@ -1871,12 +1868,9 @@ Wasavi.Registers = function (app, value) {
 	var isLatest = false;
 
 	function serialize () {
-		return JSON.stringify(serializeGeneral({unnamed:unnamed, named:named}));
+		return {unnamed:unnamed, named:named};
 	}
 	function restore (src) {
-		if (isString(src)) {
-			src = unserializeGeneral(src);
-		}
 		if (!isObject(src)) return;
 		if (!isObject(src.unnamed)) return;
 		if (!isObject(src.named)) return;
@@ -2041,32 +2035,54 @@ Wasavi.Registers = function (app, value) {
 	value = null;
 };
 
-Wasavi.Marks = function (app, ignoreStorage) {
+Wasavi.Marks = function (app, value) {
 	var buffer = app.buffer;
-	var marks = {};
+	var marks;
 
 	function serialize () {
-		return JSON.stringify(serializeGeneral({marks:marks}));
+		var result = [];
+		for (var i in marks) {
+			result.push([i, marks[i].row, marks[i].col].join('\t'));
+		}
+		return window.btoa(result.join('\n'));
+	}
+	function unserialize (value) {
+		var result = {};
+		isString(value) && window.atob(value)
+			.split('\n')
+			.forEach(function (line) {
+				line = line.split('\t');
+				if (line[0].length) {
+					result[line[0]] = {
+						row: parseInt(line[1], 10),
+						col: parseInt(line[2], 10)
+					};
+				}
+			});
+		return result;
 	}
 	function restore (src) {
-		src = unserializeGeneral(src);
-		if (!src || (!src instanceof Object)) return;
-		if (!('marks' in src) || !(src.marks instanceof Object)) return;
+		src = unserialize(src);
 
-		for (var i in src.marks) {
+		for (var i in src) {
 			if (!isValidName(i)) continue;
-			if (!src.marks[i] || !(src.marks[i] instanceof Object)) continue;
-			if (!('row' in src.marks[i]) || !('col' in src.marks[i])) continue;
+			if (!isObject(src[i])) continue;
+			if (!isNumber(src[i].row)) continue;
+			if (!isNumber(src[i].col)) continue;
 
-			var row = parseInt(src.marks[i].row);
-			var col = parseInt(src.marks[i].col);
+			var row = src[i].row;
+			var col = src[i].col;
 			if (isNaN(row) || isNaN(col)) continue;
 
 			marks[i] = (new Wasavi.Position(row, col)).round(buffer);
 		}
 	}
 	function save () {
-		app.dataset('wasaviMarks', serialize());
+		return serialize();
+	}
+	function load (value) {
+		marks = {};
+		restore(value || '');
 	}
 	function isValidName (name) {
 		return /^[a-z'\^<>]/.test(name);
@@ -2081,7 +2097,6 @@ Wasavi.Marks = function (app, ignoreStorage) {
 		name = regalizeName(name);
 		if (isValidName(name)) {
 			marks[name] = pos;
-			save();
 		}
 	}
 	function setPrivate (name, pos) {
@@ -2198,7 +2213,6 @@ Wasavi.Marks = function (app, ignoreStorage) {
 		}
 		finally {
 			releaseMarks(usedMarks);
-			save();
 		}
 	}
 	function clear () {
@@ -2239,9 +2253,9 @@ Wasavi.Marks = function (app, ignoreStorage) {
 	publish(this,
 		set, get, setPrivate, getPrivate,
 		setJumpBaseMark, setInputOriginMark, getJumpBaseMark, getInputOriginMark,
-		update, dump, dumpData, save, isValidName, clear, dispose
+		update, dump, dumpData, save, load, isValidName, clear, dispose
 	);
-	restore(!ignoreStorage && app.dataset('wasaviMarks') || '');
+	load(value);
 };
 
 Wasavi.Editor = function (element) {

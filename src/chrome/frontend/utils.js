@@ -61,44 +61,7 @@ function extend (dest, src) {
 	}
 	return dest;
 }
-function serializeGeneral (obj) {
-	if (obj == null) {
-		return null;
-	}
-	else if (obj == undefined || typeof obj == 'function') {
-		return undefined;
-	}
-	else if (typeof obj == 'boolean' || typeof obj == 'number') {
-		return obj;
-	}
-	else if (obj instanceof RegExp) {
-		return '""RegExp:' + obj.toString() + ':RegExp""';
-	}
-	else if (obj instanceof Date) {
-		return '""Date:' + obj.getTime() + ':Date""';
-	}
-	else if (obj instanceof Array) {
-		var result = [];
-		for (var i = 0; i < obj.length; i++) {
-			if (typeof obj[i] == 'function') {continue;}
-			result.push(serializeGeneral(obj[i]));
-		}
-		return result;
-	}
-	else if (obj instanceof Object) {
-		var result = {};
-		for (var i in obj) {
-			if (!obj.hasOwnProperty(i)) {continue;}
-			if (typeof obj[i] == 'function') {continue;}
-			result[i] = serializeGeneral(obj[i]);
-		}
-		return result;
-	}
-	else {
-		return obj.toString();
-	}
-}
-function unserializeGeneral (src) {
+function parseJson (src) {
 	try {
 		src = JSON.parse(src);
 	}

@@ -165,16 +165,7 @@
 			joinLines:joinLines,
 			yank:yank,
 			paste:paste
-		}),
-
-		/*
-		 * methods
-		 */
-		dataset:function (key, value) {
-			return arguments.length >= 2 ?
-				dataset(targetElement, key, value) :
-				dataset(targetElement, key);
-		}
+		})
 	});
 }
 
@@ -825,9 +816,6 @@ ime-mode:disabled; \
 	 */
 
 	targetElement = x;
-	targetElement.dataset = {};
-	targetElement.getAttribute = function (name) {return this.dataset[name];};
-	targetElement.setAttribute = function (name, value) {this.dataset[name] = value;};
 
 	l10n = new Wasavi.L10n(appProxy, req.messageCatalog);
 	ffttDictionary = new unicodeUtils.FfttDictionary(
@@ -884,8 +872,10 @@ ime-mode:disabled; \
 	lineInputHistories = new Wasavi.LineInputHistories(
 		appProxy, config.vars.history, ['/', ':'],
 		testMode ? null : req.lineInputHistories);
+	marks = new Wasavi.Marks(
+		appProxy, testMode ? null : x.marks);
+
 	inputHandler = new Wasavi.InputHandler(appProxy);
-	marks = new Wasavi.Marks(appProxy, testMode);
 	cursor = new Wasavi.CursorUI(appProxy, cc, ec, footerInput, focusHolder);
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
@@ -973,7 +963,7 @@ function uninstall (save, implicit) {
 	lastSubstituteInfo = undefined;
 	requestedState = undefined;
 	inputHandler = inputHandler.dispose();
-	marks.save();
+	targetElement.marks = testMode ? null : marks.save();
 	marks = marks.dispose();
 	cursor = cursor.dispose();
 	scroller = scroller.dispose();
@@ -984,8 +974,6 @@ function uninstall (save, implicit) {
 	completer = completer.dispose();
 
 	//
-	delete targetElement.getAttribute;
-	delete targetElement.setAttribute;
 	targetElement.tabId = extensionChannel.tabId;
 	targetElement.isTopFrame = !!extensionChannel.isTopFrame;
 	targetElement.isImplicit = !!implicit;

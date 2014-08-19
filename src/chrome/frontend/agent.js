@@ -36,6 +36,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 
 var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 var EXTENSION_CURRENT = 'data-texteditor-extension-current';
+var MARKS_ID = 'data-wasavi-marks';
 var FULLSCREEN_MARGIN = 8;
 var MIN_WIDTH_PIXELS = 320;
 var BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
@@ -315,7 +316,8 @@ function runCore (element, frameSource, value) {
 		readOnly:element.readOnly || element.disabled,
 		value:value,
 		rect:{width:rect.width, height:rect.height},
-		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily)
+		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
+		marks:element.getAttribute(MARKS_ID)
 	});
 
 	//
@@ -918,6 +920,9 @@ function handleBackendMessage (req) {
 				stateClearTimer = null;
 			}
 			document.querySelector('h1').style.color = '';
+		}
+		if (req.marks) {
+			targetElement.setAttribute(MARKS_ID, req.marks);
 		}
 		cleanup(req.value, req.isImplicit);
 		info('wasavi terminated');
