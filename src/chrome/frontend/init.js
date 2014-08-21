@@ -40,30 +40,6 @@
 /*const*/var BRACKETS = '[{(<"\'``\'">)}]';
 /*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 
-/*const*/var ACCEPTABLE_TYPES = {
-	textarea: true,
-	text:     true,
-	search:   true,
-	tel:      true,
-	url:      true,
-	email:    true,
-	password: true,
-	number:   true
-};
-
-/*const*/var EXFLAGS = {
-	addr2All: 1<<2,
-	addr2None: 1<<3,
-	addrZero: 1<<4,
-	addrZeroDef: 1<<5,
-	printDefault: 1<<6,
-	clearFlag: 1<<7,
-	newScreen: 1<<8,
-	roundMax: 1<<9,
-	updateJump: 1<<10,
-	multiAsync: 1<<11
-};
-
 /*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
 /*const*/var LINE_NUMBER_MAX_WIDTH = 6;
 

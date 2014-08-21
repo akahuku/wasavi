@@ -227,7 +227,7 @@ ExCommandExecutor.prototype = {
 			var n = Math.max(0, Math.min(
 				buffer.selectionStartRow + result.flagoff, t.rowLength - 1));
 			buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
-			ExCommand.printRow(appProxy, buffer, n.row, n.row, result.flags);
+			Wasavi.ExCommand.printRow(appProxy, buffer, n.row, n.row, result.flags);
 		}
 		this.lastError = undefined;
 		return true;
@@ -1484,7 +1484,7 @@ function executeExCommand (source, isRoot, parseOnly) {
 		// 4. Leading characters that can be interpreted as addresses shall be evaluate;
 		// see Addressing in ex
 		// (http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_02).
-		range = Wasavi.ExCommand.prototype.parseRange(appProxy, source, undefined, true);
+		range = Wasavi.ExCommand.parseRange(appProxy, source, undefined, true);
 		if (typeof range == 'string') {
 			resultMessage = range;
 			break;

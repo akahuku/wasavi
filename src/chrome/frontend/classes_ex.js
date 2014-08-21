@@ -28,7 +28,22 @@
 
 'use strict';
 
-Wasavi.ExCommand = function (name, shortName, syntax, flags, handler) {
+Wasavi.ExCommand = (function () {
+
+var EXFLAGS = {
+	addr2All: 1<<2,
+	addr2None: 1<<3,
+	addrZero: 1<<4,
+	addrZeroDef: 1<<5,
+	printDefault: 1<<6,
+	clearFlag: 1<<7,
+	newScreen: 1<<8,
+	roundMax: 1<<9,
+	updateJump: 1<<10,
+	multiAsync: 1<<11
+};
+
+function ExCommand (name, shortName, syntax, flags, handler) {
 	this.name = name;
 	this.shortName = shortName;
 	this.handler = handler;
@@ -47,9 +62,10 @@ Wasavi.ExCommand = function (name, shortName, syntax, flags, handler) {
 	};
 };
 
-Wasavi.ExCommand.prototype = {
+ExCommand.prototype = {
+	// {{{1 ExCommand class prorotype
 	clone: function () {
-		return new Wasavi.ExCommand(
+		return new ExCommand(
 			this.name,
 			this.shortName,
 			this.syntax,
@@ -60,6 +76,31 @@ Wasavi.ExCommand.prototype = {
 	parseArgs: function (app, range, line, syntax) {
 		function push_string (s) {
 			result.argv.push(s);
+		}
+		function push_2words (s) {
+			var state = 0;
+			while ((s = s.replace(/^\s+/, '')) != '') {
+				var re = /(?:\u0016.|\S)*/.exec(s);
+				switch (state) {
+				case 0:
+					if (/^\[.+\]$/.test(re[0])) {
+						result.argv.push(re[0]);
+						s = s.substring(re[0].length);
+						state = 1;
+						break;
+					}
+					// FALLTHRU
+				case 1:
+					result.argv.push(re[0]);
+					s = s.substring(re[0].length);
+					state = 2;
+					break;
+				case 2:
+					result.argv.push(s);
+					s = '';
+					break;
+				}
+			}
 		}
 		function push_words (s) {
 			while ((s = s.replace(/^\s+/, '')) != '') {
@@ -234,7 +275,7 @@ flag23_loop:
 
 			case 'l':
 				// [destination address]
-				var dest = this.parseRange(app, line, 1, true);
+				var dest = parseRange(app, line, 1, true);
 				if (typeof dest == 'string') {
 					return dest;
 				}
@@ -254,6 +295,12 @@ flag23_loop:
 			case 's':
 				// [whole of string remain]
 				push_string(line);
+				needCheckRest = false;
+				break syntax_expansion_loop;
+
+			case 'W':
+				// [option + 2 words]
+				push_2words(line);
 				needCheckRest = false;
 				break syntax_expansion_loop;
 
@@ -287,211 +334,6 @@ flag23_loop:
 		}
 
 		return result;
-	},
-	parseRange: function (app, s, requiredCount, allowZeroAddress) {
-		var t = app.buffer;
-		var rows = [];
-		var ss = t.selectionStart;
-		var error = false;
-		var re;
-
-		if ((re = /^[ \t]*%/.exec(s))) {
-			rows.push(0, t.rowLength - 1);
-			s = s.substring(re[0].length);
-		}
-		else {
-			while (true) {
-				s = s.replace(/^[ \t]+/, '');
-
-				var found = false;
-				var regexSpecified = false;
-
-				if (s.charAt(0) == '.') {
-					rows.push(t.selectionStartRow);
-					s = s.substring(1);
-					found = true;
-				}
-				else if (s.charAt(0) == '$') {
-					rows.push(t.rowLength - 1);
-					s = s.substring(1);
-					app.isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^\d+/.exec(s))) {
-					var n = re[0] - 1;
-					if (n < 0) {
-						n = allowZeroAddress ? -1 : 0;
-					}
-					rows.push(n);
-					s = s.substring(re[0].length);
-					app.isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^'(.)/.exec(s))) {
-					if (!/^[a-z`'<>]$/.test(re[1])) {
-						error = _('Invalid mark name.');
-						break;
-					}
-					var mark = app.marks.get(re[1]);
-					if (mark == undefined) {
-						error = _('Mark {0} is undefined.', re[1]);
-						break;
-					}
-					rows.push(mark.row);
-					s = s.substring(re[0].length);
-					app.isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
-					var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
-					var regex = pattern == '' ? null : app.low.getFindRegex(pattern);
-					if (!regex) {
-						if (re[1] == '' && pattern == '') {
-							error = _('No previous search pattern.');
-						}
-						else {
-							error = _('Invalid regex pattern.');
-						}
-						break;
-					}
-
-					regexSpecified = true;
-					app.lastRegexFindCommand.push({direction:1});
-					pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
-
-					app.motion.lineEnd('');
-					var result = app.motion.findByRegexForward(regex, 1);
-					if (!result) {
-						error = _('Pattern not found: {0}', pattern);
-						break;
-					}
-
-					rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-					s = s.substring(re[0].length);
-					app.isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
-					var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
-					var regex = pattern == '' ? null : app.low.getFindRegex(pattern);
-					if (!regex) {
-						if (re[1] == '' && pattern == '') {
-							error = _('No previous search pattern.');
-						}
-						else {
-							error = _('Invalid regex pattern.');
-						}
-						break;
-					}
-					regexSpecified = true;
-					app.lastRegexFindCommand.push({direction:-1});
-					pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
-
-					app.motion.lineStart('', true);
-					var result = app.motion.findByRegexBackward(regex, 1);
-					if (!result) {
-						error = _('Pattern not found: {0}', pattern);
-						break;
-					}
-
-					rows.push(t.linearPositionToBinaryPosition(result.offset).row);
-					s = s.substring(re[0].length);
-					app.isJumpBaseUpdateRequested = true;
-					found = true;
-				}
-				else if ((re = /^[\+\-](\d*)/.exec(s))) {
-					var offset = re[1] == '' ?
-						(re[0].charAt(0) == '+' ? 1 : -1) :
-						parseInt(re[0], 10);
-					rows.push(t.selectionStartRow + offset);
-					s = s.substring(re[0].length);
-					found = true;
-				}
-
-				if (found) {
-					if ((re = /^\s*[\+\-](\d*)/.exec(s))) {
-						var offset = re[1] == '' ?
-							(re[0].charAt(0) == '+' ? 1 : -1) :
-							parseInt(re[0], 10);
-						rows.lastItem += offset;
-						if (regexSpecified) {
-							app.lastRegexFindCommand.verticalOffset = offset;
-						}
-						s = s.substring(re[0].length);
-					}
-
-					if (rows.lastItem < 0) {
-						rows.lastItem = allowZeroAddress ? -1 : 0;
-					}
-
-					s = s.replace(/^[ \t]+/, '');
-				}
-
-				if (s.charAt(0) == ',') {
-					if (rows.length == 0) {
-						rows.push(t.selectionStartRow);
-					}
-					s = s.substring(1);
-					!found && rows.push(t.selectionStartRow);
-				}
-				else if (s.charAt(0) == ';') {
-					if (rows.length == 0) {
-						rows.push(t.selectionStartRow);
-					}
-					if (rows.lastItem > t.rowLength) {
-						error = _('Out of range.');
-						break;
-					}
-					t.setSelectionRange(new Wasavi.Position(rows.lastItem, 0));
-					s = s.substring(1);
-					!found && rows.push(t.selectionStartRow);
-				}
-				else {
-					break;
-				}
-			}
-		}
-
-		rows.last = function (t, count, isGlobal) {
-			var result = [];
-			count = Math.min(count, 2);
-			if (count == 1) {
-				if (this.length >= 1) {
-					result = [this.lastItem];
-				}
-				else {
-					result = [t.selectionStartRow];
-				}
-			}
-			else if (count == 2) {
-				if (this.length >= 2) {
-					result = [ this[this.length - 2], this[this.length - 1] ];
-				}
-				else if (this.length == 1) {
-					result = [ this[0], this[0] ];
-				}
-				else {
-					if (isGlobal) {
-						result = [0, t.rowLength - 1];
-					}
-					else {
-						result = [ t.selectionStartRow, t.selectionStartRow ];
-					}
-				}
-				if (result[1] < result[0]) {
-					return _('The second address is smaller than the first.');
-				}
-			}
-			result.specifiedAddresses = Math.min(this.length, 2);
-			return result;
-		};
-
-		t.setSelectionRange(ss);
-
-		return error || {
-			rows: requiredCount == undefined ? rows : rows.last(t, requiredCount),
-			rest: s
-		};
 	},
 	buildArgs: function (app, range, commandNameOption, argv, args, syntax) {
 		var result = this.parseArgs(app, range, commandNameOption, syntax);
@@ -535,80 +377,10 @@ flag23_loop:
 	toString: function () {
 		return '[ExCommand ' + this.name + ']';
 	}
+	// }}}
 };
 
-Wasavi.ExCommand.defaultCommand = new Wasavi.ExCommand(
-	'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
-	function (app, t, a) {
-		Wasavi.ExCommand.printRow(app, t, a.range[0], a.range[1], a.flags);
-		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(a.range[1], 0)));
-		a.flags.hash = a.flags.list = a.flags.print = false;
-	}
-);
-
-Wasavi.ExCommand.printRow = function (app, t, from, to, flags) {
-	function getLineNumber (i) {
-		return ('     ' + (i + 1)).substr(-6) + '  ';
-	}
-	function getLineNumberNull () {
-		return '';
-	}
-	var lg = flags.hash ? getLineNumber : getLineNumberNull;
-	if (flags.list) {
-		var escapeReplacements = {
-			7: '\\a', 8: '\\b', 9: '\\t', 10: '\\n', 11: '\\v', 12: '\\f', 13: '\\r', 92:'\\\\'
-		};
-		for (var i = from; i <= to; i++) {
-			var line = toNativeControl(t.rows(i));
-			/*
-			 * char code
-			 * \\   5c
-			 * \a   07
-			 * \b   08
-			 * \t   09
-			 * \n   0a
-			 * \v   0b
-			 * \f   0c
-			 * \r   0d
-			 */
-			line = line.replace(/[\u0007\u0008\u000a-\u000d\\]/g, function (s) {
-				return escapeReplacements[s.charCodeAt(0)];
-			});
-			line = line.replace(/[\u0000-\u0008\u0010-\u001f\u007f]/g, function (s) {
-				return '\\' + ('00' + s.charCodeAt(0).toString(8)).substr(-3);
-			});
-			line = line.replace(/\$/g, '\\$');
-			line = line + '$';
-			app.backlog.push(lg(i) + line);
-		}
-	}
-	else if (flags.hash || flags.print) {
-		for (var i = from; i <= to; i++) {
-			var line = t.rows(i);
-			app.backlog.push(lg(i) + line);
-		}
-	}
-};
-
-Wasavi.ExCommand.find = (function () {
-	var cache = {};
-	return function (name) {
-		if (name in cache) {
-			return cache[name];
-		}
-
-		var command = Wasavi.ExCommand
-			.commands
-			.filter(function (command) {return command.name == name})[0];
-		if (command) {
-			return cache[name] = command;
-		}
-
-		return null;
-	}
-})();
-
-Wasavi.ExCommand.parseWriteArg = function (app, t, a) {
+function parseWriteArg (app, t, a) {
 	var re;
 	var arg = a.argv[0] || '';
 	var isCommand = false;
@@ -632,7 +404,7 @@ Wasavi.ExCommand.parseWriteArg = function (app, t, a) {
 	};
 };
 
-Wasavi.ExCommand.writeCore = function (app, t, a, isCommand, isAppend, path) {
+function writeCore (app, t, a, isCommand, isAppend, path) {
 	path || (path = app.fileName);
 	var pathRegalized = app.low.regalizeFilePath(path, true);
 
@@ -696,7 +468,280 @@ Wasavi.ExCommand.writeCore = function (app, t, a, isCommand, isAppend, path) {
 	}
 };
 
-Wasavi.ExCommand.readCore = function (app, t, a, content, meta, status) {
+var cache = {};
+/*public*/function find (name) {
+	if (name in cache) {
+		return cache[name];
+	}
+
+	var command = commands.filter(function (command) {return command.name == name})[0];
+	if (command) {
+		return cache[name] = command;
+	}
+
+	return null;
+}
+
+/*public*/function parseRange (app, s, requiredCount, allowZeroAddress) {
+	var t = app.buffer;
+	var rows = [];
+	var ss = t.selectionStart;
+	var error = false;
+	var re;
+
+	if ((re = /^[ \t]*%/.exec(s))) {
+		rows.push(0, t.rowLength - 1);
+		s = s.substring(re[0].length);
+	}
+	else {
+		while (true) {
+			s = s.replace(/^[ \t]+/, '');
+
+			var found = false;
+			var regexSpecified = false;
+
+			if (s.charAt(0) == '.') {
+				rows.push(t.selectionStartRow);
+				s = s.substring(1);
+				found = true;
+			}
+			else if (s.charAt(0) == '$') {
+				rows.push(t.rowLength - 1);
+				s = s.substring(1);
+				app.isJumpBaseUpdateRequested = true;
+				found = true;
+			}
+			else if ((re = /^\d+/.exec(s))) {
+				var n = re[0] - 1;
+				if (n < 0) {
+					n = allowZeroAddress ? -1 : 0;
+				}
+				rows.push(n);
+				s = s.substring(re[0].length);
+				app.isJumpBaseUpdateRequested = true;
+				found = true;
+			}
+			else if ((re = /^'(.)/.exec(s))) {
+				if (!/^[a-z`'<>]$/.test(re[1])) {
+					error = _('Invalid mark name.');
+					break;
+				}
+				var mark = app.marks.get(re[1]);
+				if (mark == undefined) {
+					error = _('Mark {0} is undefined.', re[1]);
+					break;
+				}
+				rows.push(mark.row);
+				s = s.substring(re[0].length);
+				app.isJumpBaseUpdateRequested = true;
+				found = true;
+			}
+			else if ((re = /^\/((?:\\\/|[^\/])*)(?:\/|(?=\n$))/.exec(s))) {
+				var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
+				var regex = pattern == '' ? null : app.low.getFindRegex(pattern);
+				if (!regex) {
+					if (re[1] == '' && pattern == '') {
+						error = _('No previous search pattern.');
+					}
+					else {
+						error = _('Invalid regex pattern.');
+					}
+					break;
+				}
+
+				regexSpecified = true;
+				app.lastRegexFindCommand.push({direction:1});
+				pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
+
+				app.motion.lineEnd('');
+				var result = app.motion.findByRegexForward(regex, 1);
+				if (!result) {
+					error = _('Pattern not found: {0}', pattern);
+					break;
+				}
+
+				rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+				s = s.substring(re[0].length);
+				app.isJumpBaseUpdateRequested = true;
+				found = true;
+			}
+			else if ((re = /^\?((?:\\\?|[^?])*)(?:\?|(?=\n$))/.exec(s))) {
+				var pattern = re[1] == '' ? (app.lastRegexFindCommand.pattern || '') : re[1];
+				var regex = pattern == '' ? null : app.low.getFindRegex(pattern);
+				if (!regex) {
+					if (re[1] == '' && pattern == '') {
+						error = _('No previous search pattern.');
+					}
+					else {
+						error = _('Invalid regex pattern.');
+					}
+					break;
+				}
+				regexSpecified = true;
+				app.lastRegexFindCommand.push({direction:-1});
+				pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
+
+				app.motion.lineStart('', true);
+				var result = app.motion.findByRegexBackward(regex, 1);
+				if (!result) {
+					error = _('Pattern not found: {0}', pattern);
+					break;
+				}
+
+				rows.push(t.linearPositionToBinaryPosition(result.offset).row);
+				s = s.substring(re[0].length);
+				app.isJumpBaseUpdateRequested = true;
+				found = true;
+			}
+			else if ((re = /^[\+\-](\d*)/.exec(s))) {
+				var offset = re[1] == '' ?
+					(re[0].charAt(0) == '+' ? 1 : -1) :
+					parseInt(re[0], 10);
+				rows.push(t.selectionStartRow + offset);
+				s = s.substring(re[0].length);
+				found = true;
+			}
+
+			if (found) {
+				if ((re = /^\s*[\+\-](\d*)/.exec(s))) {
+					var offset = re[1] == '' ?
+						(re[0].charAt(0) == '+' ? 1 : -1) :
+						parseInt(re[0], 10);
+					rows.lastItem += offset;
+					if (regexSpecified) {
+						app.lastRegexFindCommand.verticalOffset = offset;
+					}
+					s = s.substring(re[0].length);
+				}
+
+				if (rows.lastItem < 0) {
+					rows.lastItem = allowZeroAddress ? -1 : 0;
+				}
+
+				s = s.replace(/^[ \t]+/, '');
+			}
+
+			if (s.charAt(0) == ',') {
+				if (rows.length == 0) {
+					rows.push(t.selectionStartRow);
+				}
+				s = s.substring(1);
+				!found && rows.push(t.selectionStartRow);
+			}
+			else if (s.charAt(0) == ';') {
+				if (rows.length == 0) {
+					rows.push(t.selectionStartRow);
+				}
+				if (rows.lastItem > t.rowLength) {
+					error = _('Out of range.');
+					break;
+				}
+				t.setSelectionRange(new Wasavi.Position(rows.lastItem, 0));
+				s = s.substring(1);
+				!found && rows.push(t.selectionStartRow);
+			}
+			else {
+				break;
+			}
+		}
+	}
+
+	rows.last = function (t, count, isGlobal) {
+		var result = [];
+		count = Math.min(count, 2);
+		if (count == 1) {
+			if (this.length >= 1) {
+				result = [this.lastItem];
+			}
+			else {
+				result = [t.selectionStartRow];
+			}
+		}
+		else if (count == 2) {
+			if (this.length >= 2) {
+				result = [ this[this.length - 2], this[this.length - 1] ];
+			}
+			else if (this.length == 1) {
+				result = [ this[0], this[0] ];
+			}
+			else {
+				if (isGlobal) {
+					result = [0, t.rowLength - 1];
+				}
+				else {
+					result = [ t.selectionStartRow, t.selectionStartRow ];
+				}
+			}
+			if (result[1] < result[0]) {
+				return _('The second address is smaller than the first.');
+			}
+		}
+		result.specifiedAddresses = Math.min(this.length, 2);
+		return result;
+	};
+
+	t.setSelectionRange(ss);
+
+	return error || {
+		rows: requiredCount == undefined ? rows : rows.last(t, requiredCount),
+		rest: s
+	};
+}
+
+/*public*/var defaultCommand = new ExCommand(
+	'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
+	function (app, t, a) {
+		printRow(app, t, a.range[0], a.range[1], a.flags);
+		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(a.range[1], 0)));
+		a.flags.hash = a.flags.list = a.flags.print = false;
+	}
+);
+
+/*public*/function printRow (app, t, from, to, flags) {
+	function getLineNumber (i) {
+		return ('     ' + (i + 1)).substr(-6) + '  ';
+	}
+	function getLineNumberNull () {
+		return '';
+	}
+	var lg = flags.hash ? getLineNumber : getLineNumberNull;
+	if (flags.list) {
+		var escapeReplacements = {
+			7: '\\a', 8: '\\b', 9: '\\t', 10: '\\n', 11: '\\v', 12: '\\f', 13: '\\r', 92:'\\\\'
+		};
+		for (var i = from; i <= to; i++) {
+			var line = toNativeControl(t.rows(i));
+			/*
+			 * char code
+			 * \\   5c
+			 * \a   07
+			 * \b   08
+			 * \t   09
+			 * \n   0a
+			 * \v   0b
+			 * \f   0c
+			 * \r   0d
+			 */
+			line = line.replace(/[\u0007\u0008\u000a-\u000d\\]/g, function (s) {
+				return escapeReplacements[s.charCodeAt(0)];
+			});
+			line = line.replace(/[\u0000-\u0008\u0010-\u001f\u007f]/g, function (s) {
+				return '\\' + ('00' + s.charCodeAt(0).toString(8)).substr(-3);
+			});
+			line = line.replace(/\$/g, '\\$');
+			line = line + '$';
+			app.backlog.push(lg(i) + line);
+		}
+	}
+	else if (flags.hash || flags.print) {
+		for (var i = from; i <= to; i++) {
+			var line = t.rows(i);
+			app.backlog.push(lg(i) + line);
+		}
+	}
+};
+
+/*public*/function readCore (app, t, a, content, meta, status) {
 	if (typeof content != 'string' || status == 404) {
 		return _('Cannot open "{0}".', meta.path);
 	}
@@ -714,7 +759,7 @@ Wasavi.ExCommand.readCore = function (app, t, a, content, meta, status) {
 	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
 };
 
-Wasavi.ExCommand.editCore = function (app, t, a, content, meta, status) {
+/*public*/function editCore (app, t, a, content, meta, status) {
 	var charCount = content.length;
 	if (app.extensionChannel.isTopFrame) {
 		app.fileName = meta.path;
@@ -741,7 +786,7 @@ Wasavi.ExCommand.editCore = function (app, t, a, content, meta, status) {
 	if (typeof initCommands == 'string') {
 		return initCommands;
 	}
-	var terminator = Wasavi.ExCommand.defaultCommand.clone();
+	var terminator = defaultCommand.clone();
 	if (initCommands.commands.length) {
 		terminator.handler = function (t, a) {
 			t.setSelectionRange(t.getLineTopOffset2(t.rowLength - 1, 0));
@@ -758,9 +803,9 @@ Wasavi.ExCommand.editCore = function (app, t, a, content, meta, status) {
 	app.low.requestShowMessage(app.low.getFileIoResultInfo(meta.path, charCount, status == 404));
 };
 
-Wasavi.ExCommand.chdirCore = function (app, t, a, data) {
+/*public*/function chdirCore (app, t, a, data) {
 	if (a.argv.length == 0) {
-		return Wasavi.ExCommand.find('pwd').handler.apply(this, arguments);
+		return find('pwd').handler.apply(this, arguments);
 	}
 	if (!data || !('is_dir' in data)) {
 		return _('Invalid chdir result.');
@@ -786,8 +831,8 @@ Wasavi.ExCommand.chdirCore = function (app, t, a, data) {
 	}
 };
 
-Wasavi.ExCommand.commands = [
-	new Wasavi.ExCommand('abbreviate', 'ab', 'wN', 0, function (app, t, a) {
+/*public*/var commands = [
+	new ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
 			var MIN_WIDTH = 3;
 			var PAD_WIDTH = 4;
@@ -826,48 +871,14 @@ Wasavi.ExCommand.commands = [
 				app.backlog.push(_('No abbreviations are defined.'));
 			}
 		}
-		function parseArgs (s) {
-			var result = [];
-			var state = 0;
 
-			while ((s = s.replace(/^\s+/, '')) != '') {
-				var re = /(?:\u0016.|\S)*/.exec(s);
-				switch (state) {
-				case 0:
-					s = s.substring(re[0].length);
-					state = 1;
-					break;
-				case 1:
-					if (/^\[.+\]$/.test(re[0])) {
-						result.push(re[0]);
-						s = s.substring(re[0].length);
-						state = 2;
-						break;
-					}
-					// FALLTHRU
-				case 2:
-					result.push(re[0]);
-					s = s.substring(re[0].length);
-					state = 3;
-					break;
-				case 3:
-					result.push(s);
-					s = '';
-					break;
-				}
-			}
-
-			return result;
-		}
-
-		var argv = parseArgs(a.args);
 		var lhs, rhs, option;
-		lhs = argv.shift();
+		lhs = a.argv.shift();
 		if (/^\[.+\]$/.test(lhs)) {
 			option = lhs;
-			lhs = argv.shift();
+			lhs = a.argv.shift();
 		}
-		rhs = argv.shift();
+		rhs = a.argv.shift();
 
 		// prior option
 		switch (option) {
@@ -908,7 +919,7 @@ Wasavi.ExCommand.commands = [
 			};
 		}
 	}),
-	new Wasavi.ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
 		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'chdir',
@@ -916,10 +927,10 @@ Wasavi.ExCommand.commands = [
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'chdir');
 	}),
-	new Wasavi.ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
-		return Wasavi.ExCommand.find('cd').handler.apply(this, arguments);
+	new ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+		return find('cd').handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
+	new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var rg = document.createRange();
 		rg.setStartBefore(t.rowNodes(a.range[0]));
 		rg.setEndAfter(t.rowNodes(a.range[1]));
@@ -938,7 +949,7 @@ Wasavi.ExCommand.commands = [
 		t.setSelectionRange(t.getLineTopOffset2(a.lineNumber + 1 + copied - 1, 0));
 		app.isEditCompleted = true;
 	}),
-	new Wasavi.ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (app, t, a) {
+	new ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
 		t.isLineOrientSelection = true;
 		var deleted = a.range[1] - a.range[0] + 1;
@@ -951,7 +962,7 @@ Wasavi.ExCommand.commands = [
 		t.setSelectionRange(t.getLineTopOffset2(n));
 		app.isEditCompleted = true;
 	}),
-	new Wasavi.ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (app, t, a) {
 		if (!a.flags.force && app.isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
@@ -993,7 +1004,7 @@ Wasavi.ExCommand.commands = [
 		}
 		app.low.registerMultiplexCallback(requestId, 'edit');
 	}),
-	new Wasavi.ExCommand('file', 'f', 'f', 0, function (app, t, a) {
+	new ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
 			return _('Too much arguments.');
 		}
@@ -1026,7 +1037,7 @@ Wasavi.ExCommand.commands = [
 		}
 		app.low.requestShowMessage(app.low.getFileInfo(true));
 	}),
-	new Wasavi.ExCommand('filesystem', 'files', 'wN', 0, function (app, t, a) {
+	new ExCommand('filesystem', 'files', 'wN', 0, function (app, t, a) {
 		var list = [];
 		var command = (a.argv[0] || '').replace(/\u0016(.)/g, '$1');
 		if (/^(?:de?f?a?u?l?t?)$/.test(command)) {
@@ -1081,7 +1092,7 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 	}),
-	new Wasavi.ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
+	new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
 		var r = a.range;
 		var inverted = !!a.flags.force;
 		var pattern = a.argv[0];
@@ -1226,7 +1237,7 @@ Wasavi.ExCommand.commands = [
 			app.editLogger.close();
 		}
 	}),
-	new Wasavi.ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (app, t, a) {
+	new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var head = a.range[0];
 		var tail = Math.min(t.rowLength - 1, a.range[1] + (a.flags.count ? a.count - 1 : 0));
 		t.setSelectionRange(new Wasavi.Position(head, 0));
@@ -1234,12 +1245,13 @@ Wasavi.ExCommand.commands = [
 		t.setSelectionRange(t.getLineTopOffset2(head, 0));
 		app.isEditCompleted = true;
 	}),
-	new Wasavi.ExCommand('k', 'k', 'w1r', 1, function (app, t, a) {
-		return Wasavi.ExCommand.find('mark').handler.apply(this, arguments);
+	new ExCommand('k', 'k', 'w1r', 1, function (app, t, a) {
+		return find('mark').handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('map', 'map', '!wN', 0, function (app, t, a) {
+	new ExCommand('map', 'map', '!W', 0, function (app, t, a) {
 		var mapName = a.flags.force ? 'edit' : 'command';
 		var map = app.mapManager.getMap(mapName);
+
 		function dispMap (map) {
 			var maxWidth = 0;
 			if (map.length) {
@@ -1260,6 +1272,51 @@ Wasavi.ExCommand.commands = [
 				app.backlog.push(_('No mappings for {0} mode are defined.', mapName));
 			}
 		}
+
+		var lhs, rhs, option;
+		lhs = a.argv.shift();
+		if (/^\[.+\]$/.test(lhs)) {
+			option = lhs;
+			lhs = a.argv.shift();
+		}
+		rhs = a.argv.shift();
+
+		// prior option
+		switch (option) {
+		case '[clear]':
+			map.removeAll();
+			return;
+		}
+
+		// no args
+		if (lhs == undefined && rhs == undefined) {
+			dispMap(map.toArray());
+		}
+
+		// one arg
+		else if (lhs != undefined && rhs == undefined) {
+			dispMap(map.toArray().filter(function (o) {
+				return o[0].indexOf(lhs) >= 0;
+			}));
+		}
+
+		// two args
+		else if (lhs != undefined && rhs != undefined) {
+			// reject some mappings for text input mode: <escape>, <nl>
+			if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
+				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+			}
+			// reject some mappings for command mode: :, <escape>
+			if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
+				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+			}
+			lhs = app.keyManager.insertFnKeyHeader(lhs);
+			rhs = app.keyManager.insertFnKeyHeader(rhs);
+			map.register(lhs, rhs, option == '[noremap]');
+		}
+
+		return;
+
 		if (a.argv.length == 0) {
 			dispMap(map.toArray());
 		}
@@ -1299,7 +1356,7 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 	}),
-	new Wasavi.ExCommand('mark', 'ma', 'w1r', 1, function (app, t, a) {
+	new ExCommand('mark', 'ma', 'w1r', 1, function (app, t, a) {
 		var name = a.argv[0];
 		if (name.length > 1) {
 			return _('Mark names must be a single character.');
@@ -1309,10 +1366,10 @@ Wasavi.ExCommand.commands = [
 		}
 		app.marks.set(name, new Wasavi.Position(a.range[0], 0));
 	}),
-	new Wasavi.ExCommand('marks', 'marks', '', 0, function (app, t, a) {
+	new ExCommand('marks', 'marks', '', 0, function (app, t, a) {
 		app.backlog.push(app.marks.dump());
 	}),
-	new Wasavi.ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (app, t, a) {
+	new ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var r = a.range;
 		var dest = a.lineNumber;
 		if (dest >= r[0] && dest < r[1]) {
@@ -1353,20 +1410,20 @@ Wasavi.ExCommand.commands = [
 		});
 		app.isEditCompleted = true;
 	}),
-	new Wasavi.ExCommand('options', 'opt', '', 0, function (app, t, a) {
+	new ExCommand('options', 'opt', '', 0, function (app, t, a) {
 		app.extensionChannel.postMessage({type:'open-options'});
 	}),
-	new Wasavi.ExCommand('pwd', 'pw', '', 0, function (app, t, a) {
+	new ExCommand('pwd', 'pw', '', 0, function (app, t, a) {
 		app.low.requestShowMessage(
 			app.fstab[app.fileSystemIndex].name +
 			':' +
 			app.fstab[app.fileSystemIndex].cwd);
 	}),
-	new Wasavi.ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (app, t, a) {
+	new ExCommand('print', 'p', 'ca1', 2 | EXFLAGS.clearFlag, function (app, t, a) {
 		a.flags.print = true;
-		return Wasavi.ExCommand.defaultCommand.handler.apply(this, arguments);
+		return defaultCommand.handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
+	new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
 		var register = a.flags.register ? a.register : '"';
 		if (!app.registers.exists(register)) {
 			return _('Register {0} is empty.', register);
@@ -1379,7 +1436,7 @@ Wasavi.ExCommand.commands = [
 		});
 		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
 	}),
-	new Wasavi.ExCommand('quit', 'q', '!', 0, function (app, t, a) {
+	new ExCommand('quit', 'q', '!', 0, function (app, t, a) {
 		if (a.flags.force) {
 			app.writeOnTermination = false;
 			app.terminated = true;
@@ -1393,7 +1450,7 @@ Wasavi.ExCommand.commands = [
 			}
 		}
 	}),
-	new Wasavi.ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
 		var path = a.argv[0] || '';
 		if (path == '' && app.fileName == '') {
 			return _('File name is empty.');
@@ -1406,7 +1463,7 @@ Wasavi.ExCommand.commands = [
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'read');
 	}),
-	new Wasavi.ExCommand('redo', 're', '', 0, function (app, t, a) {
+	new ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();
 		var result = app.editLogger.redo();
 		app.editLogger.open('excommand+redo');
@@ -1418,23 +1475,23 @@ Wasavi.ExCommand.commands = [
 				_('{0} {operation:0} have executed again.', result));
 		}
 	}),
-	new Wasavi.ExCommand('s', 's', 's', 2, function (app, t, a) {
+	new ExCommand('s', 's', 's', 2, function (app, t, a) {
 		return (new Wasavi.SubstituteWorker(app)).run(a.range, a.argv[0], a.argv[1], a.argv[2]);
 	}),
-	new Wasavi.ExCommand('&', '&', 's', 2, function (app, t, a) {
+	new ExCommand('&', '&', 's', 2, function (app, t, a) {
 		return (new Wasavi.SubstituteWorker(app)).run(a.range, '', '%', a.argv[0]);
 	}),
-	new Wasavi.ExCommand('~', '~', 's', 2, function (app, t, a) {
+	new ExCommand('~', '~', 's', 2, function (app, t, a) {
 		var pattern;
 		if (!app.registers.exists('/') || (pattern = app.registers.get('/').data) == '') {
 			return _('No previous search pattern.');
 		}
 		return (new Wasavi.SubstituteWorker(app)).run(a.range, pattern, '~', a.argv[0]);
 	}),
-	new Wasavi.ExCommand('script', 'sc', 's', 2 | EXFLAGS.addrZero | EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('script', 'sc', 's', 2 | EXFLAGS.addrZero | EXFLAGS.multiAsync, function (app, t, a) {
 		return 'Under development!';
 	}),
-	new Wasavi.ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
+	new ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
 		var messages;
 		var logToConsole = false;
 		var emphasis = false;
@@ -1501,7 +1558,7 @@ Wasavi.ExCommand.commands = [
 			app.low.requestShowMessage(messages, emphasis);
 		}
 	}),
-	new Wasavi.ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {
+	new ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {
 		app.lastRegexFindCommand.push({});
 		app.lastRegexFindCommand.setPattern('');
 		app.lastSubstituteInfo.clear();
@@ -1513,7 +1570,7 @@ Wasavi.ExCommand.commands = [
 			'current pos: ' + app.editLogger.currentPosition
 		].join('\n'));
 	}),
-	new Wasavi.ExCommand('sashimi', 'sashimi', '', 0, function (app, t, a) {
+	new ExCommand('sashimi', 'sashimi', '', 0, function (app, t, a) {
 		app.low.requestShowMessage('Soy sauce!');
 		app.extensionChannel.postMessage(
 			{
@@ -1526,13 +1583,13 @@ Wasavi.ExCommand.commands = [
 			}
 		);
 	}),
-	new Wasavi.ExCommand('registers', 'reg', '', 0, function (app, t, a) {
+	new ExCommand('registers', 'reg', '', 0, function (app, t, a) {
 		app.backlog.push(app.registers.dump());
 	}),
-	new Wasavi.ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
-		return Wasavi.ExCommand.find('copy').handler.apply(this, arguments);
+	new ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
+		return find('copy').handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('unabbreviate', 'una', 'w1r', 0, function (app, t, a) {
+	new ExCommand('unabbreviate', 'una', 'w1r', 0, function (app, t, a) {
 		var lhs = a.argv[0];
 		if (lhs == '[all]') {
 			app.abbrevs.clear();
@@ -1544,7 +1601,7 @@ Wasavi.ExCommand.commands = [
 			delete app.abbrevs[lhs];
 		}
 	}),
-	new Wasavi.ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (app, t, a) {
+	new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (app, t, a) {
 		app.editLogger.close();
 		var result = app.editLogger.undo();
 		app.editLogger.open('excommand+undo');
@@ -1556,7 +1613,7 @@ Wasavi.ExCommand.commands = [
 				_('{0} {operation:0} have reverted.', result));
 		}
 	}),
-	new Wasavi.ExCommand('unmap', 'unm', '!w1r', 0, function (app, t, a) {
+	new ExCommand('unmap', 'unm', '!w1r', 0, function (app, t, a) {
 		var lhs = a.argv[0];
 		var map = app.mapManager.getMap(a.flags.force ? 'edit' : 'command');
 		if (lhs == '[all]') {
@@ -1569,49 +1626,49 @@ Wasavi.ExCommand.commands = [
 			map.remove(lhs);
 		}
 	}),
-	new Wasavi.ExCommand('version', 'ver', '', 0, function (app, t, a) {
+	new ExCommand('version', 'ver', '', 0, function (app, t, a) {
 		app.low.requestShowMessage('wasavi/' + app.version);
 	}),
-	new Wasavi.ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
+	new ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
 		a.flags.force = true;
-		return Wasavi.ExCommand.find('global').handler.apply(this, arguments);
+		return find('global').handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var o = Wasavi.ExCommand.parseWriteArg(app, t, a);
-		return typeof o == 'string' ? o : Wasavi.ExCommand.writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
+	new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		var o = parseWriteArg(app, t, a);
+		return typeof o == 'string' ? o : writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
 	}),
-	new Wasavi.ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var o = Wasavi.ExCommand.parseWriteArg(app, t, a);
+	new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		var o = parseWriteArg(app, t, a);
 		if (typeof o == 'string') return o;
-		var result = Wasavi.ExCommand.writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
-		return typeof result == 'string' ? result : Wasavi.ExCommand.find('quit').handler.apply(this, arguments);
+		var result = writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
+		return typeof result == 'string' ? result : find('quit').handler.apply(this, arguments);
 	}),
-	new Wasavi.ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+	new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
 		if (app.isTextDirty) {
-			var result = Wasavi.ExCommand.writeCore(app, t, a, false, false, a.argv[0]);
-			return typeof result == 'string' ? result : Wasavi.ExCommand.find('quit').handler.apply(this, arguments);
+			var result = writeCore(app, t, a, false, false, a.argv[0]);
+			return typeof result == 'string' ? result : find('quit').handler.apply(this, arguments);
 		}
 		else {
-			return Wasavi.ExCommand.find('quit').handler.apply(this, arguments);
+			return find('quit').handler.apply(this, arguments);
 		}
 	}),
-	new Wasavi.ExCommand('yank', 'ya', 'bca', 2, function (app, t, a) {
+	new ExCommand('yank', 'ya', 'bca', 2, function (app, t, a) {
 		var p = t.selectionStart;
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
 		app.edit.yank(a.range[1] - a.range[0] + 1, true, a.flags.register ? a.register : '');
 		t.setSelectionRange(p);
 	}),
-	new Wasavi.ExCommand('>', '>', 'mca1', 2, function (app, t, a) {
+	new ExCommand('>', '>', 'mca1', 2, function (app, t, a) {
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
 		app.edit.shift(a.range[1] - a.range[0] + 1, a.argv[0]);
 		t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 	}),
-	new Wasavi.ExCommand('<', '<', 'mca1', 2, function (app, t, a) {
+	new ExCommand('<', '<', 'mca1', 2, function (app, t, a) {
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
 		app.edit.unshift(a.range[1] - a.range[0] + 1, a.argv[0]);
 		t.setSelectionRange(t.getLineTopOffset2(a.range[1], 0));
 	}),
-	new Wasavi.ExCommand('@', '@', 'b', 1, function (app, t, a) {
+	new ExCommand('@', '@', 'b', 1, function (app, t, a) {
 		var command;
 		var register;
 
@@ -1634,9 +1691,22 @@ Wasavi.ExCommand.commands = [
 		}
 		app.registers.set('@', command, true);
 	}),
-	new Wasavi.ExCommand('*', '*', 'b', 1, function (app, t, a) {
-		return Wasavi.ExCommand.find('@').handler.apply(this, arguments);
+	new ExCommand('*', '*', 'b', 1, function (app, t, a) {
+		return find('@').handler.apply(this, arguments);
 	})
 ].sort(function (a, b) {return a.name.length - b.name.length;});
+
+return Object.freeze({
+	find: find,
+	parseRange: parseRange,
+	defaultCommand: defaultCommand,
+	printRow: printRow,
+	readCore: readCore,
+	editCore: editCore,
+	chdirCore: chdirCore,
+	commands: commands
+});
+
+})();
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
