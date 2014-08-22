@@ -1314,47 +1314,6 @@ var cache = {};
 			rhs = app.keyManager.insertFnKeyHeader(rhs);
 			map.register(lhs, rhs, option != '[noremap]');
 		}
-
-		return;
-
-		if (a.argv.length == 0) {
-			dispMap(map.toArray());
-		}
-		else {
-			var lhs = a.argv[0] || '';
-			var rhs = a.argv[1] || '';
-			var remap = true;
-			switch (lhs) {
-			case '[clear]':
-				map.removeAll();
-				break;
-			case '[noremap]':
-				lhs = rhs;
-				rhs = a.argv[2] || '';
-				remap = false;
-				/*FALLTHRU*/
-			default:
-				if (rhs == '') {
-					dispMap(map.toArray().filter(function (o) {
-						return o[0].indexOf(lhs) >= 0;
-					}));
-				}
-				else {
-					// reject some mappings for text input mode: <escape>, <nl>
-					if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
-						return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-					}
-					// reject some mappings for command mode: :, <escape>
-					if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
-						return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-					}
-					lhs = app.keyManager.insertFnKeyHeader(lhs);
-					rhs = app.keyManager.insertFnKeyHeader(rhs);
-					map.register(lhs, rhs, remap);
-				}
-				break;
-			}
-		}
 	}),
 	new ExCommand('mark', 'ma', 'w1r', 1, function (app, t, a) {
 		var name = a.argv[0];
