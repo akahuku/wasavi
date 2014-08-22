@@ -1312,7 +1312,7 @@ var cache = {};
 			}
 			lhs = app.keyManager.insertFnKeyHeader(lhs);
 			rhs = app.keyManager.insertFnKeyHeader(rhs);
-			map.register(lhs, rhs, option == '[noremap]');
+			map.register(lhs, rhs, option != '[noremap]');
 		}
 
 		return;
