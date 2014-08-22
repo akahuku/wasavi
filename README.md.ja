@@ -3,7 +3,7 @@ wasavi (VI editor for any web page)
 
 wasavi は Chrome、Opera、Firefox 用のエクステンションです。 wasavi はあらゆるページ上の TEXTAREA 要素を VI エディタ化します。wasavi はほぼすべての VI コマンド、およびいくつかの ex コマンドをサポートします。
 
-wasavi の作成は継続中です。バグレポートや機能の要請はどんなものでも歓迎します。
+wasavi の開発は継続中です。バグレポートや機能の要請はどんなものでも歓迎します。
 
 簡単な使い方
 ============

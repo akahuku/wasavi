@@ -60,7 +60,7 @@ function ExCommand (name, shortName, syntax, flags, handler) {
 		updateJump:   !!(flags & EXFLAGS.updateJump),
 		multiAsync:   !!(flags & EXFLAGS.multiAsync)
 	};
-};
+}
 
 ExCommand.prototype = {
 	// {{{1 ExCommand class prorotype
@@ -402,7 +402,7 @@ function parseWriteArg (app, t, a) {
 		isAppend:isAppend,
 		name:name
 	};
-};
+}
 
 function writeCore (app, t, a, isCommand, isAppend, path) {
 	path || (path = app.fileName);
@@ -466,7 +466,7 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 		app.isTextDirty = false;
 		app.editLogger.notifySave();
 	}
-};
+}
 
 var cache = {};
 /*public*/function find (name) {
@@ -739,7 +739,7 @@ var cache = {};
 			app.backlog.push(lg(i) + line);
 		}
 	}
-};
+}
 
 /*public*/function readCore (app, t, a, content, meta, status) {
 	if (typeof content != 'string' || status == 404) {
@@ -757,7 +757,7 @@ var cache = {};
 		content:content
 	});
 	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
-};
+}
 
 /*public*/function editCore (app, t, a, content, meta, status) {
 	var charCount = content.length;
@@ -801,7 +801,7 @@ var cache = {};
 	Array.prototype.unshift.apply(app.exCommandExecutor.commands, initCommands.commands);
 
 	app.low.requestShowMessage(app.low.getFileIoResultInfo(meta.path, charCount, status == 404));
-};
+}
 
 /*public*/function chdirCore (app, t, a, data) {
 	if (a.argv.length == 0) {
@@ -829,7 +829,7 @@ var cache = {};
 	if (path != '') {
 		app.fstab[index].cwd = app.low.regalizeFilePath(path, false);
 	}
-};
+}
 
 /*public*/var commands = [
 	new ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
