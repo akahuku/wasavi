@@ -77,7 +77,7 @@ To quit wasavi press `ZZ` or `:q` or `:wq` or any other VI quit command.
 
 ## How to use wasavi with Vimperator on Firefox
 
-Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js) in your Vimperator plugin directory, for example,  `~/.vimperator/plugin` or `%HOME%\vimperator\plugin`.
+Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) in your Vimperator plugin directory, for example,  `~/.vimperator/plugin` or `%HOME%\vimperator\plugin`.
 
 This plugin will control the pass-through mode of Vimperator according to the state of wasavi.
 

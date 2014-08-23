@@ -77,7 +77,7 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 ## Firefox で Vimperator と共存する
 
-[wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/mediators/vimperator/wasavi_mediator.js) を Vimperator のプラグインディレクトリに置いてください。たとえば `~/.vimperator/plugin` や `%HOME%\vimperator\plugin` です。
+[wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) を Vimperator のプラグインディレクトリに置いてください。たとえば `~/.vimperator/plugin` や `%HOME%\vimperator\plugin` です。
 
 このプラグインは wasavi の状態に従って Vimperator のパススルーモードを制御します。
 
