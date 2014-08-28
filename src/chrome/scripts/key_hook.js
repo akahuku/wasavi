@@ -22,14 +22,17 @@
 !(function(win,doc){
 
 var wasaviRunning = false;
+var hookUsed = false;
 function isHookEvent (en) {return en == 'keydown' || en == 'keypress'}
 function getKey (en, uc) {return en + '_' + !!uc}
 function hook (target) {
 	if (!target || !target.addEventListener || !target.removeEventListener) return;
+	if (/this code is a part of wasavi/.test(target.addEventListener)) return;
 	var addOriginal = target.addEventListener,
 		removeOriginal = target.removeEventListener,
 		listeners = [];
 	target.addEventListener = function (en, fn, uc) {
+		/*this code is a part of wasavi*/
 		if (!isHookEvent(en)) {
 			addOriginal.call(this, en, fn, uc);
 			return;
@@ -37,12 +40,13 @@ function hook (target) {
 		var key = getKey(en, uc);
 		!listeners[key] && (listeners[key] = []);
 		if (!listeners[key].some(function (o) {return o[0] == fn})) {
-			var wrappedListener = function (e) {!wasaviRunning && fn && fn(e)};
+			var wrappedListener = function (e) {!wasaviRunning && !hookUsed && fn && fn(e)};
 			listeners[key].push([fn, wrappedListener]);
 			addOriginal.call(this, en, wrappedListener, uc);
 		}
 	};
 	target.removeEventListener = function (en, fn, uc) {
+		/*this code is a part of wasavi*/
 		if (!isHookEvent(en)) {
 			removeOriginal.call(this, en, fn, uc);
 			return;
@@ -57,14 +61,17 @@ function hook (target) {
 	};
 }
 
-if (window.chrome || window.opera) {
+if (win.chrome || win.opera) {
 	hook(win.HTMLInputElement && win.HTMLInputElement.prototype);
 	hook(win.HTMLTextAreaElement && win.HTMLTextAreaElement.prototype);
 	hook(win.Node && win.Node.prototype);
+	hook(win);
+	hook(doc);
 }
 
 doc.addEventListener('WasaviStarting', function () {wasaviRunning = true}, false);
 doc.addEventListener('WasaviTerminated', function () {wasaviRunning = false}, false);
+doc.addEventListener('WasaviKeyhookState', function (e) {hookUsed = e.detail}, false);
 doc.addEventListener('WasaviRequestGetContent', function (e) {
 	var node = doc.getElementsByClassName(e.detail.className)[0];
 	if (!node) return;

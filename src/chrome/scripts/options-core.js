@@ -34,6 +34,59 @@ function $ (arg) {
  * ----------------
  */
 
+function setMarkup (node, text) {
+	text = text.replace(/\n/g, '[br]');
+
+	var pattern = /((?:\\.|[^\[])+)|(\[\/?(\w+)[^\]]*\])/g;
+	var stack = [{name:'#root', node: node}];
+
+	for (var re; (re = pattern.exec(text)); ) {
+		var s = re[1] || re[2];
+
+		if (s.charAt(0) == '[') {
+			if (s.charAt(1) == '/') {
+				// close tag
+				if (stack.length && stack[0].name == re[3]) {
+					stack.shift();
+				}
+			}
+			else {
+				// open tag
+				var nodeName = null;
+				switch (re[3]) {
+				case 'c':
+					nodeName = 'code';
+					break;
+
+				case 'i':
+				case 'b':
+					nodeName = re[3];
+					break;
+
+				case 'br':
+					stack[0].node.appendChild(
+						document.createElement('br'));
+					break;
+				}
+
+				if (nodeName) {
+					stack.unshift({
+						name: re[3],
+						node: stack[0].node.appendChild(
+							document.createElement(nodeName))
+					});
+				}
+			}
+		}
+		else {
+			// text node
+			stack[0].node.appendChild(document.createTextNode(
+				s.replace(/\\(.)/g, '$1')
+			));
+		}
+	}
+}
+
 function initPage (req) {
 	/*
 	 * initialize form elements
@@ -107,6 +160,17 @@ function initPage (req) {
 		el.checked = req.logMode;
 	}
 
+	// page hooks
+	el = $('page-hooks');
+	if (el && el.nodeName == 'TEXTAREA') {
+		el.value = req.pageHooks;
+	}
+	if (window.chrome && /\bopera\b/i.test(window.navigator.vendor)) {
+		$('page-hooks-rule').classList.remove('hidden');
+		$('page-hooks-head').classList.remove('hidden');
+		$('page-hooks-opts').classList.remove('hidden');
+	}
+
 	/*
 	 * replace all message ids to translated one
 	 */
@@ -119,16 +183,17 @@ function initPage (req) {
 			message
 			.replace(/^\s*\*\s*/, '')
 			.split(/\n\*\s*/)
-			.map(function (line) {
+			.forEach(function (line) {
 				var li = ul.appendChild(document.createElement('li'));
-				li.textContent = line;
+				setMarkup(li, line);
 			});
 		}
 	};
 	var iter = document.createNodeIterator(
 		document, window.NodeFilter.SHOW_TEXT, null, false);
 	var defaultConverter = function (node, message) {
-		node.nodeValue = message;
+		node.nodeValue = '';
+		setMarkup(node.parentNode, message);
 	};
 
 	var texts = [];
@@ -349,6 +414,12 @@ function handleOptionsSave () {
 	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'logMode', value:el.checked});
+	}
+
+	// page hooks
+	el = $('page-hooks');
+	if (el && el.nodeName == 'TEXTAREA') {
+		items.push({key:'pageHooks', value:el.value});
 	}
 
 	/*

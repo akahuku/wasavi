@@ -60,6 +60,7 @@ var fontFamily;
 var quickActivation;
 var devMode;
 var logMode;
+var pageHooksCode;
 
 var targetElement;
 var wasaviFrame;
@@ -72,6 +73,41 @@ var mutationObserver;
 var getValueCallback;
 var stateClearTimer;
 var keyStrokeLog = [];
+
+var pageHooksHelper = Object.freeze({
+	tabs: Object.freeze({
+		open: function (url) {
+			extension.postMessage({
+				type: 'tabctl',
+				subtype: 'open',
+				url: url,
+				self: window.location.href
+			});
+		},
+		next: function () {
+			extension.postMessage({type: 'tabctl', subtype: 'next'});
+		},
+		prev: function () {
+			extension.postMessage({type: 'tabctl', subtype: 'prev'});
+		}
+	}),
+	clipboard: Object.freeze({
+		set: function (data) {
+			extension.setClipboard(data);
+		},
+		get: function () {
+			extension.getClipboard.apply(extension, arguments);
+		}
+	}),
+	wasavi: Object.freeze({
+		start: function () {
+			!targetElement && run(document.activeElement);
+		},
+		openOptions: function () {
+			extension.postMessage({type: 'open-options'});
+		}
+	})
+});
 
 function log () {
 	logMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
@@ -201,6 +237,8 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 }
 
 function run (element) {
+	fireCustomEvent('WasaviStarting', 0);
+
 	var isPseudoTextarea = false;
 	for (var e = element; e; e = e.parentNode) {
 		if (!e.classList) continue;
@@ -227,7 +265,7 @@ function run (element) {
 		setTimeout(function () {
 			getValueCallback = null;
 			element.classList.remove(className);
-		}, 1000 * 5);
+		}, BOOT_WAIT_TIMEOUT_MSECS);
 		fireCustomEvent('WasaviRequestGetContent', {className:className});
 	}
 	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
@@ -671,9 +709,28 @@ function handleKeydown (e) {
 		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
 
 		if (matchWithShortcut(e)) {
-			fireCustomEvent('WasaviStarting', 0);
 			e.preventDefault();
 			run(e.target);
+		}
+	}
+
+	if (window.chrome && /\bopera\b/i.test(window.navigator.vendor)) {
+		var keyCode = [];
+		e.shiftKey && keyCode.push('s');
+		e.ctrlKey && keyCode.push('c');
+		keyCode.push(e.keyCode);
+		var hook = getPageHook(
+			pageHooksCode,
+			(e.target.isContentEditable || (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')) ? 'edit' : 'view',
+			keyCode.join('-')
+		);
+		if (hook) {
+			fireCustomEvent('WasaviKeyhookState', true);
+			e.preventDefault();
+			try {hook(e, pageHooksHelper)} catch (ex) {}
+		}
+		else {
+			fireCustomEvent('WasaviKeyhookState', false);
 		}
 	}
 }
@@ -1101,6 +1158,7 @@ function handleConnect (req) {
 	extraHeight = 0;
 	devMode = req.devMode;
 	logMode = req.logMode;
+	pageHooksCode = req.pageHooksCode;
 
 	extension.ensureRun(handleAgentInitialized, req);
 }

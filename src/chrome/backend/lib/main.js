@@ -60,6 +60,7 @@
 	var storageUpdatePayload = {};
 	var sounds;
 	var soundVolume;
+	var pageHooksCode;
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -187,6 +188,14 @@
 			def: 25,
 			set: function (value) {
 				return soundVolume = Math.max(0, Math.min(value, 100));
+			},
+			setOnInit: true
+		},
+		pageHooks: {
+			def: '',
+			set: function (value) {
+				pageHooksCode = parsePageHooks(value);
+				return value;
 			},
 			setOnInit: true
 		}
@@ -481,6 +490,48 @@
 		ext.postMessage({type:'request-run'});
 	}
 
+	/** {{{2 pageHooks */
+
+	function parsePageHooks (s) {
+		var result = {};
+		var currentFn;
+		var buffer = [];
+
+		function store () {
+			if (!currentFn) return;
+
+			var keyCode = hotkey.keyTable[currentFn[3].toLowerCase()];
+			if (!keyCode) return;
+
+			var modifier = (currentFn[2] || '')
+				.replace(/[^a-z]/g, '')
+				.replace(/./g, '$&-');
+
+			if (!result[currentFn[1]]) {
+				result[currentFn[1]] = {};
+			}
+
+			result[currentFn[1]][modifier + keyCode] = buffer.join('\n');
+		}
+
+		s.replace(/(\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\/)|(\/\/.*)/g, ' ')
+		.split('\n')
+		.forEach(function (line) {
+			var re = /^function\s+(view|edit)_(s_|c_|sc_)?(\w+)/.exec(line);
+			if (!re) {
+				buffer.push(line);
+				return;
+			}
+			store();
+			currentFn = re;
+			buffer.length = 0;
+			buffer.push(line.replace(/^function[^{]+/, ''));
+		});
+
+		store();
+		return result;
+	}
+
 	/** {{{2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
@@ -508,11 +559,15 @@
 			// for options
 			sounds: isOptions ? config.get('sounds') : null,
 			soundVolume: isOptions ? config.get('soundVolume') : null,
+			pageHooks: isOptions ? config.get('pageHooks') : null,
 
 			// for wasavi and options
 			exrc: isAgent ? null : config.get('exrc'),
 			messageCatalog: isAgent ? null : ext.messageCatalog,
 			fstab: isAgent ? null : ext.fileSystem.getInfo(),
+
+			// for agent and options
+			pageHooksCode: isInit ? null : pageHooksCode,
 
 			// for wasavi
 			ros: isInit && payload && payload.url != TEST_MODE_URL ?
@@ -697,6 +752,22 @@
 		return result;
 	}
 
+	function handleTabCtl (command, data, sender, respond) {
+		switch (data.subtype) {
+		case 'open':
+			ext.openTabWithUrl(data.url, data.self);
+			break;
+
+		case 'next':
+			ext.nextTab(command.tabId);
+			break;
+
+		case 'prev':
+			ext.prevTab(command.tabId);
+			break;
+		}
+	}
+
 	function handleQueryShortcut (command, data, sender, respond) {
 		respond({result: hotkey.validateKeyCode(data.data)});
 	}
@@ -743,6 +814,7 @@
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
 		'fsctl':				handleFsCtl,
+		'tabctl':				handleTabCtl,
 		'query-shortcut':		handleQueryShortcut,
 		'terminated':			handleTerminated,
 		'dump-internal-ids':	handleDumpInternalIds

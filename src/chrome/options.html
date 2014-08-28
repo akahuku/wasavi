@@ -41,6 +41,13 @@
 			.covered {
 				background-color:rgba(255,255,255,1);
 			}
+			.monospace, div.tips i, div.tips code {
+				font-family:"Consolas",
+							"Monaco",
+							"Courier New",
+							"Courier",
+							monospace;
+			}
 			body {
 				background-color:#fff;
 				color:#000;
@@ -50,11 +57,20 @@
 							"arial",
 							"helvetica",
 							sans-serif;
+				font-size:medium;
+			}
+			ul {
+				margin:1em 0 0 0;
+			}
+			li {
+				margin-top:0;
+				margin-bottom:0;
+				line-height:1.5;
 			}
 			h1 {
 				margin:0 0 32px 0;
 				padding:0 0 12px 0;
-				font-size:24pt;
+				font-size:xx-large;
 				font-weight:bold;
 				border-bottom:1px solid silver;
 			}
@@ -71,17 +87,12 @@
 				clear:left;
 				padding:0 0 0 100px;
 				margin:0;
-				font-size:12pt;
+				font-size:large;
 				font-weight:bold;
 			}
 			div.opt-unit {
 				margin:0 0 0 300px;
 				padding:0;
-				font-family:"Consolas",
-							"Monaco",
-							"Courier New",
-							"Courier",
-							monospace;
 			}
 			div.opt-unit-inner {
 				margin:0.5em 0 0 2em;
@@ -106,7 +117,16 @@
 				width:640px;
 				font-size:80%;
 				color:#888;
-				white-space:pre-line;
+				/*white-space:pre-line*/;
+			}
+			div.tips i {
+				color:#333;
+			}
+			div.tips code {
+				color:#333;
+				background-color:#ddd;
+				padding:1px 4px 1px 4px;
+				border-radius:3px;
 			}
 			hr {
 				margin:2em 100px 2em 100px;
@@ -119,18 +139,22 @@
 				height:320px;
 				background-color:#f0f0f0;
 				border:1px solid #808080;
-				font-family:inherit;
+			}
+			textarea#page-hooks {
+				width:640px;
+				height:320px;
+				background-color:#f0f0f0;
+				border:1px solid #808080;
 			}
 			input#shortcut, input#font-family {
 				width:640px;
-				font-family:inherit;
 			}
 			button#save {
-				font-size:18pt;
+				font-size:large;
 				font-weight:bold;
 			}
 			button#capture {
-				font-size:12pt;
+				font-size:medium;
 			}
 			button#capture .normal {
 				display:inline;
@@ -166,20 +190,20 @@
 		</h1>
 		<h2>__MSG_option_exrc_head__</h2>
 		<div class="opt-unit">
-			<textarea id="exrc"></textarea>
+			<textarea id="exrc" class="monospace"></textarea>
 			<div class="tips">__MSG_option_exrc_desc__</div>
 		</div>
 		<hr>
 		<h2>__MSG_option_target_elements_head__</h2>
 		<div class="opt-unit" id="targets-container">
 			<label><input type="checkbox" id="enableTextArea">textarea</label>
-			<label><input type="checkbox" id="enableText"    >input[type=text]</label>
-			<label><input type="checkbox" id="enableSearch"  >input[type=search]</label>
-			<label><input type="checkbox" id="enableTel"     >input[type=tel]</label>
-			<label><input type="checkbox" id="enableUrl"     >input[type=url]</label>
-			<label><input type="checkbox" id="enableEmail"   >input[type=email]</label>
-			<label><input type="checkbox" id="enablePassword">input[type=password]</label>
-			<label><input type="checkbox" id="enableNumber"  >input[type=number]</label>
+			<label><input type="checkbox" id="enableText"    >input [type=text]</label>
+			<label><input type="checkbox" id="enableSearch"  >input [type=search]</label>
+			<label><input type="checkbox" id="enableTel"     >input [type=tel]</label>
+			<label><input type="checkbox" id="enableUrl"     >input [type=url]</label>
+			<label><input type="checkbox" id="enableEmail"   >input [type=email]</label>
+			<label><input type="checkbox" id="enablePassword">input [type=password]</label>
+			<label><input type="checkbox" id="enableNumber"  >input [type=number]</label>
 			<label><input type="checkbox" id="enableContentEditable">[contentEditable]</label>
 		</div>
 		<hr>
@@ -188,7 +212,7 @@
 			<label><input type="radio" name="quick-activation" value="1">__MSG_option_quick_activation_on__</label>
 			<label><input type="radio" name="quick-activation" value="0">__MSG_option_quick_activation_off__</label>
 			<div class="opt-unit-inner">
-				<label><input type="text" id="shortcut"></label>
+				<label><input type="text" id="shortcut" class="monospace"></label>
 				<button id="capture"
 					><span id="capture-normal" class="normal">__MSG_option_capture_normal__</span
 					><span id="capture-wait" class="wait"></span
@@ -200,7 +224,7 @@
 		<hr>
 		<h2>__MSG_option_font_family_head__</h2>
 		<div class="opt-unit">
-			<label><input type="text" id="font-family"></label>
+			<label><input type="text" id="font-family" class="monospace"></label>
 		</div>
 		<hr>
 		<h2>__MSG_option_sounds_head__</h2>
@@ -216,6 +240,25 @@
 			<label><input type="radio" name="fstab" id="fstab-dropbox" checked="checked" value="dropbox">Dropbox</label>
 			<label><input type="radio" name="fstab" id="fstab-gdrive" value="gdrive">Google Drive</label>
 			<label><input type="radio" name="fstab" id="fstab-onedrive" value="onedrive">Microsoft OneDrive</label>
+		</div>
+		<hr id="page-hooks-rule" class="hidden">
+		<h2 id="page-hooks-head" class="hidden">Keyboard hooks<br>(experimental)</h2>
+		<div id="page-hooks-opts" class="opt-unit hidden">
+			<textarea id="page-hooks" class="monospace"></textarea>
+			<div class="tips">
+				<ul>
+					<li>You can put any function which should be executed preferntially when key is pressed on a web page.</li>
+					<li>function name has special meaning: <i>type</i> _ (<i>modifier</i> _ )* <i>keyname</i>
+						<ul>
+						<li>type: <code>view</code> or <code>edit</code></li>
+						<li>modifier: <code>s</code> or <code>c</code> or <code>sc</code></li>
+						<li>keyname: one of <code>a</code> to <code>z</code></li>
+						</ul>
+					</li>
+					<li>function declaration must start from top of line.</li>
+					<li>function will be executed in content-script context.</li>
+				</ul>
+			</div>
 		</div>
 		<hr>
 		<h2>__MSG_option_init_head__</h2>
