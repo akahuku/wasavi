@@ -896,7 +896,9 @@ Wasavi.KeyManager = function () {
 	var inputEventHandlers = [];
 	var lastReceivedEvent = '';
 	var lastFiredEvent = '';
-	var bufferedStrokes = [];
+	var dequeue = [];
+	var lockCount = 0;
+	var isSweeping = false;
 
 	// for general composition
 	var lastValue = '';
@@ -972,419 +974,6 @@ Wasavi.KeyManager = function () {
 		compositionStartPos = -1;
 		lastCompositionLength = -1;
 		inputEventInvokedCount = 0;
-	}
-	function dispose () {
-		inputEventHandlers =
-		compositStartEventHandlers =
-		compositUpdateEventHandlers =
-		compositEndEventHandlers = undefined;
-		uninstall();
-	}
-
-	// event handlers
-	function handleKeydown (e) {
-		lastReceivedEvent = e.type;
-
-		if (window.opera && e.keyCode == 229 && !e.__delayedTrace) {
-			keydownStack.push([e, [], '']);
-			//ENABLE_LOG && logit('[keydown] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
-			return;
-		}
-
-		keyDownCode = e.keyCode;
-		inputEventInvokedCount = 0;
-		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
-		ENABLE_LOG && logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
-		if (window.chrome) {
-			specialKeyName = false;
-
-			// special keys
-			if (specialKeyName === false) {
-				var translated = TRANSLATE_TABLE_WEBKIT[e.keyIdentifier.toLowerCase()];
-				if (translated !== undefined) {
-					specialKeyName = SPECIAL_KEYS[translated] || false;
-					specialKeyCode = SPECIAL_KEY_CODES[translated] || -translated;
-				}
-			}
-
-			// ctrl code shortcuts: ctrl + *
-			if (specialKeyName === false) {
-				if (e.ctrlKey && (
-					e.keyCode >= 64 && e.keyCode <= 95 ||
-					e.keyCode >= 96 && e.keyCode <= 127 ||
-					e.keyCode == 219)
-				) {
-					handleKeypress({
-						shiftKey:e.shiftKey,
-						ctrlKey:e.ctrlKey,
-						keyCode:e.keyCode & 0x1f,
-						preventDefault:function () {
-							e.preventDefault();
-						}
-					});
-				}
-			}
-
-			if (specialKeyName !== false) {
-				if (isPasteKeyStroke(e)) return;
-				handleKeypress(e);
-			}
-		}
-		else {
-			specialKeyName = e.keyCode == e.which && SPECIAL_KEYS[e.keyCode] ?
-				SPECIAL_KEYS[e.keyCode] : false;
-			specialKeyCode = SPECIAL_KEY_CODES[e.keyCode] || -e.keyCode;
-
-			if (isPasteKeyStroke(e)) return;
-			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
-				handleKeypress(e);
-			}
-		}
-	}
-	function handleKeypress (e) {
-		'type' in e && (lastReceivedEvent = e.type);
-		e.preventDefault();
-
-		var c = [];
-		var baseKeyName;
-		var logicalCharCode;
-		var isSpecial = false;
-		var shiftKey = e.shiftKey;
-		var ctrlKey = e.ctrlKey;
-
-		if (specialKeyName) {
-			if (isPasteKeyStroke(e)) return;
-			shiftKey && c.push('s');
-			ctrlKey  && c.push('c');
-			baseKeyName = specialKeyName;
-			c.push(specialKeyName);
-			logicalCharCode = specialKeyCode;
-			isSpecial = true;
-		}
-		else {
-			var keyCode = e.keyCode || e.charCode;
-
-			// very very spceial behavior for Opera 12.16 on Linux:
-			// translate invalid plus sign (+) to equal sign (=).
-			// TODO: It is bad idea to patch strange browser behavior
-			// by the following code.
-			if (window.opera && window.navigator.platform == 'Linux'
-			&& !shiftKey && !ctrlKey && keyCode == 43) {
-				keyCode = 61;
-				shiftKey = ctrlKey = false;
-			}
-
-			// ctrl code shortcuts: ctrl + *
-			if (ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
-				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
-				c.push(baseKeyName);
-				logicalCharCode = keyCode & 0x1f;
-			}
-			else if (ctrlKey && keyCode == 32) {
-				baseKeyName = '^@';
-				c.push(baseKeyName);
-				logicalCharCode = 0;
-			}
-			// printable chars
-			else if (keyCode >= 32 && keyCode <= 127) {
-				baseKeyName = String.fromCharCode(keyCode);
-				c.push(baseKeyName);
-				logicalCharCode = keyCode;
-			}
-			// ctrl code directly
-			else if (keyCode >= 0 && keyCode <= 31) {
-				baseKeyName = '^' + String.fromCharCode(keyCode + 64);
-				c.push(baseKeyName);
-				logicalCharCode = keyCode;
-			}
-			// others
-			else {
-				baseKeyName = keyCode;
-				c.push(baseKeyName);
-				logicalCharCode = keyCode;
-			}
-		}
-
-		fire('input', inputEventHandlers, {
-			code:             logicalCharCode,
-			identifier:       baseKeyName,
-			fullIdentifier:   c.join('-'),
-			shift:            shiftKey,
-			ctrl:             ctrlKey,
-			isSpecial:        isSpecial
-		});
-	}
-	function handleKeyup (e) {
-		/*if (e.keyCode == 16 || e.keyCode == 17) {
-			return;
-		}*/
-
-		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which);
-	}
-	function handleKeyupOpera (e) {
-		if (keydownStack.length) {
-			keydownStack = keydownStack.filter(function (item) {return !item[0].repeat});
-			if (keyupStack.length != keydownStack.length - 1 && !e.__delayedTrace) {
-				keyupStack.push(e);
-				//ENABLE_LOG && logit('[  keyup] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
-				return;
-			}
-			if (!e.__delayedTrace) {
-				//ENABLE_LOG && logit('[  keyup] *** delayed tracing start. 1:' + keydownStack.length + ', 2:' + keyupStack.length + ' ***');
-				while (keyupStack.length) {
-					var keyup = keyupStack.shift();
-					keyup.__delayedValue = e.target.value;
-					var inputs = keydownStack.shift();
-					inputs[0].__delayedTrace = true;
-					handleKeydown(inputs[0]);
-					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
-						inputs[1][i].__delayedTrace = true;
-						keyup.__delayedValue = inputs[2];
-						handleInputOpera(inputs[1][i]);
-					}
-					keyup.__delayedTrace = true;
-					handleKeyupOpera(keyup);
-				}
-				//ENABLE_LOG && logit('[  keyup] *** delayed tracing end ***');
-				if (keydownStack.length != 1 || keyupStack.length != 0) {
-					//console.error('keyup: balance mismatch. 1:' + keydownStack.length + ', 2:' + keyupStack.length);
-					return;
-				}
-				else {
-					var inputs = keydownStack.shift();
-					inputs[0].__delayedTrace = true;
-					handleKeydown(inputs[0]);
-					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
-						inputs[1][i].__delayedTrace = true;
-						handleInputOpera(inputs[1][i]);
-					}
-				}
-			}
-		}
-
-		if (e.keyCode == 16 || e.keyCode == 17) return;
-		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', __v:"' + e.__delayedValue + '", v:"' + e.target.value + '"');
-		if (keyDownCode == 229 || isInComposition) {
-			var value = e.__delayedValue || e.target.value;
-			var composition, increment;
-
-			if (isInComposition && inputEventInvokedCount == 3) {
-				composition = value.substr(
-					compositionStartPos,
-					lastCompositionLength);
-				bulkFire(composition);
-				ENABLE_LOG && logit('[  keyup] composition end(1) with:"' + composition + '"');
-				clear(e);
-				compositionStartPos += lastCompositionLength;
-				lastCompositionLength = value.length - lastValue.length;
-				fire('compositionstart', compositStartEventHandlers, {data:''});
-				ENABLE_LOG && logit('[  keyup] composition start(1)');
-			}
-			else if (isInComposition && inputEventInvokedCount == 2) {
-				isInComposition = false;
-				composition = value.substr(
-					compositionStartPos,
-					lastCompositionLength + value.length - lastValue.length);
-				bulkFire(composition);
-				ENABLE_LOG && logit('[  keyup] composition end(2) with:"' + composition + '"');
-				clear(e);
-				value = e.target.value;
-			}
-			else if (
-				isInComposition &&
-				(e.keyCode == 27 && inputEventInvokedCount == 0)
-			) {
-				isInComposition = false;
-				fireCompositEnd('');
-				ENABLE_LOG && logit('[  keyup] composition end(3)');
-				clear(e);
-				value = e.target.value;
-			}
-			else if (value != lastValue) {
-				if (!isInComposition) {
-					isInComposition = true;
-					fire('compositionstart', compositStartEventHandlers, {data:''});
-					ENABLE_LOG && logit('[  keyup] composition start(2)');
-					compositionStartPos = getCompositionStartPos(lastValue, value);
-					lastCompositionLength = 0;
-				}
-				increment = value.length - lastValue.length;
-				lastCompositionLength += increment;
-				if (lastCompositionLength > 0) {
-					composition = value.substr(
-						compositionStartPos,
-						lastCompositionLength);
-					fire('compositionupdate', compositUpdateEventHandlers, {data:composition});
-				}
-				else {
-					isInComposition = false;
-					fireCompositEnd('');
-					ENABLE_LOG && logit('[  keyup] composition end(4)');
-					clear(e);
-					value = e.target.value;
-				}
-			}
-			inputEventInvokedCount = 0;
-			keyDownCode = -1;
-			lastValue = value;
-		}
-	}
-	function handleCompStart (e) {
-		if (!ensureTarget(e)) return;
-		lastReceivedEvent = e.type;
-		isInComposition = true;
-		fire('compositionstart', compositStartEventHandlers, {data:e.data});
-	}
-	function handleCompUpdate (e) {
-		if (!ensureTarget(e)) return;
-		lastReceivedEvent = e.type;
-		fire('compositionupdate', compositUpdateEventHandlers, {data:e.data});
-	}
-	function handleCompEnd (e) {
-		if (!ensureTarget(e)) return;
-		lastReceivedEvent = e.type;
-		compositionResult = e.data;
-		isInComposition = false;
-	}
-	function handleInputChrome (e) {
-		if (!ensureTarget(e)) return;
-		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
-		if (lastReceivedEvent == 'keydown') {
-			var s = e.target.value.substring(lastValue.length);
-			if (s != '') {
-				fire('compositionstart', compositStartEventHandlers, {data:''});
-				fire('compositionupdate', compositUpdateEventHandlers, {data:s});
-				bulkFire(s);
-			}
-			clear(e);
-		}
-		else if (lastReceivedEvent == 'compositionend') {
-			bulkFire(compositionResult);
-			clear(e);
-			compositionResult = null;
-		}
-		lastValue = e.target.value;
-		lastReceivedEvent = e.type;
-	}
-	function handleInputOpera (e) {
-		if (keydownStack.length && !e.__delayedTrace) {
-			var last = keydownStack.lastItem;
-			if (!last[0].repeat) {
-				last[1].push(e);
-				last[2] = e.target.value;
-			}
-			//ENABLE_LOG && logit('[  input] *** stacked: "' + e.target.value + '", ' + keydownStack.length + ' ***');
-			return;
-		}
-		if (!ensureTarget(e)) return;
-		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '", activeElement:' + [
-			document.activeElement.nodeName,
-			document.activeElement.id,
-			document.activeElement.style.display
-		].join(', '));
-		inputEventInvokedCount++;
-		lastReceivedEvent = e.type;
-	}
-	function handleInputGecko (e) {
-		if (!ensureTarget(e)) return;
-		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
-		if (lastReceivedEvent == 'compositionend') {
-			bulkFire(compositionResult);
-			clear(e);
-			compositionResult = null;
-		}
-		lastReceivedEvent = e.type;
-	}
-
-	// privates
-	function logit (s) {
-		console.log(s);
-	}
-	function getCompositionStartPos (before, current) {
-		var length = current.length - before.length;
-		if (length <= 0) {
-			return -1;
-		}
-		for (var i = 0, goal = (current.length - length) + 1; i < goal; i++) {
-			var tmp = before.substring(0, i)
-				+ current.substring(i, i + length)
-				+ before.substring(i);
-			if (tmp == current) {
-				return i;
-			}
-		}
-		return -1;
-	}
-	function getKeyupHandler () {
-		if (window.opera) return handleKeyupOpera;
-		return handleKeyup;
-	}
-	function getInputHandler () {
-		if (window.chrome) return handleInputChrome;
-		if (window.opera) return handleInputOpera;
-		return handleInputGecko;
-	}
-	function getHandlers (type) {
-		var handlers;
-		switch (type) {
-		case 'input':
-			handlers = inputEventHandlers;
-			break;
-		case 'compositionstart':
-			handlers = compositStartEventHandlers;
-			break;
-		case 'compositionupdate':
-			handlers = compositUpdateEventHandlers;
-			break;
-		case 'compositionend':
-			handlers = compositEndEventHandlers;
-			break;
-		default:
-			handlers = [];
-		}
-		return handlers;
-	}
-	function fire (eventName, handlers, e) {
-		lastFiredEvent = eventName;
-		for (var i = 0, goal = handlers.length; i < goal; i++) {
-			handlers[i](e);
-		}
-	}
-	function fireCompositEnd (data) {
-		lastFiredEvent = 'compositionend';
-		var e = {data:data};
-		for (var i = 0, goal = compositEndEventHandlers.length; i < goal; i++) {
-			if (compositEndEventHandlers[i](e) === false) {
-				return false;
-			}
-		}
-		return true;
-	}
-	function bulkFire (data) {
-		if (lastFiredEvent == 'compositionupdate' && !fireCompositEnd(data)) return;
-		var e = {
-			code:             0,
-			identifier:       false,
-			fullIdentifier:   false,
-			shift:            false,
-			ctrl:             false,
-			isCompositioned:  true,
-			isCompositionedFirst: false,
-			isCompositionedLast: false
-		};
-		for (var i = 0, goal = data.length; i < goal; i++) {
-			e.code = data.charCodeAt(i);
-			e.identifier = e.fullIdentifier = data.charAt(i);
-			e.isCompositionedFirst = i == 0;
-			e.isCompositionedLast = i == goal - 1;
-			fire('input', inputEventHandlers, e);
-		}
-	}
-	function ensureTarget (e) {
-		return !target || target == e.target;
-	}
-	function clear (e) {
-		!isPreserve && init('');
 	}
 	function code2letter (c, useSpecial) {
 		if (typeof c != 'number') return '';
@@ -1529,26 +1118,504 @@ Wasavi.KeyManager = function () {
 		}
 		return result;
 	}
+	function setDequeue (method, args, callback) {
+		var items = [];
+
+		for (var i = 0, goal = args.length; i < goal; i++) {
+			var s = args[i];
+
+			if (isString(s)) {
+				items = createSequences(s);
+			}
+			else if (isObject(s)) {
+				if ('value' in s && s.asComposition) {
+					items = createSequences(s.value);
+					if (items.length) {
+						items.forEach(function (a) {a.isCompositioned = true});
+						items.firstItem.isCompositionedFirst = true;
+						items.lastItem.isCompositionedLast = true;
+					}
+				}
+				else {
+					items.push(s);
+				}
+			}
+		}
+
+		callback && callback(items);
+		dequeue[method].apply(dequeue, items);
+	}
 	function push () {
-		bufferedStrokes.push.apply(bufferedStrokes, arguments);
+		var args = Array.prototype.slice.call(arguments);
+		var callback;
+
+		if (isFunction(args.lastItem)) {
+			callback = args.pop();
+		}
+
+		setDequeue('push', args, callback);
+	}
+	function unshift () {
+		var args = Array.prototype.slice.call(arguments);
+		var callback;
+
+		if (isFunction(args.lastItem)) {
+			callback = args.pop();
+		}
+
+		setDequeue('unshift', args, callback);
+	}
+	function invalidate () {
+		dequeue.length = 0;
 	}
 	function sweep () {
-		if (bufferedStrokes.length == 0) return;
+		if (isSweeping) return;
 
-		var bs = bufferedStrokes.slice(0);
-		bufferedStrokes.length = 0;
-		while (bs.length) {
-			fire('input', inputEventHandlers, bs.shift());
+		isSweeping = true;
+		try {
+			while (lockCount == 0 && dequeue.length) {
+				fire('input', inputEventHandlers, dequeue.shift());
+			}
+		}
+		finally {
+			isSweeping = false;
 		}
 	}
-	function pushSweep (s, asComposition) {
-		push.apply(push, createSequences(s));
-		if (asComposition && bufferedStrokes.length) {
-			bufferedStrokes.forEach(function (a) {a.isCompositioned = true});
-			bufferedStrokes[0].isCompositionedFirst = true;
-			bufferedStrokes.lastItem.isCompositionedLast = true;
+	function lock () {
+		lockCount++;
+	}
+	function unlock (reset) {
+		if (reset) {
+			lockCount = 0;
+		}
+		else {
+			lockCount--;
+			if (lockCount < 0) {
+				console.error('lockCount error');
+				lockCount = 0;
+			}
+		}
+		if (lockCount == 0) {
+			sweep();
+		}
+	}
+	function dispose () {
+		inputEventHandlers =
+		compositStartEventHandlers =
+		compositUpdateEventHandlers =
+		compositEndEventHandlers = undefined;
+		uninstall();
+	}
+
+	// event handlers
+	function handleKeydown (e) {
+		lastReceivedEvent = e.type;
+
+		if (window.opera && e.keyCode == 229 && !e.__delayedTrace) {
+			keydownStack.push([e, [], '']);
+			//ENABLE_LOG && logit('[keydown] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
+			return;
+		}
+
+		keyDownCode = e.keyCode;
+		inputEventInvokedCount = 0;
+		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
+		ENABLE_LOG && logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
+		if (window.chrome) {
+			specialKeyName = false;
+
+			// special keys
+			if (specialKeyName === false) {
+				var translated = TRANSLATE_TABLE_WEBKIT[e.keyIdentifier.toLowerCase()];
+				if (translated !== undefined) {
+					specialKeyName = SPECIAL_KEYS[translated] || false;
+					specialKeyCode = SPECIAL_KEY_CODES[translated] || -translated;
+				}
+			}
+
+			// ctrl code shortcuts: ctrl + *
+			if (specialKeyName === false) {
+				if (e.ctrlKey && (
+					e.keyCode >= 64 && e.keyCode <= 95 ||
+					e.keyCode >= 96 && e.keyCode <= 127 ||
+					e.keyCode == 219)
+				) {
+					handleKeypress({
+						shiftKey:e.shiftKey,
+						ctrlKey:e.ctrlKey,
+						keyCode:e.keyCode & 0x1f,
+						preventDefault:function () {
+							e.preventDefault();
+						}
+					});
+				}
+			}
+
+			if (specialKeyName !== false) {
+				if (isPasteKeyStroke(e)) return;
+				handleKeypress(e);
+			}
+		}
+		else {
+			specialKeyName = e.keyCode == e.which && SPECIAL_KEYS[e.keyCode] ?
+				SPECIAL_KEYS[e.keyCode] : false;
+			specialKeyCode = SPECIAL_KEY_CODES[e.keyCode] || -e.keyCode;
+
+			if (isPasteKeyStroke(e)) return;
+			if (window.opera && specialKeyName !== false && e.keyCode != 13) {
+				handleKeypress(e);
+			}
+		}
+	}
+	function handleKeypress (e) {
+		'type' in e && (lastReceivedEvent = e.type);
+		e.preventDefault();
+
+		var c = [];
+		var baseKeyName;
+		var logicalCharCode;
+		var isSpecial = false;
+		var shiftKey = e.shiftKey;
+		var ctrlKey = e.ctrlKey;
+
+		if (specialKeyName) {
+			if (isPasteKeyStroke(e)) return;
+			shiftKey && c.push('s');
+			ctrlKey  && c.push('c');
+			baseKeyName = specialKeyName;
+			c.push(specialKeyName);
+			logicalCharCode = specialKeyCode;
+			isSpecial = true;
+		}
+		else {
+			var keyCode = e.keyCode || e.charCode;
+
+			// very very spceial behavior for Opera 12.16 on Linux:
+			// translate invalid plus sign (+) to equal sign (=).
+			// TODO: It is bad idea to patch strange browser behavior
+			// by the following code.
+			if (window.opera && window.navigator.platform == 'Linux'
+			&& !shiftKey && !ctrlKey && keyCode == 43) {
+				keyCode = 61;
+				shiftKey = ctrlKey = false;
+			}
+
+			// ctrl code shortcuts: ctrl + *
+			if (ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
+				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
+				c.push(baseKeyName);
+				logicalCharCode = keyCode & 0x1f;
+			}
+			else if (ctrlKey && keyCode == 32) {
+				baseKeyName = '^@';
+				c.push(baseKeyName);
+				logicalCharCode = 0;
+			}
+			// printable chars
+			else if (keyCode >= 32 && keyCode <= 127) {
+				baseKeyName = String.fromCharCode(keyCode);
+				c.push(baseKeyName);
+				logicalCharCode = keyCode;
+			}
+			// ctrl code directly
+			else if (keyCode >= 0 && keyCode <= 31) {
+				baseKeyName = '^' + String.fromCharCode(keyCode + 64);
+				c.push(baseKeyName);
+				logicalCharCode = keyCode;
+			}
+			// others
+			else {
+				baseKeyName = keyCode;
+				c.push(baseKeyName);
+				logicalCharCode = keyCode;
+			}
+		}
+
+		pushInputEvent({
+			code:             logicalCharCode,
+			identifier:       baseKeyName,
+			fullIdentifier:   c.join('-'),
+			shift:            shiftKey,
+			ctrl:             ctrlKey,
+			isSpecial:        isSpecial
+		});
+	}
+	function handleKeyup (e) {
+		/*if (e.keyCode == 16 || e.keyCode == 17) {
+			return;
+		}*/
+
+		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which);
+	}
+	function handleKeyupOpera (e) {
+		if (keydownStack.length) {
+			keydownStack = keydownStack.filter(function (item) {return !item[0].repeat});
+			if (keyupStack.length != keydownStack.length - 1 && !e.__delayedTrace) {
+				keyupStack.push(e);
+				//ENABLE_LOG && logit('[  keyup] *** stacked: ' + e.keyCode + ', ' + keydownStack.length + ' ***');
+				return;
+			}
+			if (!e.__delayedTrace) {
+				//ENABLE_LOG && logit('[  keyup] *** delayed tracing start. 1:' + keydownStack.length + ', 2:' + keyupStack.length + ' ***');
+				while (keyupStack.length) {
+					var keyup = keyupStack.shift();
+					keyup.__delayedValue = e.target.value;
+					var inputs = keydownStack.shift();
+					inputs[0].__delayedTrace = true;
+					handleKeydown(inputs[0]);
+					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
+						inputs[1][i].__delayedTrace = true;
+						keyup.__delayedValue = inputs[2];
+						handleInputOpera(inputs[1][i]);
+					}
+					keyup.__delayedTrace = true;
+					handleKeyupOpera(keyup);
+				}
+				//ENABLE_LOG && logit('[  keyup] *** delayed tracing end ***');
+				if (keydownStack.length != 1 || keyupStack.length != 0) {
+					//console.error('keyup: balance mismatch. 1:' + keydownStack.length + ', 2:' + keyupStack.length);
+					return;
+				}
+				else {
+					var inputs = keydownStack.shift();
+					inputs[0].__delayedTrace = true;
+					handleKeydown(inputs[0]);
+					for (var i = 0, goal = inputs[1].length; i < goal; i++) {
+						inputs[1][i].__delayedTrace = true;
+						handleInputOpera(inputs[1][i]);
+					}
+				}
+			}
+		}
+
+		if (e.keyCode == 16 || e.keyCode == 17) return;
+		//ENABLE_LOG && logit('[  keyup]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', __v:"' + e.__delayedValue + '", v:"' + e.target.value + '"');
+		if (keyDownCode == 229 || isInComposition) {
+			var value = e.__delayedValue || e.target.value;
+			var composition, increment;
+
+			if (isInComposition && inputEventInvokedCount == 3) {
+				composition = value.substr(
+					compositionStartPos,
+					lastCompositionLength);
+				pushCompositInputEvent(composition);
+				ENABLE_LOG && logit('[  keyup] composition end(1) with:"' + composition + '"');
+				clear(e);
+				compositionStartPos += lastCompositionLength;
+				lastCompositionLength = value.length - lastValue.length;
+				fire('compositionstart', compositStartEventHandlers, {data:''});
+				ENABLE_LOG && logit('[  keyup] composition start(1)');
+			}
+			else if (isInComposition && inputEventInvokedCount == 2) {
+				isInComposition = false;
+				composition = value.substr(
+					compositionStartPos,
+					lastCompositionLength + value.length - lastValue.length);
+				pushCompositInputEvent(composition);
+				ENABLE_LOG && logit('[  keyup] composition end(2) with:"' + composition + '"');
+				clear(e);
+				value = e.target.value;
+			}
+			else if (
+				isInComposition &&
+				(e.keyCode == 27 && inputEventInvokedCount == 0)
+			) {
+				isInComposition = false;
+				fireCompositEnd('');
+				ENABLE_LOG && logit('[  keyup] composition end(3)');
+				clear(e);
+				value = e.target.value;
+			}
+			else if (value != lastValue) {
+				if (!isInComposition) {
+					isInComposition = true;
+					fire('compositionstart', compositStartEventHandlers, {data:''});
+					ENABLE_LOG && logit('[  keyup] composition start(2)');
+					compositionStartPos = getCompositionStartPos(lastValue, value);
+					lastCompositionLength = 0;
+				}
+				increment = value.length - lastValue.length;
+				lastCompositionLength += increment;
+				if (lastCompositionLength > 0) {
+					composition = value.substr(
+						compositionStartPos,
+						lastCompositionLength);
+					fire('compositionupdate', compositUpdateEventHandlers, {data:composition});
+				}
+				else {
+					isInComposition = false;
+					fireCompositEnd('');
+					ENABLE_LOG && logit('[  keyup] composition end(4)');
+					clear(e);
+					value = e.target.value;
+				}
+			}
+			inputEventInvokedCount = 0;
+			keyDownCode = -1;
+			lastValue = value;
+		}
+	}
+	function handleCompStart (e) {
+		if (!ensureTarget(e)) return;
+		lastReceivedEvent = e.type;
+		isInComposition = true;
+		fire('compositionstart', compositStartEventHandlers, {data:e.data});
+	}
+	function handleCompUpdate (e) {
+		if (!ensureTarget(e)) return;
+		lastReceivedEvent = e.type;
+		fire('compositionupdate', compositUpdateEventHandlers, {data:e.data});
+	}
+	function handleCompEnd (e) {
+		if (!ensureTarget(e)) return;
+		lastReceivedEvent = e.type;
+		compositionResult = e.data;
+		isInComposition = false;
+	}
+	function handleInputChrome (e) {
+		if (!ensureTarget(e)) return;
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
+		if (lastReceivedEvent == 'keydown') {
+			var s = e.target.value.substring(lastValue.length);
+			if (s != '') {
+				fire('compositionstart', compositStartEventHandlers, {data:''});
+				fire('compositionupdate', compositUpdateEventHandlers, {data:s});
+				pushCompositInputEvent(s);
+			}
+			clear(e);
+		}
+		else if (lastReceivedEvent == 'compositionend') {
+			pushCompositInputEvent(compositionResult);
+			clear(e);
+			compositionResult = null;
+		}
+		lastValue = e.target.value;
+		lastReceivedEvent = e.type;
+	}
+	function handleInputOpera (e) {
+		if (keydownStack.length && !e.__delayedTrace) {
+			var last = keydownStack.lastItem;
+			if (!last[0].repeat) {
+				last[1].push(e);
+				last[2] = e.target.value;
+			}
+			//ENABLE_LOG && logit('[  input] *** stacked: "' + e.target.value + '", ' + keydownStack.length + ' ***');
+			return;
+		}
+		if (!ensureTarget(e)) return;
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '", activeElement:' + [
+			document.activeElement.nodeName,
+			document.activeElement.id,
+			document.activeElement.style.display
+		].join(', '));
+		inputEventInvokedCount++;
+		lastReceivedEvent = e.type;
+	}
+	function handleInputGecko (e) {
+		if (!ensureTarget(e)) return;
+		ENABLE_LOG && logit('[  input]\tvalue:"' + e.target.value + '"');
+		if (lastReceivedEvent == 'compositionend') {
+			pushCompositInputEvent(compositionResult);
+			clear(e);
+			compositionResult = null;
+		}
+		lastReceivedEvent = e.type;
+	}
+
+	// privates
+	function logit (s) {
+		console.log(s);
+	}
+	function getCompositionStartPos (before, current) {
+		var length = current.length - before.length;
+		if (length <= 0) {
+			return -1;
+		}
+		for (var i = 0, goal = (current.length - length) + 1; i < goal; i++) {
+			var tmp = before.substring(0, i)
+				+ current.substring(i, i + length)
+				+ before.substring(i);
+			if (tmp == current) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	function getKeyupHandler () {
+		if (window.opera) return handleKeyupOpera;
+		return handleKeyup;
+	}
+	function getInputHandler () {
+		if (window.chrome) return handleInputChrome;
+		if (window.opera) return handleInputOpera;
+		return handleInputGecko;
+	}
+	function getHandlers (type) {
+		var handlers;
+		switch (type) {
+		case 'input':
+			handlers = inputEventHandlers;
+			break;
+		case 'compositionstart':
+			handlers = compositStartEventHandlers;
+			break;
+		case 'compositionupdate':
+			handlers = compositUpdateEventHandlers;
+			break;
+		case 'compositionend':
+			handlers = compositEndEventHandlers;
+			break;
+		default:
+			handlers = [];
+		}
+		return handlers;
+	}
+	function fire (eventName, handlers, e) {
+		lastFiredEvent = eventName;
+		for (var i = 0, goal = handlers.length; i < goal; i++) {
+			handlers[i](e);
+		}
+	}
+	function fireCompositEnd (data) {
+		lastFiredEvent = 'compositionend';
+		var e = {data:data};
+		for (var i = 0, goal = compositEndEventHandlers.length; i < goal; i++) {
+			if (compositEndEventHandlers[i](e) === false) {
+				return false;
+			}
+		}
+		return true;
+	}
+	function pushInputEvent (e) {
+		if (lockCount > 0 && e.code == 3) {
+			fire('input', inputEventHandlers, e);
+		}
+		else {
+			dequeue.push(e);
+			sweep();
+		}
+	}
+	function pushCompositInputEvent (data) {
+		if (lastFiredEvent == 'compositionupdate' && !fireCompositEnd(data)) return;
+		for (var i = 0, goal = data.length; i < goal; i++) {
+			dequeue.push({
+				code:             data.charCodeAt(i),
+				identifier:       data.charAt(i),
+				fullIdentifier:   data.charAt(i),
+				shift:            false,
+				ctrl:             false,
+				isCompositioned:  true,
+				isCompositionedFirst: i == 0,
+				isCompositionedLast: i == goal - 1
+			});
 		}
 		sweep();
+	}
+	function ensureTarget (e) {
+		return !target || target == e.target;
+	}
+	function clear (e) {
+		!isPreserve && init('');
 	}
 	function isPasteKeyStroke (e) {
 		return specialKeyCode == -45 && e.shiftKey && !e.ctrlKey;
@@ -1558,7 +1625,7 @@ Wasavi.KeyManager = function () {
 		install, uninstall, addEventListener, removeEventListener,
 		init, code2letter, toInternalString, objectFromCode,
 		nopObjectFromCode, insertFnKeyHeader, parseKeyDesc, createSequences,
-		push, sweep, pushSweep, dispose,
+		setDequeue, push, unshift, invalidate, sweep, lock, unlock, dispose,
 		{
 			preserve:[
 				function () {return isPreserve},
@@ -1571,7 +1638,8 @@ Wasavi.KeyManager = function () {
 					init(v.value);
 				}
 			],
-			isInComposition:function () {return isInComposition}
+			isInComposition:function () {return isInComposition},
+			isLocked:function () {return lockCount > 0}
 		}
 	);
 };
@@ -1632,7 +1700,6 @@ Wasavi.MapManager = function (app) {
 		new MapItem('edit', rules[1], sequences[1], sequencesExpanded[1], options[1])
 	];
 	var depth = 0;
-	var stack = [];
 	var delayedInfo = {
 		timer:null,
 		mapIndex: null,
@@ -1666,10 +1733,13 @@ Wasavi.MapManager = function (app) {
 		}
 		return result;
 	}
-	function reset () {
+	function reset (full) {
 		resetDelayed();
 		currentMap = null;
 		index = 0;
+		if (full) {
+			depth = 0;
+		}
 	}
 	function registerExpandDelayed (mapIndex, lhs, handler) {
 		delayedInfo.mapIndex = mapIndex;
@@ -1700,56 +1770,55 @@ Wasavi.MapManager = function (app) {
 			handler, context || 'expand delayed'
 		);
 	}
+	function markExpanded (items) {
+		item.mapExpanded = true;
+	}
+	function markExpandedNoremap (items) {
+		item.isNoremap = true;
+		item.mapExpanded = true;
+	}
 	function expand (rhs, remap, handler) {
 		if (!handler) return;
 		if (depth < NEST_MAX) {
 			depth++;
-			stack.push([currentMap, index]);
-			currentMap = null;
-			index = 0;
-			try {
-				if (app.config.vars.remap && remap) {
-					for (var i = 0; i < rhs.length; i++) {
-						process(rhs[i], handler);
-					}
-				}
-				else {
-					for (var i = 0; i < rhs.length; i++) {
-						handler(rhs[i].code, rhs[i]);
-					}
-				}
-			}
-			finally {
-				var o = stack.pop();
-				currentMap = o[0];
-				index = o[1];
-				depth--;
-			}
+			app.keyManager.setDequeue(
+				'unshift', rhs,
+				app.config.vars.remap && remap ?
+					markExpanded : markExpandedNoremap
+			);
 		}
 		else {
-			requestShowMessage(_('Map expansion reached maximum recursion limit.'), true);
+			reset(true);
+			app.keyManager.invalidate();
+			app.low.showMessage(_('Map expansion reached maximum recursion limit.'), true);
 		}
 	}
-	function process (keyCode, handler) {
+	function run () {
+		var args = Array.prototype.slice.call(arguments);
+		var handler = args.shift();
+		reset(true);
+		handler && handler.apply(null, args);
+	}
+	function process (e, handler) {
 		var delayed = resetDelayed();
-		var mapIndex, obj;
+		var mapIndex, keyCode;
+
 		if (app.inputMode in MAP_INDICES) {
 			mapIndex = MAP_INDICES[app.inputMode];
 		}
-		if (typeof keyCode == 'object') {
-			obj = keyCode;
-			keyCode = obj.code;
+		if (!isObject(e)) {
+			e = app.keyManager.nopObjectFromCode();
 		}
-		else {
-			obj = app.keyManager.nopObjectFromCode();
-		}
-		if (mapIndex == undefined || keyCode == false) {
+
+		keyCode = e.code;
+
+		if (mapIndex == undefined || !keyCode) {
 			delayed && expandDelayed(delayed, 'delayed #1');
-			handler && handler(keyCode, obj);
+			run(handler, e);
 			return;
 		}
 		if (app.quickActivation && app.inputMode == 'command' && keyCode == 9) {
-			handler && handler(keyCode, obj);
+			run(handler, e);
 			return;
 		}
 		if (mapIndex != lastMapIndex) {
@@ -1794,8 +1863,7 @@ Wasavi.MapManager = function (app) {
 		}
 		else {
 			delayed && expandDelayed(delayed, 'delayed #3');
-			handler && handler(keyCode, obj);
-			reset();
+			run(handler, e);
 		}
 	}
 
@@ -3967,6 +4035,7 @@ Wasavi.Completer = function (appProxy, alist) {
 		timeoutTimer = setTimeout(function () {
 			timeoutTimer = null;
 			stopNotifierTimer();
+			appProxy.keyManager.unlock();
 			running = false;
 			callback(_('completion timed out'));
 			callback.__timed_out__ = true;
@@ -4015,9 +4084,11 @@ Wasavi.Completer = function (appProxy, alist) {
 		}
 
 		running = true;
+		appProxy.keyManager.lock();
 		startNotifierTimer(callback);
 		ctx.item.requestCandidates(value, function () {
 			stopNotifierTimer();
+			appProxy.keyManager.unlock();
 			running = false;
 			if (callback.__timed_out__) {
 				return false;

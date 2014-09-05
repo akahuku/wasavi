@@ -289,6 +289,7 @@ ExCommandExecutor.prototype = {
 		else {
 			if (this.editLogLevel > 0) {
 				editLogger.close();
+				keyManager.unlock();
 				this.running = false;
 				this.editLogLevel--;
 			}
@@ -307,8 +308,8 @@ ExCommandExecutor.prototype = {
 			if (this.editLogLevel == 0) {
 				editLogger.open('excommand');
 				this.running = true;
-
 				this.editLogLevel++;
+				keyManager.lock();
 			}
 			this.runAsyncNext();
 			return false;
@@ -861,7 +862,6 @@ ime-mode:disabled; \
 	lastSubstituteInfo = new Collection;
 	lastMessage = '';
 	requestedState = {};
-	clipboardReadingState = 0;
 
 	buffer.value = x.value;
 	buffer.selectionStart = x.selectionStart || 0;
@@ -1414,7 +1414,8 @@ function executeExCommand (source, isRoot, parseOnly) {
 	}
 	function paragraph12 () {
 		if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
-			skipto(/[\n|"]/g, {escapeChars:'\u0016'});
+			// do not include double quote for compatibility with vim.
+			skipto(/[\n|]/g, {escapeChars:'\u0016'});
 		}
 		else {
 			skipto(/[\n|"]/g);
@@ -1747,38 +1748,14 @@ function executeExCommand (source, isRoot, parseOnly) {
 
 	return parseOnly ? executor : executor.run();
 }
-function executeViCommand (arg, keepRunLevel) {
-	var cursorState = {visible:cursor.visible};
-	cursor.update({visible:false});
-	cursor.locked = true;
-
-	var prefixInputSaved = prefixInput.clone();
-	prefixInput.reset();
-
-	!keepRunLevel && runLevel++;
-
-	try {
-		var cmd = keyManager.createSequences(arg);
-		for (var i = 0, goal = cmd.length; i < goal; i++) {
-			mapManager.process(cmd[i], function (keyCode, e) {
-				processInput(keyCode, e);
-			});
-		}
-		mapManager.process(false);
-	}
-	finally {
-		!keepRunLevel && runLevel--;
-
-		if (prefixInput) {
-			prefixInput.assign(prefixInputSaved);
-		}
-
-		if (cursor) {
-			cursor.locked = false;
-			cursor.ensureVisible();
-			cursor.update(cursorState);
-		}
-	}
+function executeViCommand (arg) {
+	var seq = keyManager.createSequences(arg);
+	keyManager.setDequeue('unshift', seq, function (items) {
+		items.forEach(function (item) {
+			item.isNoremap = true;
+		});
+	});
+	keyManager.sweep();
 }
 function completeSelectionRange (ss, se) {
 	if (buffer.selectionStart.gt(ss) && buffer.selectionStart.gt(se)) {
@@ -1878,7 +1855,8 @@ function processAbbrevs (force, ignoreAbbreviation) {
 			inputHandler.textFragment = inputHandler.textFragment
 				.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
 			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-			keyManager.pushSweep(abbrevs[abbrev].value + last);
+			keyManager.unshift(abbrevs[abbrev].value + last);
+			keyManager.sweep();
 		}
 		break;
 	}
@@ -2231,10 +2209,8 @@ function processInput (code, e, ignoreAbbreviation) {
 			}
 			if (runLevel == 0 && e.isCompositionedFirst) {
 				cursor.editCursor.style.display = 'none';
-				isBulkInputting = true;
 			}
 			if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
-				isBulkInputting = false;
 				cursor.ensureVisible();
 				cursor.update({visible:true, focused:true});
 				requestShowPrefixInput(getDefaultPrefixInputString());
@@ -4438,59 +4414,6 @@ function handleWindowResize (e) {
 		relocate();
 	}
 }
-
-// editor (document)
-function handleKeydownMain (code, e) {
-	notifyKeydownEvent(e.code, e.fullIdentifier, '');
-	processInput(code, e);
-	if (clipboardReadingState == 2) {
-		clipboardReadingState = 0;
-	}
-}
-function handleClipboardRead () {
-	clipboardReadingState = 2;
-	keyManager.sweep();
-}
-function handleKeydown (e) {
-	if (scroller.running
-	|| exCommandExecutor.running
-	|| completer.running
-	|| isBulkInputting && !e.isCompositioned
-	|| clipboardReadingState == 1) {
-		if (exCommandExecutor.running && e.code == 3) {
-			interruptMultiplexCallback();
-			bell.play();
-			return;
-		}
-		keyManager.push(e);
-		if (testMode) {
-			var s = 'busy now('
-				+ (scroller.running ? 'scrolling' : '')
-				+ (exCommandExecutor.running ? 'ex command running' : '')
-				+ (completer.running ? 'completing' : '')
-				+ (isBulkInputting && !e.isCompositioned ? 'bulk input' : '')
-				+ (clipboardReadingState ? 'clipboard reading' : '')
-				+ ')';
-			log(s);
-			notifyKeydownEvent(e.code, e.fullIdentifier, s);
-		}
-		return;
-	}
-
-	if (prefixInput.toString() == '"*' && clipboardReadingState != 2) {
-		clipboardReadingState = 1;
-		keyManager.push(e);
-		extensionChannel.getClipboard(handleClipboardRead);
-		return;
-	}
-
-	if (recordedStrokes) {
-		recordedStrokes.strokes += keyManager.toInternalString(e);
-	}
-
-	isInteractive = true;
-	mapManager.process(e, handleKeydownMain);
-}
 function handleBeforeUnload (e) {
 	try {
 		if (!extensionChannel.isTopFrame) return;
@@ -4502,6 +4425,35 @@ function handleBeforeUnload (e) {
 
 	return e.returnValue = _('The text has been modified.');
 }
+
+// keyManager
+function handleKeydownMain (e) {
+	notifyKeydownEvent(e.code, e.fullIdentifier, '');
+	processInput(e.code, e);
+}
+function handleKeydown (e) {
+	if (keyManager.isLocked) {
+		if (exCommandExecutor.running && e.code == 3) {
+			interruptMultiplexCallback();
+			bell.play();
+		}
+		return;
+	}
+
+	if (recordedStrokes && !e.mapExpanded) {
+		recordedStrokes.strokes += keyManager.toInternalString(e);
+	}
+
+	isInteractive = true;
+	if (e.isNoremap) {
+		handleKeydownMain(e);
+	}
+	else {
+		mapManager.process(e, handleKeydownMain);
+	}
+}
+
+// document
 function handlePaste (e) {
 	e.preventDefault();
 	var s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
@@ -4511,21 +4463,28 @@ function handlePaste (e) {
 		case 'bound':
 		case 'bound_line':
 			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-			keyManager.pushSweep('c');
-			keyManager.pushSweep(s, true);
-			keyManager.pushSweep('\u001b');
+			keyManager.unshift(
+				'c',
+				{value:s, asComposition:true},
+				'\u001b'
+			);
+			keyManager.sweep();
 			break;
 
 		case 'command':
 			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-			keyManager.pushSweep('a');
-			keyManager.pushSweep(s, true);
-			keyManager.pushSweep('\u001b');
+			keyManager.pushSweep(
+				'a',
+				{value:s, asComposition:true},
+				'\u001b'
+			);
+			keyManager.sweep();
 			break;
 
 		case 'edit': case 'overwrite':
 			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-			keyManager.pushSweep(s, true);
+			keyManager.push({value:s, asComposition:true});
+			keyManager.sweep();
 			break;
 		}
 		break;
@@ -4534,7 +4493,8 @@ function handlePaste (e) {
 		s = s
 			.replace(/[\u0016\u001b]/g, '\u0016$&')
 			.replace(/\n/g, toVisibleControl(13));
-		keyManager.pushSweep(s);
+		keyManager.push(s);
+		keyManager.sweep();
 		break;
 	}
 }
@@ -4560,7 +4520,8 @@ function handleCoverMousewheel (e) {
 				delta = e.detail;
 			}
 			if (delta) {
-				keyManager.pushSweep(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'));
+				keyManager.push(Math.abs(delta) + (delta > 0 ? '\u0005' : '\u0019'));
+				keyManager.sweep();
 			}
 			break;
 		}
@@ -5049,7 +5010,6 @@ var searchUtils;
 var recordedStrokes;
 var literalInput;
 var notifier;
-var clipboardReadingState; // 0:free 1:reading 2:ready
 var multiplexCallbackId;
 
 var isEditCompleted;
@@ -5059,7 +5019,6 @@ var isInteractive;
 var isSmoothScrollRequested;
 var isJumpBaseUpdateRequested;
 var isLastKeyCodeLocked;
-var isBulkInputting;
 var isCompleteResetCanceled;
 
 var lastKeyCode;
@@ -5103,6 +5062,12 @@ var commandMap = {
 		wait_register:function (c) {
 			prefixInput.appendRegister(c);
 			requestShowPrefixInput();
+			if (c == '*') {
+				keyManager.lock();
+				extensionChannel.getClipboard(function (data) {
+					keyManager.unlock();
+				});
+			}
 		}
 	},
 
@@ -6958,17 +6923,16 @@ var editMap = {
 
 			var s;
 			if (c == '*') {
-				clipboardReadingState = 1;
+				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					if (data == '') {
 						showMessage(_('Register {0} is empty.', c));
-						clipboardReadingState = 0;
 						cursor.update({visible:true, focused:true});	// for opera
 					}
 					else {
-						clipboardReadingState = 2;
 						fireDOMPasteEvent(data);
 					}
+					keyManager.unlock();
 				});
 				return undefined;
 			}
@@ -7212,17 +7176,16 @@ var lineInputEditMap = {
 		wait_register:function (c, o) {
 			var s;
 			if (c == '*') {
-				clipboardReadingState = 1;
+				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					if (data == '') {
 						notifier.show(_('Register {0} is empty.', c));
-						clipboardReadingState = 0;
 					}
 					else {
 						notifier.hide();
-						clipboardReadingState = 2;
 						fireDOMPasteEvent(data);
 					}
+					keyManager.unlock();
 					processInput(0, keyManager.nopObjectFromCode());
 				});
 				return undefined;

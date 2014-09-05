@@ -33,11 +33,21 @@
  * ----------------
  */
 
-Object.defineProperty(Array.prototype, 'lastItem', {
-	get:function () {return this[this.length - 1]},
-	set:function (v) {
-		if (this.length) {
-			this[this.length - 1] = v;
+Object.defineProperties(Array.prototype, {
+	firstItem: {
+		get:function () {return this[0]},
+		set:function (v) {
+			if (this.length) {
+				this[0] = v;
+			}
+		}
+	},
+	lastItem: {
+		get:function () {return this[this.length - 1]},
+		set:function (v) {
+			if (this.length) {
+				this[this.length - 1] = v;
+			}
 		}
 	}
 });
@@ -329,6 +339,9 @@ function publish () {
 			break;
 		}
 	}
+}
+function toArray (arg) {
+	return Array.prototype.slice.call(arg);
 }
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

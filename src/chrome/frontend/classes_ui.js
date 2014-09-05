@@ -655,6 +655,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 			return;
 		}
 		distance = scrollTopDest - scrollTopStart;
+		app.keyManager.lock();
 		running = true;
 		lastRan = +Date.now();
 		(function doScroll () {
@@ -664,7 +665,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 			if (!app.targetElement || !cursor || !modeLine) {
 				app.low.notifyCommandComplete();
 				running = false;
-				app.keyManager.sweep();
+				app.keyManager.unlock();
 				return;
 			}
 
@@ -677,7 +678,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 				modeLine.style.display == '' && app.low.showPrefixInput();
 				app.low.notifyCommandComplete();
 				running = false;
-				app.keyManager.sweep();
+				app.keyManager.unlock();
 			}
 			else {
 				buffer.scrollTop = parseInt(y);

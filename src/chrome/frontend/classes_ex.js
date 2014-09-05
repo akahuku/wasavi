@@ -74,6 +74,12 @@ ExCommand.prototype = {
 		);
 	},
 	parseArgs: function (app, range, line, syntax) {
+		function stripv (s) {
+			return s.replace(/\u0016(.)/g, '$1');
+		}
+		function stripp (s) {
+			return s.replace(/\\([^\/])/g, '$1');
+		}
 		function push_string (s) {
 			result.argv.push(s);
 		}
@@ -84,19 +90,19 @@ ExCommand.prototype = {
 				switch (state) {
 				case 0:
 					if (/^\[.+\]$/.test(re[0])) {
-						result.argv.push(re[0]);
+						result.argv.push(stripv(re[0]));
 						s = s.substring(re[0].length);
 						state = 1;
 						break;
 					}
 					// FALLTHRU
 				case 1:
-					result.argv.push(re[0]);
+					result.argv.push(stripv(re[0]));
 					s = s.substring(re[0].length);
 					state = 2;
 					break;
 				case 2:
-					result.argv.push(s);
+					result.argv.push(stripv(s));
 					s = '';
 					break;
 				}
@@ -112,7 +118,7 @@ ExCommand.prototype = {
 		function push_paths (s) {
 			while ((s = s.replace(/^\s+/, '')) != '') {
 				var re = /(?:\\(.)|\S)*/.exec(s);
-				result.argv.push(re[0].replace(/\\([^\/])/g, '$1'));
+				result.argv.push(stripp(re[0]));
 				s = s.substring(re[0].length);
 			}
 		}
