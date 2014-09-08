@@ -2516,10 +2516,16 @@ Wasavi.Editor.prototype = new function () {
 		},
 		charAt: function () {
 			var a = arg2pos(arguments);
+			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+				return undefined;
+			}
 			return this.elm.childNodes[a.row].textContent.charAt(a.col);
 		},
 		charCodeAt: function () {
 			var a = argspos(arguments);
+			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+				return undefined;
+			}
 			return this.elm.childNodes[a.row].textContent.charCodeAt(a.col);
 		},
 		charClassAt: function (a, treatNewlineAsSpace) {
@@ -3254,7 +3260,7 @@ loop:			while (node) {
 				return span;
 			}
 whole:
-			for (; length > 0 && s.row < this.elm.childNodes.length; s.row++) {
+			for (; length > 0 && s.row >= 0 && s.row < this.elm.childNodes.length; s.row++) {
 				var iter = document.createNodeIterator(
 					this.elm.childNodes[s.row], window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;

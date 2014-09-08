@@ -1371,7 +1371,7 @@ var cache = {};
 				app.low.requestShowMessage(_('Moved {0} {line:0}.', rows));
 			}
 
-			t.setSelectionRange(t.getLineTopOffset2(dest + rows, 0));
+			t.setSelectionRange(t.getLineTopOffset2(Math.min(t.rowLength - 1, dest + rows), 0));
 		});
 		app.isEditCompleted = true;
 	}),
@@ -1399,7 +1399,7 @@ var cache = {};
 			lineOrientOverride:true,
 			register:register
 		});
-		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart, 0));
+		t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
 	}),
 	new ExCommand('quit', 'q', '!', 0, function (app, t, a) {
 		if (a.flags.force) {
