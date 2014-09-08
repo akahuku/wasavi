@@ -351,13 +351,13 @@ ExCommandExecutor.prototype = {
  */
 
 function log () {
-	logMode && console.log('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.log('wasavi: ' + toArray(arguments).join(' '));
 }
 function info () {
-	logMode && console.info('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.info('wasavi: ' + toArray(arguments).join(' '));
 }
 function error () {
-	logMode && console.error('wasavi: ' + Array.prototype.slice.call(arguments).join(' '));
+	logMode && console.error('wasavi: ' + toArray(arguments).join(' '));
 }
 function getLocalStorage (keyName, callback) {
 	extensionChannel.postMessage(

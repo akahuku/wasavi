@@ -225,7 +225,7 @@ function insertToLineInput (t, ch) {
 	t.selectionEnd = t.selectionStart;
 }
 function _ () {
-	var args = Array.prototype.slice.call(arguments);
+	var args = toArray(arguments);
 	var format = args.shift();
 	return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
 		if ($1 == undefined || $1 == '') {
@@ -340,8 +340,8 @@ function publish () {
 		}
 	}
 }
-function toArray (arg) {
-	return Array.prototype.slice.call(arg);
+function toArray (arg, index) {
+	return Array.prototype.slice.call(arg, index || 0);
 }
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

@@ -495,7 +495,7 @@ Wasavi.EditLogger = function (app, max) {
 		}
 
 		var item = new pool[type];
-		item.init.apply(item, Array.prototype.slice.call(arguments, 1));
+		item.init.apply(item, toArray(arguments, 1));
 		cluster.push(item);
 		//console.log('undo item pushed:' + item.dump());
 

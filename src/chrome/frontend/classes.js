@@ -127,7 +127,7 @@ Wasavi.L10n = function (app, catalog) {
 	}
 	function getTranslator () {
 		return function () {
-			var args = Array.prototype.slice.call(arguments);
+			var args = toArray(arguments);
 			var format = getMessage(args.shift());
 			return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
 				return $1 == undefined || $1 == '' ?
@@ -1147,7 +1147,7 @@ Wasavi.KeyManager = function () {
 		dequeue[method].apply(dequeue, items);
 	}
 	function push () {
-		var args = Array.prototype.slice.call(arguments);
+		var args = toArray(arguments);
 		var callback;
 
 		if (isFunction(args.lastItem)) {
@@ -1157,7 +1157,7 @@ Wasavi.KeyManager = function () {
 		setDequeue('push', args, callback);
 	}
 	function unshift () {
-		var args = Array.prototype.slice.call(arguments);
+		var args = toArray(arguments);
 		var callback;
 
 		if (isFunction(args.lastItem)) {
@@ -1800,7 +1800,7 @@ Wasavi.MapManager = function (app) {
 		}
 	}
 	function run () {
-		var args = Array.prototype.slice.call(arguments);
+		var args = toArray(arguments);
 		var handler = args.shift();
 		reset(true);
 		handler && handler.apply(null, args);
@@ -2106,12 +2106,14 @@ Wasavi.Registers = function (app, value) {
 			writableList:function () {
 				return writableRegex.source
 					.replace(/^\^\[/, '')
-					.replace(/\]\$$/, '');
+					.replace(/\]\$$/, '')
+					.replace(/\\/g, '');
 			},
 			readableList:function () {
 				return readableRegex.source
 					.replace(/^\^\[/, '')
-					.replace(/\]\$$/, '');
+					.replace(/\]\$$/, '')
+					.replace(/\\/g, '');
 			}
 		}
 	);
@@ -3084,7 +3086,7 @@ loop:			while (node) {
 			if (this.isLineOrientSelection) {
 				return this.deleteRangeRows.apply(this, arguments);
 			}
-			var args = Array.prototype.slice.call(arguments);
+			var args = toArray(arguments);
 			var func = popLastArg(args);
 			var r = select.apply(this, args);
 			var content = r.r.toString();
@@ -3123,7 +3125,7 @@ loop:			while (node) {
 			return result;
 		},
 		deleteRangeRows: function () {
-			var args = Array.prototype.slice.call(arguments);
+			var args = toArray(arguments);
 			var func = popLastArg(args);
 			var r = selectRows.apply(this, args);
 			var content = r.r.toString();
