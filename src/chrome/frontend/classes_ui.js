@@ -440,8 +440,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			//cursorRect = null;
 		};
 		this.show = function () {
-			if (app.runLevel) return;
-
 			relocate();
 			removeCompositionSpan();
 			var span = createCompositionSpan();

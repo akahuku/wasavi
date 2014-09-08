@@ -63,7 +63,6 @@
 		get writeOnTermination () {return writeOnTermination},
 		set writeOnTermination (v) {writeOnTermination = v},
 		get state () {return state},
-		get runLevel () {return runLevel},
 		get marks () {return marks},
 		get cursor () {return cursor},
 		get scroller () {return scroller},
@@ -847,7 +846,6 @@ ime-mode:disabled; \
 	terminated = false;
 	writeOnTermination = true;
 	state = 'normal';
-	runLevel = 0;
 	inputModeStack = [];
 	inputMode = 'command';
 	inputModeSub = '';
@@ -2208,10 +2206,10 @@ function processInput (code, e, ignoreAbbreviation) {
 				inputHandler.ungetText();
 				inputHandler.ungetStroke();
 			}
-			if (runLevel == 0 && e.isCompositionedFirst) {
+			if (e.isCompositionedFirst) {
 				cursor.editCursor.style.display = 'none';
 			}
-			if (runLevel == 0 && (!e.isCompositioned || e.isCompositionedLast)) {
+			if (!e.isCompositioned || e.isCompositionedLast) {
 				cursor.ensureVisible();
 				cursor.update({visible:true, focused:true});
 				requestShowPrefixInput(getDefaultPrefixInputString());
@@ -2326,7 +2324,7 @@ function processInput (code, e, ignoreAbbreviation) {
 			requestedState.notice = null;
 			result.needEmitEvent = true;
 		}
-		if (runLevel == 0 && state == 'normal' && (backlog.queued || backlog.visible)) {
+		if (state == 'normal' && (backlog.queued || backlog.visible)) {
 			backlog.write(false, messageUpdated);
 		}
 		if (result.needEmitEvent !== false) {
@@ -4979,7 +4977,6 @@ var preferredNewline;
 var terminated;
 var writeOnTermination;
 var state;
-var runLevel;
 var registers;
 var lineInputHistories;
 var marks;
