@@ -1125,16 +1125,17 @@ Wasavi.KeyManager = function () {
 			var s = args[i];
 
 			if (isString(s)) {
-				items = createSequences(s);
+				items.push.apply(items, createSequences(s));
 			}
 			else if (isObject(s)) {
 				if ('value' in s && s.asComposition) {
-					items = createSequences(s.value);
-					if (items.length) {
-						items.forEach(function (a) {a.isCompositioned = true});
-						items.firstItem.isCompositionedFirst = true;
-						items.lastItem.isCompositionedLast = true;
+					s = createSequences(s.value);
+					if (s.length) {
+						s.forEach(function (a) {a.isCompositioned = true});
+						s.firstItem.isCompositionedFirst = true;
+						s.lastItem.isCompositionedLast = true;
 					}
+					items.push.apply(items, s);
 				}
 				else {
 					items.push(s);
@@ -1747,35 +1748,39 @@ Wasavi.MapManager = function (app) {
 		delayedInfo.handler = handler;
 		delayedInfo.timer = setTimeout(function () {
 			reset();
-			expandDelayed(mapIndex, lhs, handler);
+			expandDelayed({
+				index: mapIndex,
+				rule: lhs,
+				handler: handler
+			});
 		}, DELAY_TIMEOUT);
 	}
-	function expandDelayed () {
-		var mapIndex, lhs, handler, context;
-		if (typeof arguments[0] == 'object') {
-			mapIndex = arguments[0].index;
-			lhs = arguments[0].rule;
-			handler = arguments[0].handler;
-			context = arguments[1];
-		}
-		else {
-			mapIndex = arguments[0];
-			lhs = arguments[1];
-			handler = arguments[2];
-			context = arguments[3];
-		}
+	function expandDelayed (delayed, e) {
+		var mapIndex = delayed.index;
+		var lhs = delayed.rule;
+		var handler = delayed.handler;
+
 		expand(
 			sequencesExpanded[mapIndex][lhs],
 			options[mapIndex][lhs].remap,
-			handler, context || 'expand delayed'
+			handler
 		);
+
+		if (e) {
+			app.keyManager.push(e);
+			app.keyManager.sweep();
+		}
 	}
 	function markExpanded (items) {
-		item.mapExpanded = true;
+		for (var i = 0, goal = items.length; i < goal; i++) {
+			items[i].mapExpanded = true;
+		}
 	}
 	function markExpandedNoremap (items) {
-		item.isNoremap = true;
-		item.mapExpanded = true;
+		for (var i = 0, goal = items.length; i < goal; i++) {
+			item[i].isNoremap = true;
+			item[i].mapExpanded = true;
+		}
 	}
 	function expand (rhs, remap, handler) {
 		if (!handler) return;
@@ -1786,6 +1791,7 @@ Wasavi.MapManager = function (app) {
 				app.config.vars.remap && remap ?
 					markExpanded : markExpandedNoremap
 			);
+			app.keyManager.sweep();
 		}
 		else {
 			reset(true);
@@ -1813,8 +1819,12 @@ Wasavi.MapManager = function (app) {
 		keyCode = e.code;
 
 		if (mapIndex == undefined || !keyCode) {
-			delayed && expandDelayed(delayed, 'delayed #1');
-			run(handler, e);
+			if (delayed) {
+				expandDelayed(delayed, e);
+			}
+			else {
+				run(handler, e);
+			}
 			return;
 		}
 		if (app.quickActivation && app.inputMode == 'command' && keyCode == 9) {
@@ -1822,7 +1832,9 @@ Wasavi.MapManager = function (app) {
 			return;
 		}
 		if (mapIndex != lastMapIndex) {
-			delayed && expandDelayed(delayed, 'delayed #2');
+			if (delayed) {
+				expandDelayed(delayed);
+			}
 			reset();
 		}
 		lastMapIndex = mapIndex;
@@ -1862,13 +1874,17 @@ Wasavi.MapManager = function (app) {
 			}
 		}
 		else {
-			delayed && expandDelayed(delayed, 'delayed #3');
-			run(handler, e);
+			if (delayed) {
+				expandDelayed(delayed, e);
+			}
+			else {
+				run(handler, e);
+			}
 		}
 	}
 
 	publish(this,
-		reset, getMap, process,
+		reset, getMap, process, markExpanded, markExpandedNoremap,
 		{
 			commandMap:function () {return maps[0]},
 			editMap:function () {return maps[1]}

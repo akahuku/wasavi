@@ -1750,11 +1750,7 @@ function executeExCommand (source, isRoot, parseOnly) {
 }
 function executeViCommand (arg) {
 	var seq = keyManager.createSequences(arg);
-	keyManager.setDequeue('unshift', seq, function (items) {
-		items.forEach(function (item) {
-			item.isNoremap = true;
-		});
-	});
+	keyManager.setDequeue('unshift', seq, keyManager.markExpandedNoremap);
 	keyManager.sweep();
 }
 function completeSelectionRange (ss, se) {
@@ -1783,7 +1779,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 	if (ignoreAbbreviation) return;
 
 	var regex = config.vars.iskeyword;
-	var target, last;
+	var target, last, canTransit;
 
 	if (force) {
 		if (inputHandler.text.length < 1) return;
@@ -1801,7 +1797,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 	for (var abbrev in abbrevs) {
 		if (target.substr(-abbrev.length) != abbrev) continue;
 
-		var canTransit = false;
+		canTransit = false;
 		if (regex.test(abbrev.charAt(0))) {
 			if (abbrev.length == 1) {
 				if (buffer.selectionStartCol - abbrev.length <= 1
@@ -1851,15 +1847,16 @@ function processAbbrevs (force, ignoreAbbreviation) {
 		// remapped abbreviation
 		else {
 			inputHandler.text = inputHandler.text
-				.substring(0, inputHandler.text.length - abbrev.length - 1);
+				.substring(0, inputHandler.text.length - abbrev.length - last.length);
 			inputHandler.textFragment = inputHandler.textFragment
-				.substring(0, inputHandler.textFragment.length - abbrev.length - 1);
+				.substring(0, inputHandler.textFragment.length - abbrev.length - last.length);
 			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
 			keyManager.unshift(abbrevs[abbrev].value + last);
 			keyManager.sweep();
 		}
 		break;
 	}
+	return canTransit;
 }
 function processAutoDivide (e) {
 	if (config.vars.textwidth <= 0) return;
@@ -2138,8 +2135,12 @@ function processInput (code, e, ignoreAbbreviation) {
 		cursor.windup();
 
 		if (subkey == inputMode && code == 0x1b) {
+			if (processAbbrevs(true, ignoreAbbreviation)) {
+				keyManager.push('\u001b');
+				break;
+			}
+
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
-			processAbbrevs(true, ignoreAbbreviation);
 
 			var finalStroke = inputHandler.stroke;
 			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
@@ -4360,7 +4361,7 @@ function quickReplace (c, count, allowMultiLine) {
 				var replacerWidth = scaler.offsetWidth;
 
 				if (originalWidth && replacerWidth) {
-					var replacer = multiply(c, Math.max(1, Math.floor(originalWidth / replacerWidth)));
+					var replacer = multiply(c, Math.max(1, Math.floor(originalWidth / replacerWidth + 0.5)));
 					editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
 					buffer.setSelectionRange(buffer.leftPos(buffer.overwriteChars(n, replacer)));
 				}
@@ -4463,21 +4464,13 @@ function handlePaste (e) {
 		case 'bound':
 		case 'bound_line':
 			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-			keyManager.unshift(
-				'c',
-				{value:s, asComposition:true},
-				'\u001b'
-			);
+			keyManager.push('c', {value:s, asComposition:true}, '\u001b');
 			keyManager.sweep();
 			break;
 
 		case 'command':
 			s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-			keyManager.pushSweep(
-				'a',
-				{value:s, asComposition:true},
-				'\u001b'
-			);
+			keyManager.push('a', {value:s, asComposition:true}, '\u001b');
 			keyManager.sweep();
 			break;
 
@@ -7183,17 +7176,14 @@ var lineInputEditMap = {
 					}
 					else {
 						notifier.hide();
-						fireDOMPasteEvent(data);
+						fireDOMPasteEvent(data + String.fromCharCode(0));
 					}
 					keyManager.unlock();
-					processInput(0, keyManager.nopObjectFromCode());
 				});
-				return undefined;
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				notifier.hide();
-				fireDOMPasteEvent(s);
-				return true;
+				fireDOMPasteEvent(s + String.fromCharCode(0));
 			}
 			else {
 				notifier.show(_('Register {0} is empty.', c));

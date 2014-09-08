@@ -1095,7 +1095,7 @@ function handleBackendMessage (req) {
 			stateClearTimer = null;
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
 			keylog('notify-state', '', '');
-		}, 100);
+		}, 500);
 		//keylog('notify-state: timer registered.', '', '');
 		break;
 
@@ -1127,7 +1127,7 @@ function handleBackendMessage (req) {
 			stateClearTimer = null;
 			//wasaviFrame.setAttribute('data-wasavi-command-state', 'done');
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
-		}, 100);
+		}, 500);
 		//keylog('command-completed: timer registered.', '', '');
 		break;
 	}
