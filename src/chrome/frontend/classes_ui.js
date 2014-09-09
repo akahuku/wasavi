@@ -385,7 +385,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 					r.setStart(node.firstChild, leadingPos.col);
 					r.setEnd(node.firstChild, n.col);
 					r.surroundContents(span);
-					r.detach();
 				}
 				else {
 					span = buffer.emphasis(

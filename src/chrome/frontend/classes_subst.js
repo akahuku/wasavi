@@ -129,7 +129,6 @@ Wasavi.SubstituteWorker.prototype = {
 		rg.setStartBefore(t.rowNodes(range[0]));
 		rg.setEndAfter(t.rowNodes(range[1]));
 		this.text = trimTerm(rg.toString());
-		rg.detach();
 
 		this.substCount = 0;
 		this.foundCount = 0;

@@ -2556,14 +2556,12 @@ Wasavi.Editor.prototype = new function () {
 			else {
 				var r = select.apply(this, arguments);
 				var content = r.r.toString();
-				r.r.detach();
 				return content;
 			}
 		},
 		getSelectionRows: function () {
 			var r = selectRows.apply(this, arguments);
 			var content = ensureNewline(r.r.toString());
-			r.r.detach();
 			return content;
 		},
 		leftPos: function () {
@@ -3095,11 +3093,9 @@ loop:			while (node) {
 
 			if (r.s.row == r.e.row) {
 				r.r.deleteContents();
-				r.r.detach();
 				this.elm.childNodes[r.s.row].normalize();
 			}
 			else {
-				r.r.detach();
 
 				var r2 = document.createRange();
 				setRange.call(this, r2, r.s);
@@ -3117,7 +3113,6 @@ loop:			while (node) {
 					r2.deleteContents();
 				}
 
-				r2.detach();
 			}
 			this.selectionStart = r.s;
 			this.selectionEnd = r.s;
@@ -3132,7 +3127,6 @@ loop:			while (node) {
 			var result = r.e.row - r.s.row + 1;
 			func && func(content, r.r.cloneContents());
 			r.r.deleteContents();
-			r.r.detach();
 			if (this.elm.childNodes.length == 0) {
 				this.elm
 					.appendChild(document.createElement('div'))
@@ -3152,7 +3146,6 @@ loop:			while (node) {
 				Math.min(this.selectionEndRow + count - 1,
 				this.elm.childNodes.length - 1), 0);
 			var r = selectRows.call(this, s, e);
-			r.r.detach();
 			this.selectionStart = r.s;
 			this.selectionEnd = r.e;
 			this.isLineOrientSelection = true;
@@ -3181,7 +3174,6 @@ loop:			while (node) {
 			}
 			r.setEndAfter(div1.lastChild);
 			div2.appendChild(r.extractContents());
-			r.detach();
 			fixLineTail(div1);
 			fixLineTail(div2);
 			n.row++;
@@ -3233,7 +3225,6 @@ loop:			while (node) {
 			setRange.call(this, r, new Wasavi.Position(0, 0), false);
 			setRange.call(this, r, a, true);
 			var result = r.toString().length;
-			r.detach();
 			return result;
 		},
 		emphasis: function (s, e, className) {
@@ -3297,7 +3288,6 @@ whole:
 				}
 			}
 
-			r.detach();
 			return result;
 		},
 		emphasis_p_p: function (s, e, className) {
@@ -3345,7 +3335,6 @@ whole:
 				r.insertNode(span);
 			}
 
-			r.detach();
 			return result;
 		},
 		unEmphasis: function (className, start, end) {
@@ -3363,7 +3352,6 @@ whole:
 					r.deleteContents();
 					pa.normalize();
 				}
-				r.detach();
 			}
 		},
 		offsetBy: function (s, offset, treatLastLineAsNormal) {

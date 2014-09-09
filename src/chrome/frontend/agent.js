@@ -521,7 +521,6 @@ function setValue (element, value, isForce) {
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
-		r.detach();
 
 		var f = document.createDocumentFragment();
 		var length = 0;

@@ -436,7 +436,6 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	rg.setStartBefore(t.rowNodes(a.range[0]));
 	rg.setEndAfter(t.rowNodes(a.range[1]));
 	var content = toNativeControl(rg.toString());
-	rg.detach();
 
 	if (a.range[1] == t.rowLength - 1) {
 		content = trimTerm(content);
@@ -941,7 +940,6 @@ var cache = {};
 		rg.setStartBefore(t.rowNodes(a.range[0]));
 		rg.setEndAfter(t.rowNodes(a.range[1]));
 		var content = rg.toString();
-		rg.detach();
 		t.setSelectionRange(new Wasavi.Position(a.lineNumber, 0));
 		app.edit.paste(1, {
 			isForward:true,
@@ -1128,7 +1126,6 @@ var cache = {};
 		rg.setStartBefore(t.rowNodes(r[0]));
 		rg.setEndAfter(t.rowNodes(r[1]));
 		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
-		rg.detach();
 		rg = null;
 
 		// pass 1

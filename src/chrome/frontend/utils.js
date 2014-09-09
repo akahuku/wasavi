@@ -216,7 +216,6 @@ function emptyNodeContents (node) {
 	var r = document.createRange();
 	r.selectNodeContents(node);
 	r.deleteContents();
-	r.detach();
 }
 function insertToLineInput (t, ch) {
 	var ss = t.selectionStart;
