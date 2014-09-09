@@ -39,6 +39,7 @@ var EXTENSION_CURRENT = 'data-texteditor-extension-current';
 var MARKS_ID = 'data-wasavi-marks';
 var FULLSCREEN_MARGIN = 8;
 var MIN_WIDTH_PIXELS = 320;
+var MIN_HEIGHT_PIXELS = 240;
 var BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
 var ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
@@ -185,7 +186,7 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		var position = 'fixed';
 		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
 		var widthAdjusted = Math.max(MIN_WIDTH_PIXELS, rect.width);
-		var heightAdjusted = rect.height + (extraHeight || 0);
+		var heightAdjusted = Math.max(MIN_HEIGHT_PIXELS, rect.height + (extraHeight || 0));
 
 		if (!isFixedPosition(target)) {
 			position = 'absolute';
