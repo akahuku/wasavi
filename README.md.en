@@ -126,6 +126,12 @@ Tips and Tricks
 	+ `:filesystem reset` discards the access token for online storage.
 	+ You can place the file system name at the head of a file name explicitly:
 	  for instance, `:read dropbox:/hello.txt`.
+* When you read from the register of A to Z, some registers returns special content:
+	+ `B` register: user agent string
+	+ `D` register: current date time string
+	+ `T` register: title string
+	+ `U` register: URL string
+	+ `W` register: version string of wasavi
 
 
 
@@ -254,3 +260,4 @@ Vim features in wasavi
 * bound mode (aka, Vim visual mode)
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`,
   `relativenumber`, `textwidth`, `expandtab`
+* writing to the register of A to Z

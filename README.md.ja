@@ -126,6 +126,12 @@ Tips and Tricks
 	+ `:filesystem reset` はアクセストークンを破棄します。こちらも、ファイルシステム名を
 	  指定することができます
 	+ ファイル名の先頭にファイルシステム名を明示することができます: `:read dropbox:/hello.txt`
+* A から Z までのレジスタを読み込む際、いくつかのレジスタは特別な内容を返します:
+	+ `B` register: ユーザーエージェント文字列
+	+ `D` register: 現在の日付時刻文字列
+	+ `T` register: タイトル文字列
+	+ `U` register: URL 文字列
+	+ `W` register: wasavi のバージョン文字列
 
 
 
@@ -253,3 +259,4 @@ Vim 互換の機能
 * 範囲選択モード（Vim でいうところのビジュアルモード）
 * オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、
   `relativenumber`、`textwidth`、 `expandtab`
+* A から Z レジスタへの書き込み
