@@ -1902,7 +1902,8 @@ Wasavi.Registers = function (app, value) {
 	 * - named register
 	 *  1 - 9   implicit register, and its histories. 1 is latest.
 	 *  a - z   general named register
-	 *  A - Z   general named register for append (write only)
+	 *  A - Z   write: general named register for append
+	 *          read: special purpose content,
 	 *  @       last executed command via :@ in ex mode or @ in vi mode
 	 *  .       last edited text (read only) [vim compatible]
 	 *  :       last executed ex command (read only) [vim compatible]
@@ -1948,7 +1949,7 @@ Wasavi.Registers = function (app, value) {
 	var named;
 	var storageKey = 'wasavi_registers';
 	var writableRegex = /^[1-9a-zA-Z@]$/;
-	var readableRegex = /^["1-9a-z@.:*\/\^]$/;
+	var readableRegex = /^["1-9a-zA-Z@.:*\/\^]$/;
 	var isLatest = false;
 
 	function serialize () {
@@ -1997,12 +1998,13 @@ Wasavi.Registers = function (app, value) {
 		if (!isReadable(name)) {
 			return false;
 		}
-		switch (name) {
-		case "*":
-			return app.extensionChannel && typeof app.extensionChannel.clipboardData == 'string';
-		default:
-			return name == '"' || named[name];
+		if (/^[A-Z"]$/.test(name)) {
+			return true;
 		}
+		if (name == '*') {
+			return typeof app.extensionChannel.clipboardData == 'string';
+		}
+		return !!named[name];
 	}
 	function findItem (name) {
 		if (name == '"') {
@@ -2060,10 +2062,34 @@ Wasavi.Registers = function (app, value) {
 		if (typeof name != 'string' || name == '') {
 			return unnamed;
 		}
-		name = name.toLowerCase();
 		if (isReadable(name)) {
-			var item = findItem(name);
-			name == '*' && app.extensionChannel && item.set(app.extensionChannel.clipboardData);
+			var item;
+
+			if (/^[A-Z]$/.test(name)) {
+				item = new RegisterItem();
+
+				switch (name) {
+				case 'B':
+					item.set(window.navigator.userAgent);
+					break;
+				case 'D':
+					item.set(new Date().toLocaleString());
+					break;
+				case 'T':
+					item.set(app.targetElement.title);
+					break;
+				case 'U':
+					item.set(app.targetElement.url);
+					break;
+				case 'W':
+					item.set('wasavi/' + app.version);
+					break;
+				}
+			}
+			else {
+				item = findItem(name);
+			}
+
 			return item;
 		}
 		return new RegisterItem();

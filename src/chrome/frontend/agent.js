@@ -342,6 +342,7 @@ function runCore (element, frameSource, value) {
 		parentTabId:extension.tabId,
 		parentInternalId:extension.internalId,
 		url:window.location.href,
+		title:document.title,
 		testMode:isTestFrame,
 		id:element.id,
 		nodeName:element.nodeName,

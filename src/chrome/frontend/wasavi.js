@@ -2035,16 +2035,9 @@ function processInput (code, e, ignoreAbbreviation) {
 		break;
 
 	case 'wait_register':
-		if (registers.isReadable(letter)) {
-			mapkey = keyManager.code2letter(lastKeyCode, true);
-			subkey = inputModeSub;
-			inputModeSub = '';
-		}
-		else {
-			inputModeSub = '';
-			lastKeyCode = code;
-			return;
-		}
+		mapkey = keyManager.code2letter(lastKeyCode, true);
+		subkey = inputModeSub;
+		inputModeSub = '';
 		break;
 
 	case 'backlog':
