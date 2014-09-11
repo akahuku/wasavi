@@ -35,9 +35,9 @@
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
 	var IS_FX_JETPACK =
-		 typeof global.getInterface == 'function'
-		 && /^\s*function\s+getInterface\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
-			global.getInterface.toString().replace(/[\s\r\n\t]+/g, ' '));
+		typeof global.self == 'object' && typeof global.self.on == 'function'
+		&& /^\s*function\s+on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
+			global.self.on.toString().replace(/[\s\r\n\t]+/g, ' '));
 	var EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
 	var EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	/* }}} */
@@ -96,7 +96,7 @@
 	}
 	ExtensionWrapper.prototype = {
 		get name () {return EXTENSION_NAME},
-		get isTopFrame () {return window.self == window.top},
+		isTopFrame: function () {return window.self == window.top},
 		postMessage: function (data, callback, preserved) {
 			var type;
 			var requestNumber = this.getNewRequestNumber();
@@ -488,13 +488,11 @@
 				self.options.wasaviFrameSource
 			);
 		};
-		Object.defineProperty(this, 'isTopFrame', {
-			get: function () {
-				var result = false;
-				try { result = !!!window.frameElement; } catch (e) {}
-				return result;
-			}
-		});
+		this.isTopFrame = function () {
+			var result = false;
+			try { result = !!!window.frameElement; } catch (e) {}
+			return result;
+		};
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
 	/* }}} */

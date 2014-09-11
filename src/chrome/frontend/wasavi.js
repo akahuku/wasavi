@@ -904,7 +904,7 @@ ime-mode:disabled; \
 		height: cnt.offsetHeight,
 		childInternalId: extensionChannel.internalId
 	});
-	extensionChannel.isTopFrame && runExrc();
+	extensionChannel.isTopFrame() && runExrc();
 }
 function runExrc () {
 	/*
@@ -973,7 +973,7 @@ function uninstall (save, implicit) {
 
 	//
 	targetElement.tabId = extensionChannel.tabId;
-	targetElement.isTopFrame = !!extensionChannel.isTopFrame;
+	targetElement.isTopFrame = !!extensionChannel.isTopFrame();
 	targetElement.isImplicit = !!implicit;
 	targetElement.ros = config.dumpScript(true).join('\n');
 
@@ -1043,7 +1043,7 @@ function setGeometory (target) {
 
 	var rect = target.rect;
 
-	if (extensionChannel.isTopFrame) {
+	if (extensionChannel.isTopFrame()) {
 		rect.height -= footer.offsetHeight;
 	}
 
@@ -2391,7 +2391,7 @@ function getFindRegex (src) {
 }
 function getFileNameString (full) {
 	var result = '';
-	if (extensionChannel.isTopFrame) {
+	if (extensionChannel.isTopFrame()) {
 		if (fileName == '') {
 			result = _('*Untitled*');
 		}
@@ -2493,7 +2493,7 @@ function getLogicalColumn () {
 	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
 }
 function notifyToParent (eventName, payload) {
-	if (extensionChannel.isTopFrame) return;
+	if (!extensionChannel || extensionChannel.isTopFrame()) return;
 	payload || (payload = {});
 	payload.type = eventName;
 	extensionChannel.postMessage({
@@ -4392,12 +4392,12 @@ function handleWindowResize (e) {
 				document.documentElement.clientWidth;
 			targetElement.rect.height =
 				document.documentElement.clientHeight -
-				(extensionChannel.isTopFrame ? 0 : $('wasavi_footer').offsetHeight);
+				(extensionChannel.isTopFrame() ? 0 : $('wasavi_footer').offsetHeight);
 			setGeometory();
 		}
 		resizeHandlerInvokeTimer = null;
 	}
-	if (extensionChannel.isTopFrame) {
+	if (extensionChannel.isTopFrame()) {
 		if (!resizeHandlerInvokeTimer) {
 			resizeHandlerInvokeTimer = setTimeout(relocate, 100);
 		}
@@ -4408,7 +4408,7 @@ function handleWindowResize (e) {
 }
 function handleBeforeUnload (e) {
 	try {
-		if (!extensionChannel.isTopFrame) return;
+		if (!extensionChannel.isTopFrame()) return;
 		if (!config.vars.modified) return;
 	}
 	catch (ex) {
@@ -4840,7 +4840,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['monospace', 'i', 20],
 		['fullscreen', 'b', false, function (v) {
 			extensionChannel &&
-			!extensionChannel.isTopFrame &&
+			!extensionChannel.isTopFrame() &&
 			targetElement &&
 			notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
@@ -7311,7 +7311,7 @@ if (global.WasaviExtensionWrapper
 			extensionChannel.ensureRun(doRun);
 		}
 
-		if (extensionChannel.isTopFrame) {
+		if (extensionChannel.isTopFrame()) {
 			run(function() {
 				!targetElement && install({
 					// parentTabId

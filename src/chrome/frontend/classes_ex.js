@@ -417,7 +417,7 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	if (isCommand) {
 		return _('Command redirection is not implemented.');
 	}
-	if (path == '' && app.extensionChannel.isTopFrame) {
+	if (path == '' && app.extensionChannel.isTopFrame()) {
 		return _('No file name.');
 	}
 	if (isAppend) {
@@ -766,7 +766,7 @@ var cache = {};
 
 /*public*/function editCore (app, t, a, content, meta, status) {
 	var charCount = content.length;
-	if (app.extensionChannel.isTopFrame) {
+	if (app.extensionChannel.isTopFrame()) {
 		app.fileName = meta.path;
 		document.title = /[^\/]+$/.exec(app.fileName)[0] + ' - wasavi';
 		var empty = [];
@@ -982,7 +982,7 @@ var cache = {};
 			a.initCommand = '';
 		}
 
-		if (app.extensionChannel.isTopFrame) {
+		if (app.extensionChannel.isTopFrame()) {
 			if (path == '' && app.fileName == '') {
 				return _('File name is empty.');
 			}
@@ -1013,7 +1013,7 @@ var cache = {};
 			return _('Too much arguments.');
 		}
 		if (a.argv.length == 1) {
-			if (!app.extensionChannel.isTopFrame) {
+			if (!app.extensionChannel.isTopFrame()) {
 				return _('Only stand alone form can rename.');
 			}
 
