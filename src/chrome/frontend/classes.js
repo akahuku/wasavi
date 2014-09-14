@@ -1727,44 +1727,50 @@ Wasavi.MapManager = function (app) {
 			result = {
 				index:delayedInfo.mapIndex,
 				rule:delayedInfo.rule,
-				handler:delayedInfo.handler
+				handler:delayedInfo.handler,
+				suspendedEvent:delayedInfo.suspendedEvent
 			};
-			delayedInfo.timer = delayedInfo.mapIndex =
-			delayedInfo.rule = delayedInfo.handler = null;
+			delayedInfo.timer =
+			delayedInfo.mapIndex = delayedInfo.rule =
+			delayedInfo.handler = delayedInfo.suspendedEvent = null;
 		}
 		return result;
 	}
 	function reset (full) {
-		resetDelayed();
+		var result = resetDelayed();
 		currentMap = null;
 		index = 0;
 		if (full) {
 			depth = 0;
 		}
+		return result;
 	}
-	function registerExpandDelayed (mapIndex, lhs, handler) {
+	function registerExpandDelayed (mapIndex, lhs, handler, suspendedEvent) {
 		delayedInfo.mapIndex = mapIndex;
 		delayedInfo.rule = lhs;
 		delayedInfo.handler = handler;
+		delayedInfo.suspendedEvent = suspendedEvent;
 		delayedInfo.timer = setTimeout(function () {
-			reset();
-			expandDelayed({
-				index: mapIndex,
-				rule: lhs,
-				handler: handler
-			});
+			expandDelayed(reset());
 		}, DELAY_TIMEOUT);
 	}
 	function expandDelayed (delayed, e) {
 		var mapIndex = delayed.index;
 		var lhs = delayed.rule;
 		var handler = delayed.handler;
+		var suspendedEvent = delayed.suspendedEvent;
 
-		expand(
-			sequencesExpanded[mapIndex][lhs],
-			options[mapIndex][lhs].remap,
-			handler
-		);
+		if (suspendedEvent) {
+			run(handler, suspendedEvent);
+		}
+
+		if (lhs) {
+			expand(
+				sequencesExpanded[mapIndex][lhs],
+				options[mapIndex][lhs].remap,
+				handler
+			);
+		}
 
 		if (e) {
 			app.keyManager.push(e);
@@ -1871,6 +1877,9 @@ Wasavi.MapManager = function (app) {
 				else {
 					registerExpandDelayed(mapIndex, propCompleted, handler);
 				}
+			}
+			else {
+				registerExpandDelayed(mapIndex, null, handler, e);
 			}
 		}
 		else {

@@ -1066,7 +1066,6 @@ function handleBackendMessage (req) {
 	 * available only on http://wasavi.appsweets.net/test_frame.html
 	 */
 	case 'notify-keydown':
-		console.log('notify-keydown');
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
@@ -1077,7 +1076,6 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'command-start':
-		console.log('command-start');
 		if (!isTestFrame) break;
 		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
 			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
@@ -1087,7 +1085,6 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'notify-state':
-		console.log('notify-state');
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
@@ -1104,7 +1101,6 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'command-completed':
-		console.log('command-completed');
 		if (!isTestFrame) break;
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
