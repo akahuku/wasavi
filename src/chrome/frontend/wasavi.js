@@ -4941,13 +4941,6 @@ var config = new Wasavi.Configurator(appProxy,
 	}
 );
 // }}}
-var isStandAlone = (function () {
-	try {
-		return window.chrome ? window.parent == window : !!!window.frameElement;
-	} catch (e) {
-		return false;
-	}
-})();
 
 var extensionChannel;
 var version;
