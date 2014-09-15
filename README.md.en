@@ -149,12 +149,12 @@ Commands implemented
 Operations
 ----------
 
-`c` `y` `d` `>` `<` `gq`
+`c` `y` `d` `>` `<` `gq` `gu` `gU`
 
 Operation Aliases
 ------------------
 
-`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq`
+`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
 
 Motions
 ------
@@ -261,3 +261,4 @@ Vim features in wasavi
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`,
   `relativenumber`, `textwidth`, `expandtab`
 * writing to the register of A to Z
+* `gu` / `gU` + motion: lowerize or upperize a region

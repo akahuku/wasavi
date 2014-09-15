@@ -149,12 +149,12 @@ Tips and Tricks
 Operations
 ----------
 
-`c` `y` `d` `>` `<` `gq`
+`c` `y` `d` `>` `<` `gq` `gu` `gU`
 
 Operation Aliases
 ------------------
 
-`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq`
+`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
 
 Motions
 ------
@@ -260,3 +260,4 @@ Vim 互換の機能
 * オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、
   `relativenumber`、`textwidth`、 `expandtab`
 * A から Z レジスタへの書き込み
+* `gu` / `gU` + モーションは領域を小文字化または大文字化します

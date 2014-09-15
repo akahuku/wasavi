@@ -5911,6 +5911,8 @@ var commandMap = {
 				result = this['$'].apply(this, arguments);
 				break;
 			case 'q':
+			case 'u':
+			case 'U':
 				result = operationDefault(o.key + c, o);
 				break;
 			case 'v':
@@ -5954,6 +5956,37 @@ var commandMap = {
 			buffer.setSelectionRange(reformat());
 			requestSimpleCommandUpdate();
 			return true;
+		}
+	},
+	gu:{
+		$op:function (c) {
+			if (isAlias(c, prefixInput.operation.substring(1))) {
+				this._.apply(this, arguments);
+			}
+			if (requestedState.notice) {
+				return;
+			}
+
+			buffer.regalizeSelectionRelation();
+			var origin = buffer.selectionStart;
+			var adjusted = adjustDeleteOperationPos(
+				isAlias(c, prefixInput.operation.substring(1)) || isVerticalMotion,
+				buffer.selectionEndRow - buffer.selectionStartRow + 1);
+			if (adjusted.isLineOrient) {
+				motionLineEnd();
+			}
+			else {
+				extendRightIfInclusiveMotion();
+			}
+			unifyCase(1, prefixInput.operation.charAt(1) == 'U', true);
+			buffer.setSelectionRange(origin);
+			requestSimpleCommandUpdate();
+			return true;
+		}
+	},
+	gU:{
+		$op:function (c) {
+			return this.gu.$op.apply(this, arguments);
 		}
 	},
 
@@ -6053,7 +6086,7 @@ var commandMap = {
 		// . command repeats the last
 		// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 		//          a, c, d, i, o, p, r, s,    x, y,
-		//          gq,
+		//          gq, gu, gU
 		// or ~ command.
 		if (!prefixInput.isEmptyOperation) {
 			return inputEscape(o.e.fullIdentifier);
@@ -6077,7 +6110,8 @@ var commandMap = {
 	},
 	u:function (c, o) {
 		if (!prefixInput.isEmptyOperation) {
-			return inputEscape(o.e.fullIdentifier);
+			return /^g/.test(prefixInput.operation) ?
+				true : inputEscape(o.e.fullIdentifier);
 		}
 		var result = editLogger.undo();
 		if (result === false) {
@@ -6105,7 +6139,14 @@ var commandMap = {
 			return true;
 		}
 	},
-	U:null,
+	U:function (c, o) {
+		if (!prefixInput.isEmptyOperation) {
+			return /^g/.test(prefixInput.operation) ?
+				true : inputEscape(o.e.fullIdentifier);
+		}
+		requestShowMessage(_('Not implemented.'), true);
+		return true;
+	},
 	'~':function (c, o) {
 		if (!prefixInput.isEmptyOperation || buffer.selected) {
 			return inputEscape(o.e.fullIdentifier);
@@ -6191,11 +6232,8 @@ var commandMap = {
 	q:{
 		command:function (c, o) {
 			if (!prefixInput.isEmptyOperation) {
-				// ad hoc solution for gqq
-				if (prefixInput.operation == 'gq') {
-					return true;
-				}
-				return inputEscape(o.e.fullIdentifier);
+				return /^g/.test(prefixInput.operation) ?
+					true : inputEscape(o.e.fullIdentifier);
 			}
 			if (recordedStrokes) {
 				var stroke = recordedStrokes.strokes.replace(/q$/, '');

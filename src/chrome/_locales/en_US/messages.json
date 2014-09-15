@@ -664,6 +664,10 @@
         "message": "Not a authentication task: {0}",
         "description": "Not a authentication task: {0}"
     },
+    "not_implemented": {
+        "message": "Not implemented.",
+        "description": "Not implemented."
+    },
     "obtaining_access_rights_@0": {
         "message": "Obtaining access rights ({0})...",
         "description": "Obtaining access rights ({0})..."

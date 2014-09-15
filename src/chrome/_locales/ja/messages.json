@@ -664,6 +664,10 @@
         "message": "認証タスクではありません: {0}",
         "description": "Not a authentication task: {0}"
     },
+    "not_implemented": {
+        "message": "未実装です。",
+        "description": "Not implemented."
+    },
     "obtaining_access_rights_@0": {
         "message": "アクセス権を取得しています ({0})...",
         "description": "Obtaining access rights ({0})..."
