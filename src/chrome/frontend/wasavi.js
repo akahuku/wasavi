@@ -278,7 +278,10 @@ ExCommandExecutor.prototype = {
 		if (this.commands.length) {
 			setTimeout((function (obj, fn, cmd) {return function () {
 				if (obj._isClipboardAccess(cmd[1])) {
-					extensionChannel.getClipboard(function () {fn.call(obj)});
+					extensionChannel.getClipboard(function (data) {
+						registers.get('*').set(data);
+						fn.call(obj);
+					});
 				}
 				else {
 					fn.call(obj);
@@ -994,6 +997,7 @@ function setupEventHandlers (install) {
 	window[method]('blur', handleWindowBlur, false);
 	window[method]('resize', handleWindowResize, false);
 	window[method]('beforeunload', handleBeforeUnload, false);
+	testMode && window[method]('error', handleWindowError, false);
 
 	// document
 	document[method]('paste', handlePaste, false);
@@ -4417,6 +4421,30 @@ function handleBeforeUnload (e) {
 
 	return e.returnValue = _('The text has been modified.');
 }
+function handleWindowError (message, fileName, lineNumber, error) {
+	try {
+		if (!testMode) return;
+		if (!error) {
+			if (typeof message == 'object') {
+				error = message;
+			}
+			else {
+				error = {
+					message: message,
+					fileName: fileName,
+					lineNumber: lineNumber
+				};
+			}
+		}
+		notifyToParent('notify-error', {
+			message: error.message,
+			fileName: error.filename || error.fileName,
+			lineNumber: error.lineno || error.lineNumber
+		});
+	}
+	catch (ex) {
+	}
+}
 
 // keyManager
 function handleKeydownMain (e) {
@@ -5041,6 +5069,7 @@ var commandMap = {
 			if (c == '*') {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
+					registers.get('*').set(data);
 					keyManager.unlock();
 				});
 			}
@@ -5973,13 +6002,19 @@ var commandMap = {
 				isAlias(c, prefixInput.operation.substring(1)) || isVerticalMotion,
 				buffer.selectionEndRow - buffer.selectionStartRow + 1);
 			if (adjusted.isLineOrient) {
+				motionLineStart();
 				motionLineEnd();
 			}
 			else {
 				extendRightIfInclusiveMotion();
 			}
 			unifyCase(1, prefixInput.operation.charAt(1) == 'U', true);
-			buffer.setSelectionRange(origin);
+			if (adjusted.isLineOrient) {
+				buffer.setSelectionRange(buffer.getLineTopOffset2(origin));
+			}
+			else {
+				buffer.setSelectionRange(origin);
+			}
 			requestSimpleCommandUpdate();
 			return true;
 		}
@@ -6939,6 +6974,7 @@ var editMap = {
 			if (c == '*') {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
+					registers.get('*').set(data);
 					if (data == '') {
 						showMessage(_('Register {0} is empty.', c));
 						cursor.update({visible:true, focused:true});	// for opera
@@ -7192,6 +7228,7 @@ var lineInputEditMap = {
 			if (c == '*') {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
+					registers.get('*').set(data);
 					if (data == '') {
 						notifier.show(_('Register {0} is empty.', c));
 					}

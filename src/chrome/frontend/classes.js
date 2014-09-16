@@ -2010,9 +2010,6 @@ Wasavi.Registers = function (app, value) {
 		if (/^[A-Z"]$/.test(name)) {
 			return true;
 		}
-		if (name == '*') {
-			return typeof app.extensionChannel.clipboardData == 'string';
-		}
 		return !!named[name];
 	}
 	function findItem (name) {

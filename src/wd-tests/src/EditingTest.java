@@ -578,6 +578,7 @@ public class EditingTest extends WasaviTest {
 
 		Wasavi.send("3G", "2.");
 		assertEquals("#2", "third\nfourth\n", Wasavi.getRegister("\""));
+
 	}
 
 	@Test
@@ -661,6 +662,36 @@ public class EditingTest extends WasaviTest {
 			"nostrud exercitation ullamco\n" +
 			"laboris nisi ut aliquip ex ea\n" +
 			"commodo consequat.");
+	}
+
+	@Test
+	public void testRepetitionUpperCase () {
+		Wasavi.send("ifoo bar baz bax\u001b", "0");
+
+		Wasavi.send("gUw");
+
+		Wasavi.send(".");
+		assertEquals("#1-1", "FOO bar baz bax", Wasavi.getValue());
+		assertPos("#1-2", 0, 0);
+
+		Wasavi.send("w2.");
+		assertEquals("#2-1", "FOO BAR BAZ bax", Wasavi.getValue());
+		assertPos("#2-2", 0, 4);
+	}
+
+	@Test
+	public void testRepetitionLowerCase () {
+		Wasavi.send("iFOO BAR BAZ BAX\u001b", "0");
+
+		Wasavi.send("guw");
+
+		Wasavi.send(".");
+		assertEquals("#1-1", "foo BAR BAZ BAX", Wasavi.getValue());
+		assertPos("#1-2", 0, 0);
+
+		Wasavi.send("w2.");
+		assertEquals("#2-1", "foo bar baz BAX", Wasavi.getValue());
+		assertPos("#2-2", 0, 4);
 	}
 
 	// undo, redo tests are in another file. see UndoTest.java
@@ -1024,5 +1055,57 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send("afoo\nbar\u001b1G\"*yG");
 		Wasavi.send("O\u0012*\u001b");
 		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+	}
+
+	@Test
+	public void testUpperCaseHorizontal () {
+		Wasavi.send("i\tfoo bar baz bax\u001b", "^");
+		Wasavi.send("gU2w");
+		assertEquals("#1-1", "\tFOO BAR baz bax", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
+	}
+
+	@Test
+	public void testUpperCaseVertical () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tfoo bar\nbaz bax\u001b", "gg");
+		Wasavi.send("wgUj");
+		assertEquals("#1-1", "\tFOO BAR\nBAZ BAX", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
+	}
+
+	@Test
+	public void testUpperCaseVerticalAlias () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tfoo bar\nbaz bax\u001b", "gg");
+		Wasavi.send("wgUU");
+		assertEquals("#1-1", "\tFOO BAR\nbaz bax", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
+	}
+
+	@Test
+	public void testLowerCaseHorizontal () {
+		Wasavi.send("i\tFOO BAR BAZ BAX\u001b", "^");
+		Wasavi.send("gu2w");
+		assertEquals("#1-1", "\tfoo bar BAZ BAX", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
+	}
+
+	@Test
+	public void testLowerCaseVertical () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tFOO BAR\nBAZ BAX\u001b", "gg");
+		Wasavi.send("wguj");
+		assertEquals("#1-1", "\tfoo bar\nbaz bax", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
+	}
+
+	@Test
+	public void testLowerCaseVerticalAlias () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send("i\tFOO BAR\nBAZ BAX\u001b", "gg");
+		Wasavi.send("wguu");
+		assertEquals("#1-1", "\tfoo bar\nBAZ BAX", Wasavi.getValue());
+		assertPos("#1-2", 0, 1);
 	}
 }

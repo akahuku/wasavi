@@ -1075,6 +1075,12 @@ function handleBackendMessage (req) {
 		keylog(req.eventType, req.keyCode, req.key);
 		break;
 
+	case 'notify-error':
+		if (!isTestFrame) break;
+		var s = 'error:\t' + req.fileName + '\t(' + req.lineNumber + ')\t' + req.message;
+		document.body.appendChild(document.createElement('div')).textContent = s;
+		break;
+
 	case 'command-start':
 		if (!isTestFrame) break;
 		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
