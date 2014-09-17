@@ -25,19 +25,6 @@
 		<pathelement location="${TEST_CLASS_DIR}" />
 	</path>
 
-	<target name="runtest-start-server">
-		<java jar="${SELENIUM_SERVER_JAR}"
-			fork="true" spawn="true">
-		</java>
-	</target>
-
-	<target name="runtest-stop-server">
-		<get taskname="selenium-shutdown"
-			src="http://localhost:4444/selenium-server/driver/?cmd=shutDownSeleniumServer"
-			dest=".stop-server-result" ignoreerrors="true" />
-		<echo taskname="selenium-shutdown" message="standalone-server stopped." />
-	</target>
-
 	<target name="runtest-compile">
 		<javac
 			srcdir="${TEST_SOURCE_DIR}"
@@ -90,21 +77,6 @@
 		</junit>
 	</target>
 
-	<target name="runtest">
-		<parallel>
-			<antcall target="runtest-start-server" />
-			<sequential>
-				<echo message="running standalone-server..." />
-				<waitfor maxwait="2" maxwaitunit="minute" checkevery="100">
-					<http url="http://localhost:4444/selenium-server/driver/?cmd=testComplete" />
-				</waitfor>
-				<antcall target="runtest-junit" />
-				<antcall target="runtest-stop-server" />
-				<delete file="chromedriver.log" />
-			</sequential>
-		</parallel>
-	</target>
-
 
 
 	<!--
@@ -114,17 +86,17 @@
 
 	<target name="test-chrome">
 		<property name="TEST_BROWSER" value="chrome" />
-		<antcall target="runtest" />
+		<antcall target="runtest-junit" />
 	</target>
 
 	<target name="test-opera">
 		<property name="TEST_BROWSER" value="opera" />
-		<antcall target="runtest" />
+		<antcall target="runtest-junit" />
 	</target>
 
 	<target name="test-firefox">
 		<property name="TEST_BROWSER" value="firefox" />
-		<antcall target="runtest" />
+		<antcall target="runtest-junit" />
 	</target>
 
 

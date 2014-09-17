@@ -15,8 +15,6 @@
 	<property name="CHROMEDRIVER_EXE"  value="${TEST_LIB_DIR}/chromedriver.exe" />
 	<property name="SELENIUM_DIR"      value="${TEST_LIB_DIR}/selenium-2.37.0" />
 	<property name="SELENIUM_JAR"      value="${SELENIUM_DIR}/selenium-java-2.37.0.jar" />
-	<property name="SELENIUM_SERVER_JAR"
-		value="${TEST_LIB_DIR}/selenium-server-standalone-2.37.0.jar" />
 
 	<!-- test url (probably no need to change these) -->
 	<property
@@ -25,14 +23,16 @@
 
 	<!-- parameters for test on chrome -->
 	<property
-		name="CHROME_EXECUTABLE"
-		value="${env.HOME}/AppData/Local/Google/Chrome/Application/chrome.exe" />
-	<property
-		name="TEST_CHROME_EXTENSION_PATH"
-		value="../chrome" />
-	<property
 		name="TEST_CHROME_PROFILE_PATH"
 		value="./profile/chrome" />
+
+	<!-- parameters for test on opera -->
+	<property
+		name="OPERA_EXECUTABLE"
+		value="C:/Program Files/Opera/Current/opera.exe" />
+	<property
+		name="TEST_OPERA_PROFILE_PATH"
+		value="${env.HOME}/Projects/wasavi/trunk/src/wd-tests/profile/opera" />
 
 	<!-- test parameters for test on firefox -->
 	<property
@@ -47,13 +47,4 @@
 	<property
 		name="TEST_FIREFOX_PROFILE_PATH"
 		value="./profile/firefox" />
-
-	<!-- parameters for test on opera -->
-	<property
-		name="OPERA_EXECUTABLE"
-		value="C:/Program Files/Opera/Current/opera.exe" />
-	<property
-		name="TEST_OPERA_PROFILE_PATH"
-		value="${env.HOME}/Projects/wasavi/trunk/src/wd-tests/profile/opera" />
-
 </project>
