@@ -4421,8 +4421,9 @@ function handleBeforeUnload (e) {
 
 	return e.returnValue = _('The text has been modified.');
 }
-function handleWindowError (message, fileName, lineNumber, error) {
+function handleWindowError (message, fileName, lineNumber, columnNumber, error) {
 	try {
+		// TODO: Should we collect error always?
 		if (!testMode) return;
 		if (!error) {
 			if (typeof message == 'object') {
