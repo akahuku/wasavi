@@ -27,7 +27,6 @@
  */
 
 'use strict';
-
 (function (global) {
 
 /*
@@ -4421,27 +4420,34 @@ function handleBeforeUnload (e) {
 
 	return e.returnValue = _('The text has been modified.');
 }
-function handleWindowError (message, fileName, lineNumber, columnNumber, error) {
+function handleWindowError (message, fileName, lineNumber, columnNumber, errObj) {
 	try {
 		// TODO: Should we collect error always?
 		if (!testMode) return;
-		if (!error) {
+		if (!errObj) {
 			if (typeof message == 'object') {
-				error = message;
+				errObj = message;
 			}
 			else {
-				error = {
+				errObj = {
 					message: message,
 					fileName: fileName,
 					lineNumber: lineNumber
 				};
 			}
 		}
+
 		notifyToParent('notify-error', {
-			message: error.message,
-			fileName: error.filename || error.fileName,
-			lineNumber: error.lineno || error.lineNumber
+			message: errObj.message,
+			fileName: errObj.filename || errObj.fileName,
+			lineNumber: errObj.lineno || errObj.lineNumber
 		});
+
+		error(
+			(errObj.filename || errObj.fileName) + ': ' +
+			(errObj.lineno || errObj.lineNumber) + '\n' +
+			errObj.message
+		);
 	}
 	catch (ex) {
 	}
@@ -7366,13 +7372,14 @@ if (global.WasaviExtensionWrapper
 				 * an issue of security risk about innerHTML
 				 * =========================================
 				 * Assigning a string to innerHTML may cause security risk.
-				 * But in this code, 'wasaviFrame' content is the resource
-				 * within extension package at all the time, and not be manipulated
-				 * from the outside.
+				 * But in this code, Both 'bodyHTML' and 'headHTML' content is
+				 * the resource within extension package at all the time,
+				 * and not be manipulated from the outside.
 				 * Thus we leave innerHTML.
 				 */
 				if (!/^chrome-extension:/.test(window.location.protocol)) {
-					document.body.innerHTML = req.wasaviFrame;
+					document.head.innerHTML = req.headHTML;
+					document.body.innerHTML = req.bodyHTML;
 				}
 				callback();
 			}
