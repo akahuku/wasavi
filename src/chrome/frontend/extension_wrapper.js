@@ -488,11 +488,6 @@
 				self.options.wasaviFrameSource
 			);
 		};
-		this.isTopFrame = function () {
-			var result = false;
-			try { result = !!!window.frameElement; } catch (e) {}
-			return result;
-		};
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
 	/* }}} */

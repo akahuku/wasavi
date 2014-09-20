@@ -42,6 +42,11 @@
 	var wasaviFrameSource;
 
 	/*
+	 * wasaviFrameHeader is content of head in wasavi frame.
+	 */
+	var wasaviFrameHeader;
+
+	/*
 	 * wasaviFrameContent is content of body in wasavi frame.
 	 */
 	var wasaviFrameContent;
@@ -438,7 +443,8 @@
 			wasaviFrameSource = 'data:text/html;charset=UTF-8;base64,' +
 				require('kosian/Utils').Utils.btoa(wasaviFrameSource);
 
-			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1]
+			wasaviFrameHeader = /<head[^>]*>(.+?)<\/head>/.exec(data)[1];
+			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
 		}, {noCache:true, sync:true});
 	}
 
@@ -573,7 +579,8 @@
 			ros: isInit && payload && payload.url != TEST_MODE_URL ?
 				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
 				'',
-			wasaviFrame: isInit ? wasaviFrameContent : null,
+			headHTML: isInit ? wasaviFrameHeader : null,
+			bodyHTML: isInit ? wasaviFrameContent : null,
 			unicodeDictData: isInit ? unicodeDictData : null,
 			lineInputHistories: isInit ? config.get('wasavi_lineinput_histories') : null,
 			registers: isInit ? config.get('wasavi_registers') : null,
