@@ -33,6 +33,7 @@ Wasavi.Theme = function (app) {
 	var fontStyle;
 	var lineHeight;
 	var useStripe;
+	var currentColorSetName;
 	var colors = {
 		statusHue:-1,
 		background:'',
@@ -170,24 +171,25 @@ Wasavi.Theme = function (app) {
 		}
 		return '#888';
 	}
-	function select (colorSet) {
-		if (!container) return;
-
-		if (typeof colorSet == 'object') {
-			var newColors = {};
-			for (var i in colors) {
-				if (!(i in colorSet)) return false;
-				newColors[i] = colors[i] instanceof Array ?
-					[colors[i][0], colorSet[i]] : colorSet[i];
-			}
-			colors = newColors;
-			return true;
+	function doSelect (colorSet) {
+		var newColors = {};
+		for (var i in colors) {
+			if (!(i in colorSet)) return false;
+			newColors[i] = colors[i] instanceof Array ?
+				[colors[i][0], colorSet[i]] : colorSet[i];
 		}
-		colorSet || (colorSet = '');
-		if (colorSet == '' || !(colorSet in colorSets)) {
-			colorSet = 'blight';
+		colors = newColors;
+		return true;
+	}
+	function select (colorSetName) {
+		if (!colorSetName || colorSetName == '' || !(colorSetName in colorSets)) {
+			colorSetName = 'blight';
 		}
-		return select(colorSets[colorSet]);
+		if (colorSetName == currentColorSetName) {
+			return;
+		}
+		currentColorSetName = colorSetName;
+		return doSelect(colorSets[colorSetName]);
 	}
 	function update () {
 		if (!container || !colors || colors.background == '') return;

@@ -745,12 +745,9 @@ ime-mode:disabled; \
 	].join('')));
 
 	// theme
-	theme.container = cnt;
 	theme.fontStyle = fontStyle;
 	theme.lineHeight = lineHeight;
 	theme.useStripe = config.vars.stripe;
-	theme.select();
-	theme.update();
 
 	// focus holder
 	var focusHolder = $('wasavi_focus_holder');
@@ -927,6 +924,13 @@ function runExrc () {
 	}
 	exrc = null;
 	config.setData('nomodified');
+
+	/*
+	 * setup theme
+	 */
+
+	theme.container = $(CONTAINER_ID);;
+	theme.update();
 
 	/*
 	 * show cursor
