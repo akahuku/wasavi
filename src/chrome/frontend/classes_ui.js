@@ -32,6 +32,7 @@ Wasavi.Theme = function (app) {
 	var container;
 	var fontStyle;
 	var lineHeight;
+	var useStripe;
 	var colors = {
 		statusHue:-1,
 		background:'',
@@ -99,6 +100,7 @@ Wasavi.Theme = function (app) {
 		var pieces = {};
 		for (var i in colors) {
 			if (!(colors[i] instanceof Array)) continue;
+			if (i == 'rowBgOdd' && !useStripe) continue;
 			var selector = colors[i][0];
 			var rule = colors[i][1];
 			(pieces[selector] || (pieces[selector] = []))
@@ -169,6 +171,8 @@ Wasavi.Theme = function (app) {
 		return '#888';
 	}
 	function select (colorSet) {
+		if (!container) return;
+
 		if (typeof colorSet == 'object') {
 			var newColors = {};
 			for (var i in colors) {
@@ -224,6 +228,7 @@ Wasavi.Theme = function (app) {
 			container:[function () {}, function (v) {container = v}],
 			fontStyle:[function () {}, function (v) {fontStyle = v}],
 			lineHeight:[function () {}, function (v) {lineHeight = v}],
+			useStripe:[function () {}, function (v) {useStripe = v}],
 			colorSets:function () {return Object.keys(colorSets)}
 		}
 	);

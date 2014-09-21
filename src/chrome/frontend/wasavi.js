@@ -748,6 +748,7 @@ ime-mode:disabled; \
 	theme.container = cnt;
 	theme.fontStyle = fontStyle;
 	theme.lineHeight = lineHeight;
+	theme.useStripe = config.vars.stripe;
 	theme.select();
 	theme.update();
 
@@ -4886,6 +4887,11 @@ var config = new Wasavi.Configurator(appProxy,
 		}],
 		['jkdenotative', 'b', false],
 		['undoboundlen', 'i', 20],
+		['stripe', 'b', true, function (v) {
+			theme.useStripe = v;
+			theme.update();
+			return v;
+		}],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
