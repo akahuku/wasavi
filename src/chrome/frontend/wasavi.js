@@ -389,15 +389,9 @@ function install (x, req) {
 	 *   |   |
 	 *   |   + div#wasavi_footer_modeline
 	 *   |   |   |
-	 *   |   |   + table#wasavi_footer_modeline_table
-	 *   |   |       |
-	 *   |   |       + tbody
-	 *   |   |         |
-	 *   |   |         + tr
-	 *   |   |             |
-	 *   |   |             + td#wasavi_footer_file_indicator [file name indicator]
-	 *   |   |             |
-	 *   |   |             + td#wasavi_footer_prefix_indicator [prefix input indicator]
+	 *   |   |   + div#wasavi_footer_prefix_indicator [prefix input indicator]
+	 *   |   |   |
+	 *   |   |   + div#wasavi_footer_file_indicator [file name indicator]
 	 *   |   |
 	 *   |   + div#wasavi_footer_alter
 	 *   |       |
@@ -591,14 +585,14 @@ overflow:hidden; \
 #wasavi_footer_alter { \
 ' + boxSizingPrefix + 'box-sizing:border-box; \
 } \
-#wasavi_footer_modeline_table,#wasavi_footer_alter_table { \
+#wasavi_footer_alter_table { \
 padding:0; \
 margin:0; \
 border-collapse:collapse; \
 border:none; \
 background-color:transparent \
 } \
-#wasavi_footer_modeline>table td,#wasavi_footer_alter>table td { \
+#wasavi_footer_alter>table td { \
 border:none; \
 padding:0; \
 line-height:1; \
@@ -608,12 +602,16 @@ white-space:pre; \
 padding:0; \
 line-height:1; \
 text-align:left; \
+white-space:nowrap; \
+overflow:hidden; \
+text-overflow:ellipsis; \
 } \
 #wasavi_footer_prefix_indicator { \
-width:1px; \
-padding:0; \
+float:right; \
+padding:0 0 0 8px; \
 line-height:1; \
 text-align:right; \
+white-space:pre; \
 } \
 #wasavi_footer_input_indicator { \
 width:1px; \
@@ -1035,12 +1033,11 @@ function setGeometory (target) {
 	var conCon = $('wasavi_console_container');
 	var con = $('wasavi_console');
 	var conScaler = $('wasavi_console_scaler');
-	var fmodTable = $('wasavi_footer_modeline_table');
 	var faltTable = $('wasavi_footer_alter_table');
 	var fNotifier = $('wasavi_footer_notifier');
 
 	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !fmodTable || !faltTable || !fNotifier) {
+	||  !faltTable || !fNotifier) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
@@ -1082,10 +1079,6 @@ function setGeometory (target) {
 
 	style(conScaler, {
 		width:(rect.width - 16) + 'px'
-	});
-
-	style(fmodTable, {
-		width:(rect.width - 4) + 'px'
 	});
 
 	style(faltTable, {
