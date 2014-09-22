@@ -1271,6 +1271,15 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testSubst4 () {
+		Wasavi.send(":set ai\n");
+		Wasavi.send("i\t\tfoo\nbar\nbaz\u001b");
+		Wasavi.send(":%s/^\\t//g\n");
+
+		assertValue("\tfoo\n\tbar\n\tbaz");
+	}
+
+	@Test
 	public void testSubstPatternOmit () {
 		Wasavi.send(":sushi\n");
 		Wasavi.send("i1\n2\n3\u001b");
