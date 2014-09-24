@@ -2080,8 +2080,8 @@ function processInput (code, e, ignoreAbbreviation) {
 			cursor.ensureVisible();
 			cursor.update({visible:true});
 		}
-		notifyCommandComplete();
-		return;
+		result.needEmitEvent = true;
+		break;
 
 	default:
 		inputModeSub = '';

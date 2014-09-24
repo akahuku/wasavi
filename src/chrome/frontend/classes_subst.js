@@ -33,17 +33,12 @@ Wasavi.SubstituteWorker = function (app) {
 	this.patternString = '';
 	this.pattern = null;
 	this.replOpcodes = null;
+	this.range = null;
 	this.isGlobal = false;
 	this.isConfirm = false;
-	this.text = '';
-	this.textPreLength = 0;
-	this.textRowCount = 0;
-	this.foundCount = 0;
 	this.substCount = 0;
-	this.re;
-	this.currentPos;
-	this.prevPos;
-	this.prevOffset;
+	this.buffer = null;
+	this.k = null;
 };
 Wasavi.SubstituteWorker.prototype = {
 	run: function (range, pattern, repl, options) {
@@ -107,165 +102,170 @@ Wasavi.SubstituteWorker.prototype = {
 			options = options.substring(re[0].length);
 		}
 
+		// update search history
 		app.lastRegexFindCommand.push({direction:1});
 		app.lastRegexFindCommand.setPattern(pattern);
 		app.lastSubstituteInfo.pattern = pattern;
 		app.lastSubstituteInfo.replacement = repl;
+		app.registers.set('/', app.lastRegexFindCommand.pattern);
+
+		// initialize regex instance
 		this.patternString = pattern;
 		this.pattern = app.low.getFindRegex(pattern);
 		this.pattern.lastIndex = 0;
-		app.registers.set('/', app.lastRegexFindCommand.pattern);
+
+		// compile the replace pattern into opcodes
 		this.replOpcodes = this.compileReplacer(repl);
 		if (!this.replOpcodes) {
 			return _('Internal Error: invalid replace function');
 		}
 
+		// create search buffer
 		var rg = document.createRange();
-		rg.setStartBefore(t.rowNodes(0));
-		rg.setEndBefore(t.rowNodes(range[0]));
-		this.textPreLength = rg.toString().length;
-		this.textRowCount = range[1] - range[0] + 1;
-
 		rg.setStartBefore(t.rowNodes(range[0]));
 		rg.setEndAfter(t.rowNodes(range[1]));
-		this.text = trimTerm(rg.toString());
+		this.buffer = this.createBuffer(trimTerm(rg.toString()));
 
-		this.substCount = 0;
-		this.foundCount = 0;
-		if (this.isConfirm) {
-			app.low.setSubstituteWorker(this);
-			this.kontinue();
-		}
-		else {
-			this.burst();
-		}
-		return undefined;
-	},
-	burst: function () {
-		var t = this.app.buffer;
-		var prevOffset, prevRow, re;
-		var nullNewline = {length:0};
+		if (this.buffer.length) {
+			// found something
+			this.range = range;
+			this.substCount = 0;
 
-		if ((re = this.pattern.exec(this.text))) {
-			var row, col;
-			var pos = t.linearPositionToBinaryPosition(re.index + this.textPreLength);
-			row = pos.row;
-			col = pos.col;
-			this.doSubstitute(re, row, col);
-			prevOffset = re.index;
-			prevRow = row;
-			this.foundCount++;
-
-			while ((re = this.pattern.exec(this.text))) {
-				var delta = (this.text.substring(prevOffset, re.index).match(/\n/g) || nullNewline).length;
-				row = prevRow + delta;
-				if (this.isGlobal || row != prevRow) {
-					col = re.index - (Math.max(-1, this.text.lastIndexOf('\n', re.index - 1)) + 1);
-					this.doSubstitute(re, row, col);
-				}
-				prevOffset = re.index;
-				prevRow = row;
-				this.foundCount++;
+			if (this.isConfirm) {
+				app.low.setSubstituteWorker(this);
+				this.k = {
+					pos: null,
+					posPrev: null,
+					bufferPos: 0,
+					indexPrev: -1,
+				};
+				this.kontinue();
+			}
+			else {
+				this.burst();
 			}
 		}
-
-		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
-		if (this.foundCount) {
-			this.showResult();
-		}
 		else {
+			// not found
 			this.showNotFound();
 		}
 	},
+	createBuffer: function (text) {
+		var re;
+		var buffer = [];
+		var lastIndex = -1;
+		var pattern = this.pattern;
+
+		while ((re = pattern.exec(text))) {
+			if (pattern.lastIndex <= lastIndex) {
+				pattern.lastIndex = lastIndex + 1;
+				continue;
+			}
+			buffer.push(re);
+			lastIndex = pattern.lastIndex;
+		}
+
+		return buffer;
+	},
+	burst: function () {
+		var t = this.app.buffer;
+		var buffer = this.buffer;
+		var indexPrev = -1;
+		var pos;
+		var replacer;
+
+		t.setSelectionRange(new Wasavi.Position(this.range[0], 0));
+
+		for (var i = 0, goal = buffer.length; i < goal; i++) {
+			pos = t.offsetBy(t.selectionStart, buffer[i].index - indexPrev - 1);
+			replacer = this.executeReplacer(buffer[i]);
+			indexPrev = buffer[i].index;
+
+			this.doSubstitute(pos, buffer[i][0].length, replacer);
+		}
+
+		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
+
+		this.showResult();
+		this.buffer = null;
+	},
 	kontinue: function (action) {
 		var t = this.app.buffer;
-		var nullNewline = {length:0};
 
 		if (action == undefined) {
-			if ((this.re = this.pattern.exec(this.text))) {
-				var pos = t.linearPositionToBinaryPosition(this.re.index + this.textPreLength);
-				this.currentPos = pos;
-				this.prevPos = new Wasavi.Position(-1, -1);
-				this.foundCount++;
-				t.setSelectionRange(pos);
-				this.app.cursor.ensureVisible();
-				t.emphasis(pos, this.re[0].length);
-				this.app.low.requestInputMode('console_wait', {modeSub:'ex_s'});
-				this.app.low.requestShowMessage(_('Substitute? ([y]es, [n]o, [q]uit)'), false, true, true);
-			}
-			else {
-				this.showNotFound();
-			}
-		}
-		else {
-			if (this.re) {
-				t.unEmphasis();
+			this.k.pos = t.offsetBy(
+				new Wasavi.Position(this.range[0], 0),
+				this.buffer[this.k.bufferPos].index);
+			this.k.posPrev = new Wasavi.Position(-1, 0);
 
-				switch (action.toLowerCase()) {
-				case 'y':
-					if (this.isGlobal || this.currentPos.row != this.prevPos.row) {
-						this.doSubstitute(this.re, this.currentPos.row, this.currentPos.col);
-					}
-					/*FALLTHRU*/
-				case 'n':
-					this.prevOffset = this.re.index;
-					this.prevPos = this.currentPos;
-					this.re = this.pattern.exec(this.text);
-					break;
-				case 'q':
-				case '\u001b':
-					this.re = null;
-					break;
-				default:
-					bell.play();
-					break;
+			t.setSelectionRange(this.k.pos);
+			this.app.cursor.ensureVisible();
+			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
+
+			this.app.low.requestInputMode(
+				'console_wait', {modeSub:'ex_s'});
+			this.app.low.requestShowMessage(
+				_('Substitute? ([y]es, [n]o, [q]uit)'),
+				false, true, true);
+			return;
+		}
+
+		if (this.k.bufferPos < this.buffer.length) {
+			t.unEmphasis();
+
+			switch (action.toLowerCase()) {
+			case 'y':
+				if (this.isGlobal || this.k.pos.row != this.k.posPrev.row) {
+					var replacer = this.executeReplacer(this.buffer[this.k.bufferPos]);
+					this.doSubstitute(
+						this.k.pos,
+						this.buffer[this.k.bufferPos][0].length,
+						replacer);
 				}
-			}
-			if (this.re) {
-				var delta = (this.text.substring(this.prevOffset, this.re.index).match(/\n/g) || nullNewline).length;
-				var pos = new Wasavi.Position(
-					this.prevPos.row + delta,
-					this.re.index -
-						(Math.max(-1, this.text.lastIndexOf('\n', this.re.index - 1)) + 1));
-				this.currentPos = pos;
-				this.foundCount++;
-				t.setSelectionRange(pos);
-				this.app.cursor.ensureVisible();
-				t.emphasis(pos, this.re[0].length);
+				/*FALLTHRU*/
+
+			case 'n':
+				this.k.indexPrev = this.buffer[this.k.bufferPos].index;
+				this.k.bufferPos++;
+				break;
+
+			case 'q':
+			case '\u001b':
+				this.k.bufferPos = this.buffer.length;
+				break;
+
+			default:
+				t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
+				this.app.low.requestRegisterNotice();
 				return true;
 			}
-			else {
-				this.re = this.pattern = this.replOpcodes =
-				this.text = this.currentPos = this.prevOffset = this.prevPos.row = null;
-				this.app.low.popInputMode();
-				this.app.cursor.ensureVisible();
-				t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
-				this.showResult(true);
-				return false;
-			}
 		}
-		return false;
+
+		if (this.k.bufferPos < this.buffer.length) {
+			this.k.posPrev = this.k.pos;
+			this.k.pos = t.offsetBy(t.selectionStart, this.buffer[this.k.bufferPos].index - this.k.indexPrev - 1);
+			t.setSelectionRange(this.k.pos);
+			this.app.cursor.ensureVisible();
+			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
+			return true;
+		}
+
+		this.k = this.buffer = null;
+		this.app.low.popInputMode();
+		this.app.cursor.ensureVisible();
+		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
+		this.showResult();
 	},
-	doSubstitute: function (re, row, col) {
+	doSubstitute: function (pos, length, replacer) {
 		var t = this.app.buffer;
-		var replaced = this.executeReplacer(re);
-		t.selectionStart = new Wasavi.Position(row, col);
-		t.selectionEnd = t.offsetBy(t.selectionStart, re[0].length);
-		this.app.edit.insert(replaced);
-		this.text =
-			this.text.substring(0, re.index) +
-			replaced +
-			this.text.substring(re.index + re[0].length);
-		this.pattern.lastIndex +=
-			replaced.length - (re[0].length ? re[0].length : -1);
-		this.pattern.lastIndex +=
-			this.pattern.lastIndex >= this.text.length || this.text.charAt(this.pattern.lastIndex) == '\n' ?
-			1 : 0;
+		t.selectionStart = pos;
+		t.selectionEnd = t.offsetBy(t.selectionStart, length);
+		this.app.edit.insert(replacer);
 		this.substCount++;
 	},
 	showResult: function (immediate) {
 		if (this.substCount) {
-			var line = _('{0} {substitution:0} on {1} {line:1}.', this.substCount, this.textRowCount);
+			var line = _('{0} {substitution:0} on {1} {line:1}.', this.substCount, this.range[1] - this.range[0] + 1);
 			immediate ? this.app.low.showMessage(line) : this.app.low.requestShowMessage(line);
 			this.app.isEditCompleted = true;
 		}
