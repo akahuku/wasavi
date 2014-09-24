@@ -1373,6 +1373,20 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testSubstQueriedGiveUp () {
+		Wasavi.send("ifirst\nsecond\nthird\u001b");
+
+		Wasavi.send("1G", ":%s/i/I/gc\n");
+		Wasavi.send("y", "q");
+		assertEquals("#1-1", "1 substitution on 3 lines.", Wasavi.getLastMessage());
+		assertValue("#1-2", "fIrst\nsecond\nthird");
+		assertPos("#1-3", 2, 2);
+
+		Wasavi.send("u");
+		assertValue("#2-1", "first\nsecond\nthird");
+	}
+
+	@Test
 	public void testSubstQueriedNonMatch () {
 		Wasavi.send("ifirst\nsecond\nthird\u001b");
 
@@ -1383,7 +1397,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("1G", "1|");
 		Wasavi.send(":%s/i/!/gc\n");
 		Wasavi.send("yn");
-		assertPos("#2-1", 2, 0);
+		assertPos("#2-1", 2, 2);
 	}
 
 	@Test
@@ -1503,8 +1517,20 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("1G", ":s/\\*\\?$/<\\/li>/g\n");
 		assertValue("#1-1", "1</li>\n012\n3*");
 
+		/*
+		 * subst by zero width match,
+		 *
+		 *   012 -> !0!1!2!
+		 *
+		 * note: this result is compatible to nvi.
+		 *       the result on vim is
+		 *
+		 *         012 -> !0!1!2
+		 *
+		 *       (a newline is excepted from a zero width match)
+		 */
 		Wasavi.send("2G", ":s/a\\?/!/g\n");
-		assertValue("#1-2", "1</li>\n!0!1!2\n3*");
+		assertValue("#1-2", "1</li>\n!0!1!2!\n3*");
 	}
 
 	@Test

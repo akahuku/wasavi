@@ -134,10 +134,12 @@ Wasavi.SubstituteWorker.prototype = {
 			if (this.isConfirm) {
 				app.low.setSubstituteWorker(this);
 				this.k = {
+					bufferPos: 0,
 					pos: null,
 					posPrev: null,
-					bufferPos: 0,
 					indexPrev: -1,
+					delta: 0,
+					lastRow: -1
 				};
 				this.kontinue();
 			}
@@ -170,18 +172,30 @@ Wasavi.SubstituteWorker.prototype = {
 	burst: function () {
 		var t = this.app.buffer;
 		var buffer = this.buffer;
-		var indexPrev = -1;
+		var indexPrev = 0;
+		var delta = 0;
+		var lastRow = -1;
 		var pos;
+		var posPrev;
 		var replacer;
 
-		t.setSelectionRange(new Wasavi.Position(this.range[0], 0));
+		posPrev = new Wasavi.Position(this.range[0], 0);
 
 		for (var i = 0, goal = buffer.length; i < goal; i++) {
-			pos = t.offsetBy(t.selectionStart, buffer[i].index - indexPrev - 1);
-			replacer = this.executeReplacer(buffer[i]);
-			indexPrev = buffer[i].index;
+			pos = t.offsetBy(posPrev, buffer[i].index - indexPrev + delta);
 
-			this.doSubstitute(pos, buffer[i][0].length, replacer);
+			if (this.isGlobal || pos.row > lastRow) {
+				replacer = this.executeReplacer(buffer[i]);
+				delta = replacer.length - buffer[i][0].length;
+				lastRow = pos.row;
+				this.doSubstitute(pos, buffer[i][0].length, replacer);
+			}
+			else {
+				delta = 0;
+			}
+
+			indexPrev = buffer[i].index;
+			posPrev = pos;
 		}
 
 		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
@@ -193,10 +207,8 @@ Wasavi.SubstituteWorker.prototype = {
 		var t = this.app.buffer;
 
 		if (action == undefined) {
-			this.k.pos = t.offsetBy(
-				new Wasavi.Position(this.range[0], 0),
-				this.buffer[this.k.bufferPos].index);
-			this.k.posPrev = new Wasavi.Position(-1, 0);
+			this.k.posPrev = new Wasavi.Position(this.range[0], 0);
+			this.k.pos = t.offsetBy(this.k.posPrev, this.buffer[this.k.bufferPos].index);
 
 			t.setSelectionRange(this.k.pos);
 			this.app.cursor.ensureVisible();
@@ -215,12 +227,17 @@ Wasavi.SubstituteWorker.prototype = {
 
 			switch (action.toLowerCase()) {
 			case 'y':
-				if (this.isGlobal || this.k.pos.row != this.k.posPrev.row) {
+				if (this.isGlobal || this.k.pos.row != this.k.lastRow) {
 					var replacer = this.executeReplacer(this.buffer[this.k.bufferPos]);
+					this.k.delta = replacer.length - this.buffer[this.k.bufferPos][0].length;
+					this.k.lastRow = this.k.pos.row;
 					this.doSubstitute(
 						this.k.pos,
 						this.buffer[this.k.bufferPos][0].length,
 						replacer);
+				}
+				else {
+					this.k.delta = 0;
 				}
 				/*FALLTHRU*/
 
@@ -243,18 +260,25 @@ Wasavi.SubstituteWorker.prototype = {
 
 		if (this.k.bufferPos < this.buffer.length) {
 			this.k.posPrev = this.k.pos;
-			this.k.pos = t.offsetBy(t.selectionStart, this.buffer[this.k.bufferPos].index - this.k.indexPrev - 1);
+			this.k.pos = t.offsetBy(
+				this.k.posPrev,
+				this.buffer[this.k.bufferPos].index - this.k.indexPrev + this.k.delta);
+
 			t.setSelectionRange(this.k.pos);
 			this.app.cursor.ensureVisible();
 			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
+
 			return true;
 		}
 
-		this.k = this.buffer = null;
+		if (this.buffer.length == this.substCount) {
+			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
+		}
+
 		this.app.low.popInputMode();
 		this.app.cursor.ensureVisible();
-		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
 		this.showResult();
+		this.k = this.buffer = null;
 	},
 	doSubstitute: function (pos, length, replacer) {
 		var t = this.app.buffer;
