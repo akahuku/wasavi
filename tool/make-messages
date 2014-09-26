@@ -31,6 +31,17 @@ $extensionInfo = array(
 		"message" => "when a key combination is entered",
 		"description" => ""
 	),
+	"option_qa_blacklist_title" => array(
+		"message" => "Exceptional URLs",
+		"description" => ""
+	),
+	"option_qa_blacklist_tips" => array(
+		"message" => "* Put any URL to prevent from on-focus activation.
+* One URL per line.
+* A line starting with [c];[/c] or [c]#[/c] is treated as comment.
+* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
+		"description" => ""
+	),
 	"option_target_elements_desc" => array(
 		"message" => "* Format is <(modifier-)* key>,...
 For example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"
@@ -279,6 +290,7 @@ function main ($argv)
 			break;
 		}
 	}
+	echo "\n\n\n";
 
 	if (is_array($messages)) {
 		ksort($messages);

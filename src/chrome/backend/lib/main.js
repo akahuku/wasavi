@@ -170,6 +170,9 @@
 		quickActivation: {
 			def: false
 		},
+		qaBlacklist: {
+			def: ''
+		},
 		logMode: {
 			def: false,
 			set: function (value) {
@@ -574,6 +577,7 @@
 
 			// for agent and options
 			pageHooksCode: isInit ? null : pageHooksCode,
+			qaBlacklist: isInit ? null : config.get('qaBlacklist'),
 
 			// for wasavi
 			ros: isInit && payload && payload.url != TEST_MODE_URL ?
