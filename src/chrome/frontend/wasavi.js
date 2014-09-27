@@ -4470,7 +4470,7 @@ function handleKeydown (e) {
 	}
 
 	isInteractive = true;
-	if (e.isNoremap) {
+	if (e.isNoremap || inputModeSub != '') {
 		handleKeydownMain(e);
 	}
 	else {

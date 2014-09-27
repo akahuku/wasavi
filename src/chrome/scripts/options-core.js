@@ -118,6 +118,12 @@ function initPage (req) {
 		el.checked = true;
 	}
 
+	// blacklist
+	el = $('qa-blacklist');
+	if (el && el.nodeName == 'TEXTAREA') {
+		el.value = req.qaBlacklist;
+	}
+
 	// shortcut
 	el = $('shortcut');
 	if (el && el.nodeName == 'INPUT') {
@@ -175,26 +181,29 @@ function initPage (req) {
 	 * replace all message ids to translated one
 	 */
 
+	function defaultConverter (node, message) {
+		node.nodeValue = '';
+		setMarkup(node.parentNode, message);
+	}
+	function extractList (node, message) {
+		node = node.parentNode;
+		node.textContent = '';
+		var ul = node.appendChild(document.createElement('ul'));
+		message
+		.replace(/^\s*\*\s*/, '')
+		.split(/\n\*\s*/)
+		.forEach(function (line) {
+			var li = ul.appendChild(document.createElement('li'));
+			setMarkup(li, line);
+		});
+	}
+
 	var converter = {
-		option_target_elements_desc: function (node, message) {
-			node = node.parentNode;
-			node.textContent = '';
-			var ul = node.appendChild(document.createElement('ul'));
-			message
-			.replace(/^\s*\*\s*/, '')
-			.split(/\n\*\s*/)
-			.forEach(function (line) {
-				var li = ul.appendChild(document.createElement('li'));
-				setMarkup(li, line);
-			});
-		}
+		option_target_elements_desc: extractList,
+		option_qa_blacklist_tips: extractList
 	};
 	var iter = document.createNodeIterator(
 		document, window.NodeFilter.SHOW_TEXT, null, false);
-	var defaultConverter = function (node, message) {
-		node.nodeValue = '';
-		setMarkup(node.parentNode, message);
-	};
 
 	var texts = [];
 	for (var node = iter.nextNode(); node; node = iter.nextNode()) {
@@ -353,6 +362,12 @@ function handleOptionsSave () {
 	el = document.querySelector('input[name="quick-activation"]:checked');
 	if (el) {
 		items.push({key:'quickActivation', value:el.value == '1'});
+	}
+
+	// blacklist
+	el = $('qa-blacklist');
+	if (el && el.nodeName == 'TEXTAREA') {
+		items.push({key:'qaBlacklist', value:el.value});
 	}
 
 	// shortcut

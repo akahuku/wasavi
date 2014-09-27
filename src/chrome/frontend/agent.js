@@ -660,6 +660,58 @@ function toPlainText (input) {
 	}
 }
 
+function isInBlacklist (blacklist) {
+	return blacklist.split('\n').some(function (url) {
+		url = url.replace(/^\s+|\s+$/g, '');
+		if (/^[#;]/.test(url)) return;
+
+		try {
+			url = new RegExp('^' + url
+				.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
+				.replace(/\?/g, '.')
+				.replace(/\*/g, '.+?'), 'i');
+
+			if (url.test(window.location.href)) return true;
+		}
+		catch (e) {}
+	});
+}
+
+function matchWithShortcut (e) {
+	return shortcutCode && shortcutCode.some(function (code) {
+		for (var i in code) {
+			if (!(i in e)) return false;
+			if (e[i] !== code[i]) return false;
+		}
+		return true;
+	});
+}
+
+/**
+ * page agent creator
+ * ----------------
+ */
+
+function createPageAgent (doHook) {
+	var parent = document.head || document.body || document.documentElement;
+	if (!parent) return;
+
+	if (doHook) {
+		window.addEventListener('keydown', handleKeydown, true);
+	}
+
+	window.addEventListener('focus', handleTargetFocus, true);
+
+	var s = document.createElement('script');
+	s.onload = function () {
+		this.onload = null;
+		this.parentNode.removeChild(this);
+	};
+	s.type = 'text/javascript';
+	s.src = extension.getKeyHookScriptSrc();
+	parent.appendChild(s);
+}
+
 /**
  * unexpected wasavi frame deletion handler
  * ----------------
@@ -742,7 +794,7 @@ function handleKeydown (e) {
  */
 
 function handleTargetFocus (e) {
-	if (targetElement || !e || !e.target || !enableList) return;
+	if (!quickActivation || targetElement || !e || !e.target || !enableList) return;
 
 	if (e.target.isContentEditable && enableList.enableContentEditable
 	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
@@ -787,21 +839,6 @@ function handleBeforeUnload (e) {
 }
 
 /**
- * shortcut key tester
- * ----------------
- */
-
-function matchWithShortcut (e) {
-	return shortcutCode && shortcutCode.some(function (code) {
-		for (var i in code) {
-			if (!(i in e)) return false;
-			if (e[i] !== code[i]) return false;
-		}
-		return true;
-	});
-}
-
-/**
  * agent initializer
  * ----------------
  */
@@ -812,37 +849,9 @@ function handleAgentInitialized (req) {
 		window.WasaviOptions.initPage(req);
 	}
 
-	if (quickActivation) {
-		window.addEventListener('focus', handleTargetFocus, true);
-		window.removeEventListener('keydown', handleKeydown, true);
-	}
-
 	extension.isTopFrame()
 	&& document.querySelector('textarea')
 	&& info('running on ', window.location.href.replace(/[#?].*$/, ''));
-}
-
-/**
- * page agent
- * ----------------
- */
-
-function createPageAgent (doHook) {
-	var parent = document.head || document.body || document.documentElement;
-	if (!parent) return;
-
-	if (doHook) {
-		window.addEventListener('keydown', handleKeydown, true);
-	}
-
-	var s = document.createElement('script');
-	s.onload = function () {
-		this.onload = null;
-		this.parentNode.removeChild(this);
-	};
-	s.type = 'text/javascript';
-	s.src = extension.getKeyHookScriptSrc();
-	parent.appendChild(s);
 }
 
 /**
@@ -1026,6 +1035,7 @@ function handleBackendMessage (req) {
 	 */
 	case 'update-storage':
 		var logbuf = [];
+		var qaBlacklist;
 		for (var i in req.items) {
 			var item = req.items[i];
 			switch (item.key) {
@@ -1039,7 +1049,7 @@ function handleBackendMessage (req) {
 				logbuf.push(item.key);
 				break;
 
-			case 'quickActivate':
+			case 'quickActivation':
 				quickActivation = item.value;
 				logbuf.push(item.key);
 				break;
@@ -1048,7 +1058,15 @@ function handleBackendMessage (req) {
 				logMode = item.value;
 				logbuf.push(item.key);
 				break;
+
+			case 'qaBlacklist':
+				qaBlacklist = item.value;
+				logbuf.push(item.key);
+				break;
 			}
+		}
+		if (quickActivation && qaBlacklist) {
+			quickActivation = !isInBlacklist(qaBlacklist);
 		}
 		logbuf.length && log(
 			'update-storage: consumed ', logbuf.join(', '));
@@ -1161,7 +1179,7 @@ function handleConnect (req) {
 	enableList = req.targets;
 	shortcutCode = req.shortcutCode;
 	fontFamily = req.fontFamily;
-	quickActivation = req.quickActivation;
+	quickActivation = req.quickActivation && !isInBlacklist(req.qaBlacklist);
 	extraHeight = 0;
 	devMode = req.devMode;
 	logMode = req.logMode;
