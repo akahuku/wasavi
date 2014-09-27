@@ -1784,8 +1784,8 @@ Wasavi.MapManager = function (app) {
 	}
 	function markExpandedNoremap (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
-			item[i].isNoremap = true;
-			item[i].mapExpanded = true;
+			items[i].isNoremap = true;
+			items[i].mapExpanded = true;
 		}
 	}
 	function expand (rhs, remap, handler) {
