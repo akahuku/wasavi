@@ -299,6 +299,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 		--localedir=$(SRC_DIR)/chrome/_locales \
 		--ver=$(VERSION) \
 		--strip-update-url
+	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 
 #	amo(beta) version
@@ -309,6 +310,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 		--localedir=$(SRC_DIR)/chrome/_locales \
 		--ver=$(VERSION)beta \
 		--strip-update-url
+	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 
 	@echo ///
