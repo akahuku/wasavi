@@ -289,7 +289,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		var item = getItem(name);
 		return item ? (reformat ? item.visibleString : item.value) : null;
 	}
-	function setData (name, value) {
+	function setData (name, value, skipSubSetter) {
 		var off = false;
 		if (/^no/.test(name)) {
 			name = name.substring(2);
@@ -310,7 +310,17 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		}
 		else {
 			try {
+				var subSetter;
+				if (skipSubSetter) {
+					subSetter = item.subSetter;
+					item.subSetter = null;
+				}
+
 				item.value = value;
+
+				if (subSetter) {
+					item.subSetter = subSetter;
+				}
 			}
 			catch (e) {
 				return e.message;

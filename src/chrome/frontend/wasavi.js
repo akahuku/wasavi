@@ -125,7 +125,8 @@
 			regalizeFilePath:regalizeFilePath,
 			registerMultiplexCallback:registerMultiplexCallback,
 			removeMultiplexCallback:removeMultiplexCallback,
-			interruptMultiplexCallback:interruptMultiplexCallback
+			interruptMultiplexCallback:interruptMultiplexCallback,
+			notifyError:handleWindowError
 		}),
 
 		/*
@@ -1089,8 +1090,8 @@ function setGeometory (target) {
 			bottom:(footer.offsetHeight + 4) + 'px'
 	});
 
-	config.setData('lines', parseInt(editor.clientHeight / lineHeight));
-	config.setData('columns', parseInt(editor.clientWidth / charWidth));
+	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
+	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
 }
 function setInputMode (newInputMode, newInputModeSub, prefix, initial) {
 	var newState;
@@ -4430,21 +4431,23 @@ function handleWindowError (message, fileName, lineNumber, columnNumber, errObj)
 				errObj = {
 					message: message,
 					fileName: fileName,
-					lineNumber: lineNumber
+					lineNumber: lineNumber,
+					stack: '*stacktrace is not available*'
 				};
 			}
 		}
 
 		notifyToParent('notify-error', {
-			message: errObj.message,
-			fileName: errObj.filename || errObj.fileName,
-			lineNumber: errObj.lineno || errObj.lineNumber
+			message: errObj.message || '?',
+			fileName: errObj.filename || errObj.fileName || '?',
+			lineNumber: errObj.lineno || errObj.lineNumber || -1
 		});
 
 		error(
-			(errObj.filename || errObj.fileName) + ': ' +
-			(errObj.lineno || errObj.lineNumber) + '\n' +
-			errObj.message
+			(errObj.filename || errObj.fileName || '?') + ': ' +
+			(errObj.lineno || errObj.lineNumber || -1) + '\n' +
+			(errObj.message || '?') + '\n' +
+			(errObj.stack || '*stacktrace is not available*')
 		);
 	}
 	catch (ex) {
@@ -4889,6 +4892,10 @@ var config = new Wasavi.Configurator(appProxy,
 			theme.update();
 			return v;
 		}],
+		['syncsize', 'b', true, function (v) {
+			notifyToParent('set-size', {isSyncSize: v});
+			return v;
+		}],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
@@ -4915,7 +4922,16 @@ var config = new Wasavi.Configurator(appProxy,
 		//['backup', 's', ''],
 		//['cdpath', 's', ':'],
 		//['cedit', 's', ''],
-		['columns', 'i', 0, null, true],
+		['columns', 'i', 0, function (v) {
+			if (isNumber(charWidth)) {
+				var ed = $(EDITOR_CORE_ID);
+				notifyToParent('set-size', {
+					width: v * charWidth + (ed.offsetWidth - ed.clientWidth),
+					isSyncSize: config.vars.syncsize
+				});
+			}
+			return v;
+		}, true],
 		//['combined', 'b', false],
 		//['comment', 'b', false],
 		//['escapetime', 'i', 6],
@@ -4928,7 +4944,15 @@ var config = new Wasavi.Configurator(appProxy,
 		//['inputencoding', 's', ''],
 		//['keytime', 'i', 6],
 		//['leftright', 'b', false],
-		['lines', 'i', 0, null, true],
+		['lines', 'i', 0, function (v) {
+			if (isNumber(lineHeight)) {
+				notifyToParent('set-size', {
+					height: v * lineHeight,
+					isSyncSize: config.vars.syncsize
+				});
+			}
+			return v;
+		}, true],
 		//['lisp', 'b', false],
 		//['lock', 'b', true],
 		['matchtime', 'i', 5],

@@ -66,11 +66,14 @@ var pageHooksCode;
 var targetElement;
 var wasaviFrame;
 var wasaviFrameInternalId;
+var widthOwn;
+var heightOwn;
 var extraHeight;
 var isFullscreen;
-var targetElementResizedTimer;
+var isSyncSize;
+var removeListener;
+var resizeListener;
 var wasaviFrameTimeoutTimer;
-var mutationObserver;
 var getValueCallback;
 var stateClearTimer;
 var keyStrokeLog = [];
@@ -141,7 +144,7 @@ function notifyToChild (id, payload) {
 	});
 }
 
-function locate (iframe, target, isFullscreen, extraHeight) {
+function locate (iframe, target, opts) {
 	function isFixedPosition (element) {
 		var isFixed = false;
 		for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
@@ -164,6 +167,10 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		}
 	}
 
+	opts || (opts = {});
+	var isFullscreen = !!opts.isFullscreen;
+	var extraHeight = opts.extraHeight || 0;
+
 	if (isFullscreen) {
 		var div = document.body.appendChild(document.createElement('div'));
 		div.style.position = 'fixed';
@@ -185,8 +192,8 @@ function locate (iframe, target, isFullscreen, extraHeight) {
 		var rect = target.getBoundingClientRect();
 		var position = 'fixed';
 		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
-		var widthAdjusted = Math.max(MIN_WIDTH_PIXELS, rect.width);
-		var heightAdjusted = Math.max(MIN_HEIGHT_PIXELS, rect.height + (extraHeight || 0));
+		var widthAdjusted = Math.max(MIN_WIDTH_PIXELS, opts.width || rect.width);
+		var heightAdjusted = Math.max(MIN_HEIGHT_PIXELS, (opts.height || rect.height) + extraHeight);
 
 		if (!isFixedPosition(target)) {
 			position = 'absolute';
@@ -336,6 +343,14 @@ function runCore (element, frameSource, value) {
 	document.body.appendChild(wasaviFrame);
 
 	//
+	widthOwn = heightOwn = null;
+	extraHeight = 0;
+	isFullscreen = false;
+	isSyncSize = true;
+	removeListener = createElementRemoveListener(wasaviFrame, handleWasaviFrameRemove);
+	wasaviFrameTimeoutTimer = setTimeout(handleWasaviFrameInitTimeout, BOOT_WAIT_TIMEOUT_MSECS);
+
+	//
 	var rect = locate(wasaviFrame, element);
 	extension.postMessage({
 		type:'push-payload',
@@ -359,26 +374,6 @@ function runCore (element, frameSource, value) {
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
 		marks:element.getAttribute(MARKS_ID)
 	});
-
-	//
-	var mo = window.MutationObserver
-	|| window.WebKitMutationObserver
-	|| window.OMutationObserver
-	|| window.MozMutationObserver;
-	if (mo) {
-		mutationObserver = new mo(handleWasaviFrameMutation);
-		mutationObserver.observe(wasaviFrame.parentNode, {childList:true});
-	}
-	else {
-		mutationObserver = null;
-		wasaviFrame.addEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
-	}
-
-	//
-	wasaviFrameTimeoutTimer = setTimeout(function () {
-		wasaviFrame.parentNode.removeChild(wasaviFrame);
-		wasaviFrameTimeoutTimer = null;
-	}, BOOT_WAIT_TIMEOUT_MSECS);
 }
 
 function cleanup (value, isImplicit) {
@@ -390,12 +385,10 @@ function cleanup (value, isImplicit) {
 		targetElement.removeAttribute(EXTENSION_CURRENT);
 		targetElement = null;
 	}
-	if (mutationObserver) {
-		mutationObserver.disconnect();
-		mutationObserver = null;
+	if (removeListener) {
+		removeListener = removeListener.disconnect();
 	}
 	if (wasaviFrame) {
-		wasaviFrame.removeEventListener('DOMNodeRemoved', handleWasaviFrameRemoved, false);
 		wasaviFrame.parentNode.removeChild(wasaviFrame);
 		wasaviFrame = null;
 	}
@@ -403,9 +396,11 @@ function cleanup (value, isImplicit) {
 		clearTimeout(stateClearTimer);
 		stateClearTimer = null;
 	}
-	window.removeEventListener('resize', handleTargetResize, false);
 	window.removeEventListener('beforeunload', handleBeforeUnload, false);
 	extraHeight = 0;
+	isFullscreen = isSyncSize = null;
+	resizeListener = resizeListener.disconnect();
+	getValueCallback = null;
 }
 
 function focusToFrame (req) {
@@ -687,6 +682,89 @@ function matchWithShortcut (e) {
 	});
 }
 
+function getMutationObserver () {
+	return window.MutationObserver
+	|| window.WebKitMutationObserver
+	|| window.OMutationObserver
+	|| window.MozMutationObserver;
+}
+
+function createElementRemoveListener (element, callback) {
+	var mo = getMutationObserver();
+
+	function fireRemoved () {
+		callback({target: element});
+	}
+
+	function handleRemove (records) {
+		element
+		&& records.some(function (r) {
+			return r.removedNodes && Array.prototype.indexOf.call(r.removedNodes, element) >= 0;
+		})
+		&& fireRemoved();
+	}
+
+	function connect () {
+		mo ? mo.observe(element.parentNode, {childList: true}) :
+			element.addEventListener('DOMNodeRemoved', fireRemoved, false);
+	}
+
+	function disconnect () {
+		mo ? mo.disconnect() :
+			element.removeEventListener('DOMNodeRemoved', fireRemoved, false);
+	}
+
+	mo = mo ? new mo(handleRemove) : null;
+	connect();
+	return {connect: connect, disconnect: disconnect};
+}
+
+function createElementResizeListener (element, callback) {
+	var mo = getMutationObserver();
+	var width = element.offsetWidth;
+	var height = element.offsetHeight;
+	var timer;
+
+	function fireIfResized () {
+		if (timer) return;
+		timer = setTimeout(function () {
+			timer = null;
+			var resized = false;
+			if (element.offsetWidth != width) {
+				resized = true;
+				width = element.offsetWidth;
+			}
+			if (element.offsetHeight != height) {
+				resized = true;
+				height = element.offsetHeight;
+			}
+			resized && callback({target: element});
+		}, 100);
+	}
+
+	function handleDOMAttrModified (e) {
+		e.attrName == 'style' && fireIfResized();
+	}
+
+	function connect () {
+		mo ? mo.observe(element, {attributes: true, attributeFilter: ['style']}) :
+			element.addEventListener('DOMAttrModified', handleDOMAttrModified, false);
+		window.addEventListener('resize', fireIfResized, false);
+		element.addEventListener('mouseup', fireIfResized, false);
+	}
+
+	function disconnect () {
+		mo ? mo.disconnect() :
+			element.removeEventListener('DOMAttrModified', handleDOMAttrModified, false);
+		window.removeEventListener('resize', fireIfResized, false);
+		element.removeEventListener('mouseup', fireIfResized, false);
+	}
+
+	mo = mo ? new mo(fireIfResized) : null;
+	connect();
+	return {connect: connect, disconnect: disconnect, fire: fireIfResized};
+}
+
 /**
  * page agent creator
  * ----------------
@@ -710,25 +788,6 @@ function createPageAgent (doHook) {
 	s.type = 'text/javascript';
 	s.src = extension.getKeyHookScriptSrc();
 	parent.appendChild(s);
-}
-
-/**
- * unexpected wasavi frame deletion handler
- * ----------------
- */
-
-function handleWasaviFrameMutation (records) {
-	wasaviFrame
-	&& records.some(function (r) {
-		return r.removedNodes && Array.prototype.indexOf.call(r.removedNodes, wasaviFrame) >= 0;
-	})
-	&& handleWasaviFrameRemoved();
-}
-
-function handleWasaviFrameRemoved (e) {
-	wasaviFrame = null;
-	cleanup();
-	error('wasavi terminated abnormally.');
 }
 
 /**
@@ -817,13 +876,28 @@ function handleTargetFocus (e) {
  */
 
 function handleTargetResize (e) {
-	if (targetElementResizedTimer) return;
-	targetElementResizedTimer = setTimeout(function () {
-		if (wasaviFrame && targetElement) {
-			locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
-		}
-		targetElementResizedTimer = null;
-	}, 100);
+	if (!wasaviFrame || !targetElement) return;
+	locate(wasaviFrame, targetElement, {
+		isFullscreen: isFullscreen,
+		extraHeight: extraHeight,
+		width: widthOwn,
+		height: heightOwn
+	});
+}
+
+/**
+ * element removal event handler
+ * ----------------
+ */
+
+function handleWasaviFrameRemove () {
+	wasaviFrame = null;
+	cleanup();
+	error('wasavi terminated abnormally.');
+}
+function handleWasaviFrameInitTimeout () {
+	wasaviFrame.parentNode.removeChild(wasaviFrame);
+	wasaviFrameTimeoutTimer = null;
 }
 
 /**
@@ -905,7 +979,7 @@ function handleBackendMessage (req) {
 		wasaviFrame.style.height = newHeight + 'px';
 		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
-		window.addEventListener('resize', handleTargetResize, false);
+		resizeListener = createElementResizeListener(wasaviFrame, handleTargetResize);
 		window.addEventListener('beforeunload', handleBeforeUnload, false);
 
 		if (isTestFrame) {
@@ -919,7 +993,10 @@ function handleBackendMessage (req) {
 	case 'ready':
 		if (!wasaviFrame) break;
 		document.activeElement != wasaviFrame && focusToFrame(req);
-		locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
+		locate(wasaviFrame, targetElement, {
+			isFullscreen: isFullscreen,
+			extraHeight: extraHeight
+		});
 		wasaviFrame.style.visibility = 'visible';
 		info('wasavi started');
 		fireCustomEvent('WasaviStarted', 0);
@@ -934,7 +1011,10 @@ function handleBackendMessage (req) {
 		case 'maximized':
 		case 'normal':
 			isFullscreen = req.state == 'maximized';
-			locate(wasaviFrame, targetElement, isFullscreen, extraHeight);
+			locate(wasaviFrame, targetElement, {
+				isFullscreen: isFullscreen,
+				extraHeight: extraHeight
+			});
 			break;
 		}
 		break;
@@ -977,6 +1057,38 @@ function handleBackendMessage (req) {
 			if (!wasaviFrame) return;
 			wasaviFrame.style.visibility = '';
 		}, 500);
+		break;
+
+	case 'set-size':
+		if ('isSyncSize' in req) {
+			isSyncSize = req.isSyncSize;
+			if (isSyncSize) {
+				widthOwn = heightOwn = null;
+			}
+			else {
+				widthOwn = targetElement.offsetWidth;
+				heightOwn = targetElement.offsetHeight;
+			}
+		}
+		if ('width' in req) {
+			if (isSyncSize) {
+				targetElement.style.width = req.width + 'px';
+				widthOwn = null;
+			}
+			else {
+				widthOwn = req.width;
+			}
+		}
+		if ('height' in req) {
+			if (isSyncSize) {
+				targetElement.style.height = req.height + 'px';
+				heightOwn = null;
+			}
+			else {
+				heightOwn = req.height;
+			}
+		}
+		resizeListener.fire();
 		break;
 
 	case 'terminated':
@@ -1180,7 +1292,6 @@ function handleConnect (req) {
 	shortcutCode = req.shortcutCode;
 	fontFamily = req.fontFamily;
 	quickActivation = req.quickActivation && !isInBlacklist(req.qaBlacklist);
-	extraHeight = 0;
 	devMode = req.devMode;
 	logMode = req.logMode;
 	pageHooksCode = req.pageHooksCode;

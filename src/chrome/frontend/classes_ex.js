@@ -374,6 +374,7 @@ flag23_loop:
 		}
 		catch (e) {
 			result = e.toString();
+			app.low.notifyError(e);
 		}
 		if (typeof result == 'string') {
 			return this.name + ': ' + result;
