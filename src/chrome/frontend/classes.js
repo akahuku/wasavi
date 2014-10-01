@@ -3565,6 +3565,11 @@ Wasavi.LiteralInput.prototype = {
 		if (code == 10 || code == 13) {
 			return this.getResult();
 		}
+		if (code == 8 && this.value.length > 0) {
+			this.value = this.value.replace(/.$/, '');
+			this.message = this.message.replace(/.$/, '');
+			return null;
+		}
 		if (this.pattern.test(c)) {
 			this.value += c;
 			this.message += c;
