@@ -911,11 +911,21 @@ public class ExCommandsTest extends WasaviTest {
 	@Test
 	public void testNoRemap () {
 		Wasavi.send(":map [clear]\n");
-		Wasavi.send(":map j jj\n");
+		Wasavi.send(":map [noremap] j jj\n");
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
 
 		Wasavi.send("ggj");
 		assertPos("#1-1", 2, 0);
+	}
+
+	@Test
+	public void testReplaceMappedChar () {
+		Wasavi.send(":map [clear]\n");
+		Wasavi.send(":map a bc\n");
+		Wasavi.send("ifoobar\u001b");
+
+		Wasavi.send("0ra");
+		assertValue("#1-1", "aoobar");
 	}
 
 	@Test
