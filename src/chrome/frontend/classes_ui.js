@@ -774,7 +774,7 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 		}
 
 		if (app.state != 'console_wait') {
-			app.low.pushInputMode('console_wait', 'backlog');
+			app.low.pushInputMode({}, ['console_wait', 'backlog']);
 		}
 		if (!preserveMessage) {
 			app.low.showMessage(
@@ -816,11 +816,20 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 };
 
 Wasavi.Notifier = function (app, container) {
-	var timer;
+	var showTimer;
+	var hideTimer;
+	var delayIntervalMsecs = 1000;
 	var hideIntervalMsecs = 2000;
 
-	function show (message, aIntervalMsecs) {
-		timer && clearTimeout(timer);
+	function register (message, intervalMsecs, delayMsecs) {
+		showTimer && clearTimeout(showTimer);
+		showTimer = setTimeout(function () {
+			showTimer = null;
+			show(message, intervalMsecs);
+		}, delayMsecs || delayIntervalMsecs);
+	}
+	function show (message, intervalMsecs) {
+		hideTimer && clearTimeout(hideTimer);
 		if (typeof message == 'function') {
 			message(container);
 		}
@@ -828,24 +837,22 @@ Wasavi.Notifier = function (app, container) {
 			container.textContent = message;
 		}
 		container.style.visibility = 'visible';
-		timer = setTimeout(hide, aIntervalMsecs || hideIntervalMsecs);
+		hideTimer = setTimeout(function () {
+			hideTimer = null;
+			hide();
+		}, intervalMsecs || hideIntervalMsecs);
 	}
 	function hide () {
 		container.style.visibility = 'hidden';
-		timer = null;
+		showTimer && clearTimeout(showTimer);
+		hideTimer && clearTimeout(hideTimer);
+		showTimer = hideTimer = null;
 	}
 	function dispose () {
 		app = container = null;
 	}
 
-	publish(this, show, hide, dispose,
-		{
-			hideIntervalMsecs:[
-				function () {return hideIntervalMsecs},
-				function (v) {hideIntervalMsecs = v}
-			]
-		}
-	);
+	publish(this, register, show, hide, dispose);
 };
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

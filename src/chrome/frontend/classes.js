@@ -497,7 +497,7 @@ Wasavi.PrefixInput = function () {
 
 			do {
 				var arg = arguments[0];
-				var re = /^(".)?([1-9][0-9]*)?(g?.)([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
+				var re = /^("(?:=[^\n]*|.))?([1-9][0-9]*)?(g?.)([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
 				if (re) {
 					if (typeof re[1] == 'string' && re[1] != '') {
 						register = re[1];
@@ -520,7 +520,7 @@ Wasavi.PrefixInput = function () {
 					break;
 				}
 
-				var re = /^(".)?([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
+				var re = /^("(?:=[^\n]*|.))?([1-9][0-9]*)?(g?.)(.*)$/.exec(arg);
 				if (re) {
 					if (typeof re[1] == 'string' && re[1] != '') {
 						register = re[1];
@@ -1928,6 +1928,8 @@ Wasavi.Registers = function (app, value) {
 	 *  :       last executed ex command (read only) [vim compatible]
 	 *  *       system clipboard, if available [vim compatible]
 	 *  /       last searched text (read only) [vim compatible]
+	 *  ^       last input position (read only) [vim compatible]
+	 *  =       last computed result of simple math-expression (readonly) [vim compatible]
 	 */
 
 	function RegisterItem () {
@@ -1968,7 +1970,7 @@ Wasavi.Registers = function (app, value) {
 	var named;
 	var storageKey = 'wasavi_registers';
 	var writableRegex = /^[1-9a-zA-Z@]$/;
-	var readableRegex = /^["1-9a-zA-Z@.:*\/\^]$/;
+	var readableRegex = /^["1-9a-zA-Z@.:*\/\^=]$/;
 	var isLatest = false;
 
 	function serialize () {
@@ -2008,12 +2010,13 @@ Wasavi.Registers = function (app, value) {
 		restore(value || '');
 	}
 	function isWritable (name) {
-		return writableRegex.test(name);
+		return writableRegex.test(name.charAt(0));
 	}
 	function isReadable (name) {
-		return readableRegex.test(name);
+		return readableRegex.test(name.charAt(0));
 	}
 	function exists (name) {
+		name = name.charAt(0);
 		if (!isReadable(name)) {
 			return false;
 		}
@@ -2023,6 +2026,7 @@ Wasavi.Registers = function (app, value) {
 		return !!named[name];
 	}
 	function findItem (name) {
+		name = name.charAt(0);
 		if (name == '"') {
 			return unnamed;
 		}
@@ -2078,6 +2082,7 @@ Wasavi.Registers = function (app, value) {
 		if (typeof name != 'string' || name == '') {
 			return unnamed;
 		}
+		name = name.charAt(0);
 		if (isReadable(name)) {
 			var item;
 

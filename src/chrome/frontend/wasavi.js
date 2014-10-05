@@ -867,7 +867,7 @@ ime-mode:disabled; \
 	registers = new Wasavi.Registers(
 		appProxy, testMode ? null : req.registers);
 	lineInputHistories = new Wasavi.LineInputHistories(
-		appProxy, config.vars.history, ['/', ':'],
+		appProxy, config.vars.history, ['/', ':', 'e'],
 		testMode ? null : req.lineInputHistories);
 	marks = new Wasavi.Marks(
 		appProxy, testMode ? null : x.marks);
@@ -1132,13 +1132,19 @@ function setInputMode (newInputMode, newInputModeSub, prefix, initial) {
 	isEditCompleted = isVerticalMotion = isSmoothScrollRequested = false;
 	idealWidthPixels = -1;
 }
-function pushInputMode (mode, modeSub, prefix, initial) {
-	inputModeStack.push(inputMode);
-	setInputMode(mode, modeSub, prefix, initial);
+function pushInputMode (currentContext, newModeArgs) {
+	currentContext.inputMode = inputMode;
+	inputModeStack.push(currentContext);
+	setInputMode.apply(null, newModeArgs);
+	console.log([
+		'*** pushInputMode ***',
+		'currentContext: ' + JSON.stringify(currentContext, null, ' '),
+		'newModeArgs: ' + JSON.stringify(newModeArgs, null, ' ')
+	].join('\n'));
 }
 function popInputMode () {
 	if (inputModeStack.length) {
-		setInputMode(inputModeStack.pop());
+		setInputMode(inputModeStack.pop().inputMode);
 	}
 	else {
 		setInputMode('command');
@@ -2224,31 +2230,50 @@ function processInput (code, e, ignoreAbbreviation) {
 		var input = $(LINE_INPUT_ID);
 		var canEscape = code == 0x1b
 			|| code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
+		var isComplete = prefixInput.operation != ''
+			|| prefixInput.motion != '';
 
 		dataset(input, 'current', input.value);
 		isCompleteResetCanceled = false;
 
 		if (subkey == inputMode && canEscape) {
-			mapkey = prefixInput.motion || prefixInput.operation;
 			backlog.hide();
 			execMap(
-				buffer, e, commandMap,
-				mapkey, '$' + inputMode + '_escape', input.value);
+				buffer, e,
+				getMap(inputModeStack.lastItem.inputMode),
+				inputModeStack.lastItem.mapkey,
+				'$' + inputMode + '_escape',
+				input.value);
+
 			popInputMode();
 			prefixInput.reset();
 			requestShowPrefixInput();
 		}
 		else if (subkey == inputMode && (code == 0x0d || code == 0x0a)) {
 			var line = toNativeControl(input.value);
-			prefixInput.trailer = line + keyManager.code2letter(code);
-			mapkey = prefixInput.motion || prefixInput.operation;
+			if (isComplete) {
+				prefixInput.trailer = line + keyManager.code2letter(code);
+			}
+			else {
+				line = line.replace(/\s+/g, ' ');
+				prefixInput.appendRegister(line + keyManager.code2letter(code));
+			}
+
 			execMap(
-				buffer, e, commandMap,
-				mapkey, '$' + inputMode + '_reset', line);
-			execCommandMap(result, e, commandMap, mapkey, subkey, line);
+				buffer, e,
+				getMap(inputModeStack.lastItem.inputMode),
+				inputModeStack.lastItem.mapkey,
+				'$' + inputMode + '_reset',
+				line);
+			execMap(
+				buffer, e,
+				getMap(inputModeStack.lastItem.inputMode),
+				inputModeStack.lastItem.mapkey,
+				inputMode,
+				line);
 
 			popInputMode();
-			prefixInput.reset();
+			isComplete && prefixInput.reset();
 		}
 		else if (execLineInputEditMap(result, e, mapkey, subkey, code)) {
 			setTimeout(function () {
@@ -2282,7 +2307,14 @@ function processInput (code, e, ignoreAbbreviation) {
 	else {
 		if (requestedState.inputMode) {
 			var im = requestedState.inputMode;
-			pushInputMode(im.mode, im.modeSub, im.prefix, im.initial);
+			pushInputMode(
+				{
+					mapkey: mapkey,
+					subkey: subkey,
+					code: code
+				},
+				[im.mode, im.modeSub, im.prefix, im.initial]
+			);
 			requestShowPrefixInput(getDefaultPrefixInputString());
 			im.callback && im.callback();
 			im.updateCursor && cursor.update({focused:true, visible:true});
@@ -2338,10 +2370,11 @@ function processInput (code, e, ignoreAbbreviation) {
 function processInputSupplement () {
 	if (inputMode != 'line_input') return;
 	var input = $(LINE_INPUT_ID);
-	var key = prefixInput.motion || prefixInput.operation;
 	var e = keyManager.nopObjectFromCode();
-	execMap(buffer, e, commandMap, key, '$' + inputMode + '_reset', input.value);
-	execMap(buffer, e, commandMap, key, '$' + inputMode + '_notify', input.value);
+	var last = inputModeStack.lastItem;
+	var map = getMap(last.inputMode);
+	execMap(buffer, e, map, last.mapkey, '$' + inputMode + '_reset', input.value);
+	execMap(buffer, e, map, last.mapkey, '$' + inputMode + '_notify', input.value);
 }
 function getFindRegex (src) {
 	var result;
@@ -2771,6 +2804,21 @@ function getChdirHandler (id) {
  * ----------------
  */
 
+function getMap (mode) {
+	switch (mode) {
+	case 'command':
+		return commandMap;
+	case 'bound':
+		return boundMap;
+	case 'edit':
+	case 'overwrite':
+		return editMap;
+	case 'line_input':
+		return lineInputEditMap;
+	default:
+		return null;
+	}
+}
 function execMap (target, e, map, key, subkey, code, pos) {
 	if (!map[key]) return false;
 	subkey || (subkey = '');
@@ -5107,6 +5155,22 @@ var commandMap = {
 					keyManager.unlock();
 				});
 			}
+			else if (c == '=') {
+				lineInputHistories.defaultName = 'e';
+				requestInputMode('line_input', {prefix:_('expr:')});
+			}
+		},
+		$line_input_notify:function (c) {
+			var r = expr(c);
+			notifier.register(r.error || r.result, 1000 * 60);
+		},
+		$line_input_escape:function (c) {
+			notifier.hide();
+		},
+		line_input:function (c) {
+			var r = expr(c);
+			registers.get('=').set(r.error ? '' : r.result);
+			notifier.hide();
 		}
 	},
 
@@ -7018,7 +7082,10 @@ var editMap = {
 					}
 					keyManager.unlock();
 				});
-				return undefined;
+			}
+			else if (c == '=') {
+				lineInputHistories.defaultName = 'e';
+				requestInputMode('line_input', {prefix:_('expr:')});
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				fireDOMPasteEvent(s);
@@ -7026,6 +7093,18 @@ var editMap = {
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));
 			}
+		},
+		$line_input_notify:function (c) {
+			var r = expr(c);
+			notifier.register(r.error || r.result, 1000 * 60);
+		},
+		$line_input_escape:function (c) {
+			notifier.hide();
+		},
+		line_input:function (c) {
+			var r = expr(c);
+			fireDOMPasteEvent(r.error ? '' : r.result);
+			notifier.hide();
 		}
 	},
 	'\u0014'/*^T*/:function () {this['\u0004'].apply(this, arguments)},
@@ -7251,6 +7330,7 @@ var lineInputEditMap = {
 	},
 	'\u0012'/*^R*/:{
 		line_input:function (c, o) {
+			debugger;
 			inputModeSub = 'wait_register';
 			notifier.show(
 				_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList),

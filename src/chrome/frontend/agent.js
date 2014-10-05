@@ -396,10 +396,12 @@ function cleanup (value, isImplicit) {
 		clearTimeout(stateClearTimer);
 		stateClearTimer = null;
 	}
+	if (resizeListener) {
+		resizeListener = resizeListener.disconnect();
+	}
 	window.removeEventListener('beforeunload', handleBeforeUnload, false);
 	extraHeight = 0;
 	isFullscreen = isSyncSize = null;
-	resizeListener = resizeListener.disconnect();
 	getValueCallback = null;
 }
 

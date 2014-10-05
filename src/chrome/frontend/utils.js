@@ -342,5 +342,71 @@ function publish () {
 function toArray (arg, index) {
 	return Array.prototype.slice.call(arg, index || 0);
 }
+function expr (source) {
+	var tokens = [];
+	var i = 0;
+
+	function add () {
+		var r = mul();
+		while (tokens[i] == '+' || tokens[i] == '-') {
+			r = tokens[i++] == '+' ? r + mul() : r - mul();
+		}
+		return r;
+	}
+	function mul () {
+		var r = fact();
+		while (tokens[i] == '*' || tokens[i] == '/') {
+			r = tokens[i++] == '*' ? r * fact() : r / fact();
+		}
+		return r;
+	}
+	function fact () {
+		var r = tokens[i++];
+		if (r == '(') {
+			r = add();
+			if (tokens[i++] != ')') {
+				throw new Error(_('Missing ")".'));
+			}
+		}
+		else {
+			var sign = '';
+			if (r == '+' || r == '-') {
+				sign = r;
+				r = tokens[i++];
+			}
+			r = parseFloat(sign + r);
+			if (isNaN(r)) {
+				throw new Error(_('Missing a number.'));
+			}
+		}
+		return r;
+	}
+
+	try {
+		var regex = /^([()+\-*\/]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
+		var re;
+
+		source = source.replace(/^\s+/, '');
+		while ((re = regex.exec(source))) {
+			tokens.push(re[1]);
+			source = source.substring(re[0].length);
+		}
+		if (source != '') {
+			throw new Error(_('Invalid token: {0}', source.charAt(0)));
+		}
+		if (tokens.length == 0) {
+			throw new Error(_('Empty expression.'));
+		}
+
+		var result = add();
+		if (i < tokens.length) {
+			throw new Error(_('Extra token: {0}', tokens[i].charAt(0)));
+		}
+		return {result: result};
+	}
+	catch (e) {
+		return {error: e.message};
+	}
+}
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
