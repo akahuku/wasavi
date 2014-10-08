@@ -214,8 +214,7 @@ Wasavi.SubstituteWorker.prototype = {
 			this.app.cursor.ensureVisible();
 			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
 
-			this.app.low.requestInputMode(
-				'console_wait', {modeSub:'ex_s'});
+			this.app.low.requestInputMode('ex_s_prompt');
 			this.app.low.requestShowMessage(
 				_('Substitute? ([y]es, [n]o, [q]uit)'),
 				false, true, true);

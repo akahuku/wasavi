@@ -348,15 +348,24 @@ function expr (source) {
 
 	function add () {
 		var r = mul();
-		while (tokens[i] == '+' || tokens[i] == '-') {
-			r = tokens[i++] == '+' ? r + mul() : r - mul();
+loop:	while (true) {
+			switch (tokens[i]) {
+			case '+': r += mul(); break;
+			case '-': r -= mul(); break;
+			default: break loop;
+			}
 		}
 		return r;
 	}
 	function mul () {
 		var r = fact();
-		while (tokens[i] == '*' || tokens[i] == '/') {
-			r = tokens[i++] == '*' ? r * fact() : r / fact();
+loop:	while (true) {
+			switch (tokens[i]) {
+			case '*': r *= fact(); break;
+			case '/': r /= fact(); break;
+			case '%': r %= fact(); break;
+			default: break loop;
+			}
 		}
 		return r;
 	}
@@ -383,7 +392,7 @@ function expr (source) {
 	}
 
 	try {
-		var regex = /^([()+\-*\/]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
+		var regex = /^([()+\-*\/%]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
 		var re;
 
 		source = source.replace(/^\s+/, '');
@@ -395,7 +404,7 @@ function expr (source) {
 			throw new Error(_('Invalid token: {0}', source.charAt(0)));
 		}
 		if (tokens.length == 0) {
-			throw new Error(_('Empty expression.'));
+			return {};
 		}
 
 		var result = add();

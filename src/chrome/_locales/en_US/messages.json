@@ -412,9 +412,21 @@
         "message": "Element to be written has readonly attribute (use \"!\" to override).",
         "description": "Element to be written has readonly attribute (use \"!\" to override)."
     },
+    "empty": {
+        "message": "Empty",
+        "description": "Empty"
+    },
     "exception_while_saving_@0": {
         "message": "Exception while saving: {0}",
         "description": "Exception while saving: {0}"
+    },
+    "expr": {
+        "message": "expr:",
+        "description": "expr:"
+    },
+    "extra_token_@0": {
+        "message": "Extra token: {0}",
+        "description": "Extra token: {0}"
     },
     "failed_to_retrieve_directory_id": {
         "message": "Failed to retrieve directory id.",
@@ -560,6 +572,10 @@
         "message": "Invalid text format.",
         "description": "Invalid text format."
     },
+    "invalid_token_@0": {
+        "message": "Invalid token: {0}",
+        "description": "Invalid token: {0}"
+    },
     "key_@0_cannot_be_remapped": {
         "message": "Key {0} cannot be remapped.",
         "description": "Key {0} cannot be remapped."
@@ -599,6 +615,14 @@
     "matched_@0_of_@1": {
         "message": "matched #{0} of {1}",
         "description": "matched #{0} of {1}"
+    },
+    "missing_": {
+        "message": "Missing \")\".",
+        "description": "Missing \")\"."
+    },
+    "missing_a_number": {
+        "message": "Missing a number.",
+        "description": "Missing a number."
     },
     "modified": {
         "message": "modified",

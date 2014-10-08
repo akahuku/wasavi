@@ -773,9 +773,6 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 			}
 		}
 
-		if (app.state != 'console_wait') {
-			app.low.pushInputMode({}, ['console_wait', 'backlog']);
-		}
 		if (!preserveMessage) {
 			app.low.showMessage(
 				buffer.length ? _('More...') :
@@ -820,12 +817,15 @@ Wasavi.Notifier = function (app, container) {
 	var hideTimer;
 	var delayIntervalMsecs = 1000;
 	var hideIntervalMsecs = 2000;
+	var registeredMessage;
 
 	function register (message, intervalMsecs, delayMsecs) {
-		showTimer && clearTimeout(showTimer);
+		registeredMessage = message;
+		if (showTimer) return;
 		showTimer = setTimeout(function () {
 			showTimer = null;
-			show(message, intervalMsecs);
+			show(registeredMessage, intervalMsecs);
+			registeredMessage = null;
 		}, delayMsecs || delayIntervalMsecs);
 	}
 	function show (message, intervalMsecs) {

@@ -745,6 +745,7 @@ var cache = {};
 			app.backlog.push(lg(i) + line);
 		}
 	}
+	app.low.requestOpenConsole();
 }
 
 /*public*/function readCore (app, t, a, content, meta, status) {
@@ -876,6 +877,7 @@ var cache = {};
 			else {
 				app.backlog.push(_('No abbreviations are defined.'));
 			}
+			app.low.requestOpenConsole();
 		}
 
 		var lhs, rhs, option;
@@ -1083,6 +1085,7 @@ var cache = {};
 					);
 				})
 				app.backlog.push(list);
+				app.low.requestOpenConsole();
 			}
 			else {
 				return _('no available file systems.');
@@ -1275,6 +1278,7 @@ var cache = {};
 			else {
 				app.backlog.push(_('No mappings for {0} mode are defined.', mapName));
 			}
+			app.low.requestOpenConsole();
 		}
 
 		var lhs, rhs, option;
@@ -1331,6 +1335,7 @@ var cache = {};
 	}),
 	new ExCommand('marks', 'marks', '', 0, function (app, t, a) {
 		app.backlog.push(app.marks.dump());
+		app.low.requestOpenConsole();
 	}),
 	new ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var r = a.range;
@@ -1516,6 +1521,7 @@ var cache = {};
 		}
 		if (logToConsole) {
 			app.backlog.push(messages);
+			app.low.requestOpenConsole();
 		}
 		else {
 			app.low.requestShowMessage(messages, emphasis);
@@ -1548,6 +1554,7 @@ var cache = {};
 	}),
 	new ExCommand('registers', 'reg', '', 0, function (app, t, a) {
 		app.backlog.push(app.registers.dump());
+		app.low.requestOpenConsole();
 	}),
 	new ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		return find('copy').handler.apply(this, arguments);

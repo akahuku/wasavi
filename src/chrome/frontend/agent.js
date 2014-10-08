@@ -981,7 +981,7 @@ function handleBackendMessage (req) {
 		wasaviFrame.style.height = newHeight + 'px';
 		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
-		resizeListener = createElementResizeListener(wasaviFrame, handleTargetResize);
+		resizeListener = createElementResizeListener(targetElement, handleTargetResize);
 		window.addEventListener('beforeunload', handleBeforeUnload, false);
 
 		if (isTestFrame) {

@@ -412,9 +412,21 @@
         "message": "書き込み先要素は読み取り専用属性です (\"!\" 付加で上書きできます)。",
         "description": "Element to be written has readonly attribute (use \"!\" to override)."
     },
+    "empty": {
+        "message": "Empty",
+        "description": "Empty"
+    },
     "exception_while_saving_@0": {
         "message": "保存中に例外が発生しました: {0}",
         "description": "Exception while saving: {0}"
+    },
+    "expr": {
+        "message": "式:",
+        "description": "expr:"
+    },
+    "extra_token_@0": {
+        "message": "余分な字句: {0}",
+        "description": "Extra token: {0}"
     },
     "failed_to_retrieve_directory_id": {
         "message": "ディレクトリ ID の取得に失敗しました。",
@@ -560,6 +572,10 @@
         "message": "テキストの形式が不正です。",
         "description": "Invalid text format."
     },
+    "invalid_token_@0": {
+        "message": "不正な字句: {0}",
+        "description": "Invalid token: {0}"
+    },
     "key_@0_cannot_be_remapped": {
         "message": "{0} キーは再マップできません。",
         "description": "Key {0} cannot be remapped."
@@ -599,6 +615,14 @@
     "matched_@0_of_@1": {
         "message": "{1} 個中の #{0} で補完",
         "description": "matched #{0} of {1}"
+    },
+    "missing_": {
+        "message": "\")\" がありません。",
+        "description": "Missing \")\"."
+    },
+    "missing_a_number": {
+        "message": "数値がありません。",
+        "description": "Missing a number."
     },
     "modified": {
         "message": "変更済み",
