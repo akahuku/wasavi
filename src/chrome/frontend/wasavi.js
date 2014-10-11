@@ -7411,14 +7411,15 @@ var lineInputEditMap = {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					registers.get('*').set(data);
+					keyManager.unlock();
 					if (data == '') {
 						notifier.show(_('Register {0} is empty.', c));
+						processInput(keyManager.nopObjectFromCode());
 					}
 					else {
 						notifier.hide();
 						fireDOMPasteEvent(data + String.fromCharCode(0));
 					}
-					keyManager.unlock();
 				});
 			}
 			else if (c == '=') {

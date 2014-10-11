@@ -1209,8 +1209,11 @@ function handleBackendMessage (req) {
 
 	case 'notify-error':
 		if (!isTestFrame) break;
-		var s = 'error:\t' + req.fileName + '\t(' + req.lineNumber + ')\t' + req.message;
-		document.body.appendChild(document.createElement('div')).textContent = s;
+		document.body.appendChild(document.createElement('div')).textContent =
+			document.querySelector('h1').textContent + ':' +
+			'\t' + req.fileName +
+			'\t(' + req.lineNumber + ')' +
+			'\t' + req.message;
 		break;
 
 	case 'command-start':
