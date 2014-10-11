@@ -96,7 +96,7 @@
 	}
 	ExtensionWrapper.prototype = {
 		get name () {return EXTENSION_NAME},
-		isTopFrame: function () {return window.self == window.top},
+		isTopFrame: function () {return global.window == window.top},
 		postMessage: function (data, callback, preserved) {
 			var type;
 			var requestNumber = this.getNewRequestNumber();
