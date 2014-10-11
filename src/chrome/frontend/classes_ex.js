@@ -795,12 +795,12 @@ var cache = {};
 	}
 	var terminator = defaultCommand.clone();
 	if (initCommands.commands.length) {
-		terminator.handler = function (t, a) {
+		terminator.handler = function (app, t, a) {
 			t.setSelectionRange(t.getLineTopOffset2(t.rowLength - 1, 0));
 		};
 	}
 	else {
-		terminator.handler = function (t, a) {
+		terminator.handler = function (app, t, a) {
 			t.setSelectionRange(t.getLineTopOffset2(0, 0));
 		};
 	}
