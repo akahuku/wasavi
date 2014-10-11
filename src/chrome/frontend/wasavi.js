@@ -1093,18 +1093,20 @@ function setGeometory (target) {
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
 	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
 }
+function getPrimaryMode () {
+	if (inputMode in mode2stateTable) {
+		return inputMode;
+	}
+
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (inputModeStack[i].inputMode in mode2stateTable) {
+			return inputModeStack[i].inputMode;
+		}
+	}
+}
 function setInputMode (newInputMode, opts) {
-	var newState = state;
+	var newState = mode2stateTable[newInputMode] || state;
 	opts || (opts = {});
-	if (/^(?:command|bound|bound_line|edit|overwrite)$/.test(newInputMode)) {
-		newState = 'normal';
-	}
-	else if (newInputMode == 'line_input') {
-		newState = 'line_input';
-	}
-	else if (/^(?:backlog_prompt|ex_s_prompt)$/.test(newInputMode)) {
-		newState = 'console_wait';
-	}
 
 	inputMode = newInputMode;
 	if (newState != state) {
@@ -1153,10 +1155,15 @@ function pushInputMode (context, newInputMode, newInputModeOpts) {
 	inputModeStack.push(context);
 	setInputMode(newInputMode, newInputModeOpts);
 }
-function popInputMode () {
+function popInputMode (context) {
 	if (inputModeStack.length) {
-		var context = inputModeStack.pop();
-		setInputMode(context.inputMode, context);
+		var lastContext = inputModeStack.pop();
+		setInputMode(lastContext.inputMode, lastContext);
+		if (context) {
+			['code', 'letter', 'mapkey', 'subkey'].forEach(function (a) {
+				context[a] = lastContext[a];
+			});
+		}
 	}
 	else {
 		setInputMode('command');
@@ -1293,11 +1300,8 @@ function requestInputMode (mode, opts) {
 		opts || (opts = {});
 		requestedState.inputMode = {
 			mode:mode,
-			modeOpts: {
-				prefix:opts.prefix,
-				value:opts.value,
-				historyName:opts.historyName
-			},
+			modeOpts:opts.modeOpts || {},
+			overrides:opts.overrides || {},
 			updateCursor:!!opts.updateCursor,
 			callback:opts.callback
 		};
@@ -2074,7 +2078,11 @@ function processInput (e, ignoreAbbrev) {
 	var messageUpdated = false;
 	if (requestedState.inputMode) {
 		var im = requestedState.inputMode;
-		pushInputMode(result, im.mode, im.modeOpts);
+		var context = {};
+		['code', 'letter', 'mapkey', 'subkey'].forEach(function (a) {
+			context[a] = a in im.overrides ? im.overrides[a] : result[a];
+		});
+		pushInputMode(context, im.mode, im.modeOpts);
 		requestShowPrefixInput(getDefaultPrefixInputString());
 		im.callback && im.callback();
 		im.updateCursor && cursor.update({focused:true, visible:true});
@@ -2110,7 +2118,7 @@ function processInput (e, ignoreAbbrev) {
 		requestedState.notice = null;
 		result.needEmitEvent = true;
 	}
-	if (requestedState.console) {
+	if (requestedState.console && backlog.queued) {
 		backlog.write(false, messageUpdated);
 		pushInputMode(result, ['backlog_prompt']);
 		requestedState.console = null;
@@ -2331,6 +2339,7 @@ function notifyCommandComplete (eventName) {
 	});
 }
 function fireDOMPasteEvent (s) {
+	s += '';
 	if (window.ClipboardEvent) {
 		document.dispatchEvent(new window.ClipboardEvent('paste', {
 			bubbles:true,
@@ -4286,7 +4295,7 @@ function handleKeydown (e) {
 function handlePaste (e) {
 	e.preventDefault();
 	var s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
-	switch (inputMode) {
+	switch (getPrimaryMode()) {
 	case 'bound':
 	case 'bound_line':
 		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
@@ -4862,6 +4871,17 @@ var lastMessage;
 var lastBoundMode;
 
 /*
+ * mode to state table
+ * ----------------
+ */
+
+var mode2stateTable = {
+	command: 'normal', bound: 'normal', bound_line: 'normal', edit: 'normal', overwrite: 'normal',
+	line_input: 'line_input',
+	backlog_prompt: 'console_wait', ex_s_prompt: 'console_wait'
+};
+
+/*
  * input handlers for each mode {{{1
  * ----------------
  */
@@ -4872,14 +4892,10 @@ var modeHandlers = {
 		execCommandMap(r, e, commandMap, r.mapkey, r.subkey, r.code);
 	},
 	wait_register: function (e, r) {
-		r.mapkey = inputModeStack.lastItem.mapkey + r.mapkey;
-		execCommandMap(
-			r, e,
-			getMap(inputModeStack.lastItem.inputMode),
-			inputModeStack.lastItem.mapkey,
-			inputMode,
-			r.code);
+		var mapkeyActual = inputModeStack.lastItem.mapkey;
 		popInputMode();
+		r.mapkey = mapkeyActual;
+		return this[inputMode].apply(this, arguments);
 	},
 	wait_a_letter: function () {
 		return this.wait_register.apply(this, arguments);
@@ -4920,7 +4936,7 @@ var modeHandlers = {
 	bound: function (e, r) {
 		cursor.windup();
 
-		if (r.code == 0x1b) {
+		if (r.subkey == inputMode && r.code == 0x1b) {
 			buffer.unEmphasis(BOUND_CLASS);
 			popInputMode();
 			cursor.ensureVisible();
@@ -4950,7 +4966,7 @@ var modeHandlers = {
 	edit: function (e, r) {
 		cursor.windup();
 
-		if (r.code == 0x1b) {
+		if (r.subkey == inputMode && r.code == 0x1b) {
 			if (processAbbrevs(true, r.ignoreAbbrev)) {
 				keyManager.push('\u001b');
 				return;
@@ -5055,7 +5071,7 @@ var modeHandlers = {
 		dataset(input, 'current', input.value);
 		isCompleteResetCanceled = false;
 
-		if (canEscape) {
+		if (r.subkey == inputMode && canEscape) {
 			backlog.hide();
 			execMap(
 				buffer, e,
@@ -5068,7 +5084,7 @@ var modeHandlers = {
 			prefixInput.reset();
 			requestShowPrefixInput();
 		}
-		else if (r.code == 0x0d || r.code == 0x0a) {
+		else if (r.subkey == inputMode && (r.code == 0x0d || r.code == 0x0a)) {
 			var line = toNativeControl(input.value);
 			if (isComplete) {
 				prefixInput.trailer = line + keyManager.code2letter(r.code);
@@ -5149,7 +5165,7 @@ var commandMap = {
 		},
 		bound:function (c, o) {return this['"'].command.apply(this, arguments)},
 		bound_line:function (c, o) {return this['"'].command.apply(this, arguments)},
-		wait_register:function (c) {
+		wait_register:function (c, o) {
 			prefixInput.appendRegister(c);
 			requestShowPrefixInput();
 			if (c == '*') {
@@ -5161,11 +5177,18 @@ var commandMap = {
 			}
 			else if (c == '=') {
 				requestInputMode('line_input', {
-					prefix:_('expr:'),
-					historyName:'e'
+					modeOpts:{
+						prefix:_('expr:'),
+						historyName:'e',
+					},
+					overrides:{
+						mapkey:o.key + c
+					}
 				});
 			}
 		},
+	},
+	'"=':{
 		$line_input_notify:function (c) {
 			var r = expr(c);
 			var message;
@@ -5194,9 +5217,6 @@ var commandMap = {
 			}
 			if (data != undefined) {
 				registers.get('=').set(data);
-				if (inputMode != 'command') {
-					fireDOMPasteEvent(data);
-				}
 			}
 			notifier.hide();
 		}
@@ -5523,8 +5543,10 @@ var commandMap = {
 		command:function (c) {
 			prefixInput.motion = c;
 			requestInputMode('line_input', {
-				prefix:c,
-				historyName:'/'
+				modeOpts:{
+					prefix:c,
+					historyName:'/'
+				}
 			});
 			lastRegexFindCommand.push({
 				head:c,
@@ -6513,9 +6535,11 @@ var commandMap = {
 			}
 			prefixInput.operation = c;
 			requestInputMode('line_input', {
-				prefix:config.vars.prompt ? c : '',
-				value:prefixInput.isCountSpecified ? '.,.+' + (prefixInput.count - 1) : '',
-				historyName:':'
+				modeOpts:{
+					prefix:config.vars.prompt ? c : '',
+					value:prefixInput.isCountSpecified ? '.,.+' + (prefixInput.count - 1) : '',
+					historyName:':'
+				}
 			});
 		},
 		line_input:function (c) {
@@ -6792,9 +6816,11 @@ var boundMap = {
 		bound:function (c, o) {
 			return operateToBound(c, o, false, null, function (p1, p2, act) {
 				requestInputMode('line_input', {
-					prefix:config.vars.prompt ? c : '',
-					value:"'<,'>",
-					historyName:':'
+					modeOpts:{
+						prefix:config.vars.prompt ? c : '',
+						value:"'<,'>",
+						historyName:':'
+					}
 				});
 				prefixInput.reset();
 				prefixInput.operation = c;
@@ -7096,7 +7122,7 @@ var editMap = {
 			requestShowPrefixInput(_('{0}: register [{1}]', o.e.fullIdentifier, registers.readableList));
 		},
 		overwrite:function (c, o) {this[o.key].edit.apply(this, arguments)},
-		wait_register:function (c) {
+		wait_register:function (c, o) {
 			inputHandler.ungetText();
 			inputHandler.ungetStroke();
 
@@ -7117,8 +7143,13 @@ var editMap = {
 			}
 			else if (c == '=') {
 				requestInputMode('line_input', {
-					prefix:_('expr:'),
-					historyName:'e'
+					modeOpts:{
+						prefix:_('expr:'),
+						historyName:'e',
+					},
+					overrides:{
+						mapkey:o.key + c
+					}
 				});
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
@@ -7128,14 +7159,23 @@ var editMap = {
 				requestShowMessage(_('Register {0} is empty.', c));
 			}
 		},
+	},
+	'\u0012='/*^R=*/:{
 		$line_input_notify:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			commandMap['"='][o.subkey].apply(this, arguments);
 		},
 		$line_input_escape:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			commandMap['"='][o.subkey].apply(this, arguments);
 		},
 		line_input:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			commandMap['"='][o.subkey].apply(this, arguments);
+			var s;
+			if (registers.exists('=') && (s = registers.get('=').data) != '') {
+				fireDOMPasteEvent(s);
+			}
+			else {
+				requestShowMessage(_('Register {0} is empty.', c));
+			}
 		}
 	},
 	'\u0014'/*^T*/:function () {this['\u0004'].apply(this, arguments)},
@@ -7384,8 +7424,13 @@ var lineInputEditMap = {
 			else if (c == '=') {
 				notifier.hide();
 				requestInputMode('line_input', {
-					prefix:_('expr:'),
-					historyName:'e'
+					modeOpts:{
+						prefix:_('expr:'),
+						historyName:'e',
+					},
+					overrides:{
+						mapkey:o.key + c
+					}
 				});
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
@@ -7400,13 +7445,13 @@ var lineInputEditMap = {
 	},
 	'\u0012='/*^R=*/:{
 		$line_input_notify:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			commandMap['"='][o.subkey].apply(this, arguments);
 		},
 		$line_input_escape:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			commandMap['"='][o.subkey].apply(this, arguments);
 		},
 		line_input:function (c, o) {
-			commandMap['"'][o.subkey].apply(this, arguments);
+			editMap['\u0012='][o.subkey].apply(this, arguments);
 			return true;
 		}
 	},

@@ -50,7 +50,7 @@ class WasaviWrapper {
 	protected WebDriver driver;
 	protected JSONObject wasaviState;
 	protected final ArrayList<String> inputModeOfWacthTargetDefault =
-		new ArrayList<String>(java.util.Arrays.asList("command", "console_wait"));
+		new ArrayList<String>(java.util.Arrays.asList("command", "backlog_prompt", "ex_s_prompt"));
 	protected ArrayList<String> inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	protected Boolean isAppMode = false;
 	protected StrokeSender strokeSender = null;
@@ -282,11 +282,13 @@ class WasaviWrapper {
 		inputModeOfWacthTarget = new ArrayList<String>();
 
 		for (String s: modes) {
-			if ("command".equals(s) ||
-				"edit".equals(s) ||
-				"overwrite".equals(s) ||
-				"line_input".equals(s)) {
-
+			if ("command".equals(s)
+				|| "edit".equals(s)
+				|| "overwrite".equals(s)
+				|| "line_input".equals(s)
+				|| "backlog_prompt".equals(s)
+				|| "ex_s_prompt".equals(s)
+			) {
 				inputModeOfWacthTarget.add(s);
 			}
 		}

@@ -1461,15 +1461,12 @@ var cache = {};
 	}),
 	new ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
 		var messages;
-		var logToConsole = false;
 		var emphasis = false;
 		if (a.argv.length == 0) {
 			messages = app.config.dump(app.backlog.cols);
-			logToConsole = true;
 		}
 		else if (a.argv.some(function (o) {return o == 'all';})) {
 			messages = app.config.dump(app.backlog.cols, true);
-			logToConsole = true;
 		}
 		else {
 			messages = [];
@@ -1512,19 +1509,15 @@ var cache = {};
 					}
 				}
 			}
+		}
+		if (messages.length) {
 			if (messages.length == 1) {
-				messages = messages[0];
+				app.low.requestShowMessage(messages[0], emphasis);
 			}
-			else {
-				logToConsole = true;
+			else if (messages.length > 1) {
+				app.backlog.push(messages);
+				app.low.requestOpenConsole();
 			}
-		}
-		if (logToConsole) {
-			app.backlog.push(messages);
-			app.low.requestOpenConsole();
-		}
-		else {
-			app.low.requestShowMessage(messages, emphasis);
 		}
 	}),
 	new ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {

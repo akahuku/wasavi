@@ -349,10 +349,10 @@ function expr (source) {
 	function add () {
 		var r = mul();
 loop:	while (true) {
-			switch (tokens[i]) {
+			switch (tokens[i++]) {
 			case '+': r += mul(); break;
 			case '-': r -= mul(); break;
-			default: break loop;
+			default: --i; break loop;
 			}
 		}
 		return r;
@@ -360,11 +360,11 @@ loop:	while (true) {
 	function mul () {
 		var r = fact();
 loop:	while (true) {
-			switch (tokens[i]) {
+			switch (tokens[i++]) {
 			case '*': r *= fact(); break;
 			case '/': r /= fact(); break;
 			case '%': r %= fact(); break;
-			default: break loop;
+			default: --i; break loop;
 			}
 		}
 		return r;

@@ -1046,8 +1046,14 @@ public class EditingTest extends WasaviTest {
 	@Test
 	public void pasteRegister () {
 		Wasavi.send("afoo\nbar\u001b1GyG");
-		Wasavi.send("O\u0012\"\u001b");
-		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+		Wasavi.send("\"\"P");
+		assertValue("#1-1", "foo\nbar\nfoo\nbar");
+	}
+
+	@Test
+	public void pasteCalcRegister () {
+		Wasavi.send("\"=99*99\nP");
+		assertValue("#1-1", "9801");
 	}
 
 	@Test

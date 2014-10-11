@@ -1179,6 +1179,19 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#1-4", "\too");
 	}
+
+	@Test
+	public void pasteRegister () {
+		Wasavi.send("afoo\nbar\u001b1GyG");
+		Wasavi.send("O\u0012\"\u001b");
+		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+	}
+
+	@Test
+	public void pasteCalcRegister () {
+		Wasavi.send("afoo\nbar\u001b1Go\u0012=99*99\nbaz\u001b");
+		assertValue("#1-1", "foo\n9801baz\nbar");
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

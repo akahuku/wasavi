@@ -186,6 +186,13 @@ public class LineInputEditingTest extends WasaviTest {
 	}
 
 	@Test
+	public void pasteCalcRegister () {
+		Wasavi.send("afoo\nbar\nbaz\u001b");
+		Wasavi.send(":\u0012=1+2\np\n");
+		assertEquals("#1-1", "baz", Wasavi.getLastMessage());
+	}
+
+	@Test
 	public void pasteClipboard () {
 		Wasavi.send("afoo\nbar\u001b1G\"*yG");
 		Wasavi.setInputModeOfWatchTarget("line_input");
