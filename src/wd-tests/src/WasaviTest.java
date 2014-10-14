@@ -315,6 +315,7 @@ class WasaviWrapper {
 				|| "line_input".equals(s)
 				|| "backlog_prompt".equals(s)
 				|| "ex_s_prompt".equals(s)
+				|| "write handler".equals(s)
 			) {
 				inputModeOfWacthTarget.add(s);
 			}

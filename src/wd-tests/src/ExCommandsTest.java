@@ -1739,8 +1739,8 @@ public class ExCommandsTest extends WasaviTest {
 	@Test
 	public void testWriteToFile () {
 		Wasavi.send("ifoobar\u001b");
+		Wasavi.setInputModeOfWatchTarget("write handler");
 		Wasavi.send(":writ test/foobar\n");
-		Wasavi.waitCommandCompletion();
 		assertEquals("#1-1", "Written: \"/test/foobar\" [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
 	}
 

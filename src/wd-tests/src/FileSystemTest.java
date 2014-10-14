@@ -86,10 +86,8 @@ public class FileSystemTest extends WasaviTest {
 		int n = (int)(Math.random() * 1000);
 		Wasavi.send(":files default " + fs + "\n");
 		Wasavi.send(String.format("ggawrite test:%d\nwrite test\u001b", n));
+		Wasavi.setInputModeOfWatchTarget("write handler");
 		Wasavi.send(":w /test/write\\ test.txt\n");
-		// TBD: This waiting is not good.
-		// We have to wait for the completion event produced by write handler.
-		sleep(1000 * 10);
 		Wasavi.send(":r /test/write\\ test.txt\n");
 		assertEquals("#1-1",
 				String.format("write test:%d\nwrite test\nwrite test:%d\nwrite test", n, n),
