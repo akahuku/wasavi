@@ -40,7 +40,7 @@ public class FileSystemTest extends WasaviTest {
 		String line = Wasavi.getLineInput();
 		Wasavi.send("\u001b");
 
-		System.out.println(testLabel + ": " + line);
+		Wasavi.log(String.format("completeRootPath: label:%s fs:%s prefix:%s makeDefault:%s line: %s", testLabel, fs, prefix, makeDefault ? "true" : "false", line));
 
 		if (makeDefault) {
 			assertTrue(testLabel, Pattern.matches("^r " + prefix + ".+$", line));
@@ -67,7 +67,7 @@ public class FileSystemTest extends WasaviTest {
 		String line = Wasavi.getLineInput();
 		Wasavi.send("\u001b");
 
-		System.out.println(testLabel + ": " + line);
+		Wasavi.log(String.format("completeSubPath: label:%s fs:%s makeDefault:%s line: %s", testLabel, fs, makeDefault ? "true" : "false", line));
 
 		if (makeDefault) {
 			assertTrue(testLabel, Pattern.matches("^r /test.+$", line));
@@ -86,9 +86,11 @@ public class FileSystemTest extends WasaviTest {
 		int n = (int)(Math.random() * 1000);
 		Wasavi.send(":files default " + fs + "\n");
 		Wasavi.send(String.format("ggawrite test:%d\nwrite test\u001b", n));
-		Wasavi.send(":w /test/write\\ test.txt\n", "G");
-		Wasavi.waitCommandCompletion();
-		Wasavi.send(":r /test/write\\ test.txt\n", "gg");
+		Wasavi.send(":w /test/write\\ test.txt\n");
+		// TBD: This waiting is not good.
+		// We have to wait for the completion event produced by write handler.
+		sleep(1000 * 10);
+		Wasavi.send(":r /test/write\\ test.txt\n");
 		assertEquals("#1-1",
 				String.format("write test:%d\nwrite test\nwrite test:%d\nwrite test", n, n),
 				Wasavi.getValue());

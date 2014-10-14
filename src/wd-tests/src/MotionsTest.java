@@ -125,9 +125,6 @@ public class MotionsTest extends WasaviTest {
 
 		Wasavi.send("0");
 		assertPos("#1", 0, 0);
-
-		Wasavi.send("$10");
-		assertPos("#2", 0, 5);
 	}
 
 	private void _testTailOfLine (CharSequence a) {

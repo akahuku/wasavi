@@ -1,5 +1,6 @@
 // ==UserScript==
 // @include http://wasavi.appsweets.net/
+// @include http://wasavi.appsweets.net/?testmode
 // @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
@@ -117,7 +118,7 @@
 			getFileIoResultInfo:getFileIoResultInfo,
 			getFileInfo:getFileInfo,
 			notifyToParent:notifyToParent,
-			notifyKeydownEvent:notifyKeydownEvent,
+			notifyActivity:notifyActivity,
 			notifyCommandComplete:notifyCommandComplete,
 			setSubstituteWorker:setSubstituteWorker,
 			extractDriveName:extractDriveName,
@@ -989,8 +990,9 @@ function uninstall (save, implicit) {
 	});
 	notifyToParent('terminated', targetElement);
 
-	extensionChannel = extensionChannel.disconnect();
+	//extensionChannel = extensionChannel.disconnect();
 	targetElement = null;
+	emptyNodeContents(document.body);
 }
 function setupEventHandlers (install) {
 	var method = install ? 'addEventListener' : 'removeEventListener';
@@ -1116,12 +1118,6 @@ function setInputMode (newInputMode, opts) {
 			cursor.update({type:newInputMode, focused:true, visible:!backlog.visible});
 			showPrefixInput();
 			break;
-		/*
-		case 'line_input':
-			showLineInput(prefix, initial);
-			cursor.update({type:newInputMode, focused:true, visible:true});
-			break;
-		 */
 		case 'console_wait':
 			cursor.update({type:newInputMode, visible:!backlog.visible && inputMode != 'ex_s_prompt'});
 			break;
@@ -1983,7 +1979,6 @@ function needBreakUndo (s, ch) {
 		|| unicodeUtils.isIdeograph(ch);
 }
 function execCommandMap (r, e, map, key, subkey, code, updateBound) {
-	notifyCommandStart();
 	lastMessage = '';
 	var ss = buffer.selectionStart;
 	var se = buffer.selectionEnd;
@@ -2010,17 +2005,12 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 				delete requestedState.simpleCommand;
 			}
 
-			if (!scroller.running) {
-				r.needEmitEvent = true;
-			}
-
+			r.needEmitEvent = true;
 			prefixInput.reset();
 			requestShowPrefixInput();
 		}
 	}
-	else {
-		r.needEmitEvent = true;
-	}
+
 	var im;
 	if (/^bound(?:_line)?$/.test(im = inputMode)
 	|| requestedState.inputMode && /^bound(?:_line)?$/.test(im = requestedState.inputMode.mode)) {
@@ -2052,7 +2042,6 @@ function execEditMap (r, e, key, subkey, code) {
 }
 function execLineInputEditMap (r, e, key, subkey, code) {
 	if (!lineInputEditMap[key]) return false;
-	notifyCommandStart();
 	if (execMap($(LINE_INPUT_ID), e, lineInputEditMap, key, subkey, code)) {
 		r.needEmitEvent = true;
 	}
@@ -2105,7 +2094,6 @@ function processInput (e, ignoreAbbrev) {
 		}
 		requestedState.modeline = null;
 		config.vars.errorbells && requestRegisterNotice();
-		result.needEmitEvent = true;
 	}
 	if (requestedState.notice) {
 		if (requestedState.notice.play) {
@@ -2116,14 +2104,13 @@ function processInput (e, ignoreAbbrev) {
 			log(requestedState.notice.message);
 		}
 		requestedState.notice = null;
-		result.needEmitEvent = true;
 	}
 	if (requestedState.console && backlog.queued) {
 		backlog.write(false, messageUpdated);
 		pushInputMode(result, ['backlog_prompt']);
 		requestedState.console = null;
 	}
-	if (result.needEmitEvent !== false) {
+	if (!keyManager.isLocked && (result.needEmitEvent !== false || prefixInput == '')) {
 		notifyCommandComplete(
 			isString(result.needEmitEvent) ? result.needEmitEvent : null);
 	}
@@ -2298,45 +2285,51 @@ function notifyToParent (eventName, payload) {
 		payload: payload
 	});
 }
-function notifyKeydownEvent (code, key, note) {
-	if (!testMode) return;
-	notifyToParent('notify-keydown', {
-		keyCode:code,
-		key:key,
-		eventType:note
-	});
+function notifyActivity (code, key, note) {
+	if (!testMode || !extensionChannel) return;
+	if (extensionChannel.isTopFrame()) {
+		if (!document.documentElement.getAttribute('data-wasavi-command-state')) {
+			document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
+		}
+	}
+	else {
+		notifyToParent('notify-keydown', {
+			keyCode:code,
+			key:key,
+			eventType:note
+		});
+	}
 }
-function notifyCommandStart () {
-	document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
-	if (!testMode) return;
-	notifyToParent('command-start');
-}
-function notifyCommandComplete (eventName) {
+function notifyCommandComplete (eventName, modeOverridden) {
 	if (exCommandExecutor.commands.length) return;
-	document.documentElement.removeAttribute('data-wasavi-command-state');
-	document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
-	if (!testMode) return;
+	if (!testMode || !extensionChannel) return;
 	eventName || (eventName = 'command-completed');
 	var pt = new Position(getCurrentViewPositionIndices().top, 0);
-	notifyToParent(eventName, {
-		state:{
-			running:    !!targetElement,
-			state:      state,
-			inputMode:  inputMode,
-			lastMessage:lastMessage,
-			lastSimpleCommand: lastSimpleCommand,
-			value:      buffer.value,
-			row:        buffer.selectionStartRow,
-			col:        buffer.selectionStartCol,
-			topRow:     pt.row,
-			topCol:     pt.col,
-			rowLength:  buffer.elm.childNodes.length,
-			registers:  registers.dumpData(),
-			marks:      marks.dumpData(),
-			lines:      config.vars.lines,
-			lineInput:  state == 'line_input' ? $(LINE_INPUT_ID).value : ''
-		}
-	});
+	var currentState = {
+		running:    !!targetElement,
+		state:      state,
+		inputMode:  modeOverridden || inputMode,
+		lastMessage:lastMessage,
+		lastSimpleCommand: lastSimpleCommand,
+		value:      buffer.value,
+		row:        buffer.selectionStartRow,
+		col:        buffer.selectionStartCol,
+		topRow:     pt.row,
+		topCol:     pt.col,
+		rowLength:  buffer.elm.childNodes.length,
+		registers:  registers.dumpData(),
+		marks:      marks.dumpData(),
+		lines:      config.vars.lines,
+		lineInput:  state == 'line_input' ? $(LINE_INPUT_ID).value : ''
+	};
+	if (extensionChannel.isTopFrame()) {
+		document.documentElement.removeAttribute('data-wasavi-command-state');
+		document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
+		document.documentElement.setAttribute('data-wasavi-state', JSON.stringify(currentState));
+	}
+	else {
+		notifyToParent(eventName, {state:currentState});
+	}
 }
 function fireDOMPasteEvent (s) {
 	s += '';
@@ -2521,7 +2514,8 @@ function getWriteHandler (id) {
 		if (req.error) {
 			removeMultiplexCallback(id);
 			showMessage(_.apply(null, req.error), true, false);
-			notifyCommandComplete();
+			notifyActivity('', '', 'write handler error: ' + req.error);
+			notifyCommandComplete(null, req.meta.path == '' ? null : 'write handler');
 			return;
 		}
 
@@ -2537,7 +2531,8 @@ function getWriteHandler (id) {
 		case 'complete':
 			showMessage(
 				_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
-			notifyCommandComplete();
+			notifyActivity('', '', 'write handler completed');
+			notifyCommandComplete(null, req.meta.path == '' ? null : 'write handler');
 			removeMultiplexCallback(id);
 			break;
 		}
@@ -4265,11 +4260,9 @@ function handleWindowError (message, fileName, lineNumber, columnNumber, errObj)
 }
 
 // keyManager
-function handleKeydownMain (e) {
-	notifyKeydownEvent(e.code, e.fullIdentifier, '');
-	processInput(e);
-}
 function handleKeydown (e) {
+	notifyActivity(e.code, e.fullIdentifier);
+
 	if (keyManager.isLocked) {
 		if (exCommandExecutor.running && e.code == 3) {
 			interruptMultiplexCallback();
@@ -4284,10 +4277,10 @@ function handleKeydown (e) {
 
 	isInteractive = true;
 	if (e.isNoremap) {
-		handleKeydownMain(e);
+		processInput(e);
 	}
 	else {
-		mapManager.process(e, handleKeydownMain);
+		mapManager.process(e, processInput);
 	}
 }
 
@@ -4925,7 +4918,6 @@ var modeHandlers = {
 		}
 	},
 	ex_s_prompt: function (e, r) {
-		notifyCommandStart();
 		if (!substituteWorker.kontinue(r.letter)) {
 			substituteWorker = null;
 			cursor.ensureVisible();
@@ -7585,6 +7577,7 @@ if (global.WasaviExtensionWrapper
 		}
 
 		if (extensionChannel.isTopFrame()) {
+			testMode = req.testMode;
 			run(function() {
 				!targetElement && install({
 					// parentTabId
