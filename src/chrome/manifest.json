@@ -39,6 +39,7 @@
     {
       "matches": [
         "http://wasavi.appsweets.net/",
+        "http://wasavi.appsweets.net/?testmode",
         "https://ss1.xrea.com/wasavi.appsweets.net/"
       ],
       "js": [

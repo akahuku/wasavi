@@ -1,5 +1,6 @@
 // ==UserScript==
 // @include http://wasavi.appsweets.net/
+// @include http://wasavi.appsweets.net/?testmode
 // @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 
@@ -4100,6 +4101,7 @@ Wasavi.Completer = function (appProxy, alist) {
 			timeoutTimer = null;
 			stopNotifierTimer();
 			appProxy.keyManager.unlock();
+			appProxy.low.notifyActivity('', '', 'completion timed out');
 			running = false;
 			callback(_('completion timed out'));
 			callback.__timed_out__ = true;
@@ -4153,6 +4155,7 @@ Wasavi.Completer = function (appProxy, alist) {
 		ctx.item.requestCandidates(value, function () {
 			stopNotifierTimer();
 			appProxy.keyManager.unlock();
+			appProxy.low.notifyActivity('', '', 'completion done');
 			running = false;
 			if (callback.__timed_out__) {
 				return false;

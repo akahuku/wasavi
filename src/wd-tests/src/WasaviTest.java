@@ -63,8 +63,6 @@ class WasaviWrapper {
 
 	class SymbiosisModeStrokeSender extends StrokeSender {
 		@Override public void setup () {
-			js("document.getElementById('wasavi_frame')" +
-				".setAttribute('data-wasavi-command-state', 'busy');");
 		}
 
 		@Override public WebElement waitCommandCompletion () {
@@ -77,7 +75,14 @@ class WasaviWrapper {
 							String commandState = elm.getAttribute("data-wasavi-command-state");
 							String inputMode = elm.getAttribute("data-wasavi-input-mode");
 
+							/*
+							if (commandState != null) {
+								System.out.println(String.format("%s, mode: %s", commandState, inputMode));
+							}
+							 */
+
 							if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
+								//System.out.println(String.format("found, mode: %s", inputMode));
 								return elm;
 							}
 						}
@@ -106,7 +111,6 @@ class WasaviWrapper {
 			String source = wasaviFrame.getAttribute("data-wasavi-state");
 			if (source != null) {
 				try {
-					//System.out.println(source);
 					wasaviState = new JSONObject(source);
 				}
 				catch (JSONException e) {
@@ -124,14 +128,11 @@ class WasaviWrapper {
 			}
 
 			WasaviAsserts.setWasaviState(wasaviState);
-			//System.out.println(getValue());
 		}
 	}
 
 	class AppModeStrokeSender extends StrokeSender {
 		@Override public void setup () {
-			js("document.documentElement" +
-				".setAttribute('data-wasavi-command-state', 'busy');");
 		}
 
 		@Override public WebElement waitCommandCompletion () {
@@ -143,6 +144,12 @@ class WasaviWrapper {
 							WebElement elm = d.findElement(By.tagName("html"));
 							String commandState = elm.getAttribute("data-wasavi-command-state");
 							String inputMode = elm.getAttribute("data-wasavi-input-mode");
+
+							/*
+							if (commandState != null) {
+								System.out.println(String.format("%s, mode: %s", commandState, inputMode));
+							}
+							 */
 
 							if (commandState == null && inputModeOfWacthTarget.contains(inputMode)) {
 								return elm;
@@ -166,6 +173,27 @@ class WasaviWrapper {
 		}
 
 		@Override public void finish (WebElement wasaviFrame) {
+			WebElement elm = driver.findElement(By.tagName("html"));
+			String source = elm.getAttribute("data-wasavi-state");
+			if (source != null) {
+				try {
+					wasaviState = new JSONObject(source);
+				}
+				catch (JSONException e) {
+					if (LOG_EXCEPTION) {
+						System.out.println("finish: invalid json source: " + source);
+					}
+					wasaviState = new JSONObject();
+				}
+			}
+			else {
+				if (LOG_EXCEPTION) {
+					System.out.println("finish: cannot retrieve wasavi state.");
+				}
+				wasaviState = new JSONObject();
+			}
+
+			WasaviAsserts.setWasaviState(wasaviState);
 		}
 	}
 
@@ -239,15 +267,14 @@ class WasaviWrapper {
 
 	public void send (CharSequence... strokes) {
 		getStrokeSender();
+		strokeSender.setup();
 
 		for (CharSequence s: strokes) {
-			strokeSender.setup();
-
 			(new Actions(driver)).sendKeys(s).perform();
-
-			WebElement elm = strokeSender.waitCommandCompletion();
-			strokeSender.finish(elm);
 		}
+
+		WebElement elm = strokeSender.waitCommandCompletion();
+		strokeSender.finish(elm);
 
 		inputModeOfWacthTarget = inputModeOfWacthTargetDefault;
 	}
@@ -294,8 +321,17 @@ class WasaviWrapper {
 		}
 	}
 
-	public Object js (String script) {
-		return ((JavascriptExecutor)driver).executeScript(script);
+	public Object js (String script, Object... args) {
+		return ((JavascriptExecutor)driver).executeScript(script, args);
+	}
+
+	public void log (String s) {
+		js(
+			"var t = document.getElementById('test-log');" +
+			"if (!t) return;" +
+			"t.value += '\\n' + Array.prototype.slice.call(arguments).join('\\t');" +
+			"t.scrollTop = t.scrollHeight - t.clientHeight;",
+			s);
 	}
 
 	public Boolean waitTerminate () {
@@ -829,7 +865,7 @@ public class WasaviTest {
 	}
 
 	protected WebElement invokeAppModeWasavi () {
-		driver.navigate().to("http://wasavi.appsweets.net/");
+		driver.navigate().to("http://wasavi.appsweets.net/?testmode");
 
 		WebElement wasaviFrame = null;
 

@@ -25,6 +25,8 @@
 	/* {{{1 consts */
 
 	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
+	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
+	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	var TEST_VERSION = '0.0.1';
 
 	/* {{{1 variables */
@@ -371,8 +373,8 @@
 					'https://*'
 				],
 				exclude_matches: [
-					'http://wasavi.appsweets.net/',
-					'https://ss1.xrea.com/wasavi.appsweets.net/',
+					APP_MODE_URL, APP_MODE_URL + '?testmode',
+					APP_MODE_URL_SECURE,
 					self.data.url('options.html') + '*',
 					function (url) {
 						return url.substring(0, 256) ==
@@ -388,8 +390,8 @@
 			{
 				name: 'wasavi',
 				matches: [
-					'http://wasavi.appsweets.net/',
-					'https://ss1.xrea.com/wasavi.appsweets.net/',
+					APP_MODE_URL, APP_MODE_URL + '?testmode',
+					APP_MODE_URL_SECURE,
 					function (url) {
 						return url.substring(0, 256) ==
 							wasaviFrameSource.substring(0, 256);
@@ -555,7 +557,8 @@
 			version: ext.version,
 			devMode: ext.isDev,
 			logMode: ext.logMode,
-			testMode: data.url == TEST_MODE_URL,
+			testMode: data.url == TEST_MODE_URL
+				|| ((data.url.indexOf(APP_MODE_URL) === 0 || data.url.indexOf(APP_MODE_URL_SECURE) === 0) && /[?&]testmode/.test(data.url)),
 
 			targets: config.get('targets'),
 			shortcut: config.get('shortcut'),

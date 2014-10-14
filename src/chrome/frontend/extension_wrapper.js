@@ -260,7 +260,9 @@
 						port.postMessage(data) :
 						chrome.runtime.sendMessage(data);
 				}
-				catch (e) {}
+				catch (e) {
+					debugger;
+				}
 			}
 		};
 		this.doConnect = function () {

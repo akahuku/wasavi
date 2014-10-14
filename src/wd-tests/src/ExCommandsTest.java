@@ -890,7 +890,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":map Q 1G\n");
 		Wasavi.send(":map QQ G\n");
 		Wasavi.send("i1\n2\n3\n4\n5\u001b");
-			
+
 		// ambiguous, timed out
 		Wasavi.send("Q");
 		assertPos("#1-1", 0, 0);

@@ -2,6 +2,7 @@
 // @include http://*/*
 // @include https://*/*
 // @exclude http://wasavi.appsweets.net/
+// @exclude http://wasavi.appsweets.net/?testmode
 // @exclude https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
@@ -76,7 +77,6 @@ var resizeListener;
 var wasaviFrameTimeoutTimer;
 var getValueCallback;
 var stateClearTimer;
-var keyStrokeLog = [];
 
 var pageHooksHelper = Object.freeze({
 	tabs: Object.freeze({
@@ -458,8 +458,11 @@ function getFocusables () {
 	return ordered.concat(unordered);
 }
 
-function keylog (eventType, keyCode, key) {
-	keyStrokeLog.unshift([keyCode, key, eventType].join('\t'));
+function keylog () {
+	var t = document.getElementById('test-log');
+	if (!t) return;
+	t.value += '\n' + Array.prototype.slice.call(arguments).join('\t');
+	t.scrollTop = t.scrollHeight - t.clientHeight;
 }
 
 function fireCustomEvent (name, detail, target) {
@@ -1130,7 +1133,7 @@ function handleBackendMessage (req) {
 		if (typeof result == 'number') {
 			payload.state = 'complete';
 			payload.meta = {
-				path:req.value.path,
+				path:req.path,
 				bytes:result
 			};
 		}
@@ -1202,27 +1205,21 @@ function handleBackendMessage (req) {
 		if (stateClearTimer) {
 			clearTimeout(stateClearTimer);
 			stateClearTimer = null;
-			//keylog('notify-keydown: timer cleared', '', '');
 		}
-		keylog(req.eventType, req.keyCode, req.key);
+		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
+			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
+			document.querySelector('h1').style.color = 'red';
+			keylog('', '', 'command start');
+		}
+		keylog(req.key, req.keyCode, req.eventType);
 		break;
 
 	case 'notify-error':
 		if (!isTestFrame) break;
-		document.body.appendChild(document.createElement('div')).textContent =
-			document.querySelector('h1').textContent + ':' +
-			'\t' + req.fileName +
-			'\t(' + req.lineNumber + ')' +
-			'\t' + req.message;
-		break;
-
-	case 'command-start':
-		if (!isTestFrame) break;
-		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
-			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
-			keylog('command-start', '', '');
-		}
-		document.querySelector('h1').style.color = 'red';
+		keylog(
+			'error on ' + document.querySelector('h1').textContent,
+			req.fileName + '(' + req.lineNumber + ')',
+			req.message);
 		break;
 
 	case 'notify-state':
@@ -1231,14 +1228,14 @@ function handleBackendMessage (req) {
 			clearTimeout(stateClearTimer);
 		}
 		stateClearTimer = setTimeout(function () {
+			stateClearTimer = null;
+
 			wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
 			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
-
-			stateClearTimer = null;
 			wasaviFrame.removeAttribute('data-wasavi-command-state');
-			keylog('notify-state', '', '');
+
+			keylog('notify-state');
 		}, 500);
-		//keylog('notify-state: timer registered.', '', '');
 		break;
 
 	case 'command-completed':
@@ -1247,30 +1244,27 @@ function handleBackendMessage (req) {
 			clearTimeout(stateClearTimer);
 		}
 		stateClearTimer = setTimeout(function () {
-			wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
-			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
-			wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
-
-			keylog('command-completed', '', '');
-			keyStrokeLog.unshift('*** sequence point ***');
-			document.querySelector('h1').style.color = '';
-			document.getElementById('test-log').value =
-				keyStrokeLog.join('\n') + '\n' + document.getElementById('test-log').value;
-
-			var state = document.getElementById('state');
-			state.textContent = '';
-			['running', 'state', 'inputMode', 'row', 'col', 'lastMessage'].forEach(function (p) {
-				state.appendChild(document.createElement('div')).textContent =
-					p + ': ' + req.state[p];
-			});
-
-			keyStrokeLog = [];
-
 			stateClearTimer = null;
-			//wasaviFrame.setAttribute('data-wasavi-command-state', 'done');
-			wasaviFrame.removeAttribute('data-wasavi-command-state');
+			try {
+				wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
+				wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
+				wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
+
+				document.querySelector('h1').style.color = '';
+
+				var state = document.getElementById('state');
+				state.textContent = '';
+				['running', 'state', 'inputMode', 'row', 'col', 'lastMessage'].forEach(function (p) {
+					state.appendChild(document.createElement('div')).textContent =
+						p + ': ' + req.state[p];
+				});
+			}
+			finally {
+				wasaviFrame.removeAttribute('data-wasavi-command-state');
+				keylog('*** sequence point (' + req.state.inputMode + ') ***');
+
+			}
 		}, 500);
-		//keylog('command-completed: timer registered.', '', '');
 		break;
 	}
 }

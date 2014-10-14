@@ -2,6 +2,7 @@
 // @include http://*/*
 // @include https://*/*
 // @exclude http://wasavi.appsweets.net/
+// @exclude http://wasavi.appsweets.net/?testmode
 // @exclude https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //

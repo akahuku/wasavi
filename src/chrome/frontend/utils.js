@@ -1,5 +1,6 @@
 // ==UserScript==
 // @include http://wasavi.appsweets.net/
+// @include http://wasavi.appsweets.net/?testmode
 // @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //

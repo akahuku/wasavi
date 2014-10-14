@@ -1,5 +1,6 @@
 // ==UserScript==
 // @include http://wasavi.appsweets.net/
+// @include http://wasavi.appsweets.net/?testmode
 // @include https://ss1.xrea.com/wasavi.appsweets.net/
 // ==/UserScript==
 //
@@ -654,7 +655,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 		scrollTopDest = dest;
 		if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
 			buffer.scrollTop = dest;
-			app.low.notifyKeydownEvent('', '', 'scroller exit (1)');
+			app.low.notifyActivity('', '', 'scroller exit (no effect)');
 			callback && callback();
 			return;
 		}
@@ -667,6 +668,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 			var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
 			if (!app.targetElement || !cursor || !modeLine) {
+				app.low.notifyActivity('', '', 'scroller exit (illegal state)');
 				app.low.notifyCommandComplete();
 				running = false;
 				app.keyManager.unlock();
@@ -680,6 +682,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 				cursor.ensureVisible();
 				cursor.update({visible:true});
 				modeLine.style.display == '' && app.low.showPrefixInput();
+				app.low.notifyActivity('', '', 'scroller exit (scrolled)');
 				app.low.notifyCommandComplete();
 				running = false;
 				app.keyManager.unlock();
