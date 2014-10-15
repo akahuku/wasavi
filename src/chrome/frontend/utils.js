@@ -204,8 +204,13 @@ var dataset = (function () {
 			result = elm.getAttribute(name);
 		}
 		else {
-			result = arguments[2].toString();
-			elm.setAttribute(name, result);
+			if (arguments[2] === null) {
+				elm.removeAttribute(name);
+			}
+			else {
+				result = arguments[2].toString();
+				elm.setAttribute(name, result);
+			}
 		}
 
 		return result;

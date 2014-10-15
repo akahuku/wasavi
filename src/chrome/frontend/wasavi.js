@@ -5105,6 +5105,25 @@ var modeHandlers = {
 		else if (execLineInputEditMap(r, e, r.mapkey, r.subkey, r.code)) {
 			setTimeout(function () {
 				var input = $(LINE_INPUT_ID);
+
+				/*
+				 * Although following codes are very very strange,
+				 * required for Firefox.
+				 * It seems that Firefox has a bug which clears
+				 * the contents of input element by the escape key :-<
+				 */
+				if (IS_GECKO) {
+					var processed = dataset(input, 'processed');
+					if (input.value != processed) {
+						input.value = processed;
+						var pos = dataset(input, 'pos') - 0;
+						input.selectionStart = pos;
+						input.selectionEnd = pos;
+					}
+				}
+				dataset(input, 'processed', null);
+				dataset(input, 'pos', null);
+
 				if (input.value != dataset(input, 'current')) {
 					processInputSupplement();
 				}
@@ -5124,6 +5143,9 @@ var modeHandlers = {
 		if (!isCompleteResetCanceled) {
 			completer.reset();
 		}
+
+		dataset(input, 'processed', input.value);
+		dataset(input, 'pos', input.selectionStart);
 	}
 };
 
