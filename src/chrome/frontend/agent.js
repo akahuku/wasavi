@@ -663,7 +663,7 @@ function toPlainText (input) {
 function isInBlacklist (blacklist) {
 	return blacklist.split('\n').some(function (url) {
 		url = url.replace(/^\s+|\s+$/g, '');
-		if (/^[#;]/.test(url)) return;
+		if (url == '' || /^[#;]/.test(url)) return;
 
 		try {
 			url = new RegExp('^' + url
