@@ -111,7 +111,7 @@
 			requestShowMessage:requestShowMessage,
 			requestRegisterNotice:requestRegisterNotice,
 			requestInputMode:requestInputMode,
-			requestOpenConsole:requestOpenConsole,
+			requestConsoleState:requestConsoleState,
 			executeExCommand:executeExCommand,
 			executeViCommand:executeViCommand,
 			getFindRegex:getFindRegex,
@@ -1304,9 +1304,11 @@ function requestInputMode (mode, opts) {
 	}
 	return requestedState.inputMode;
 }
-function requestOpenConsole () {
+function requestConsoleState (isClose) {
 	if (!requestedState.console) {
-		requestedState.console = true;
+		requestedState.console = {
+			open:!isClose
+		};
 	}
 }
 function requestSimpleCommandUpdate (initial) {
@@ -2105,9 +2107,14 @@ function processInput (e, ignoreAbbrev) {
 		}
 		requestedState.notice = null;
 	}
-	if (requestedState.console && backlog.queued) {
-		backlog.write(false, messageUpdated);
-		pushInputMode(result, ['backlog_prompt']);
+	if (requestedState.console) {
+		if (requestedState.console.open && backlog.queued) {
+			backlog.write(false, messageUpdated);
+			pushInputMode(result, ['backlog_prompt']);
+		}
+		else if (!requestedState.console.open) {
+			backlog.hide();
+		}
 		requestedState.console = null;
 	}
 	if (!keyManager.isLocked && (result.needEmitEvent !== false || prefixInput == '')) {
