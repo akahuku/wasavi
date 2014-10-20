@@ -1594,7 +1594,7 @@ var cache = {};
 			map.remove(lhs);
 		}
 	}),
-	new ExCommand('version', 'ver', '', 0, function (app, t, a) {
+	new ExCommand('version', 've', '', 0, function (app, t, a) {
 		app.low.requestShowMessage('wasavi/' + app.version);
 	}),
 	new ExCommand('v', 'v', 's', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
