@@ -1006,6 +1006,7 @@ Wasavi.KeyManager = function () {
 			fullIdentifier: identifier,
 			shift: false,
 			ctrl: false,
+			alt: false,
 			isSpecial: c < 0 && SPECIAL_KEYS[-c]
 		};
 	}
@@ -1016,6 +1017,7 @@ Wasavi.KeyManager = function () {
 			fullIdentifier: '*nop*',
 			shift: false,
 			ctrl: false,
+			alt: false,
 			isSpecial: false
 		};
 	}
@@ -1027,11 +1029,12 @@ Wasavi.KeyManager = function () {
 	function parseKeyDesc (desc, escaped) {
 		function doParse (desc) {
 			var parts = desc.toLowerCase().split('-');
-			var shift = false, ctrl = false, name = '';
+			var shift = false, ctrl = false, alt = false, name = '';
 
-			while (parts.length > 1 && (parts[0] == 's' || parts[0] == 'c')) {
+			while (parts.length > 1 && /^[sca]$/.test(parts[0])) {
 				shift = parts[0] == 's' || shift;
 				ctrl = parts[0] == 'c' || ctrl;
+				alt = parts[0] == 'a' || alt;
 				parts.shift();
 			}
 
@@ -1043,7 +1046,8 @@ Wasavi.KeyManager = function () {
 						code:SPECIAL_KEY_ALIASES[name],
 						name:name,
 						shift:shift,
-						ctrl:ctrl
+						ctrl:ctrl,
+						alt:alt
 					};
 				}
 				else {
@@ -1057,7 +1061,8 @@ Wasavi.KeyManager = function () {
 						code:SPECIAL_KEY_CODES[i] || -i,
 						name:name,
 						shift:shift,
-						ctrl:ctrl
+						ctrl:ctrl,
+						alt:alt
 					};
 				}
 			}
@@ -1087,6 +1092,7 @@ Wasavi.KeyManager = function () {
 				var c = [];
 				obj.shift && c.push('s');
 				obj.ctrl  && c.push('c');
+				obj.alt  && c.push('a');
 				c.push(obj.name);
 				return {
 					consumed:consumed,
@@ -1096,6 +1102,7 @@ Wasavi.KeyManager = function () {
 						fullIdentifier:c.join('-'),
 						shift:obj.shift,
 						ctrl:obj.ctrl,
+						alt:obj.alt,
 						isSpecial:true
 					}
 				};
@@ -1109,6 +1116,7 @@ Wasavi.KeyManager = function () {
 				fullIdentifier:desc.charAt(0),
 				shift:false,
 				ctrl:false,
+				alt:false,
 				isSpecial:false
 			}
 		};
@@ -1231,7 +1239,7 @@ Wasavi.KeyManager = function () {
 
 		keyDownCode = e.keyCode;
 		inputEventInvokedCount = 0;
-		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17) return;
+		if (e.shiftKey && e.keyCode == 16 || e.ctrlKey && e.keyCode == 17 || e.altKey && e.keyCode == 18) return;
 		ENABLE_LOG && logit('[keydown]\tkeyCode:' + e.keyCode + ', which:' + e.which + ', shift:' + e.shiftKey + ', ctrl:' + e.ctrlKey);
 		if (window.chrome) {
 			specialKeyName = false;
@@ -1247,7 +1255,7 @@ Wasavi.KeyManager = function () {
 
 			// ctrl code shortcuts: ctrl + *
 			if (specialKeyName === false) {
-				if (e.ctrlKey && (
+				if (e.ctrlKey && !e.altKey && (
 					e.keyCode >= 64 && e.keyCode <= 95 ||
 					e.keyCode >= 96 && e.keyCode <= 127 ||
 					e.keyCode == 219)
@@ -1255,6 +1263,7 @@ Wasavi.KeyManager = function () {
 					handleKeypress({
 						shiftKey:e.shiftKey,
 						ctrlKey:e.ctrlKey,
+						altKey:e.altKey,
 						keyCode:e.keyCode & 0x1f,
 						preventDefault:function () {
 							e.preventDefault();
@@ -1289,11 +1298,13 @@ Wasavi.KeyManager = function () {
 		var isSpecial = false;
 		var shiftKey = e.shiftKey;
 		var ctrlKey = e.ctrlKey;
+		var altKey = e.altKey;
 
 		if (specialKeyName) {
 			if (isPasteKeyStroke(e)) return;
 			shiftKey && c.push('s');
 			ctrlKey  && c.push('c');
+			altKey   && c.push('a');
 			baseKeyName = specialKeyName;
 			c.push(specialKeyName);
 			logicalCharCode = specialKeyCode;
@@ -1309,16 +1320,16 @@ Wasavi.KeyManager = function () {
 			if (window.opera && window.navigator.platform == 'Linux'
 			&& !shiftKey && !ctrlKey && keyCode == 43) {
 				keyCode = 61;
-				shiftKey = ctrlKey = false;
+				shiftKey = ctrlKey = altKey = false;
 			}
 
 			// ctrl code shortcuts: ctrl + *
-			if (ctrlKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
+			if (ctrlKey && !altKey && (keyCode >= 64 && keyCode <= 95 || keyCode >= 97 && keyCode <= 127)) {
 				baseKeyName = '^' + String.fromCharCode(keyCode & 0x5f);
 				c.push(baseKeyName);
 				logicalCharCode = keyCode & 0x1f;
 			}
-			else if (ctrlKey && keyCode == 32) {
+			else if (ctrlKey && !altKey && keyCode == 32) {
 				baseKeyName = '^@';
 				c.push(baseKeyName);
 				logicalCharCode = 0;
@@ -1349,11 +1360,12 @@ Wasavi.KeyManager = function () {
 			fullIdentifier:   c.join('-'),
 			shift:            shiftKey,
 			ctrl:             ctrlKey,
+			alt:              altKey,
 			isSpecial:        isSpecial
 		});
 	}
 	function handleKeyup (e) {
-		/*if (e.keyCode == 16 || e.keyCode == 17) {
+		/*if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) {
 			return;
 		}*/
 
@@ -1616,6 +1628,7 @@ Wasavi.KeyManager = function () {
 				fullIdentifier:   data.charAt(i),
 				shift:            false,
 				ctrl:             false,
+				alt:              false,
 				isCompositioned:  true,
 				isCompositionedFirst: i == 0,
 				isCompositionedLast: i == goal - 1
@@ -1630,7 +1643,7 @@ Wasavi.KeyManager = function () {
 		!isPreserve && init('');
 	}
 	function isPasteKeyStroke (e) {
-		return specialKeyCode == -45 && e.shiftKey && !e.ctrlKey;
+		return specialKeyCode == -45 && e.shiftKey && !e.ctrlKey && !e.altKey;
 	}
 
 	publish(this,
