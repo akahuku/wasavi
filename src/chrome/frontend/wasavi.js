@@ -1563,7 +1563,7 @@ function executeExCommand (source, isRoot, parseOnly) {
 					commandObj = Wasavi.ExCommand.defaultCommand;
 					break;
 				}
-				if (lastTerminator == undefined || lastTerminator == '|') {
+				if (lastTerminator == undefined || lastTerminator == '|' || !isInteractive) {
 					break;
 				}
 				/*FALLTHRU*/

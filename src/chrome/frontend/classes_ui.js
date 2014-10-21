@@ -225,6 +225,8 @@ Wasavi.Theme = function (app) {
 		app = container = null;
 	}
 
+	this.colors = getMirror();
+
 	publish(this,
 		select, update, dispose,
 		{
