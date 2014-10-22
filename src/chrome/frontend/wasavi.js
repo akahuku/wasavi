@@ -6812,9 +6812,13 @@ var boundMap = {
 				marks.getPrivate('<'), marks.getPrivate('>'),
 				buffer.selectionStart, buffer.selectionEnd
 			].sort(function (a, b) {return a.eq(b) ? 0 : a.lt(b) ? -1 : 1});
-			marks.setPrivate('<', p[0]);
-			p[3] = buffer.leftPos(p[3]);
-			buffer.setSelectionRange(p[3]);
+			if (inputMode != 'bound_line' || buffer.selectionStart.lt(marks.getPrivate('<'))) {
+				inputMode = 'bound_line';
+				buffer.unEmphasis(BOUND_CLASS);
+				marks.setPrivate('<', buffer.selectionStart);
+				requestShowPrefixInput();
+			}
+			buffer.setSelectionRange(p.lastItem);
 			return result;
 		}
 	},
