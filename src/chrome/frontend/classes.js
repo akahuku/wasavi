@@ -1797,7 +1797,7 @@ Wasavi.MapManager = function (app) {
 		}
 
 		if (e) {
-			app.keyManager.push(e);
+			app.keyManager.unshift(e);
 			app.keyManager.sweep();
 		}
 	}
