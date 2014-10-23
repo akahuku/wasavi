@@ -909,6 +909,15 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testMapAmbiguousIssue55 () {
+		Wasavi.send(":map [clear]\n");
+		Wasavi.send(":map! ,zz <enter>bb, cc<enter>\n");
+		Wasavi.send("i,zz\u001b");
+
+		assertValue("#1-1", "\nbb, cc\n");
+	}
+
+	@Test
 	public void testNoRemap () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map [noremap] j jj\n");

@@ -522,6 +522,44 @@ public class BoundTest extends WasaviTest {
 	}
 
 	@Test
+	public void rangeSymbolInnerPara () {
+		Wasavi.send("ione\ntwo\nthree\nfour\n\none\ntwo\nthree\nfour\u001b");
+
+		Wasavi.send("2G2|vipy\u001b");
+		assertPos("#1-1", 0, 0);
+		assertEquals("#1-2", "one\ntwo\nthree\nfour\n", Wasavi.getRegister("\""));
+		assertEquals("#1-3", "vipy", Wasavi.getLastSimpleCommand());
+		testMark("<", 0, 0);
+		testMark(">", 3, 0);
+
+		Wasavi.send("8G3|vipy\u001b");
+		assertPos("#2-1", 5, 0);
+		assertEquals("#2-2", "one\ntwo\nthree\nfour\n", Wasavi.getRegister("\""));
+		assertEquals("#2-3", "vipy", Wasavi.getLastSimpleCommand());
+		testMark("<", 5, 0);
+		testMark(">", 8, 0);
+	}
+
+	@Test
+	public void rangeSymbolAllPara () {
+		Wasavi.send("ione\ntwo\nthree\nfour\n\none\ntwo\nthree\nfour\u001b");
+
+		Wasavi.send("2G2|vapy\u001b");
+		assertPos("#1-1", 0, 0);
+		assertEquals("#1-2", "one\ntwo\nthree\nfour\n\n", Wasavi.getRegister("\""));
+		assertEquals("#1-3", "vapy", Wasavi.getLastSimpleCommand());
+		testMark("<", 0, 0);
+		testMark(">", 4, 0);
+
+		Wasavi.send("8G3|vapy\u001b");
+		assertPos("#2-1", 4, 0);
+		assertEquals("#2-2", "\none\ntwo\nthree\nfour\n", Wasavi.getRegister("\""));
+		assertEquals("#2-3", "vapy", Wasavi.getLastSimpleCommand());
+		testMark("<", 4, 0);
+		testMark(">", 8, 0);
+	}
+
+	@Test
 	public void swapCaseInLineBound () {
 		Wasavi.send("ifoo BAR\nBAZ bax\nqux quux\u001b");
 		Wasavi.send("1G^2|Vj$h~");
