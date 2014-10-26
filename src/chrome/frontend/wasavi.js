@@ -4034,6 +4034,7 @@ function startEdit (c, opts) {
 		cursor.update({type:'edit'});
 		prefixInput.isLocked = true;
 		inputHandler.reset(opts.repeatCount, opened ? '\n' : '', buffer.selectionStart, true);
+		compositionLevel = 0;
 	}});
 
 	prefixInput.operation = c;
@@ -4304,9 +4305,16 @@ function handlePaste (e) {
 		break;
 
 	case 'command':
+		paste(1, {
+			content: s,
+			lineOrientOverride: false,
+			isForward: false
+		});
+		/*
 		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
 		keyManager.push('a', {value:s, asComposition:true}, '\u001b');
 		keyManager.sweep();
+		 */
 		break;
 
 	case 'edit': case 'overwrite':
@@ -4854,6 +4862,7 @@ var recordedStrokes;
 var literalInput;
 var notifier;
 var multiplexCallbackId;
+var compositionLevel;
 
 var isEditCompleted;
 var isVerticalMotion;
@@ -5040,9 +5049,13 @@ var modeHandlers = {
 				inputHandler.ungetStroke();
 			}
 			if (e.isCompositionedFirst) {
+				compositionLevel++;
 				cursor.editCursor.style.display = 'none';
 			}
-			if (!e.isCompositioned || e.isCompositionedLast) {
+			else if (e.isCompositionedLast) {
+				compositionLevel > 0 && compositionLevel--;
+			}
+			if (compositionLevel == 0) {
 				cursor.ensureVisible();
 				cursor.update({visible:true, focused:true});
 				requestShowPrefixInput(getDefaultPrefixInputString());
@@ -5138,13 +5151,9 @@ var modeHandlers = {
 		}
 		else if (r.code >= 32) {
 			lineInputHistories.isInitial = true;
-			if (!e.isCompositioned) {
-				insertToLineInput(input, r.letter);
-			}
-			if (!e.isCompositioned || e.isCompositionedLast) {
-				processInputSupplement();
-				keyManager.init(input);
-			}
+			insertToLineInput(input, r.letter);
+			processInputSupplement();
+			keyManager.init(input);
 		}
 
 		if (!isCompleteResetCanceled) {

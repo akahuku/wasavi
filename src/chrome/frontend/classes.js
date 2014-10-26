@@ -1150,7 +1150,6 @@ Wasavi.KeyManager = function () {
 				if ('value' in s && s.asComposition) {
 					s = createSequences(s.value);
 					if (s.length) {
-						s.forEach(function (a) {a.isCompositioned = true});
 						s.firstItem.isCompositionedFirst = true;
 						s.lastItem.isCompositionedLast = true;
 					}
@@ -1629,7 +1628,6 @@ Wasavi.KeyManager = function () {
 				shift:            false,
 				ctrl:             false,
 				alt:              false,
-				isCompositioned:  true,
 				isCompositionedFirst: i == 0,
 				isCompositionedLast: i == goal - 1
 			});
@@ -1805,12 +1803,15 @@ Wasavi.MapManager = function (app) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
 			items[i].mapExpanded = true;
 		}
+		items.firstItem.isCompositionedFirst = true;
+		items.lastItem.isCompositionedLast = true;
 	}
 	function markExpandedNoremap (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
-			items[i].isNoremap = true;
-			items[i].mapExpanded = true;
+			items[i].isNoremap = items[i].mapExpanded = true;
 		}
+		items.firstItem.isCompositionedFirst = true;
+		items.lastItem.isCompositionedLast = true;
 	}
 	function expand (rhs, remap, handler) {
 		if (!handler) return;
@@ -2410,6 +2411,7 @@ Wasavi.Editor = function (element) {
 	if (!this.elm) {
 		throw new Error('*** wasavi: Editor constructor: invalid element: ' + element);
 	}
+	this._ssrow = this._sscol = this._serow = this._secol = 0;
 	this.isLineOrientSelection = false;
 };
 Wasavi.Editor.prototype = new function () {
@@ -3463,19 +3465,19 @@ whole:
 			return new Wasavi.Position(this.selectionStartRow, this.selectionStartCol);
 		},
 		get selectionStartRow () {
-			return dataset(this.elm, 'wasaviSelStartRow') - 0;
+			return this._ssrow;
 		},
 		get selectionStartCol () {
-			return dataset(this.elm, 'wasaviSelStartCol') - 0;
+			return this._sscol;
 		},
 		get selectionEnd () {
 			return new Wasavi.Position(this.selectionEndRow, this.selectionEndCol);
 		},
 		get selectionEndRow () {
-			return dataset(this.elm, 'wasaviSelEndRow') - 0;
+			return this._serow;
 		},
 		get selectionEndCol () {
-			return dataset(this.elm, 'wasaviSelEndCol') - 0;
+			return this._secol;
 		},
 		get scrollTop () {
 			return this.elm.scrollTop;
@@ -3503,8 +3505,8 @@ whole:
 				v = this.linearPositionToBinaryPosition(v) || new Wasavi.Position(0, 0);
 			}
 			if (v instanceof Wasavi.Position) {
-				dataset(this.elm, 'wasaviSelStartRow', v.row);
-				dataset(this.elm, 'wasaviSelStartCol', v.col);
+				this._ssrow = v.row;
+				this._sscol = v.col;
 			}
 		},
 		set selectionEnd (v) {
@@ -3512,8 +3514,8 @@ whole:
 				v = this.linearPositionToBinaryPosition(v) || new Wasavi.Position(0, 0);
 			}
 			if (v instanceof Wasavi.Position) {
-				dataset(this.elm, 'wasaviSelEndRow', v.row);
-				dataset(this.elm, 'wasaviSelEndCol', v.col);
+				this._serow = v.row;
+				this._secol = v.col;
 			}
 		},
 		set scrollTop (v) {
