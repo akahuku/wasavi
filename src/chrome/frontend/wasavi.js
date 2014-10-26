@@ -4305,11 +4305,9 @@ function handlePaste (e) {
 		break;
 
 	case 'command':
-		paste(1, {
-			content: s,
-			lineOrientOverride: false,
-			isForward: false
-		});
+		registers.get('*').set(s);
+		keyManager.push('"*P');
+		keyManager.sweep();
 		/*
 		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
 		keyManager.push('a', {value:s, asComposition:true}, '\u001b');
