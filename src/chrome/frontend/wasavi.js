@@ -2338,23 +2338,6 @@ function notifyCommandComplete (eventName, modeOverridden) {
 		notifyToParent(eventName, {state:currentState});
 	}
 }
-function fireDOMPasteEvent (s) {
-	s += '';
-	if (window.ClipboardEvent) {
-		document.dispatchEvent(new window.ClipboardEvent('paste', {
-			bubbles:true,
-			cancelable:true,
-			dataType:'text/plain',
-			data:s
-		}));
-	}
-	else {
-		handlePaste({
-			preventDefault:function () {},
-			clipboardData:{getData:function () {return s}}
-		});
-	}
-}
 function setSubstituteWorker (obj) {
 	if (!(obj instanceof Wasavi.SubstituteWorker)) {
 		throw new Error('invalid object assigning as SubstituteWorker');
@@ -4296,38 +4279,26 @@ function handleKeydown (e) {
 function handlePaste (e) {
 	e.preventDefault();
 	var s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
-	switch (getPrimaryMode()) {
-	case 'bound':
-	case 'bound_line':
-		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-		keyManager.push('c', {value:s, asComposition:true}, '\u001b');
-		keyManager.sweep();
-		break;
+	var r = registers.get('"');
+	var d = r.data;
+	r.set(s);
+	try {
+		switch (getPrimaryMode()) {
+		case 'command':
+		case 'bound': case 'bound_line':
+			keyManager.push('P');
+			keyManager.sweep();
+			break;
 
-	case 'command':
-		registers.get('*').set(s);
-		keyManager.push('"*P');
-		keyManager.sweep();
-		/*
-		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-		keyManager.push('a', {value:s, asComposition:true}, '\u001b');
-		keyManager.sweep();
-		 */
-		break;
-
-	case 'edit': case 'overwrite':
-		s = s.replace(/[\u0016\u001b]/g, '\u0016$&');
-		keyManager.push({value:s, asComposition:true});
-		keyManager.sweep();
-		break;
-
-	case 'line_input':
-		s = s
-			.replace(/[\u0016\u001b]/g, '\u0016$&')
-			.replace(/\n/g, toVisibleControl(13));
-		keyManager.push(s);
-		keyManager.sweep();
-		break;
+		case 'edit': case 'overwrite':
+		case 'line_input':
+			keyManager.push('\u0012"');
+			keyManager.sweep();
+			break;
+		}
+	}
+	finally {
+		r.set(d);
 	}
 }
 
@@ -7168,7 +7139,7 @@ var editMap = {
 						cursor.update({visible:true, focused:true});	// for opera
 					}
 					else {
-						fireDOMPasteEvent(data);
+						paste(1, {content: data, isForward: false});
 					}
 					keyManager.unlock();
 				});
@@ -7185,7 +7156,7 @@ var editMap = {
 				});
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
-				fireDOMPasteEvent(s);
+				paste(1, {content: s, isForward: false});
 			}
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));
@@ -7203,7 +7174,7 @@ var editMap = {
 			commandMap['"='][o.subkey].apply(this, arguments);
 			var s;
 			if (registers.exists('=') && (s = registers.get('=').data) != '') {
-				fireDOMPasteEvent(s);
+				paste(1, {content: s, isForward: false});
 			}
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));
@@ -7446,12 +7417,12 @@ var lineInputEditMap = {
 					keyManager.unlock();
 					if (data == '') {
 						notifier.show(_('Register {0} is empty.', c));
-						processInput(keyManager.nopObjectFromCode());
 					}
 					else {
 						notifier.hide();
-						fireDOMPasteEvent(data + String.fromCharCode(0));
+						insertToLineInput(o.target, data);
 					}
+					processInput(keyManager.nopObjectFromCode());
 				});
 			}
 			else if (c == '=') {
@@ -7468,7 +7439,8 @@ var lineInputEditMap = {
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				notifier.hide();
-				fireDOMPasteEvent(s + String.fromCharCode(0));
+				insertToLineInput(o.target, s);
+				processInput(keyManager.nopObjectFromCode());
 			}
 			else {
 				notifier.show(_('Register {0} is empty.', c));
