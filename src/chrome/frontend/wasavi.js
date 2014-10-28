@@ -2109,11 +2109,17 @@ function processInput (e, ignoreAbbrev) {
 	}
 	if (requestedState.console) {
 		if (requestedState.console.open && backlog.queued) {
-			backlog.write(false, messageUpdated);
-			pushInputMode(result, ['backlog_prompt']);
+			if (backlog.buffer.length > 1) {
+				backlog.write(false, messageUpdated);
+				pushInputMode(result, ['backlog_prompt']);
+			}
+			else {
+				showMessage(backlog.buffer[0]);
+			}
 		}
 		else if (!requestedState.console.open) {
 			backlog.hide();
+			backlog.clear();
 		}
 		requestedState.console = null;
 	}
@@ -2719,8 +2725,15 @@ function operationDefault (c, o) {
 	}
 }
 function isEditing (mode) {
-	mode || (mode = inputMode);
-	return mode == 'edit' || mode == 'overwrite';
+	function o (mode) {
+		return mode == 'edit' || mode == 'overwrite';
+	}
+	if (mode) return o(mode);
+	if (o(inputMode)) return true;
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (o(inputModeStack[i].inputMode)) return true;
+	}
+	return false;
 }
 function isAlias (c, op) {
 	return prefixInput.motion == '' && c == (op || prefixInput.operation);
@@ -4049,7 +4062,7 @@ function openLine (c, after) {
 		buffer.setSelectionRange(n);
 		insert('\n' + indent);
 	}
-	isEditCompleted = true;
+	config.setData('modified');
 	return startEdit(c, {repeatCount:prefixInput.count, opened:true});
 }
 function toggleCase (count, allowMultiLine) {
@@ -4279,26 +4292,24 @@ function handleKeydown (e) {
 function handlePaste (e) {
 	e.preventDefault();
 	var s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
-	var r = registers.get('"');
-	var d = r.data;
-	r.set(s);
-	try {
-		switch (getPrimaryMode()) {
-		case 'command':
-		case 'bound': case 'bound_line':
-			keyManager.push('P');
-			keyManager.sweep();
-			break;
+	var r = registers.get(';');
+	switch (getPrimaryMode()) {
+	case 'command':
+	case 'bound': case 'bound_line':
+		r.set(s);
+		keyManager.push('";P');
+		keyManager.sweep();
+		break;
 
-		case 'edit': case 'overwrite':
-		case 'line_input':
-			keyManager.push('\u0012"');
-			keyManager.sweep();
-			break;
-		}
-	}
-	finally {
-		r.set(d);
+	case 'line_input':
+		s = s.replace(/\n/g, toVisibleControl(13));
+		/*FALLTHRU*/
+
+	case 'edit': case 'overwrite':
+		r.set(s);
+		keyManager.push('\u0012;');
+		keyManager.sweep();
+		break;
 	}
 }
 
@@ -6786,12 +6797,15 @@ var boundMap = {
 				return inputEscape(o.e.fullIdentifier);
 			}
 			prefixInput.appendMotion(c);
+			var preferredMode = isVerticalMotion ? 'bound_line' : 'bound';
 			var p = [
-				marks.getPrivate('<'), marks.getPrivate('>'),
-				buffer.selectionStart, buffer.selectionEnd
+				marks.getPrivate('<'),
+				marks.getPrivate('>'),
+				buffer.selectionStart,
+				isVerticalMotion ? buffer.selectionEnd : buffer.leftPos(buffer.selectionEnd)
 			].sort(function (a, b) {return a.eq(b) ? 0 : a.lt(b) ? -1 : 1});
-			if (inputMode != 'bound_line' || buffer.selectionStart.lt(marks.getPrivate('<'))) {
-				inputMode = 'bound_line';
+			if (inputMode != preferredMode || buffer.selectionStart.lt(marks.getPrivate('<'))) {
+				inputMode = preferredMode;
 				buffer.unEmphasis(BOUND_CLASS);
 				marks.setPrivate('<', buffer.selectionStart);
 				requestShowPrefixInput();
@@ -7174,7 +7188,8 @@ var editMap = {
 			commandMap['"='][o.subkey].apply(this, arguments);
 			var s;
 			if (registers.exists('=') && (s = registers.get('=').data) != '') {
-				paste(1, {content: s, isForward: false});
+				registers.get(';').set(s);
+				keyManager.push('\u0012;');
 			}
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));
@@ -7440,7 +7455,7 @@ var lineInputEditMap = {
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				notifier.hide();
 				insertToLineInput(o.target, s);
-				processInput(keyManager.nopObjectFromCode());
+				return true;
 			}
 			else {
 				notifier.show(_('Register {0} is empty.', c));

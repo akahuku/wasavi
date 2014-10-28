@@ -698,9 +698,7 @@ var cache = {};
 /*public*/var defaultCommand = new ExCommand(
 	'$default', '$default', 'ca1', 2 | EXFLAGS.roundMax,
 	function (app, t, a) {
-		if (a.range[0] != a.range[1]) {
-			printRow(app, t, a.range[0], a.range[1], a.flags);
-		}
+		printRow(app, t, a.range[0], a.range[1], a.flags);
 		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(a.range[1], 0)));
 		a.flags.hash = a.flags.list = a.flags.print = false;
 	}

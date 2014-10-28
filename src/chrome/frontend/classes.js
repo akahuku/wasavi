@@ -1786,17 +1786,17 @@ Wasavi.MapManager = function (app) {
 			run(handler, suspendedEvent);
 		}
 
+		if (e) {
+			app.keyManager.unshift(e);
+			app.keyManager.sweep();
+		}
+
 		if (lhs) {
 			expand(
 				sequencesExpanded[mapIndex][lhs],
 				options[mapIndex][lhs].remap,
 				handler
 			);
-		}
-
-		if (e) {
-			app.keyManager.unshift(e);
-			app.keyManager.sweep();
 		}
 	}
 	function markExpanded (items) {
@@ -1945,6 +1945,7 @@ Wasavi.Registers = function (app, value) {
 	 *  /       last searched text (read only) [vim compatible]
 	 *  ^       last input position (read only) [vim compatible]
 	 *  =       last computed result of simple math-expression (readonly) [vim compatible]
+	 *  ;       wasavi uses internally
 	 */
 
 	function RegisterItem () {
@@ -1985,7 +1986,7 @@ Wasavi.Registers = function (app, value) {
 	var named;
 	var storageKey = 'wasavi_registers';
 	var writableRegex = /^[1-9a-zA-Z@]$/;
-	var readableRegex = /^["1-9a-zA-Z@.:*\/\^=]$/;
+	var readableRegex = /^["1-9a-zA-Z@.:*\/\^=;]$/;
 	var isLatest = false;
 
 	function serialize () {

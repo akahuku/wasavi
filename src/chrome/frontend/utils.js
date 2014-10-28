@@ -223,10 +223,14 @@ function emptyNodeContents (node) {
 	r.selectNodeContents(node);
 	r.deleteContents();
 }
-function insertToLineInput (t, ch) {
+function insertToLineInput (t, s) {
 	var ss = t.selectionStart;
-	t.value = t.value.substring(0, t.selectionStart) + ch + t.value.substring(t.selectionEnd);
-	t.selectionStart = ss + ch.length;
+	var se = t.selectionEnd;
+	s = s.replace(/[\u0000-\u001f\u007f]/g, function ($0) {
+		return toVisibleControl($0.charCodeAt(0));
+	});
+	t.value = t.value.substring(0, ss) + s + t.value.substring(se);
+	t.selectionStart = ss + s.length;
 	t.selectionEnd = t.selectionStart;
 }
 function _ () {

@@ -789,6 +789,9 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 		app = container = con = scaler = null;
 	}
 
+	function getBuffer () {
+		return buffer;
+	}
 	function getQueued () {
 		return buffer.length > 0;
 	}
@@ -809,6 +812,7 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 	publish(this,
 		push, show, hide, clear, write, dispose,
 		{
+			buffer:getBuffer,
 			queued:getQueued,
 			rows:getRows,
 			cols:getCols,

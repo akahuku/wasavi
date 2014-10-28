@@ -283,6 +283,8 @@ public class BoundTest extends WasaviTest {
 		Wasavi.send("1G^ffvj$:p\n");
 
 		assertEquals("#1-1", "1 first\n2 second", Wasavi.getLastMessage());
+		testMark("<", 0, 2);
+		testMark(">", 1, 8);
 	}
 
 	@Test
@@ -512,13 +514,13 @@ public class BoundTest extends WasaviTest {
 	@Test
 	public void rangeSymbolLineBound () {
 		Wasavi.send("ifoo bar\nbaz bax\nqux quux\u001b");
-		Wasavi.send("1G6|Viwy");
+		Wasavi.send("1G6|Vjy");
 
 		assertValue("#1-1", "foo bar\nbaz bax\nqux quux");
-		assertEquals("#1-2", "foo bar\n", Wasavi.getRegister("\""));
-		assertEquals("#1-4", "Viwy", Wasavi.getLastSimpleCommand());
-		testMark("<", 0, 4);
-		testMark(">", 0, 6);
+		assertEquals("#1-2", "foo bar\nbaz bax\n", Wasavi.getRegister("\""));
+		assertEquals("#1-4", "Vjy", Wasavi.getLastSimpleCommand());
+		testMark("<", 0, 5);
+		testMark(">", 1, 5);
 	}
 
 	@Test
@@ -576,6 +578,8 @@ public class BoundTest extends WasaviTest {
 		Wasavi.send("1G^ffVj$:p\n");
 
 		assertEquals("#1-1", "1 first\n2 second", Wasavi.getLastMessage());
+		testMark("<", 0, 2);
+		testMark(">", 1, 8);
 	}
 
 	@Test

@@ -182,7 +182,7 @@ public class LineInputEditingTest extends WasaviTest {
 		Wasavi.send("afoo\nbar\u001b1GyG");
 		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":\u0012\"");
-		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
+		assertEquals("#1-1", "foo\u240abar\u240a", Wasavi.getLineInput());
 	}
 
 	@Test
@@ -197,7 +197,7 @@ public class LineInputEditingTest extends WasaviTest {
 		Wasavi.send("afoo\nbar\u001b1G\"*yG");
 		Wasavi.setInputModeOfWatchTarget("line_input");
 		Wasavi.send(":\u0012*");
-		assertEquals("#1-1", "foo\u240dbar\u240d", Wasavi.getLineInput());
+		assertEquals("#1-1", "foo\u240abar\u240a", Wasavi.getLineInput());
 	}
 }
 
