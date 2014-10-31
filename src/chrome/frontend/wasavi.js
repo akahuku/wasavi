@@ -924,6 +924,7 @@ function runExrc () {
 	}
 	exrc = null;
 	config.setData('nomodified');
+	requestedState = {};
 
 	/*
 	 * setup theme
@@ -2114,12 +2115,16 @@ function processInput (e, ignoreAbbrev) {
 				pushInputMode(result, ['backlog_prompt']);
 			}
 			else {
-				showMessage(backlog.buffer[0]);
+				backlog.length && showMessage(backlog.buffer[0]);
+				backlog.hide();
+				backlog.clear();
+				cursor.update({focused:true, visible:true});
 			}
 		}
 		else if (!requestedState.console.open) {
 			backlog.hide();
 			backlog.clear();
+			cursor.update({focused:true, visible:true});
 		}
 		requestedState.console = null;
 	}
