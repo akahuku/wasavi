@@ -156,10 +156,6 @@
         "message": "{0} がキャンセルされました。",
         "description": "{0} canceled."
     },
-    "@0_executed_in_synchronous_context": {
-        "message": "{0}: 同期的に実行されました。",
-        "description": "{0}: Executed in synchronous context."
-    },
     "@0_extra_range_specified": {
         "message": "{0}: 余分な範囲が指定されました。",
         "description": "{0}: extra range specified."
@@ -512,6 +508,10 @@
         "message": "不正なブーリアン値",
         "description": "Invalid boolean value"
     },
+    "invalid_chdir_response": {
+        "message": "chdir の応答が不正です。",
+        "description": "Invalid chdir response."
+    },
     "invalid_chdir_result": {
         "message": "chdir の結果が不正です。",
         "description": "Invalid chdir result."
@@ -523,6 +523,10 @@
     "invalid_content_response_": {
         "message": "不正な内容レスポンス: ",
         "description": "Invalid content response: "
+    },
+    "invalid_edit_response": {
+        "message": "edit の応答が不正です。",
+        "description": "Invalid edit response."
     },
     "invalid_history_item": {
         "message": "不正な履歴項目です。",
@@ -543,6 +547,10 @@
     "invalid_path": {
         "message": "不正なパスです。",
         "description": "Invalid path."
+    },
+    "invalid_read_response": {
+        "message": "read の応答が不正です。",
+        "description": "Invalid read response."
     },
     "invalid_regex_pattern": {
         "message": "不正な正規表現パターンです。",

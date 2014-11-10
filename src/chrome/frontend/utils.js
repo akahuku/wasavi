@@ -317,7 +317,7 @@ function publish () {
 			Object.defineProperty(target, arguments[i].name, {
 				value:arguments[i],
 				configurable:false,
-				enumerable:false,
+				enumerable:true,
 				writable:false
 			});
 			break;
@@ -329,7 +329,7 @@ function publish () {
 					Object.defineProperty(target, j, {
 						get:arguments[i][j],
 						configurable:false,
-						enumerable:false
+						enumerable:true
 					});
 					break;
 				case 'Array':
@@ -337,11 +337,16 @@ function publish () {
 						get:arguments[i][j][0],
 						set:arguments[i][j][1],
 						configurable:false,
-						enumerable:false
+						enumerable:true
 					});
 					break;
-				case 'Object':
-					Object.defineProperty(target, j, arguments[i][j]);
+				default:
+					Object.defineProperty(target, j, {
+						value:arguments[i][j],
+						configurable:false,
+						enumerable:true,
+						writable:false
+					});
 					break;
 				}
 			}

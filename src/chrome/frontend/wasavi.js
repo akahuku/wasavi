@@ -73,7 +73,7 @@
 		get charWidth () {return charWidth},
 		get lineHeight () {return lineHeight},
 		get backlog () {return backlog},
-		get exCommandExecutor () {return exCommandExecutor},
+		get exvm () {return exvm},
 		get recordedStrokes () {return recordedStrokes},
 		get notifier () {return notifier},
 
@@ -112,7 +112,6 @@
 			requestRegisterNotice:requestRegisterNotice,
 			requestInputMode:requestInputMode,
 			requestConsoleState:requestConsoleState,
-			executeExCommand:executeExCommand,
 			executeViCommand:executeViCommand,
 			getFindRegex:getFindRegex,
 			getFileIoResultInfo:getFileIoResultInfo,
@@ -120,7 +119,6 @@
 			notifyToParent:notifyToParent,
 			notifyActivity:notifyActivity,
 			notifyCommandComplete:notifyCommandComplete,
-			setSubstituteWorker:setSubstituteWorker,
 			extractDriveName:extractDriveName,
 			getFileSystemIndex:getFileSystemIndex,
 			splitPath:splitPath,
@@ -187,167 +185,709 @@ Collection.prototype = Object.create({}, {
 	}
 });
 
-/*constructor*/function ExCommandExecutor (isRoot, onFinish) {
+function ExCommandExecutor (app) {
+	var EX_SYNC = 1;
+	var EX_ASYNC = 2;
+
+	var that = this;
 	var running = false;
+	var async = false;
+	var suspended = false;
+	var pcOverride = false;
+	var pc = 0;
+	var opcodes = [];
+	var onexecutes = [];
+	var errorVectors = [];
+	var lastError;
 
-	this.commands = [];
-	this.editLogLevel = 0;
-	this.isRoot = !!isRoot;
-	this.isAsync = false;
-	this.isGlobalSpecified = false;
-	this.source = '';
-	this.onFinish = onFinish || null;
-	this.lastError = undefined;
-	this.lastCommand = undefined;
+	/* classes */
+	function ExICode (command, args, rangeSource) {
+		this.command = command;
+		this.args = args;
+		this.rangeSource = rangeSource;
+	}
 
-	publish(this, {
-		running:[
-			function () {return running},
-			function (v) {
-				if (v == running) return;
-				running = v;
-				$('wasavi_cover').className = v ? 'dim' : '';
-			}
-		]
-	});
-}
-ExCommandExecutor.prototype = {
-	_runCore:function (command, args) {
-		var ss = buffer.selectionStart;
-		var result = command.run(appProxy, args);
-		if (typeof result == 'string') {
-			this.lastError = result || _('{0}: unknown error.', command.name);
-			return false;
+	/* public methods */
+	function clone () {
+		return new ExCommandExecutor(app);
+	}
+	function clear () {
+		opcodes.length = 0;
+		pc = -1;
+		onexecutes.length = 0;
+	}
+	function createOpcode (command, args, rangeSource) {
+		if (isFunction(command)) {
+			command = Wasavi.ExCommand.create('', '', '', 0, command);
 		}
-		if ((isJumpBaseUpdateRequested || command.flags.updateJump)
-		&& buffer.selectionStart.ne(ss)) {
-			marks.setJumpBaseMark(ss);
-			isJumpBaseUpdateRequested = false;
+		if (!args) {
+			args = command.parseArgs(app, [], '', '');
 		}
-		if (result.flags.hash || result.flags.list || result.flags.print) {
-			var n = Math.max(0, Math.min(
-				buffer.selectionStartRow + result.flagoff, t.rowLength - 1));
-			buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
-			Wasavi.ExCommand.printRow(appProxy, buffer, n.row, n.row, result.flags);
+		return new ExICode(command, args, rangeSource);
+	}
+	function add (/*command, args, range*/) {
+		var result;
+		if (arguments.length == 0) return;
+		// [opcodes]
+		if (isArray(arguments[0])) {
+			result = arguments[0];
+			opcodes.push.apply(opcodes, result);
 		}
-		this.lastError = undefined;
-		return true;
-	},
-	_runAsyncWrapper:function () {
-		var tc;
-		try {
-			if (this.commands.length) {
-				this.lastCommand = tc = this.commands.shift();
-				if (tc[0].flags.multiAsync && !this.isAsync) {
-					this.lastError = _('{0}: Executed in synchronous context.', tc[0].name);
-					this.commands.length = 0;
-					this.lastCommand = tc = undefined;
-				}
-				else if (!this._runCore(tc[0], tc[1])) {
-					this.commands.length = 0;
-					this.lastCommand = tc = undefined;
-				}
-			}
-		}
-		finally {
-			if (!tc || !tc[0] || !tc[0].flags.multiAsync) {
-				this.runAsyncNext();
-			}
-		}
-	},
-	_isClipboardAccess:function (args) {
-		return args.flags.register && args.register == '*';
-	},
-	clear:function () {
-		this.commands.length = 0;
-		this.lastCommand = undefined;
-		this.isAsync = false;
-	},
-	stop:function () {
-		this.commands.length = 0;
-		this.lastCommand = undefined;
-		this.runAsyncNext();
-	},
-	add:function (ex, args) {
-		this.commands.push([ex, args]);
-		this.isAsync = this.isAsync || this._isClipboardAccess(args) || ex.flags.multiAsync;
-	},
-	runAsyncNext:function (injectExCommand, arg) {
-		if (!this.isAsync) return;
-
-		injectExCommand && arg && this.commands.unshift([injectExCommand, arg]);
-
-		if (this.commands.length) {
-			setTimeout((function (obj, fn, cmd) {return function () {
-				if (obj._isClipboardAccess(cmd[1])) {
-					extensionChannel.getClipboard(function (data) {
-						registers.get('*').set(data);
-						fn.call(obj);
-					});
-				}
-				else {
-					fn.call(obj);
-				}
-			}})(this, this._runAsyncWrapper, this.commands[0]), 0);
-		}
+		// command, <<args, <range>>
 		else {
-			if (this.editLogLevel > 0) {
-				editLogger.close();
-				keyManager.unlock();
-				this.running = false;
-				this.editLogLevel--;
-			}
-			this.onFinish && this.onFinish(this);
-			var e = document.createEvent('UIEvent');
-			e.initUIEvent('wasavi_command', false, true, document.defaultView, 0);
-			processInput(keyManager.nopObjectFromCode());
-			keyManager.sweep();
+			result = createOpcode(arguments[0], arguments[1], arguments[2]);
+			opcodes.push(result);
 		}
-	},
-	run:function () {
-		if (this.commands.length == 0) return true;
-		if (this.running) return true;
+		return result;
+	}
+	function insert (/*command, args, range, index*/) {
+		var a = toArray(arguments);
+		var index = a.pop();
+		var result;
 
-		if (this.isAsync && this.isRoot && isInteractive) {
-			if (this.editLogLevel == 0) {
-				editLogger.open('excommand');
-				this.running = true;
-				this.editLogLevel++;
-				keyManager.lock();
-			}
-			this.runAsyncNext();
-			return false;
+		// [opcodes], index
+		if (isArray(a[0])) {
+			result = arguments[0];
+			opcodes.splice.apply(opcodes, [index, 0].concat(result));
 		}
+		// command, <<args, <range>>, index
 		else {
-			this.running = true;
-			if (this.isRoot) {
-				editLogger.open('excommand');
+			result = createOpcode(a[0], a[1], a[2]);
+			opcodes.splice(index, 0, result);
+		}
+		return result;
+	}
+	function run (source, callback, parents) {
+		if (running && !suspended) return;
+
+		if (!suspended) {
+			clear();
+			compile(source, parents);
+			add(terminate).command.name = '$terminate';
+			app.editLogger.open('excommand');
+			showOverlay();
+			pc = 0;
+			lastError = undefined;
+			suspended = false;
+			running = true;
+			async = false;
+		}
+
+		if (isFunction(callback)) {
+			onexecutes.push(callback);
+		}
+
+		resume();
+	}
+	function showOverlay () {
+		$('wasavi_cover').className = 'dim';
+		app.keyManager.lock();
+	}
+	function hideOverlay () {
+		$('wasavi_cover').className = '';
+		app.keyManager.unlock();
+	}
+
+	function compile (source, parents) {
+		// compile body {{{
+		/*
+		 * compile ex command source to intermediate expression
+		 *
+		 * @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
+		 */
+
+		var resultMessage;
+		var lastTerminator;
+		var commandName = '';
+		var commandNameSupplement = '';
+		var commandObj = null;
+		var argv = null;
+		var args = '';
+		var range = null;
+		var literalKey = false;
+		var literalExitKey = '';
+
+		function getRegex (delimiter) {
+			delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
+			return new RegExp('\\n|' + delimiter, 'g');
+		}
+		function skipby (n, justSkip) {
+			var skip = source.substring(0, n);
+			if (!justSkip && source != '\n') {
+				args += skip;
 			}
-			try {
-				for (var i = 0, goal = this.commands.length; i < goal; i++) {
-					if (!this._runCore(this.commands[i][0], this.commands[i][1])) {
-						return this.lastError;
+			source = source.substring(n);
+			return skip;
+		}
+		function skipblank (regex) {
+			regex || (regex = /^[ \t]+/);
+			var re = regex.exec(source);
+			if (re) {
+				skipby(re[0].length);
+			}
+		}
+		function skipto (regex, opts) {
+			opts || (opts = {});
+			var escapeChars = opts.escapeChars || '\\';
+			var discard = opts.discard;
+			var re = regex.exec(source);
+			if (re) {
+				do {
+					var index = regex.lastIndex - re[0].length;
+					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
+						if (!discard) {
+							if (argv) {
+								argv.push(source.substring(0, index));
+							}
+							else {
+								commandNameSupplement += source.substring(0, index);
+							}
+						}
+						skipby(index);
+						return;
 					}
+				} while ((re = regex.exec(source)));
+			}
+			if (!discard) {
+				commandNameSupplement = source;
+			}
+			source = '';
+		}
+		function skipto2 (regex, delimiter) {
+			var escapeChars = '\\';
+			var re = regex.exec(source);
+			var found = 0;
+			var fragmentStart = 0;
+			if (re) {
+				do {
+					var index = regex.lastIndex - re[0].length;
+					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
+						found++;
+						argv.push(source.substring(fragmentStart, index));
+						fragmentStart = regex.lastIndex;
+						if (re[0] == '\n' || re[0] == delimiter && found == 2) {
+							skipby(index);
+							return;
+						}
+					}
+				} while ((re = regex.exec(source)));
+			}
+			commandNameSupplement = source;
+			source = '';
+		}
+		function findCommand (name) {
+			var commands = Wasavi.ExCommand.commands;
+			for (var i = 0, goal = commands.length; i < goal; i++) {
+				if (name.indexOf(commands[i].shortName) == 0
+				&&  commands[i].name.indexOf(name) == 0) {
+					return commands[i];
 				}
 			}
-			finally {
-				if (this.isRoot) {
-					editLogger.close();
-					this.onFinish && this.onFinish(this);
+			return null;
+		}
+		function pushCommand () {
+			if (!commandObj) return true;
+
+			var r, argObj;
+
+			if (commandObj.rangeCount == 0) {
+				if (range.rows.length) {
+					resultMessage = _('{0}: extra range specified.', commandObj.name);
+					return false;
 				}
-				this.commands.length = 0;
-				this.running = false;
+				r = [];
 			}
+			else {
+				r = range.rows.last(buffer, commandObj.rangeCount, commandObj.flags.addr2All);
+				if (typeof r == 'string') {
+					resultMessage = r;
+					return false;
+				}
+			}
+
+			argObj = commandObj.buildArgs(
+				app,
+				r, commandNameSupplement,
+				argv, args,
+				undefined
+			);
+			if (typeof argObj == 'string') {
+				resultMessage = argObj || _('{0}: unknown syntax error.', commandObj.name);
+				return false;
+			}
+
+			add(commandObj, argObj, {rows:range.rows});
 			return true;
 		}
-	},
-	get lastCommandObj () {
-		return this.lastCommand ? this.lastCommand[0] : null;
-	},
-	get lastCommandArg () {
-		return this.lastCommand ? this.lastCommand[1] : null;
+		function paragraph12 () {
+			if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
+				// do not include double quote for compatibility with vim.
+				skipto(/[\n|]/g, {escapeChars:'\u0016'});
+			}
+			else {
+				skipto(/[\n|"]/g);
+			}
+			if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
+				skipto(/\n/g);
+			}
+			if (source.charAt(0) == '"') {
+				skipto(/\n/g, {discard:true});
+			}
+			if (commandName == 'print' && commandNameSupplement == '') {
+				commandNameSupplement = 'p';
+			}
+			lastTerminator = skipby(1);
+		}
+
+		/*
+		 *
+		 */
+
+		if (/[\\\u0016]$/.test(source)) {
+			source = source.substring(0, source.length - 1);
+		}
+		if (!/\n$/.test(source)) {
+			source += '\n';
+		}
+
+		while (source.length) {
+			// in literal mode, store a string
+			if (literalKey !== false) {
+				skipto(/\n/g);
+				skipby(1);
+				if (argv && argv.length
+				&&  argv.lastItem.replace(/[ \t]+$/, '') == literalExitKey) {
+					argv.pop();
+					if (!pushCommand()) {
+						break;
+					}
+					argv = null;
+					literalKey = false;
+				}
+				else if (source.length == 0) {
+					pushCommand();
+					break;
+				}
+				continue;
+			}
+
+			commandName = commandNameSupplement = args = '';
+			commandObj = null;
+
+			// 1. Leading <colon> characters shall be skipped.
+			// 2. Leading <blank> characters shall be skipped.
+			skipblank(/^[: \t]+/);
+
+			// 3. If the leading character is a double-quote character, the characters up to and
+			// including the next non- <backslash>-escaped <newline> shall be discarded, and any
+			// subsequent characters shall be parsed as a separate command.
+			if (/^"/.test(source)) {
+				skipto(/\n/g, {discard:true});
+				lastTerminator = skipby(1);
+				continue;
+			}
+
+			// 4. Leading characters that can be interpreted as addresses shall be evaluate;
+			// see Addressing in ex
+			// (http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_02).
+			range = Wasavi.ExCommand.parseRange(app, source, undefined, true);
+			if (typeof range == 'string') {
+				resultMessage = range;
+				break;
+			}
+			skipby(source.length - range.rest.length);
+
+			// 5. Leading <blank> characters shall be skipped.
+			skipblank(/^[: \t]+/);
+
+			// 6. If the next character is a <vertical-line> character or a <newline>:
+			//
+			//   a. If the next character is a <newline>:
+			//
+			//     i. If ex is in open or visual mode, the current line shall be set to the last
+			//     address specified, if any.
+			//
+			//     ii. Otherwise, if the last command was terminated by a <vertical-line> character,
+			//     no action shall be taken; for example, the command "||<newline>" shall execute
+			//     two implied commands, not three.
+			//
+			//     iii. Otherwise, step 6.b. shall apply.
+			//
+			//   b. Otherwise, the implied command shall be the print command. The last #, p, and l
+			//   flags specified to any ex command shall be remembered and shall apply to this
+			//   implied command. Executing the ex number, print, or list command shall set the
+			//   remembered flags to #, nothing, and l, respectively, plus any other flags
+			//   specified for that execution of the number, print, or list command.
+			//
+			//   If ex is not currently performing a global or v command, and no address or count
+			//   is specified, the current line shall be incremented by 1 before the command is
+			//   executed. If incrementing the current line would result in an address past the
+			//   last line in the edit buffer, the command shall fail, and the increment shall not
+			//   happen.
+			//
+			//   c. The <newline> or <vertical-line> character shall be discarded and any
+			//   subsequent characters shall be parsed as a separate command.
+			if (source.charAt(0) == '|' || source.charAt(0) == '\n') {
+				switch (source.charAt(0)) {
+				case '\n':
+					app.isJumpBaseUpdateRequested = false;
+					if (range && range.rows.length) {
+						commandObj = Wasavi.ExCommand.defaultCommand;
+						break;
+					}
+					if (lastTerminator == undefined || lastTerminator == '|' || !app.isInteractive) {
+						break;
+					}
+					/*FALLTHRU*/
+
+				case '|':
+					commandObj = Wasavi.ExCommand.defaultCommand;
+					commandNameSupplement = 'p';
+					break;
+				}
+
+				lastTerminator = skipby(1);
+
+				if (!pushCommand()) {
+					break;
+				}
+
+				continue;
+			}
+
+			// 7. The command name shall be comprised of the next character (if the character
+			// is not alphabetic), or the next character and any subsequent alphabetic characters
+			// (if the character is alphabetic), with the following exceptions:
+			//
+			//   a. Commands that consist of any prefix of the characters in the command name
+			//   delete, followed immediately by any of the characters 'l' , 'p' , '+' , '-' , or
+			//   '#' shall be interpreted as a delete command, followed by a <blank>, followed by
+			//   the characters that were not part of the prefix of the delete command. The maximum
+			//   number of characters shall be matched to the command name delete; for example,
+			//   "del" shall not be treated as "de" followed by the flag l.
+			//
+			//   b. Commands that consist of the character 'k' , followed by a character that can
+			//   be used as the name of a mark, shall be equivalent to the mark command followed
+			//   by a <blank>, followed by the character that followed the 'k' .
+			//
+			//   c. Commands that consist of the character 's' , followed by characters that could
+			//   be interpreted as valid options to the s command, shall be the equivalent of the
+			//   s command, without any pattern or replacement values, followed by a <blank>,
+			//   followed by the characters after the 's' .
+			if (/^[a-z]/i.test(source)) {
+				if (/^(?:k\s*[a-zA-Z]|s\s*[^a-zA-Z \\|\n"])/.test(source)) {
+					commandName = source.charAt(0);
+					skipby(1);
+				}
+				else {
+					var re = /^[a-z]+/i.exec(source);
+					commandName = re[0];
+					skipby(re[0].length);
+				}
+			}
+			else {
+				commandName = source.charAt(0);
+				skipby(1);
+			}
+
+			// 8.The command name shall be matched against the possible command names, and a
+			// command name that contains a prefix matching the characters specified by the user
+			// shall be the executed command. In the case of commands where the characters
+			// specified by the user could be ambiguous, the executed command shall be as
+			// follows:
+			//
+			//   a:  append    n:  next    t:  t
+			//   c:  change    p:  print   u:  undo
+			//   ch: change    pr: print   un: undo
+			//   e:  edit      r:  read    v:  v
+			//   m:  move      re: read    w:  write
+			//   ma: mark      s:  s
+			//
+			// Implementation extensions with names causing similar ambiguities shall not be
+			// checked for a match until all possible matches for commands specified by
+			// POSIX.1-2008 have been checked.
+			commandObj = findCommand(commandName);
+			if (commandObj) {
+				commandName = commandObj.name;
+			}
+
+			// 9. (wasavi does not support '!' command)
+
+			// 10. Otherwise, if the command is an edit, ex, or next command, or a visual command
+			// while in open or visual mode, the next part of the command shall be parsed as
+			// follows:
+			//
+			//   a. Any '!' character immediately following the command shall be skipped and be
+			//   part of the command.
+			//
+			//   b. Any leading <blank> characters shall be skipped and be part of the command.
+			//
+			//   c. If the next character is a '+' , characters up to the first non- <backslash>-
+			//   escaped <newline> or non- <backslash>-escaped <blank> shall be skipped and be part
+			//   of the command.
+			//
+			//   d. The rest of the command shall be determined by the steps specified in paragraph
+			//   12.
+			if (/^(?:edit|ex|next|visual)$/.test(commandName)) {
+				if (source.charAt(0) == '!') {
+					commandNameSupplement += source.charAt(0);
+					skipby(1);
+				}
+				skipblank();
+				if (source.charAt(0) == '+') {
+					skipto(/[\n \t]/g);
+				}
+				paragraph12();
+			}
+
+			// 11. Otherwise, if the command is a global, open, s, or v command, the next part of
+			// the command shall be parsed as follows:
+			//
+			//   a. Any leading <blank> characters shall be skipped and be part of the command.
+			//
+			//   b. If the next character is not an alphanumeric, double-quote, <newline>,
+			//   <backslash>, or <vertical-line> character:
+			//
+			//     i. The next character shall be used as a command delimiter.
+			//
+			//     ii. If the command is a global, open, or v command, characters up to the first
+			//     non- <backslash>-escaped <newline>, or first non- <backslash>-escaped delimiter
+			//     character, shall be skipped and be part of the command.
+			//
+			//     iii. If the command is an s command, characters up to the first non- <backslash>
+			//     -escaped <newline>, or second non- <backslash>-escaped delimiter character,
+			//     shall be skipped and be part of the command.
+			//
+			//   c. If the command is a global or v command, characters up to the first non-
+			//   <backslash>-escaped <newline> shall be skipped and be part of the command.
+			//
+			//   d. Otherwise, the rest of the command shall be determined by the steps specified
+			//   in paragraph 12.
+			else if (/^(?:global|open|s|v)$/.test(commandName)) {
+				skipblank();
+				if (/^(?:[^a-zA-Z"\n\\|])/.test(source)) {
+					var delimiter = source.charAt(0);
+					argv = [];
+					skipby(1);
+
+					if (commandName != 's') {
+						skipto(getRegex(delimiter));
+					}
+					else {
+						skipto2(getRegex(delimiter), delimiter);
+					}
+					if (source.charAt(0) == delimiter) {
+						skipby(1);
+					}
+				}
+				if (/^(?:global|v)$/.test(commandName)) {
+					if (parents) {
+						resultMessage = _('Cannot use the global or v command recursively.');
+						break;
+					}
+					skipto(/\n/g);
+					lastTerminator = skipby(1);
+				}
+				else {
+					paragraph12();
+				}
+			}
+
+			//
+			else if (commandName == 'script') {
+				skipto(/\n/g);
+				lastTerminator = skipby(1);
+
+				if (/^\s*$/.test(commandNameSupplement)) {
+					if (app.isInteractive) {
+						resultMessage = _('Cannot use the multi-lined script interactively.');
+						break;
+					}
+					argv = [];
+					literalKey = commandName;
+					literalExitKey = commandName + 'end';
+					continue;
+				}
+			}
+
+			// 12. Otherwise:
+			//
+			//   a. If the command was a map, unmap, abbreviate, or unabbreviate command,
+			//   characters up to the first non- <control>-V-escaped <newline>, <vertical-line>,
+			//   or double-quote character shall be skipped and be part of the command.
+			//
+			//   b. Otherwise, characters up to the first non- <backslash>-escaped <newline>,
+			//   <vertical-line>, or double-quote character shall be skipped and be part of the
+			//   command.
+			//
+			//   c. If the command was an append, change, or insert command, and the step 12.b.
+			//   ended at a <vertical-line> character, any subsequent characters, up to the next
+			//   non- <backslash>-escaped <newline> shall be used as input text to the command.
+			//
+			//   d. If the command was ended by a double-quote character, all subsequent
+			//   characters, up to the next non- <backslash>-escaped <newline>, shall be discarded.
+			//
+			//   e. The terminating <newline> or <vertical-line> character shall be discarded and
+			//   any subsequent characters shall be parsed as a separate ex command.
+			else {
+				paragraph12();
+			}
+
+			if (!pushCommand()) {
+				break;
+			}
+			if (!commandObj && commandName != '') {
+				resultMessage = _('{0}: unknown command.', commandName);
+				break;
+			}
+		}
+
+		if (typeof resultMessage == 'string') {
+			return resultMessage;
+		}
+
+		if (literalKey !== false) {
+			pushCommand();
+		}
+		// }}}
 	}
-};
+
+	/* private methods */
+	function dumpOpcodes () {
+		console.log('*** opcodes ***\n' + opcodes.map(function (op, i) {
+			return ('000' + i).substr(-4) +
+				' ' + (pc == i ? '*' : ' ') +
+				' ' + op.command.name;
+		}).join('\n'));
+	}
+
+	function resume () {
+		var buffer = app.buffer;
+		suspended = false;
+		while (!suspended && pc >= 0 && pc < opcodes.length) {
+			//dumpOpcodes();
+
+			var opcode = opcodes[pc];
+			var command = opcode.command;
+
+			if (isClipboardAccess(opcode.args)) {
+				if ('clipboard' in opcode) {
+					app.registers.get('*').set(opcodes[pc].clipboard);
+				}
+				else {
+					app.extensionChannel.getClipboard(function (data) {
+						opcodes[pc].clipboard = data;
+						resume();
+					});
+					suspend();
+					break;
+				}
+			}
+			if (!opcode.args.range && opcode.rangeSource) {
+				opcode.args.range = opcode.rangeSource.rows.last(
+					buffer, opcode.command.rangeCount,
+					opcode.command.flags.addr2All);
+			}
+
+			pcOverride = false;
+			var ss = buffer.selectionStart;
+			var result = command.run(app, opcode.args);
+
+			if (opcode.rangeSource) {
+				opcode.args.range = null;
+			}
+			if (isString(result)) {
+				lastError = result || _('{0}: unknown error.', command.name);
+				if (errorVectors.length) {
+					pc = errorVectors.lastItem;
+				}
+				else {
+					pc = pc < opcodes.length - 1 ? opcodes.length - 1 : pc + 1;
+				}
+				continue;
+			}
+			if (command.flags.multiAsync || result.value === EX_ASYNC) {
+				async = true;
+				suspend();
+			}
+			else {
+				if ((app.isJumpBaseUpdateRequested || command.flags.updateJump)
+				&& buffer.selectionStart.ne(ss)) {
+					app.marks.setJumpBaseMark(ss);
+					app.isJumpBaseUpdateRequested = false;
+				}
+				if (result.flags.hash
+				|| result.flags.list
+				|| result.flags.print) {
+					var n = Math.max(0, Math.min(
+						buffer.selectionStartRow + result.flagoff,
+						buffer.rowLength - 1));
+					buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
+					Wasavi.ExCommand.printRow(app, buffer, n.row, n.row, result.flags);
+				}
+			}
+			if (!pcOverride) {
+				pc++;
+			}
+		}
+	}
+	function terminate (app, t, a) {
+		var executes = onexecutes.slice();
+
+		hideOverlay();
+		app.editLogger.close();
+		running = false;
+		clear();
+
+		lastError && requestShowMessage(lastError, true);
+		async && processInput(app.keyManager.nopObjectFromCode());
+
+		executes.forEach(function (a) {a(that)});
+	}
+	function isClipboardAccess (args) {
+		return args.flags.register && args.register == '*';
+	}
+	function suspend () {
+		if (running) {
+			suspended = true;
+		}
+	}
+
+	publish(this,
+		clone, run, showOverlay, hideOverlay,
+		{
+			EX_SYNC: EX_SYNC,
+			EX_ASYNC: EX_ASYNC,
+
+			running: function () {return running},
+			async: function () {return async},
+			suspended: function () {return suspended},
+			lastError: [
+				function () {return lastError},
+				function (v) {lastError = '' + v}
+			],
+
+			inst: Object.freeze({
+				clear: clear,
+				createOpcode: createOpcode,
+				add: add,
+				insert: insert,
+				compile: compile,
+
+				get index () {return pc},
+				set index (v) {
+					if (!running) return;
+					if (typeof v != 'number') return;
+					pc = Math.max(0, Math.min(v - 0, opcodes.length));
+					pcOverride = true;
+				},
+				get opcodes () {return opcodes},
+				get currentOpcode () {return opcodes[pc]},
+				get errorVectors () {return errorVectors}
+			})
+		}
+	);
+}
 
 /*
  * low-level functions for application management {{{1
@@ -877,7 +1417,7 @@ ime-mode:disabled; \
 	cursor = new Wasavi.CursorUI(appProxy, cc, ec, footerInput, focusHolder);
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
-	exCommandExecutor = new ExCommandExecutor(true);
+	exvm = new ExCommandExecutor(appProxy);
 	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
 	searchUtils = new Wasavi.SearchUtils(appProxy);
 	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
@@ -914,19 +1454,6 @@ function runExrc () {
 	setupEventHandlers(true);
 
 	/*
-	 * execute exrc
-	 */
-
-	isInteractive = false;
-	for (var i = 0; i < exrc.length; i++) {
-		var result = executeExCommand(exrc[i]);
-		typeof result == 'string' && showMessage(result, true);
-	}
-	exrc = null;
-	config.setData('nomodified');
-	requestedState = {};
-
-	/*
 	 * setup theme
 	 */
 
@@ -941,10 +1468,23 @@ function runExrc () {
 	cursor.update({type:inputMode, focused:true, visible:true});
 
 	/*
-	 * final event
+	 * execute exrc
 	 */
 
-	notifyToParent('ready');
+	isInteractive = false;
+	exvm.run(exrc.join('\n'), function (ex) {
+		!ex.async && processInput(keyManager.nopObjectFromCode());
+
+		exrc = null;
+		config.setData('nomodified');
+		requestedState = {};
+
+		/*
+		 * final event
+		 */
+
+		notifyToParent('ready');
+	});
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
@@ -1316,471 +1856,6 @@ function requestSimpleCommandUpdate (initial) {
 	if (!requestedState.simpleCommand) {
 		requestedState.simpleCommand = {initial:initial || ''};
 	}
-}
-function executeExCommand (source, isRoot, parseOnly) {
-	// @see http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_03
-
-	var resultMessage;
-	var lastTerminator;
-	var commandName = '';
-	var commandNameSupplement = '';
-	var commandObj = null;
-	var argv = null;
-	var args = '';
-	var range = null;
-	var literalKey = false;
-	var literalExitKey = '';
-	var executor = isRoot ? exCommandExecutor : new ExCommandExecutor();
-
-	function getRegex (delimiter) {
-		delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
-		return new RegExp('\\n|' + delimiter, 'g');
-	}
-	function skipby (n, justSkip) {
-		var skip = source.substring(0, n);
-		if (!justSkip && source != '\n') {
-			args += skip;
-		}
-		source = source.substring(n);
-		return skip;
-	}
-	function skipblank (regex) {
-		regex || (regex = /^[ \t]+/);
-		var re = regex.exec(source);
-		if (re) {
-			skipby(re[0].length);
-		}
-	}
-	function skipto (regex, opts) {
-		opts || (opts = {});
-		var escapeChars = opts.escapeChars || '\\';
-		var discard = opts.discard;
-		var re = regex.exec(source);
-		if (re) {
-			do {
-				var index = regex.lastIndex - re[0].length;
-				if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
-					if (!discard) {
-						if (argv) {
-							argv.push(source.substring(0, index));
-						}
-						else {
-							commandNameSupplement += source.substring(0, index);
-						}
-					}
-					skipby(index);
-					return;
-				}
-			} while ((re = regex.exec(source)));
-		}
-		if (!discard) {
-			commandNameSupplement = source;
-		}
-		source = '';
-	}
-	function skipto2 (regex, delimiter) {
-		var escapeChars = '\\';
-		var re = regex.exec(source);
-		var found = 0;
-		var fragmentStart = 0;
-		if (re) {
-			do {
-				var index = regex.lastIndex - re[0].length;
-				if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
-					found++;
-					argv.push(source.substring(fragmentStart, index));
-					fragmentStart = regex.lastIndex;
-					if (re[0] == '\n' || re[0] == delimiter && found == 2) {
-						skipby(index);
-						return;
-					}
-				}
-			} while ((re = regex.exec(source)));
-		}
-		commandNameSupplement = source;
-		source = '';
-	}
-	function findCommand (name) {
-		for (var i = 0, commands = Wasavi.ExCommand.commands; i < commands.length; i++) {
-			if (name.indexOf(commands[i].shortName) == 0
-			&&  commands[i].name.indexOf(name) == 0) {
-				return commands[i];
-			}
-		}
-		return null;
-	}
-	function pushCommand () {
-		var r, argObj;
-
-		if (commandObj) {
-			if (commandObj.rangeCount == 0) {
-				if (range.rows.length) {
-					resultMessage = _('{0}: extra range specified.', commandObj.name);
-					return false;
-				}
-				r = [];
-			}
-			else {
-				r = range.rows.last(buffer, commandObj.rangeCount, commandObj.flags.addr2All);
-				if (typeof r == 'string') {
-					resultMessage = r;
-					return false;
-				}
-			}
-
-			argObj = commandObj.buildArgs(
-				appProxy,
-				r, commandNameSupplement,
-				argv, args,
-				undefined
-			);
-			if (typeof argObj == 'string') {
-				resultMessage = argObj || _('{0}: unknown syntax error.', commandObj.name);
-				return false;
-			}
-
-			executor.add(commandObj, argObj);
-			return true;
-		}
-		else {
-			return true;
-		}
-	}
-	function paragraph12 () {
-		if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
-			// do not include double quote for compatibility with vim.
-			skipto(/[\n|]/g, {escapeChars:'\u0016'});
-		}
-		else {
-			skipto(/[\n|"]/g);
-		}
-		if (/^(?:append|change|insert)$/.test(commandName) && source.charAt(0) == '|') {
-			skipto(/\n/g);
-		}
-		if (source.charAt(0) == '"') {
-			skipto(/\n/g, {discard:true});
-		}
-		if (commandName == 'print' && commandNameSupplement == '') {
-			commandNameSupplement = 'p';
-		}
-		lastTerminator = skipby(1);
-	}
-
-	if (/[\\\u0016]$/.test(source)) {
-		source = source.substring(0, source.length - 1);
-	}
-	if (!/\n$/.test(source)) {
-		source += '\n';
-	}
-	if (isRoot) {
-		exCommandExecutor.isGlobalSpecified = false;
-	}
-
-	executor.clear();
-	executor.source = source.replace(/\n+$/, '');
-
-	while (source.length && !terminated) {
-		// in literal mode, store a string
-		if (literalKey !== false) {
-			skipto(/\n/g);
-			skipby(1);
-			if (argv && argv.length
-			&&  argv.lastItem.replace(/[ \t]+$/, '') == literalExitKey) {
-				argv.pop();
-				if (!pushCommand()) {
-					break;
-				}
-				argv = null;
-				literalKey = false;
-			}
-			else if (source.length == 0) {
-				pushCommand();
-				break;
-			}
-			continue;
-		}
-
-		commandName = commandNameSupplement = args = '';
-		commandObj = null;
-
-		// 1. Leading <colon> characters shall be skipped.
-		// 2. Leading <blank> characters shall be skipped.
-		skipblank(/^[: \t]+/);
-
-		// 3. If the leading character is a double-quote character, the characters up to and
-		// including the next non- <backslash>-escaped <newline> shall be discarded, and any
-		// subsequent characters shall be parsed as a separate command.
-		if (/^"/.test(source)) {
-			skipto(/\n/g, {discard:true});
-			lastTerminator = skipby(1);
-			continue;
-		}
-
-		// 4. Leading characters that can be interpreted as addresses shall be evaluate;
-		// see Addressing in ex
-		// (http://pubs.opengroup.org/onlinepubs/9699919799/utilities/ex.html#tag_20_40_13_02).
-		range = Wasavi.ExCommand.parseRange(appProxy, source, undefined, true);
-		if (typeof range == 'string') {
-			resultMessage = range;
-			break;
-		}
-		skipby(source.length - range.rest.length);
-
-		// 5. Leading <blank> characters shall be skipped.
-		skipblank(/^[: \t]+/);
-
-		// 6. If the next character is a <vertical-line> character or a <newline>:
-		//
-		//   a. If the next character is a <newline>:
-		//
-		//     i. If ex is in open or visual mode, the current line shall be set to the last
-		//     address specified, if any.
-		//
-		//     ii. Otherwise, if the last command was terminated by a <vertical-line> character,
-		//     no action shall be taken; for example, the command "||<newline>" shall execute
-		//     two implied commands, not three.
-		//
-		//     iii. Otherwise, step 6.b. shall apply.
-		//
-		//   b. Otherwise, the implied command shall be the print command. The last #, p, and l
-		//   flags specified to any ex command shall be remembered and shall apply to this
-		//   implied command. Executing the ex number, print, or list command shall set the
-		//   remembered flags to #, nothing, and l, respectively, plus any other flags
-		//   specified for that execution of the number, print, or list command.
-		//
-		//   If ex is not currently performing a global or v command, and no address or count
-		//   is specified, the current line shall be incremented by 1 before the command is
-		//   executed. If incrementing the current line would result in an address past the
-		//   last line in the edit buffer, the command shall fail, and the increment shall not
-		//   happen.
-		//
-		//   c. The <newline> or <vertical-line> character shall be discarded and any
-		//   subsequent characters shall be parsed as a separate command.
-		if (source.charAt(0) == '|' || source.charAt(0) == '\n') {
-			switch (source.charAt(0)) {
-			case '\n':
-				isJumpBaseUpdateRequested = false;
-				if (range && range.rows.length) {
-					commandObj = Wasavi.ExCommand.defaultCommand;
-					break;
-				}
-				if (lastTerminator == undefined || lastTerminator == '|' || !isInteractive) {
-					break;
-				}
-				/*FALLTHRU*/
-
-			case '|':
-				commandObj = Wasavi.ExCommand.defaultCommand;
-				commandNameSupplement = 'p';
-				break;
-			}
-
-			lastTerminator = skipby(1);
-
-			if (!pushCommand()) {
-				break;
-			}
-
-			continue;
-		}
-
-		// 7. The command name shall be comprised of the next character (if the character
-		// is not alphabetic), or the next character and any subsequent alphabetic characters
-		// (if the character is alphabetic), with the following exceptions:
-		//
-		//   a. Commands that consist of any prefix of the characters in the command name
-		//   delete, followed immediately by any of the characters 'l' , 'p' , '+' , '-' , or
-		//   '#' shall be interpreted as a delete command, followed by a <blank>, followed by
-		//   the characters that were not part of the prefix of the delete command. The maximum
-		//   number of characters shall be matched to the command name delete; for example,
-		//   "del" shall not be treated as "de" followed by the flag l.
-		//
-		//   b. Commands that consist of the character 'k' , followed by a character that can
-		//   be used as the name of a mark, shall be equivalent to the mark command followed
-		//   by a <blank>, followed by the character that followed the 'k' .
-		//
-		//   c. Commands that consist of the character 's' , followed by characters that could
-		//   be interpreted as valid options to the s command, shall be the equivalent of the
-		//   s command, without any pattern or replacement values, followed by a <blank>,
-		//   followed by the characters after the 's' .
-		if (/^[a-z]/i.test(source)) {
-			if (/^(?:k\s*[a-zA-Z]|s\s*[^a-zA-Z \\|\n"])/.test(source)) {
-				commandName = source.charAt(0);
-				skipby(1);
-			}
-			else {
-				var re = /^[a-z]+/i.exec(source);
-				commandName = re[0];
-				skipby(re[0].length);
-			}
-		}
-		else {
-			commandName = source.charAt(0);
-			skipby(1);
-		}
-
-		// 8.The command name shall be matched against the possible command names, and a
-		// command name that contains a prefix matching the characters specified by the user
-		// shall be the executed command. In the case of commands where the characters
-		// specified by the user could be ambiguous, the executed command shall be as
-		// follows:
-		//
-		//   a:  append    n:  next    t:  t
-		//   c:  change    p:  print   u:  undo
-		//   ch: change    pr: print   un: undo
-		//   e:  edit      r:  read    v:  v
-		//   m:  move      re: read    w:  write
-		//   ma: mark      s:  s
-		//
-		// Implementation extensions with names causing similar ambiguities shall not be
-		// checked for a match until all possible matches for commands specified by
-		// POSIX.1-2008 have been checked.
-		commandObj = findCommand(commandName);
-		if (commandObj) {
-			commandName = commandObj.name;
-		}
-
-		// 9. (wasavi does not support '!' command)
-
-		// 10. Otherwise, if the command is an edit, ex, or next command, or a visual command
-		// while in open or visual mode, the next part of the command shall be parsed as
-		// follows:
-		//
-		//   a. Any '!' character immediately following the command shall be skipped and be
-		//   part of the command.
-		//
-		//   b. Any leading <blank> characters shall be skipped and be part of the command.
-		//
-		//   c. If the next character is a '+' , characters up to the first non- <backslash>-
-		//   escaped <newline> or non- <backslash>-escaped <blank> shall be skipped and be part
-		//   of the command.
-		//
-		//   d. The rest of the command shall be determined by the steps specified in paragraph
-		//   12.
-		if (/^(?:edit|ex|next|visual)$/.test(commandName)) {
-			if (source.charAt(0) == '!') {
-				commandNameSupplement += source.charAt(0);
-				skipby(1);
-			}
-			skipblank();
-			if (source.charAt(0) == '+') {
-				skipto(/[\n \t]/g);
-			}
-			paragraph12();
-		}
-
-		// 11. Otherwise, if the command is a global, open, s, or v command, the next part of
-		// the command shall be parsed as follows:
-		//
-		//   a. Any leading <blank> characters shall be skipped and be part of the command.
-		//
-		//   b. If the next character is not an alphanumeric, double-quote, <newline>,
-		//   <backslash>, or <vertical-line> character:
-		//
-		//     i. The next character shall be used as a command delimiter.
-		//
-		//     ii. If the command is a global, open, or v command, characters up to the first
-		//     non- <backslash>-escaped <newline>, or first non- <backslash>-escaped delimiter
-		//     character, shall be skipped and be part of the command.
-		//
-		//     iii. If the command is an s command, characters up to the first non- <backslash>
-		//     -escaped <newline>, or second non- <backslash>-escaped delimiter character,
-		//     shall be skipped and be part of the command.
-		//
-		//   c. If the command is a global or v command, characters up to the first non-
-		//   <backslash>-escaped <newline> shall be skipped and be part of the command.
-		//
-		//   d. Otherwise, the rest of the command shall be determined by the steps specified
-		//   in paragraph 12.
-		else if (/^(?:global|open|s|v)$/.test(commandName)) {
-			skipblank();
-			if (/^(?:[^a-zA-Z"\n\\|])/.test(source)) {
-				var delimiter = source.charAt(0);
-				argv = [];
-				skipby(1);
-
-				if (commandName != 's') {
-					skipto(getRegex(delimiter));
-				}
-				else {
-					skipto2(getRegex(delimiter), delimiter);
-				}
-				if (source.charAt(0) == delimiter) {
-					skipby(1);
-				}
-			}
-			if (/^(?:global|v)$/.test(commandName)) {
-				if (exCommandExecutor.isGlobalSpecified) {
-					resultMessage = _('Cannot use the global or v command recursively.');
-					break;
-				}
-				exCommandExecutor.isGlobalSpecified = true;
-				skipto(/\n/g);
-				lastTerminator = skipby(1);
-			}
-			else {
-				paragraph12();
-			}
-		}
-
-		//
-		else if (commandName == 'script') {
-			skipto(/\n/g);
-			lastTerminator = skipby(1);
-
-			if (/^\s*$/.test(commandNameSupplement)) {
-				if (isInteractive) {
-					resultMessage = _('Cannot use the multi-lined script interactively.');
-					break;
-				}
-				argv = [];
-				literalKey = commandName;
-				literalExitKey = commandName + 'end';
-				continue;
-			}
-		}
-
-		// 12. Otherwise:
-		//
-		//   a. If the command was a map, unmap, abbreviate, or unabbreviate command,
-		//   characters up to the first non- <control>-V-escaped <newline>, <vertical-line>,
-		//   or double-quote character shall be skipped and be part of the command.
-		//
-		//   b. Otherwise, characters up to the first non- <backslash>-escaped <newline>,
-		//   <vertical-line>, or double-quote character shall be skipped and be part of the
-		//   command.
-		//
-		//   c. If the command was an append, change, or insert command, and the step 12.b.
-		//   ended at a <vertical-line> character, any subsequent characters, up to the next
-		//   non- <backslash>-escaped <newline> shall be used as input text to the command.
-		//
-		//   d. If the command was ended by a double-quote character, all subsequent
-		//   characters, up to the next non- <backslash>-escaped <newline>, shall be discarded.
-		//
-		//   e. The terminating <newline> or <vertical-line> character shall be discarded and
-		//   any subsequent characters shall be parsed as a separate ex command.
-		else {
-			paragraph12();
-		}
-
-		if (!pushCommand()) {
-			break;
-		}
-		if (!commandObj && commandName != '') {
-			resultMessage = _('{0}: unknown command.', commandName);
-			break;
-		}
-	}
-
-	if (typeof resultMessage == 'string') {
-		return resultMessage;
-	}
-
-	if (literalKey !== false) {
-		pushCommand();
-	}
-
-	return parseOnly ? executor : executor.run();
 }
 function executeViCommand (arg) {
 	var seq = keyManager.createSequences(arg);
@@ -2319,7 +2394,7 @@ function notifyActivity (code, key, note) {
 	}
 }
 function notifyCommandComplete (eventName, modeOverridden) {
-	if (exCommandExecutor.commands.length) return;
+	//if (exvm.inst.opcodes.length) return;
 	if (!testMode || !extensionChannel) return;
 	eventName || (eventName = 'command-completed');
 	var pt = new Position(getCurrentViewPositionIndices().top, 0);
@@ -2348,12 +2423,6 @@ function notifyCommandComplete (eventName, modeOverridden) {
 	else {
 		notifyToParent(eventName, {state:currentState});
 	}
-}
-function setSubstituteWorker (obj) {
-	if (!(obj instanceof Wasavi.SubstituteWorker)) {
-		throw new Error('invalid object assigning as SubstituteWorker');
-	}
-	substituteWorker = obj;
 }
 function extractDriveName (path, callback) {
 	return path.replace(/^([^\/:]+):/, function ($0, $1) {
@@ -2475,34 +2544,21 @@ function interruptMultiplexCallback () {
 function getReadHandler (id) {
 	return function (req) {
 		if (req.error) {
-			exCommandExecutor.stop();
 			removeMultiplexCallback(id);
-			showMessage(_.apply(null, req.error), true, false);
+			exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
+			exvm.run();
 			return;
 		}
 
 		switch (req.state) {
 		case 'reading':
-			showMessage(
-				_('Reading ({0}%)', req.progress.toFixed(2)));
+			showMessage(_('Reading ({0}%)', req.progress.toFixed(2)));
 			break;
 
 		case 'complete':
-			var read = exCommandExecutor.lastCommandObj.clone();
-			read.handler = function (app, t, a) {
-				switch (this.name) {
-				case 'read':
-					return Wasavi.ExCommand.readCore(
-						app, t, a, req.content, req.meta, req.status);
-				case 'edit':
-					return Wasavi.ExCommand.editCore(
-						app, t, a, req.content, req.meta, req.status);
-				}
-			};
-			cursor.update({visible:false});
-			exCommandExecutor.runAsyncNext(
-				read, exCommandExecutor.lastCommandArg);
 			removeMultiplexCallback(id);
+			exvm.inst.currentOpcode.worker = {req:req};
+			exvm.run();
 			break;
 		}
 	};
@@ -2542,18 +2598,15 @@ function getWriteHandler (id) {
 function getChdirHandler (id) {
 	return function (req) {
 		if (req.error) {
-			exCommandExecutor.stop();
 			removeMultiplexCallback(id);
-			showMessage(_.apply(null, req.error), true, false);
+			exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
+			exvm.run();
 			return;
 		}
 
-		var chdir = exCommandExecutor.lastCommandObj.clone();
-		chdir.handler = function (app, t, a) {
-			return Wasavi.ExCommand.chdirCore(app, t, a, req.data);
-		};
-		exCommandExecutor.runAsyncNext(chdir, exCommandExecutor.lastCommandArg);
 		removeMultiplexCallback(id);
+		exvm.inst.currentOpcode.worker = {req:req};
+		exvm.run();
 	};
 }
 
@@ -4273,7 +4326,7 @@ function handleKeydown (e) {
 	notifyActivity(e.code, e.fullIdentifier);
 
 	if (keyManager.isLocked) {
-		if (exCommandExecutor.running && e.code == 3) {
+		if (exvm.running && e.code == 3) {
 			interruptMultiplexCallback();
 			bell.play();
 		}
@@ -4409,8 +4462,14 @@ function handleBackendMessage (req) {
 
 	case 'fileio-authorize-response':
 		if (req.error) {
-			exCommandExecutor.stop();
-			showMessage(_.apply(null, req.error), true, false);
+			var errorMessage = _.apply(null, req.error);
+			if (exvm.running) {
+				exvm.lastError = errorMessage;
+				exvm.run();
+			}
+			else {
+				showMessage(errorMessage, true, false);
+			}
 			break;
 		}
 		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
@@ -4811,7 +4870,6 @@ var testMode;
 var devMode;
 var logMode;
 var fstab;
-var substituteWorker;
 var resizeHandlerInvokeTimer;
 var l10n;
 var ffttDictionary;
@@ -4841,7 +4899,7 @@ var idealWidthPixels;
 var idealDenotativeWidthPixels;
 var backlog;
 var pairBracketsIndicator;
-var exCommandExecutor;
+var exvm;
 var searchUtils;
 var recordedStrokes;
 var literalInput;
@@ -4919,11 +4977,8 @@ var modeHandlers = {
 		}
 	},
 	ex_s_prompt: function (e, r) {
-		if (!substituteWorker.kontinue(r.letter)) {
-			substituteWorker = null;
-			cursor.ensureVisible();
-			cursor.update({visible:true});
-		}
+		exvm.inst.currentOpcode.letter = r.letter;
+		exvm.run();
 		r.needEmitEvent = true;
 	},
 	bound: function (e, r) {
@@ -6496,7 +6551,7 @@ var commandMap = {
 		var range = [];
 		range.push(buffer.selectionStartRow + 1);
 		range.push(Math.min(range[0] + prefixInput.count - 1, buffer.rowLength));
-		var result = executeExCommand(range.join(',') + '&');
+		var result = exvm.run(range.join(',') + '&');
 		typeof result == 'string' && requestShowMessage(result, true);
 		return true;
 	},
@@ -6534,7 +6589,7 @@ var commandMap = {
 			if (!isAlias(c)) {
 				return inputEscape(prefixInput.operation);
 			}
-			var result = executeExCommand('x');
+			var result = exvm.run('x');
 			typeof result == 'string' && requestShowMessage(result, true);
 			return true;
 		},
@@ -6561,19 +6616,8 @@ var commandMap = {
 			prefixInput.trailer = c;
 			registers.set(':', c);
 			lineInputHistories.push(c);
-			if (!exCommandExecutor.onFinish) {
-				exCommandExecutor.onFinish = function (executor) {
-					executor.lastError && requestShowMessage(executor.lastError, true);
-				};
-			}
-			var result = executeExCommand(c, true);
-			if (typeof result == 'string') {
-				requestShowMessage(result, true);
-				return true;
-			}
-			else {
-				return result;
-			}
+			exvm.run(c);
+			return true;
 		}
 	},
 	// bound mode transitioner

@@ -156,10 +156,6 @@
         "message": "{0} canceled.",
         "description": "{0} canceled."
     },
-    "@0_executed_in_synchronous_context": {
-        "message": "{0}: Executed in synchronous context.",
-        "description": "{0}: Executed in synchronous context."
-    },
     "@0_extra_range_specified": {
         "message": "{0}: extra range specified.",
         "description": "{0}: extra range specified."
@@ -512,6 +508,10 @@
         "message": "Invalid boolean value",
         "description": "Invalid boolean value"
     },
+    "invalid_chdir_response": {
+        "message": "Invalid chdir response.",
+        "description": "Invalid chdir response."
+    },
     "invalid_chdir_result": {
         "message": "Invalid chdir result.",
         "description": "Invalid chdir result."
@@ -523,6 +523,10 @@
     "invalid_content_response_": {
         "message": "Invalid content response: ",
         "description": "Invalid content response: "
+    },
+    "invalid_edit_response": {
+        "message": "Invalid edit response.",
+        "description": "Invalid edit response."
     },
     "invalid_history_item": {
         "message": "Invalid history item.",
@@ -543,6 +547,10 @@
     "invalid_path": {
         "message": "Invalid path.",
         "description": "Invalid path."
+    },
+    "invalid_read_response": {
+        "message": "Invalid read response.",
+        "description": "Invalid read response."
     },
     "invalid_regex_pattern": {
         "message": "Invalid regex pattern.",

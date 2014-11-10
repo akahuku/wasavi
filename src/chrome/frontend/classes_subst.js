@@ -133,7 +133,6 @@ Wasavi.SubstituteWorker.prototype = {
 			this.substCount = 0;
 
 			if (this.isConfirm) {
-				app.low.setSubstituteWorker(this);
 				this.k = {
 					bufferPos: 0,
 					pos: null,
@@ -142,7 +141,11 @@ Wasavi.SubstituteWorker.prototype = {
 					delta: 0,
 					lastRow: -1
 				};
+
 				this.kontinue();
+				app.exvm.hideOverlay();
+				app.exvm.inst.index += 0;
+				return app.exvm.EX_ASYNC;
 			}
 			else {
 				this.burst();
@@ -216,6 +219,7 @@ Wasavi.SubstituteWorker.prototype = {
 			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
 
 			this.app.low.requestInputMode('ex_s_prompt');
+			this.app.requestedState.modeline = null;
 			this.app.low.requestShowMessage(
 				_('Substitute? ([y]es, [n]o, [q]uit)'),
 				false, true, true);
@@ -277,6 +281,8 @@ Wasavi.SubstituteWorker.prototype = {
 
 		this.app.low.popInputMode();
 		this.app.cursor.ensureVisible();
+		this.app.exvm.showOverlay();
+		this.app.exvm.inst.currentOpcode.worker = null;
 		this.showResult();
 		this.k = this.buffer = null;
 	},

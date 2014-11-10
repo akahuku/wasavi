@@ -380,7 +380,7 @@ flag23_loop:
 		if (typeof result == 'string') {
 			return this.name + ': ' + result;
 		}
-		return {flags:args.flags, offset:args.flagoff};
+		return {flags:args.flags, offset:args.flagoff, value:result};
 	},
 	toString: function () {
 		return '[ExCommand ' + this.name + ']';
@@ -475,6 +475,132 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	}
 }
 
+function globalLatterHead (app, t, a) {
+	var opcode = app.exvm.inst.currentOpcode;
+	var items = opcode.items;
+	var item = null;
+
+	if (app.exvm.lastError) {
+		app.editLogger.close();
+		return app.exvm.lastError;
+	}
+
+	while (items.length) {
+		item = items.shift();
+		if (item.parentNode) {
+			break;
+		}
+		else {
+			item = null;
+		}
+	}
+
+	if (item) {
+		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(t.indexOf(item), 0)));
+	}
+	else {
+		app.exvm.inst.errorVectors.pop();
+		app.exvm.inst.index += opcode.nestLength;
+
+		app.editLogger.close();
+	}
+}
+
+function globalLatterBottom (app, t, a) {
+	var opcode = app.exvm.inst.currentOpcode;
+	app.exvm.inst.index -= opcode.nestLength - 1;
+}
+
+function readCore (app, t, a, content, meta, status) {
+	if (typeof content != 'string' || status == 404) {
+		return _('Cannot open "{0}".', meta.path);
+	}
+	if (content == '') {
+		return _('"{0}" has no content.', meta.path);
+	}
+	content = content.replace(/\r\n|\r/g, '\n');
+	var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
+	t.setSelectionRange(new Wasavi.Position(startLine, 0));
+	app.edit.paste(1, {
+		isForward:true,
+		lineOrientOverride:true,
+		content:content
+	});
+	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
+}
+
+function editCore (app, t, a, content, meta, status) {
+	var charCount = content.length;
+	if (app.extensionChannel.isTopFrame()) {
+		app.fileName = meta.path;
+		document.title = /[^\/]+$/.exec(app.fileName)[0] + ' - wasavi';
+		var empty = [];
+		app.preferredNewline = [
+			['\n',   (content.match(/(?:^|[^\r])\n/g) || empty).length],
+			['\r',   (content.match(/\r(?!\n)/g) || empty).length],
+			['\r\n', (content.match(/\r\n/g) || empty).length]
+		].sort(function (a, b) {return b[1] - a[1];})[0][0];
+	}
+	else {
+		app.fileName = '';
+		app.preferredNewline = '\n';
+	}
+
+	t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
+	app.isTextDirty = false;
+	app.editLogger.close().clear().open('excommand+edit');
+	app.marks.clear();
+
+	// +command
+	if (a.initCommand) {
+		var ex = app.exvm.clone();
+		var compileResult = ex.inst.compile(a.initCommand);
+		if (typeof compileResult == 'string') {
+			return compileResult;
+		}
+		var locator = ex.inst.add(function (app, t, a) {
+			t.setSelectionRange(t.getLineTopOffset2(t.rowLength - 1, 0));
+		});
+
+		locator.command.name = 'edit-locator';
+		app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
+	}
+	else {
+		t.setSelectionRange(t.getLineTopOffset2(0, 0));
+	}
+
+	//
+	app.low.requestShowMessage(app.low.getFileIoResultInfo(meta.path, charCount, status == 404));
+}
+
+function chdirCore (app, t, a, data) {
+	if (a.argv.length == 0) {
+		return find('pwd').handler.apply(this, arguments);
+	}
+	if (!data || !('is_dir' in data)) {
+		return _('Invalid chdir result.');
+	}
+	if (!data.is_dir) {
+		return _('Cannot change current directory into a file.');
+	}
+
+	var drive = '';
+	var path = a.argv[0];
+	var index = -1;
+
+	path = app.low.extractDriveName(path, function ($0, d) {drive = d});
+	index = drive == '' ? app.fileSystemIndex : app.low.getFileSystemIndex(drive);
+
+	if (index < 0) {
+		return _('Unknown drive name.');
+	}
+
+	app.fileSystemIndex = index;
+	if (path != '') {
+		app.fstab[index].cwd = app.low.regalizeFilePath(path, false);
+	}
+}
+
 var cache = {};
 /*public*/function find (name) {
 	if (name in cache) {
@@ -487,6 +613,10 @@ var cache = {};
 	}
 
 	return null;
+}
+
+/*public*/function createExCommand (name, shortName, syntax, flags, handler) {
+	return new ExCommand(name, shortName, syntax, flags, handler);
 }
 
 /*public*/function parseRange (app, s, requiredCount, allowZeroAddress) {
@@ -749,96 +879,6 @@ var cache = {};
 	app.low.requestConsoleState();
 }
 
-/*public*/function readCore (app, t, a, content, meta, status) {
-	if (typeof content != 'string' || status == 404) {
-		return _('Cannot open "{0}".', meta.path);
-	}
-	if (content == '') {
-		return _('"{0}" has no content.', meta.path);
-	}
-	content = content.replace(/\r\n|\r/g, '\n');
-	var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
-	t.setSelectionRange(new Wasavi.Position(startLine, 0));
-	app.edit.paste(1, {
-		isForward:true,
-		lineOrientOverride:true,
-		content:content
-	});
-	t.setSelectionRange(t.getLineTopOffset2(startLine + 1, 0));
-}
-
-/*public*/function editCore (app, t, a, content, meta, status) {
-	var charCount = content.length;
-	if (app.extensionChannel.isTopFrame()) {
-		app.fileName = meta.path;
-		document.title = /[^\/]+$/.exec(app.fileName)[0] + ' - wasavi';
-		var empty = [];
-		app.preferredNewline = [
-			['\n',   (content.match(/(?:^|[^\r])\n/g) || empty).length],
-			['\r',   (content.match(/\r(?!\n)/g) || empty).length],
-			['\r\n', (content.match(/\r\n/g) || empty).length]
-		].sort(function (a, b) {return b[1] - a[1];})[0][0];
-	}
-	else {
-		app.fileName = '';
-		app.preferredNewline = '\n';
-	}
-	t.setSelectionRange(0, 0);
-	t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
-	app.isTextDirty = false;
-	app.editLogger.close().clear().open('excommand+edit');
-	app.marks.clear();
-
-	// +command
-	var initCommands = app.low.executeExCommand(a.initCommand, false, true);
-	if (typeof initCommands == 'string') {
-		return initCommands;
-	}
-	var terminator = defaultCommand.clone();
-	if (initCommands.commands.length) {
-		terminator.handler = function (app, t, a) {
-			t.setSelectionRange(t.getLineTopOffset2(t.rowLength - 1, 0));
-		};
-	}
-	else {
-		terminator.handler = function (app, t, a) {
-			t.setSelectionRange(t.getLineTopOffset2(0, 0));
-		};
-	}
-	initCommands.commands.push([terminator, terminator.buildArgs(app, [], '')]);
-	Array.prototype.unshift.apply(app.exCommandExecutor.commands, initCommands.commands);
-
-	app.low.requestShowMessage(app.low.getFileIoResultInfo(meta.path, charCount, status == 404));
-}
-
-/*public*/function chdirCore (app, t, a, data) {
-	if (a.argv.length == 0) {
-		return find('pwd').handler.apply(this, arguments);
-	}
-	if (!data || !('is_dir' in data)) {
-		return _('Invalid chdir result.');
-	}
-	if (!data.is_dir) {
-		return _('Cannot change current directory into a file.');
-	}
-
-	var drive = '';
-	var path = a.argv[0];
-	var index = -1;
-
-	path = app.low.extractDriveName(path, function ($0, d) {drive = d});
-	index = drive == '' ? app.fileSystemIndex : app.low.getFileSystemIndex(drive);
-
-	if (index < 0) {
-		return _('Unknown drive name.');
-	}
-
-	app.fileSystemIndex = index;
-	if (path != '') {
-		app.fstab[index].cwd = app.low.regalizeFilePath(path, false);
-	}
-}
-
 /*public*/var commands = [
 	new ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
@@ -928,15 +968,34 @@ var cache = {};
 			};
 		}
 	}),
-	new ExCommand('cd', 'cd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('cd', 'cd', 'f', 0, function (app, t, a) {
+		var opcode = app.exvm.inst.currentOpcode;
+		var worker = opcode.worker;
+		if (worker) {
+			opcode.worker = null;
+
+			if (worker.error) {
+				return worker.error;
+			}
+			if (worker.req) {
+				var req = worker.req;
+				return chdirCore(app, t, a, req.data);
+			}
+
+			return _('Invalid chdir response.');
+		}
+
 		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'chdir',
 			path:app.low.regalizeFilePath(a.argv[0], true)
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'chdir');
+
+		app.exvm.inst.index += 0;
+		return app.exvm.EX_ASYNC;
 	}),
-	new ExCommand('chdir', 'chd', 'f', EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('chdir', 'chd', 'f', 0, function (app, t, a) {
 		return find('cd').handler.apply(this, arguments);
 	}),
 	new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
@@ -970,7 +1029,23 @@ var cache = {};
 		t.setSelectionRange(t.getLineTopOffset2(n));
 		app.isEditCompleted = true;
 	}),
-	new ExCommand('edit', 'e', '!f', EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('edit', 'e', '!f', 0, function (app, t, a) {
+		var opcode = app.exvm.inst.currentOpcode;
+		var worker = opcode.worker;
+		if (worker) {
+			opcode.worker = null;
+
+			if (worker.error) {
+				return worker.error;
+			}
+			if (worker.req) {
+				var req = worker.req;
+				return editCore(app, t, a, req.content, req.meta, req.status);
+			}
+
+			return _('Invalid edit response.');
+		}
+
 		if (!a.flags.force && app.isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
@@ -1011,6 +1086,9 @@ var cache = {};
 			requestId = app.extensionChannel.postMessage(payload, true, true);
 		}
 		app.low.registerMultiplexCallback(requestId, 'edit');
+
+		app.exvm.inst.index += 0;
+		return app.exvm.EX_ASYNC;
 	}),
 	new ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
@@ -1101,7 +1179,94 @@ var cache = {};
 			}
 		}
 	}),
-	new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.updateJump, function (app, t, a) {
+	new ExCommand('global', 'g', '!s', 2 | EXFLAGS.addr2All, function (app, t, a) {
+		function getItems (text, textPreLength) {
+			var re;
+			var items = [];
+			var prevOffset;
+			var prevRow;
+			var nullNewline = {length:0};
+			pattern.lastIndex = 0;
+			if (inverted) {
+				var rangeStartRow = t.indexOf(t.rowNodes(r[0]));
+				re = pattern.exec(text);
+				if (re) {
+					var pos = pattern.lastIndex - re[0].length;
+					var row, delta;
+					row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
+					items.push(row - rangeStartRow);
+					prevOffset = pos;
+					prevRow = row;
+
+					while ((re = pattern.exec(text))) {
+						if (pattern.lastIndex == prevOffset) {
+							if (pattern.lastIndex < text.length) {
+								pattern.lastIndex++;
+								continue;
+							}
+							else {
+								break;
+							}
+						}
+						pos = pattern.lastIndex - re[0].length;
+						delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
+						row = prevRow + delta;
+						if (row > r[1]) break;
+						delta && items.push(row - rangeStartRow);
+						prevOffset = pos;
+						prevRow = row;
+					}
+
+					if (items.length >= r[1] - r[0] + 1) {
+						return _('Pattern found in every line: {0}', patternString);
+					}
+					var tmp = [], container = t.elm;
+					for (var i = r[0]; i <= r[1]; i++) {
+						tmp.push(container.childNodes[i]);
+					}
+					for (var i = items.length - 1; i >= 0; i--) {
+						tmp.splice(items[i], 1);
+					}
+					items = tmp;
+				}
+			}
+			else {
+				re = pattern.exec(text);
+				if (re) {
+					var pos = pattern.lastIndex - re[0].length;
+					var row, delta;
+					row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
+					items.push(t.rowNodes(row));
+					prevOffset = pos;
+					prevRow = row;
+
+					while ((re = pattern.exec(text))) {
+						if (pattern.lastIndex == prevOffset) {
+							if (pattern.lastIndex < text.length) {
+								pattern.lastIndex++;
+								continue;
+							}
+							else {
+								break;
+							}
+						}
+						pos = pattern.lastIndex - re[0].length;
+						delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
+						row = prevRow + delta;
+						if (row > r[1]) break;
+						delta && items.push(t.rowNodes(row));
+						prevOffset = pos;
+						prevRow = row;
+					}
+				}
+			}
+			return items;
+		}
+
+		/*
+		 * pick up all rows matches to regexp
+		 */
+
 		var r = a.range;
 		var inverted = !!a.flags.force;
 		var pattern = a.argv[0];
@@ -1120,7 +1285,6 @@ var cache = {};
 		var patternString = pattern;
 		pattern = app.low.getFindRegex(pattern);
 
-		// initialize text
 		var textPreLength;
 		var text;
 		var rg = document.createRange();
@@ -1133,117 +1297,35 @@ var cache = {};
 		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
 		rg = null;
 
-		// pass 1
-		var re;
-		var items = [];
-		var prevOffset;
-		var prevRow;
-		var nullNewline = {length:0};
-		pattern.lastIndex = 0;
-		if (inverted) {
-			var rangeStartRow = t.indexOf(t.rowNodes(r[0]));
-			re = pattern.exec(text);
-			if (re) {
-				var pos = pattern.lastIndex - re[0].length;
-				var row, delta;
-				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
-				items.push(row - rangeStartRow);
-				prevOffset = pos;
-				prevRow = row;
+		/*
+		 * build up nested ex commands
+		 */
 
-				while ((re = pattern.exec(text))) {
-					if (pattern.lastIndex == prevOffset) {
-						if (pattern.lastIndex < text.length) {
-							pattern.lastIndex++;
-							continue;
-						}
-						else {
-							break;
-						}
-					}
-					pos = pattern.lastIndex - re[0].length;
-					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
-					row = prevRow + delta;
-					if (row > r[1]) break;
-					delta && items.push(row - rangeStartRow);
-					prevOffset = pos;
-					prevRow = row;
-				}
+		var ex = app.exvm.clone();
+		var items = getItems(text, textPreLength);
 
-				if (items.length >= r[1] - r[0] + 1) {
-					return _('Pattern found in every line: {0}', patternString);
-				}
-				var tmp = [], container = t.elm;
-				for (var i = r[0]; i <= r[1]; i++) {
-					tmp.push(container.childNodes[i]);
-				}
-				for (var i = items.length - 1; i >= 0; i--) {
-					tmp.splice(items[i], 1);
-				}
-				items = tmp;
-			}
-		}
-		else {
-			re = pattern.exec(text);
-			if (re) {
-				var pos = pattern.lastIndex - re[0].length;
-				var row, delta;
-				row = t.linearPositionToBinaryPosition(pos + textPreLength).row;
-				items.push(t.rowNodes(row));
-				prevOffset = pos;
-				prevRow = row;
+		// generate opcodes
+		t.setSelectionRange(new Wasavi.Position(t.indexOf(items[0]), 0));
+		var head = ex.inst.add(globalLatterHead);
+		ex.inst.compile(command, this.name);
+		var bottom = ex.inst.add(globalLatterBottom);
 
-				while ((re = pattern.exec(text))) {
-					if (pattern.lastIndex == prevOffset) {
-						if (pattern.lastIndex < text.length) {
-							pattern.lastIndex++;
-							continue;
-						}
-						else {
-							break;
-						}
-					}
-					pos = pattern.lastIndex - re[0].length;
-					delta = (text.substring(prevOffset, pos).match(/\n/g) || nullNewline).length;
-					row = prevRow + delta;
-					if (row > r[1]) break;
-					delta && items.push(t.rowNodes(row));
-					prevOffset = pos;
-					prevRow = row;
-				}
-			}
-		}
+		// additional properties for head
+		head.items = items;
+		head.nestLength = ex.inst.opcodes.length;
+		head.command.name = this.name + '-head';
 
-		function dumpItems (title) {
-			var result = [];
-			for (var i = 0, goal = items.length; i < goal; i++) {
-				if (items[i]) {
-					result.push(i + ': "' + toVisibleString(items[i].textContent) + '"');
-				}
-				else {
-					result.push(i + ': null');
-				}
-			}
-		}
+		// additional properties for bottom
+		bottom.nestLength = ex.inst.opcodes.length;
+		bottom.command.name = this.name + '-bottom';
 
-		// pass 2
-		app.editLogger.open('global');
-		try {
-			//dumpItems('init');
-			for (var i = 0, goal = items.length; i < goal; i++) {
-				if (items[i].parentNode) {
-					t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(t.indexOf(items[i]), 0)));
-					var result = app.low.executeExCommand(command);
-					if (typeof result == 'string') {return result;}
-				}
-				else {
-					items[i] = null;
-				}
-			}
-		}
-		finally {
-			app.editLogger.close();
-		}
+		// merge into main queue of ex commands
+		app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
+		app.exvm.inst.errorVectors.push(app.exvm.inst.index + 1);
+
+		// start new edit log session
+		app.marks.setJumpBaseMark(t.selectionStart);
+		app.editLogger.open(this.name);
 	}),
 	new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var head = a.range[0];
@@ -1419,7 +1501,23 @@ var cache = {};
 			}
 		}
 	}),
-	new ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef | EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
+		var opcode = app.exvm.inst.currentOpcode;
+		var worker = opcode.worker;
+		if (worker) {
+			opcode.worker = null;
+
+			if (worker.error) {
+				return worker.error;
+			}
+			if (worker.req) {
+				var req = worker.req;
+				return readCore(app, t, a, req.content, req.meta, req.status);
+			}
+
+			return _('Invalid read response.');
+		}
+
 		var path = a.argv[0] || '';
 		if (path == '' && app.fileName == '') {
 			return _('File name is empty.');
@@ -1431,6 +1529,9 @@ var cache = {};
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'read');
+
+		app.exvm.inst.index += 0;
+		return app.exvm.EX_ASYNC;
 	}),
 	new ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();
@@ -1445,19 +1546,36 @@ var cache = {};
 		}
 	}),
 	new ExCommand('s', 's', 's', 2, function (app, t, a) {
-		return (new Wasavi.SubstituteWorker(app)).run(a.range, a.argv[0], a.argv[1], a.argv[2]);
+		var pattern;
+		if (this.name == '~') {
+			if (!app.registers.exists('/')
+			|| (pattern = app.registers.get('/').data) == '') {
+				return _('No previous search pattern.');
+			}
+		}
+		var argmap = {
+			's': [a.range, a.argv[0], a.argv[1], a.argv[2]],
+			'&': [a.range, '',        '%',       a.argv[0]],
+			'~': [a.range, pattern,   '~',       a.argv[0]]
+		};
+		var opcode = app.exvm.inst.currentOpcode;
+		if (opcode.worker) {
+			if (opcode.worker.kontinue(opcode.letter)) {
+				app.exvm.inst.index = app.exvm.inst.index;
+			}
+		}
+		else {
+			opcode.worker = new Wasavi.SubstituteWorker(app);
+			return opcode.worker.run.apply(opcode.worker, argmap[this.name]);
+		}
 	}),
 	new ExCommand('&', '&', 's', 2, function (app, t, a) {
-		return (new Wasavi.SubstituteWorker(app)).run(a.range, '', '%', a.argv[0]);
+		return find('s').handler.apply(this, arguments);
 	}),
 	new ExCommand('~', '~', 's', 2, function (app, t, a) {
-		var pattern;
-		if (!app.registers.exists('/') || (pattern = app.registers.get('/').data) == '') {
-			return _('No previous search pattern.');
-		}
-		return (new Wasavi.SubstituteWorker(app)).run(a.range, pattern, '~', a.argv[0]);
+		return find('s').handler.apply(this, arguments);
 	}),
-	new ExCommand('script', 'sc', 's', 2 | EXFLAGS.addrZero | EXFLAGS.multiAsync, function (app, t, a) {
+	new ExCommand('script', 'sc', 's', 2, function (app, t, a) {
 		return 'Under development!';
 	}),
 	new ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
@@ -1666,12 +1784,10 @@ var cache = {};
 
 return Object.freeze({
 	find: find,
+	create: createExCommand,
 	parseRange: parseRange,
 	defaultCommand: defaultCommand,
 	printRow: printRow,
-	readCore: readCore,
-	editCore: editCore,
-	chdirCore: chdirCore,
 	commands: commands
 });
 
