@@ -56,7 +56,7 @@ public class AppModeTest extends WasaviTest {
 	@Test
 	public void appModeChdir404 () {
 		Wasavi.send(":chdir noexist|file\n");
-		assertEquals("#1-1", "Invalid path.", Wasavi.getAppModeStatusLine());
+		assertEquals("#1-1", "chdir: Invalid path.", Wasavi.getAppModeStatusLine());
 	}
 
 	@Test

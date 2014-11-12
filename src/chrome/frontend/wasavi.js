@@ -189,7 +189,6 @@ function ExCommandExecutor (app) {
 	var EX_SYNC = 1;
 	var EX_ASYNC = 2;
 
-	var that = this;
 	var running = false;
 	var async = false;
 	var suspended = false;
@@ -198,6 +197,7 @@ function ExCommandExecutor (app) {
 	var opcodes = [];
 	var onexecutes = [];
 	var errorVectors = [];
+	var executedRegisterFlags = {};
 	var lastError;
 
 	/* classes */
@@ -260,17 +260,27 @@ function ExCommandExecutor (app) {
 	function run (source, callback, parents) {
 		if (running && !suspended) return;
 
-		if (!suspended) {
+		if (suspended) {
+			app.cursor.windup();
+		}
+		else {
 			clear();
-			compile(source, parents);
+			var result = compile(source, parents);
 			add(terminate).command.name = '$terminate';
-			app.editLogger.open('excommand');
+			app.editLogger.open('ex');
 			showOverlay();
-			pc = 0;
-			lastError = undefined;
+			if (typeof result == 'string') {
+				pc = opcodes.length - 1;
+				lastError = result;
+			}
+			else {
+				pc = 0;
+				lastError = undefined;
+			}
 			suspended = false;
 			running = true;
 			async = false;
+			executedRegisterFlags = {};
 		}
 
 		if (isFunction(callback)) {
@@ -416,7 +426,7 @@ function ExCommandExecutor (app) {
 				return false;
 			}
 
-			add(commandObj, argObj, {rows:range.rows});
+			add(commandObj, argObj, range.source);
 			return true;
 		}
 		function paragraph12 () {
@@ -495,6 +505,7 @@ function ExCommandExecutor (app) {
 				resultMessage = range;
 				break;
 			}
+			range.source = source.substring(0, source.length - range.rest.length);
 			skipby(source.length - range.rest.length);
 
 			// 5. Leading <blank> characters shall be skipped.
@@ -761,6 +772,16 @@ function ExCommandExecutor (app) {
 		}).join('\n'));
 	}
 
+	function raiseError (command, errorMessage) {
+		lastError = errorMessage || _('{0}: unknown error.', command.name);
+		if (errorVectors.length) {
+			pc = errorVectors.lastItem;
+		}
+		else {
+			pc = pc < opcodes.length - 1 ? opcodes.length - 1 : pc + 1;
+		}
+	}
+
 	function resume () {
 		var buffer = app.buffer;
 		suspended = false;
@@ -783,8 +804,13 @@ function ExCommandExecutor (app) {
 					break;
 				}
 			}
-			if (!opcode.args.range && opcode.rangeSource) {
-				opcode.args.range = opcode.rangeSource.rows.last(
+			if (!opcode.args.range && isString(opcode.rangeSource)) {
+				var newRange = Wasavi.ExCommand.parseRange(app, opcode.rangeSource, undefined, true);
+				if (isString(newRange)) {
+					raiseError(command, newRange);
+					continue;
+				}
+				opcode.args.range = newRange.rows.last(
 					buffer, opcode.command.rangeCount,
 					opcode.command.flags.addr2All);
 			}
@@ -793,38 +819,30 @@ function ExCommandExecutor (app) {
 			var ss = buffer.selectionStart;
 			var result = command.run(app, opcode.args);
 
-			if (opcode.rangeSource) {
+			if (isString(opcode.rangeSource)) {
 				opcode.args.range = null;
 			}
 			if (isString(result)) {
-				lastError = result || _('{0}: unknown error.', command.name);
-				if (errorVectors.length) {
-					pc = errorVectors.lastItem;
-				}
-				else {
-					pc = pc < opcodes.length - 1 ? opcodes.length - 1 : pc + 1;
-				}
+				raiseError(command, result);
 				continue;
 			}
 			if (command.flags.multiAsync || result.value === EX_ASYNC) {
-				async = true;
 				suspend();
+				break;
 			}
-			else {
-				if ((app.isJumpBaseUpdateRequested || command.flags.updateJump)
-				&& buffer.selectionStart.ne(ss)) {
-					app.marks.setJumpBaseMark(ss);
-					app.isJumpBaseUpdateRequested = false;
-				}
-				if (result.flags.hash
-				|| result.flags.list
-				|| result.flags.print) {
-					var n = Math.max(0, Math.min(
-						buffer.selectionStartRow + result.flagoff,
-						buffer.rowLength - 1));
-					buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
-					Wasavi.ExCommand.printRow(app, buffer, n.row, n.row, result.flags);
-				}
+			if ((app.isJumpBaseUpdateRequested || command.flags.updateJump)
+			&& buffer.selectionStart.ne(ss)) {
+				app.marks.setJumpBaseMark(ss);
+				app.isJumpBaseUpdateRequested = false;
+			}
+			if (result.flags.hash
+			|| result.flags.list
+			|| result.flags.print) {
+				var n = Math.max(0, Math.min(
+					buffer.selectionStartRow + result.flagoff,
+					buffer.rowLength - 1));
+				buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
+				Wasavi.ExCommand.printRow(app, buffer, n.row, n.row, result.flags);
 			}
 			if (!pcOverride) {
 				pc++;
@@ -842,13 +860,14 @@ function ExCommandExecutor (app) {
 		lastError && requestShowMessage(lastError, true);
 		async && processInput(app.keyManager.nopObjectFromCode());
 
-		executes.forEach(function (a) {a(that)});
+		executes.forEach(function (a) {a(this)}, this);
 	}
 	function isClipboardAccess (args) {
 		return args.flags.register && args.register == '*';
 	}
 	function suspend () {
 		if (running) {
+			async = true;
 			suspended = true;
 		}
 	}
@@ -862,6 +881,7 @@ function ExCommandExecutor (app) {
 			running: function () {return running},
 			async: function () {return async},
 			suspended: function () {return suspended},
+			executedRegisterFlags: function () {return executedRegisterFlags},
 			lastError: [
 				function () {return lastError},
 				function (v) {lastError = '' + v}
@@ -2190,7 +2210,7 @@ function processInput (e, ignoreAbbrev) {
 				pushInputMode(result, ['backlog_prompt']);
 			}
 			else {
-				backlog.length && showMessage(backlog.buffer[0]);
+				backlog.buffer.length && showMessage(backlog.buffer[0]);
 				backlog.hide();
 				backlog.clear();
 				cursor.update({focused:true, visible:true});
@@ -4305,7 +4325,7 @@ function handleWindowError (message, fileName, lineNumber, columnNumber, errObj)
 		}
 
 		notifyToParent('notify-error', {
-			message: errObj.message || '?',
+			message: errObj.stack || errObj.message || '?',
 			fileName: errObj.filename || errObj.fileName || '?',
 			lineNumber: errObj.lineno || errObj.lineNumber || -1
 		});

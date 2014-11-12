@@ -144,7 +144,6 @@ Wasavi.SubstituteWorker.prototype = {
 
 				this.kontinue();
 				app.exvm.hideOverlay();
-				app.exvm.inst.index += 0;
 				return app.exvm.EX_ASYNC;
 			}
 			else {
@@ -239,6 +238,7 @@ Wasavi.SubstituteWorker.prototype = {
 						this.k.pos,
 						this.buffer[this.k.bufferPos][0].length,
 						replacer);
+					this.app.editLogger.close().open('ex+s');
 				}
 				else {
 					this.k.delta = 0;

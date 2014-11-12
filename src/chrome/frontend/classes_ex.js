@@ -548,7 +548,7 @@ function editCore (app, t, a, content, meta, status) {
 
 	t.value = trimTerm(content.replace(/\r\n|\r/g, '\n'));
 	app.isTextDirty = false;
-	app.editLogger.close().clear().open('excommand+edit');
+	app.editLogger.close().clear().open('ex+edit');
 	app.marks.clear();
 
 	// +command
@@ -992,7 +992,6 @@ var cache = {};
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'chdir');
 
-		app.exvm.inst.index += 0;
 		return app.exvm.EX_ASYNC;
 	}),
 	new ExCommand('chdir', 'chd', 'f', 0, function (app, t, a) {
@@ -1087,7 +1086,6 @@ var cache = {};
 		}
 		app.low.registerMultiplexCallback(requestId, 'edit');
 
-		app.exvm.inst.index += 0;
 		return app.exvm.EX_ASYNC;
 	}),
 	new ExCommand('file', 'f', 'f', 0, function (app, t, a) {
@@ -1303,12 +1301,18 @@ var cache = {};
 
 		var ex = app.exvm.clone();
 		var items = getItems(text, textPreLength);
+		if (isString(items)) {
+			return items;
+		}
 
 		// generate opcodes
 		t.setSelectionRange(new Wasavi.Position(t.indexOf(items[0]), 0));
 		var head = ex.inst.add(globalLatterHead);
-		ex.inst.compile(command, this.name);
+		var result = ex.inst.compile(command, this.name);
 		var bottom = ex.inst.add(globalLatterBottom);
+		if (isString(result)) {
+			return result;
+		}
 
 		// additional properties for head
 		head.items = items;
@@ -1325,7 +1329,7 @@ var cache = {};
 
 		// start new edit log session
 		app.marks.setJumpBaseMark(t.selectionStart);
-		app.editLogger.open(this.name);
+		app.editLogger.open('ex+' + this.name);
 	}),
 	new ExCommand('join', 'j', '!c11', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var head = a.range[0];
@@ -1426,7 +1430,7 @@ var cache = {};
 		if (dest >= r[0] && dest < r[1]) {
 			return _('Destination is in inside source.');
 		}
-		app.editLogger.open('move', function () {
+		app.editLogger.open('ex+move', function () {
 			var rows = r[1] - r[0] + 1;
 
 			if (dest == r[0] - 1 || dest == r[1]) {
@@ -1530,13 +1534,12 @@ var cache = {};
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'read');
 
-		app.exvm.inst.index += 0;
 		return app.exvm.EX_ASYNC;
 	}),
 	new ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();
 		var result = app.editLogger.redo();
-		app.editLogger.open('excommand+redo');
+		app.editLogger.open('ex+redo');
 		if (result === false) {
 			return _('No redo item.');
 		}
@@ -1561,7 +1564,7 @@ var cache = {};
 		var opcode = app.exvm.inst.currentOpcode;
 		if (opcode.worker) {
 			if (opcode.worker.kontinue(opcode.letter)) {
-				app.exvm.inst.index = app.exvm.inst.index;
+				return app.exvm.EX_ASYNC;
 			}
 		}
 		else {
@@ -1690,7 +1693,7 @@ var cache = {};
 	new ExCommand('undo', 'u', '', 0 | EXFLAGS.updateJump, function (app, t, a) {
 		app.editLogger.close();
 		var result = app.editLogger.undo();
-		app.editLogger.open('excommand+undo');
+		app.editLogger.open('ex+undo');
 		if (result === false) {
 			return _('No undo item.');
 		}
@@ -1770,11 +1773,19 @@ var cache = {};
 		if (!app.registers.exists(register) || (command = app.registers.get(register).data) == '') {
 			return _('Register {0} is empty.', register);
 		}
+		if (app.exvm.executedRegisterFlags[register]) {
+			return _('Register {0} was used recursively.', register);
+		}
+
+		var ex = app.exvm.clone();
 		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-		var result = app.low.executeExCommand(command);
+		var result = ex.inst.compile(command);
 		if (typeof result == 'string') {
 			return result;
 		}
+
+		app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
+		app.exvm.executedRegisterFlags[register] = true;
 		app.registers.set('@', command, true);
 	}),
 	new ExCommand('*', '*', 'b', 1, function (app, t, a) {
