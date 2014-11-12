@@ -784,6 +784,10 @@
         "message": "レジスタ {0} は存在しません。",
         "description": "Register {0} is not exist."
     },
+    "register_@0_was_used_recursively": {
+        "message": "レジスタ {0} が再帰的に使用されました。",
+        "description": "Register {0} was used recursively."
+    },
     "replace_count_too_large": {
         "message": "置き換える文字数が多すぎます。",
         "description": "Replace count too large."

@@ -784,6 +784,10 @@
         "message": "Register {0} is not exist.",
         "description": "Register {0} is not exist."
     },
+    "register_@0_was_used_recursively": {
+        "message": "Register {0} was used recursively.",
+        "description": "Register {0} was used recursively."
+    },
     "replace_count_too_large": {
         "message": "Replace count too large.",
         "description": "Replace count too large."
