@@ -59,7 +59,7 @@ FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/upda
 # ========================================
 
 VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
-BINKEY_PATH = $(EMBRYO_DIR)/$(CRYPT_DST_FILE)
+BINKEY_PATH = $(CHROME_SRC_PATH)/$(CRYPT_DST_FILE)
 
 CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
@@ -95,10 +95,10 @@ clean:
 	rm -rf ./$(EMBRYO_DIR)
 
 $(BINKEY_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
-	tool/make-binkey \
-		--key=$(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
-		--src=$(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
-		--dst=$@
+	tool/make-binkey.rb \
+		--key $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
+		--src $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
+		--dst $@
 
 FORCE:
 
@@ -118,15 +118,11 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 	$(RSYNC) $(RSYNC_OPT) --exclude 'wasavi_frame_noscript.html' \
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
 
-#	create binary consumer keys, and remove its json source
-	cp $(BINKEY_PATH) $(CHROME_EMBRYO_SRC_PATH)
-	rm -f $(CHROME_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
-
 #	update manifest
-	tool/update-chrome-manifest \
-		--indir=$(CHROME_SRC_PATH) \
-		--outdir=$(CHROME_EMBRYO_SRC_PATH) \
-		--ver=$(VERSION)
+	tool/update-chrome-manifest.rb \
+		--indir $(CHROME_SRC_PATH) \
+		--outdir $(CHROME_EMBRYO_SRC_PATH) \
+		--ver $(VERSION)
 
 #	build general crx
 	$(CHROME) \
@@ -137,10 +133,10 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 	mv $(EMBRYO_DIR)/$(CHROME_SRC_DIR).$(CHROME_SUFFIX) $@
 
 #	update manifest for google web store
-	tool/update-chrome-manifest \
-		--indir=$(CHROME_SRC_PATH) \
-		--outdir=$(CHROME_EMBRYO_SRC_PATH) \
-		--ver=$(VERSION) \
+	tool/update-chrome-manifest.rb \
+		--indir $(CHROME_SRC_PATH) \
+		--outdir $(CHROME_EMBRYO_SRC_PATH) \
+		--ver $(VERSION) \
 		--strip-update-url
 
 #	build zip archive for google web store
@@ -161,7 +157,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 # last mtime holder
 $(CHROME_MTIME_PATH): FORCE
 	@mkdir -p $(CHROME_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime --dir=$(CHROME_SRC_PATH) --base=$(CHROME_TARGET_PATH) --out=$@
+	tool/mtime.rb --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
 
 
 
@@ -176,15 +172,11 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
 	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
 #	update the manifest file
-	tool/update-opera-config \
-		--indir=$(OPERA_SRC_PATH) \
-		--outdir=$(OPERA_EMBRYO_SRC_PATH) \
-		--ver=$(VERSION) \
-		--update-url=$(OPERA_UPDATE_LOCATION)
-
-#	create binary consumer keys, and remove its json source
-	cp $(BINKEY_PATH) $(OPERA_EMBRYO_SRC_PATH)
-	rm -f $(OPERA_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
+	tool/update-opera-config.rb \
+		--indir $(OPERA_SRC_PATH) \
+		--outdir $(OPERA_EMBRYO_SRC_PATH) \
+		--ver $(VERSION) \
+		--update-url $(OPERA_UPDATE_LOCATION)
 
 #	create update description file
 	sed -e 's/@appid@/$(OPERA_EXT_ID)/g' \
@@ -203,7 +195,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
 # last mtime holder
 $(OPERA_MTIME_PATH): FORCE
 	@mkdir -p $(OPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime --dir=$(OPERA_SRC_PATH) --base=$(OPERA_TARGET_PATH) --out=$@
+	tool/mtime.rb --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
 
 
 
@@ -218,16 +210,12 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEY_PATH)
 	$(RSYNC) $(RSYNC_OPT) --exclude='wasavi_frame_noscript.html' \
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
 
-#	create binary consumer keys, and remove its json source
-	cp $(BINKEY_PATH) $(BLINKOPERA_EMBRYO_SRC_PATH)
-	rm -f $(BLINKOPERA_EMBRYO_SRC_PATH)/$(CRYPT_SRC_FILE)*
-
 #	update manifest
-	tool/update-chrome-manifest \
-		--indir=$(BLINKOPERA_SRC_PATH) \
-		--outdir=$(BLINKOPERA_EMBRYO_SRC_PATH) \
-		--ver=$(VERSION) \
-		--update-url=$(BLINKOPERA_UPDATE_LOCATION)
+	tool/update-chrome-manifest.rb \
+		--indir $(BLINKOPERA_SRC_PATH) \
+		--outdir $(BLINKOPERA_EMBRYO_SRC_PATH) \
+		--ver $(VERSION) \
+		--update-url $(BLINKOPERA_UPDATE_LOCATION)
 
 #	build nex
 	$(CHROME) \
@@ -250,7 +238,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEY_PATH)
 # last mtime holder
 $(BLINKOPERA_MTIME_PATH): FORCE
 	@mkdir -p $(BLINKOPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime --dir=$(BLINKOPERA_SRC_PATH) --base=$(BLINKOPERA_TARGET_PATH) --out=$@
+	tool/mtime.rb --dir $(BLINKOPERA_SRC_PATH) --base $(BLINKOPERA_TARGET_PATH) --out $@
 
 
 
@@ -265,20 +253,16 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 	$(RSYNC) $(RSYNC_OPT) \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
-#	create binary consumer keys, and remove its json source
-	cp $(BINKEY_PATH) $(FIREFOX_EMBRYO_SRC_PATH)/data
-	rm -f $(FIREFOX_EMBRYO_SRC_PATH)/data/$(CRYPT_SRC_FILE)*
-
 #	strip script tag from options.html
 	sed -e 's/<script[^>]*><\/script>//g' \
 		$(FIREFOX_SRC_PATH)/data/options.html \
 		> $(FIREFOX_EMBRYO_SRC_PATH)/data/options.html
 
 #	update package
-	tool/update-firefox-package \
-		--indir=$(FIREFOX_SRC_PATH) \
-		--outdir=$(FIREFOX_EMBRYO_SRC_PATH) \
-		--ver=$(VERSION)
+	tool/update-firefox-package.rb \
+		--indir $(FIREFOX_SRC_PATH) \
+		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--ver $(VERSION)
 
 #	build xpi
 	cfx xpi \
@@ -293,22 +277,22 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 
 #	amo version
 	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
-	tool/update-firefox-manifest \
-		--indir=$(FIREFOX_EMBRYO_SRC_PATH) \
-		--outdir=$(FIREFOX_EMBRYO_SRC_PATH) \
-		--localedir=$(SRC_DIR)/chrome/_locales \
-		--ver=$(VERSION) \
+	tool/update-firefox-manifest.rb \
+		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--localedir $(SRC_DIR)/chrome/_locales \
+		--ver $(VERSION) \
 		--strip-update-url
 	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 
 #	amo(beta) version
 	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
-	tool/update-firefox-manifest \
-		--indir=$(FIREFOX_EMBRYO_SRC_PATH) \
-		--outdir=$(FIREFOX_EMBRYO_SRC_PATH) \
-		--localedir=$(SRC_DIR)/chrome/_locales \
-		--ver=$(VERSION)beta \
+	tool/update-firefox-manifest.rb \
+		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--localedir $(SRC_DIR)/chrome/_locales \
+		--ver $(VERSION)beta \
 		--strip-update-url
 	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
@@ -320,7 +304,16 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 # last mtime holder
 $(FIREFOX_MTIME_PATH): FORCE
 	@mkdir -p $(FIREFOX_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime --dir=$(FIREFOX_SRC_PATH) --base=$(FIREFOX_TARGET_PATH) --out=$@
+	tool/mtime.rb --dir $(FIREFOX_SRC_PATH) --base $(FIREFOX_TARGET_PATH) --out $@
+
+
+
+#
+# rules to make binary formed consumer keys
+# ========================================
+#
+
+binkeys: $(BINKEY_PATH)
 
 
 
@@ -331,16 +324,16 @@ $(FIREFOX_MTIME_PATH): FORCE
 
 message: FORCE
 #	update locales.json
-	tool/update-locales \
-		--indir=$(CHROME_SRC_PATH)/_locales
+	tool/update-locales.rb \
+		--indir $(CHROME_SRC_PATH)/_locales
 
 #	update firefox native localized messages
-	tool/update-firefox-locales \
-		--indir=$(FIREFOX_SRC_PATH) \
-		--localedir=$(CHROME_SRC_PATH)/_locales
+	tool/update-firefox-locales.rb \
+		--indir $(FIREFOX_SRC_PATH) \
+		--localedir $(CHROME_SRC_PATH)/_locales
 
 #	get diff of messages other than en-US
-	tool/make-messages \
+	tool/make-messages.rb \
 		--indir=$(CHROME_SRC_PATH) \
 		$(CHROME_SRC_PATH)/frontend/*.js \
 		$(CHROME_SRC_PATH)/backend/*.js \

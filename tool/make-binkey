@@ -52,11 +52,11 @@ if ($key === false) {
 	exit(1);
 }
 if ($verbose > 1) {
-	echo "  key:\n", $key, "\n";
+	echo "key:\n", $key, "\n";
 }
 $key = sha1($key);
 if ($verbose) {
-	echo "  sha1 of key: ", $key, "\n";
+	echo "sha1 of key: ", $key, "\n";
 }
 
 /*
@@ -69,9 +69,9 @@ if ($content === false) {
 	exit(1);
 }
 if ($verbose) {
-	echo "  content: ", strlen($content), " bytes\n";
+	echo "length of source content: ", strlen($content), " bytes\n";
 	if ($verbose > 1) {
-		echo "  content:\n", $content, "\n";
+		echo "source:\n", $content, "\n";
 	}
 }
 
@@ -80,17 +80,22 @@ if ($verbose) {
  */
 
 $bf = Crypt_Blowfish::factory("ecb");
-$bf->setKey($key);
+$bf->setKey(substr($key, 0, 16));
 $content = $bf->encrypt($content);
 $content = base64_encode($content);
+
+/*
+ * output
+ */
 
 if ($dstfile != "") {
 	file_put_contents($dstfile, $content);
 	if ($verbose > 1) {
-		echo "  crypted:\n", $content, "\n";
+		echo "crypted:\n", $content, "\n";
 	}
 }
 else {
+	echo "\n*** result ***\n";
 	echo $content;
 }
 
