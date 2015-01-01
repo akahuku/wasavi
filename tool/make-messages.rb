@@ -10,7 +10,7 @@ $plurals = {}
 def get_id (message)
 	message
 		.downcase
-		.gsub(/\{(\d+)\}/, '@$1')
+		.gsub(/\{(\d+)\}/, '@\1')
 		.gsub(/\{(\w+):\d+\}/) {
 			id = "_plural_#{$1}"
 			if !$plurals.key?(id) then
@@ -97,8 +97,12 @@ def update_localized_message (messages, locale, path)
 			File.write(path, result)
 		end
 
-		print "New message keys for #{locale}:\n"
-		print "\t#{new_keys.join("\n\t")}\n"
+		print "New message keys for #{locale}:"
+		if new_keys.length > 0 then
+			print "\n\t#{new_keys.join("\n\t")}\n"
+		else
+			print " nothing.\n"
+		end
 	end
 end
 
@@ -153,7 +157,7 @@ def main (files)
 	end
 
 	if messages then
-		ksort(messages)
+		messages = ksort(messages)
 
 		dir = "#{$basedir}/_locales/"
 		extension_info = JSON.load(File.read("#{dir}/core.json", :encoding => Encoding::UTF_8))
@@ -178,7 +182,7 @@ def main (files)
 			print messages
 			print "\n"
 		else
-			File.write("#{dir}en_US/messages.json", messages)
+			File.write("#{dir}/en_US/messages.json", messages)
 		end
 
 		print "done.\n"
