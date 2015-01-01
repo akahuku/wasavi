@@ -60,8 +60,7 @@ print "destination file: #{dstfile}\n" if verbose > 0
 #
 
 begin
-	key = File.read(keyfile, nil)
-	key.encode!(Encoding::BINARY)
+	key = File.read(keyfile, :encoding => Encoding::BINARY)
 rescue
 	print "cannot read the key file: #{keyfile}\n"
 	exit 1
@@ -76,8 +75,7 @@ print "sha1 of key: #{key}\n" if verbose > 0
 #
 
 begin
-	content = File.read(srcfile, nil)
-	content.encode!(Encoding::BINARY)
+	content = File.read(srcfile, :encoding => Encoding::BINARY)
 rescue
 	print "cannot read the source file: #{srcfile}\n"
 	exit 1
