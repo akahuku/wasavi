@@ -1,6 +1,7 @@
 #!/usr/bin/ruby
 
 require 'optparse'
+require 'fileutils'
 
 dir = ''
 base = ''
@@ -67,5 +68,5 @@ if out == '' then
 	print latest[:time].strftime("%Y-%m-%d %H:%M:%S")
 	print "\t", latest[:path], "\n"
 else
-	FileUtils.touch(out, latest[:time])
+	FileUtils.touch(out, {:mtime => latest[:time]})
 end
