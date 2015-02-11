@@ -28,9 +28,8 @@
 
 'use strict';
 
-(function (global) {
+!this.WasaviExtensionWrapper && (function (global) {
 	/* {{{1 consts */
-	var EXTENSION_NAME = 'wasavi';
 	var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
@@ -38,8 +37,12 @@
 		typeof global.self == 'object' && typeof global.self.on == 'function'
 		&& /^\s*function\s+on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.self.on.toString().replace(/[\s\r\n\t]+/g, ' '));
-	var EXTERNAL_FRAME_URL = 'http://wasavi.appsweets.net/';
-	var EXTERNAL_SECURE_FRAME_URL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	/* }}} */
+
+	/* {{{1 vars */
+	var extensionName = 'wasavi';
+	var externalFrameURL = 'http://wasavi.appsweets.net/';
+	var externalSecureFrameURL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	/* }}} */
 
 	/**
@@ -53,13 +56,12 @@
 	}
 
 	UrlInfo.prototype = {
-		externalUrl: EXTERNAL_FRAME_URL,
-		externalSecureUrl: EXTERNAL_SECURE_FRAME_URL,
-
 		eq: function (u1, u2) {
 			return (u1 || '').replace(/\?.*/, '')
 				== (u2 || '').replace(/\?.*/, '');
 		},
+		get externalUrl () {return externalFrameURL},
+		get externalSecureUrl () {return externalSecureFrameURL},
 		get isInternal () {
 			return this.eq(window.location.href, this.internalUrl)
 				|| /^data:text\/html;charset=UTF-8;base64,/.test(window.location.href);
@@ -95,7 +97,7 @@
 		this.preservedCallbacks = {};
 	}
 	ExtensionWrapper.prototype = {
-		get name () {return EXTENSION_NAME},
+		get name () {return extensionName},
 		isTopFrame: function () {return global.window == window.top},
 		postMessage: function (data, callback, preserved) {
 			var type;
@@ -207,7 +209,12 @@
 		}
 	};
 
-	ExtensionWrapper.create = function () {
+	ExtensionWrapper.create = function (opts) {
+		opts || (opts = {});
+		'extensionName' in opts && (extensionName = opts.extensionName);
+		'externalFrameURL' in opts && (externalFrameURL = opts.externalFrameURL);
+		'externalSecureUrl' in opts && (externalSecureUrl = opts.externalSecureUrl);
+		
 		if (window.chrome) return new ChromeExtensionWrapper;
 		if (window.opera)  return new OperaExtensionWrapper;
 		if (IS_FX_JETPACK) return new FirefoxJetpackExtensionWrapper;

@@ -788,7 +788,7 @@ function createPageAgent (doHook) {
 	var s = document.createElement('script');
 	s.onload = function () {
 		this.onload = null;
-		this.parentNode.removeChild(this);
+		this.parentNode && this.parentNode.removeChild(this);
 	};
 	s.type = 'text/javascript';
 	s.src = extension.getKeyHookScriptSrc();
