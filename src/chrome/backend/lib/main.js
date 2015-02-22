@@ -402,6 +402,7 @@
 					'frontend/init.js',
 					'frontend/utils.js',
 					'frontend/unicode_utils.js',
+					'frontend/qeema.js',
 					'frontend/classes.js',
 					'frontend/classes_ex.js',
 					'frontend/classes_undo.js',

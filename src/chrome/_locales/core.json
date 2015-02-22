@@ -5,6 +5,10 @@
     "wasavi_locale_code": {
         "message": "en-US"
     },
+    "wasavi_name": {
+        "message": "wasavi",
+        "description": ""
+    },
     "wasavi_desc": {
         "message": "vi editor for any web page.",
         "description": ""
@@ -123,6 +127,6 @@
     },
     "edit_with_wasavi": {
         "message": "Edit with wasavi",
-        "description": "Edit with wasavi"
+        "description": ""
     }
 }

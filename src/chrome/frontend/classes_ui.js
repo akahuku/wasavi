@@ -331,8 +331,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			buffer.adjustWrapGuide(app.config.vars.textwidth, app.charWidth);
 			buffer.updateActiveRow();
 
-			app.keyManager.init();
-
 			comFocusHolder.focus();
 			startBlink();
 		};
@@ -355,64 +353,16 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		this.windup = this.hide;
 		this.compositionUpdate =
 		this.compositionComplete = function () {};
-
-		app.keyManager.target = comFocusHolder;
-		app.keyManager.preserve = false;
 	}
 
 	/*constructor*/function EditWrapper (mode) {
-		var leadingNode;
-		var leadingPos;
-		var leading;
-		var cursorRect;
+		var compositionStartPos;
+		var leadingHeadPos;
 
-		function getCompositionSpan () {
-			var spans = buffer.getSpans(COMPOSITION_CLASS);
-			return spans.length ? spans[0] : null;
-		}
-		function updateLeadingPos () {
-			var n = buffer.selectionStart;
-			var o = buffer.rowNodes(n);
-			var r = buffer.charRectAt(n);
-			if (!app.keyManager.isInComposition
-			&& (leadingNode != o || !cursorRect || r.top != cursorRect.top)) {
-				leadingNode = o;
-				leadingPos = buffer.getLineTopDenotativeOffset(n);
-				cursorRect = r;
-			}
-			return leadingPos;
-		}
-		function createCompositionSpan () {
-			var n = buffer.selectionStart;
-			var span = getCompositionSpan();
-			if (!span) {
-				updateLeadingPos();
-				if (n.col == leadingPos.col) {
-					span = document.createElement('span');
-					span.className = COMPOSITION_CLASS;
-					var r = document.createRange();
-					var node = buffer.rowNodes(n);
-					r.setStart(node.firstChild, leadingPos.col);
-					r.setEnd(node.firstChild, n.col);
-					r.surroundContents(span);
-				}
-				else {
-					span = buffer.emphasis(
-						leadingPos, n.col - leadingPos.col, COMPOSITION_CLASS)[0];
-				}
-			}
-			var s = document.defaultView.getComputedStyle(span, '');
-			span.style.color = s.backgroundColor;
-			span.style.backgroundColor = s.backgroundColor;
-			return span;
-		}
-		function removeCompositionSpan () {
-			buffer.unEmphasis(COMPOSITION_CLASS);
-		}
-		function relocate () {
+		function relocateTextarea () {
 			var c = $(CONTAINER_ID).getBoundingClientRect();
 			var r = buffer.rowNodes(buffer.selectionStart).getBoundingClientRect();
-			var x = buffer.charRectAt(updateLeadingPos());
+			var x = buffer.charRectAt(leadingHeadPos);
 			var x0 = buffer.charRectAt(buffer.selectionStartRow, 0);
 
 			editCursor.style.display = 'block';
@@ -421,65 +371,89 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			editCursor.style.width = Math.floor(r.right - r.left) + 'px';
 			editCursor.style.height = Math.floor(docClientHeight() - x.top - 1) + 'px';
 		}
+
+		function relocateLeadingSpan () {
+			buffer.unEmphasis(LEADING_CLASS);
+
+			var n = buffer.selectionStart;
+
+			leadingHeadPos = buffer.getLineTopDenotativeOffset(n);
+
+			var span = buffer.emphasis(
+				leadingHeadPos, n.col - leadingHeadPos.col, LEADING_CLASS)[0];
+
+			return span;
+		}
+
+		function ensureCompositionSpan () {
+			var span = buffer.getSpans(COMPOSITION_CLASS)[0];
+
+			if (!span) {
+				compositionStartPos = buffer.selectionStart;
+				span = buffer.emphasis(
+					compositionStartPos, 0, COMPOSITION_CLASS)[0];
+			}
+
+			return span;
+		}
+
+		function removeLeadingSpan () {
+			buffer.unEmphasis(LEADING_CLASS);
+		}
+
+		function removeCompositionSpan () {
+			var span = buffer.getSpans(COMPOSITION_CLASS)[0];
+			span && removeChild(span);
+		}
+
 		this.compositionUpdate = function (data) {
-			var span = getCompositionSpan();
+			var span = ensureCompositionSpan();
 			if (!span) return;
-			span.textContent = leading + data;
-			buffer.setSelectionRange(new Wasavi.Position(
-				leadingPos.row, leadingPos.col + span.textContent.length));
+
+			span.textContent = data;
+
+			buffer.setSelectionRange(
+				buffer.offsetBy(compositionStartPos, span.textContent.length));
 			ensureVisible(false);
-			relocate();
+			relocateTextarea();
 		}
 		this.compositionComplete = function (data) {
-			var span = getCompositionSpan();
+			var span = ensureCompositionSpan();
 			if (!span) return;
-			span.textContent = leading;
-			buffer.setSelectionRange(new Wasavi.Position(
-				leadingPos.row, leadingPos.col + span.textContent.length));
-			if (data == '') {
-				this.show();
-			}
-			else {
-				removeCompositionSpan();
-			}
+
+			removeCompositionSpan();
+			buffer.setSelectionRange(compositionStartPos);
 		};
 		this.hide = function () {
 			editCursor.style.display = 'none';
+			removeLeadingSpan();
 			removeCompositionSpan();
-			//cursorRect = null;
 		};
 		this.show = function () {
-			relocate();
-			removeCompositionSpan();
-			var span = createCompositionSpan();
-			leading = span.textContent;
+			var leadingSpan = relocateLeadingSpan();
+
+			relocateTextarea();
+
 			buffer.adjustBackgroundImage(app.lineHeight);
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.updateActiveRow();
 
 			if (!app.keyManager.isInComposition) {
-				app.keyManager.init(leading);
+				editCursor.value = leadingSpan.textContent;
 				editCursor.selectionStart = editCursor.value.length;
 				editCursor.selectionEnd = editCursor.value.length;
 			}
 
+
 			editCursor.focus();
 		};
-		this.windup = function () {
-			removeCompositionSpan();
-		};
-		this.lostFocus = function () {};
-		this.dispose = function () {
-			leadingNode = null;
-		};
-
-		app.keyManager.target = editCursor;
-		app.keyManager.preserve = true;
+		this.windup =
+		this.lostFocus =
+		this.dispose = function () {};
 	}
 
 	/*constructor*/function LineInputWrapper (mode) {
 		this.show = function () {
-			app.keyManager.init(input.value.substring(0, input.selectionStart));
 			input.focus();
 		};
 		this.hide =
@@ -488,9 +462,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		this.dispose =
 		this.compositionUpdate =
 		this.compositionComplete = function () {};
-
-		app.keyManager.target = input;
-		app.keyManager.preserve = true;
 	}
 
 	function getCommandCursorCoord () {
@@ -610,7 +581,8 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 		var result = wrapper.compositionComplete(e.data);
 		return result;
 	}
-	function setupEventHandlers (method) {
+	function setupEventHandlers (install) {
+		var method = install ? 'addListener' : 'removeListener';
 		app.keyManager[method]('compositionstart', handleCompositionStart);
 		app.keyManager[method]('compositionupdate', handleCompositionUpdate);
 		app.keyManager[method]('compositionend', handleCompositionEnd);

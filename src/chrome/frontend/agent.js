@@ -378,7 +378,7 @@ function runCore (element, frameSource, value) {
 
 function cleanup (value, isImplicit) {
 	if (targetElement) {
-		if (value !== undefined) {
+		if (value !== null) {
 			setValue(targetElement, value);
 		}
 		!isImplicit && targetElement.focus();
@@ -1211,7 +1211,9 @@ function handleBackendMessage (req) {
 			document.querySelector('h1').style.color = 'red';
 			keylog('', '', 'command start');
 		}
-		keylog(req.key, req.keyCode, req.eventType);
+		keylog.apply(null, ['key', 'keyCode', 'eventType'].map(function (a) {
+			return (a in req) ? req[a] : '';
+		}));
 		break;
 
 	case 'notify-error':

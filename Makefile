@@ -14,7 +14,7 @@ UNZIP := unzip
 RSYNC := rsync
 RSYNC_OPT = -rptLv --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
-	--exclude '.*' --exclude 'oldlib/' \
+	--exclude '.*' \
 	--exclude '$(CRYPT_SRC_FILE)*'
 
 -include app.mk
@@ -59,7 +59,7 @@ FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/upda
 # ========================================
 
 VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
-BINKEY_PATH = $(CHROME_SRC_PATH)/$(CRYPT_DST_FILE)
+BINKEYS_PATH = $(CHROME_SRC_PATH)/$(CRYPT_DST_FILE)
 
 CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
@@ -94,7 +94,7 @@ all: $(CHROME_TARGET_PATH) \
 clean:
 	rm -rf ./$(EMBRYO_DIR)
 
-$(BINKEY_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
+$(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
 	tool/make-binkey.rb \
 		--key $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
 		--src $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
@@ -105,6 +105,7 @@ FORCE:
 .PHONY: all clean message \
 	test-chrome test-opera test-firefox \
 	run-chrome run-opera run-firefox \
+	dbgfx \
 	FORCE
 
 #
@@ -113,7 +114,7 @@ FORCE:
 #
 
 # wasavi.crx
-$(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
+$(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) --exclude 'wasavi_frame_noscript.html' \
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
@@ -142,7 +143,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEY_PATH)
 #	build zip archive for google web store
 	rm -f $(DIST_DIR)/wasavi_chrome_web_store.zip
 	cd $(CHROME_EMBRYO_SRC_PATH) \
-		&& $(ZIP) ../../$(DIST_DIR)/wasavi_chrome_web_store.zip .
+		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$(DIST_DIR)/wasavi_chrome_web_store.zip
 
 #	create update description file
 	sed -e 's/@appid@/$(CHROME_EXT_ID)/g' \
@@ -167,12 +168,13 @@ $(CHROME_MTIME_PATH): FORCE
 #
 
 # wasavi.oex
-$(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
+$(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
 #	update the manifest file
 	tool/update-opera-config.rb \
+		--product $(PRODUCT) \
 		--indir $(OPERA_SRC_PATH) \
 		--outdir $(OPERA_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -186,7 +188,8 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEY_PATH)
 
 #	zip it
 	rm -f $@
-	cd $(OPERA_EMBRYO_SRC_PATH) && $(ZIP) ../../$@ .
+	cd $(OPERA_EMBRYO_SRC_PATH) \
+		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$@ 
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
@@ -205,7 +208,7 @@ $(OPERA_MTIME_PATH): FORCE
 #
 
 # wasavi.nex
-$(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEY_PATH)
+$(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) --exclude='wasavi_frame_noscript.html' \
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
@@ -248,7 +251,7 @@ $(BLINKOPERA_MTIME_PATH): FORCE
 #
 
 # wasavi.xpi
-$(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
+$(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
@@ -270,10 +273,22 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 		--update-link=$(FIREFOX_EXT_LOCATION) \
 		--update-url=$(FIREFOX_UPDATE_LOCATION)
 
+#	prepare to amo versions
 	mv $(PRODUCT).$(FIREFOX_SUFFIX) $@
 	mv $(PRODUCT).update.rdf $(DIST_DIR)/update.rdf
 	cp $@ $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX)
 	cp $@ $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX)
+
+#	github version
+	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
+	tool/update-firefox-manifest.rb \
+		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+		--localedir $(SRC_DIR)/chrome/_locales \
+		--ver $(VERSION)
+	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_github.rdf
+	$(ZIP) -d $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX) install.rdf
+	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX) install.rdf
 
 #	amo version
 	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
@@ -283,6 +298,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 		--localedir $(SRC_DIR)/chrome/_locales \
 		--ver $(VERSION) \
 		--strip-update-url
+	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo.rdf
 	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 
@@ -294,6 +310,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEY_PATH)
 		--localedir $(SRC_DIR)/chrome/_locales \
 		--ver $(VERSION)beta \
 		--strip-update-url
+	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo_beta.rdf
 	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 
@@ -313,7 +330,7 @@ $(FIREFOX_MTIME_PATH): FORCE
 # ========================================
 #
 
-binkeys: $(BINKEY_PATH)
+binkeys: $(BINKEYS_PATH)
 
 
 
@@ -329,6 +346,7 @@ message: FORCE
 
 #	update firefox native localized messages
 	tool/update-firefox-locales.rb \
+		--product $(PRODUCT) \
 		--indir $(FIREFOX_SRC_PATH) \
 		--localedir $(CHROME_SRC_PATH)/_locales
 
@@ -356,16 +374,16 @@ test-firefox: FORCE
 	cd $(SRC_DIR)/wd-tests && ant test-firefox
 
 run-chrome: FORCE
-	@mkdir -p $(CHROME_TEST_PROFILE_PATH)
 	$(CHROME) --start-maximized --lang=en \
 		--user-data-dir=$(CHROME_TEST_PROFILE_PATH)
 
 run-opera: FORCE
-	@mkdir -p $(OPERA_TEST_PROFILE_PATH)
 	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH)
 
 run-firefox: FORCE
-	@mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
 	$(FIREFOX) -profile $(FIREFOX_TEST_PROFILE_PATH)
+
+dbgfx: FORCE
+	cd $(FIREFOX_SRC_PATH) && cfx run -p $(abspath $(FIREFOX_TEST_PROFILE_PATH)) --binary-args http://wasavi.appsweets.net/test_frame.html
 
 # end

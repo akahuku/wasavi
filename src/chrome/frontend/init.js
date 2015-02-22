@@ -45,6 +45,7 @@
 /*const*/var LINE_NUMBER_MAX_WIDTH = 6;
 
 /*const*/var COMPOSITION_CLASS = 'wasavi_composition';
+/*const*/var LEADING_CLASS = 'wasavi_leading';
 /*const*/var MARK_CLASS = 'wasavi_mark';
 /*const*/var EMPHASIS_CLASS = 'wasavi_em';
 /*const*/var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';

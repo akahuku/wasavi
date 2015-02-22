@@ -276,12 +276,20 @@ function stacktrace () {
 		x.y.z += 0;
 	}
 	catch (e) {
-		if (window.opera && e.stack) {
-			result = e.stack
-				.replace(/^[^\n]+\n/, '')
-				.replace(/@/g, '\t@')
-				.replace(/<anonymous function:\s*([^>]+)>/g, '<$1>')
-				.replace(/\(\[arguments not available\]\)/g, '(?)');
+		if (e.stack) {
+			result = e.stack;
+			if (IS_GECKO) {
+				result = result
+					.replace(/\n\+/g, ' -> ')
+					.replace(/(@).+?(:\d+:\d+)/g, '$1$2');
+			}
+			else if (window.opera) {
+				result = result
+					.replace(/^[^\n]+\n/, '')
+					.replace(/@/g, '\t@')
+					.replace(/<anonymous function:\s*([^>]+)>/g, '<$1>')
+					.replace(/\(\[arguments not available\]\)/g, '(?)');
+			}
 		}
 	}
 	return result;

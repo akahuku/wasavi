@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "wasavi",
-  "short_name": "wasavi",
+  "name": "__MSG_wasavi_name__",
+  "short_name": "__MSG_wasavi_name__",
   "version": "0.0.1",
   "description": "__MSG_wasavi_desc__",
   "default_locale": "en_US",
@@ -13,7 +13,10 @@
   "permissions": [
     "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
     "https://*.dropbox.com/*",
-    "https://*.googleusercontent.com/*"
+    "https://*.google.com/*",
+    "https://*.googleapis.com/*",
+    "https://*.googleusercontent.com/*",
+    "https://apis.live.net/*"
   ],
   "background": {
     "page": "backend/main.html"
@@ -47,6 +50,7 @@
         "frontend/init.js",
         "frontend/utils.js",
         "frontend/unicode_utils.js",
+        "frontend/qeema.js",
         "frontend/classes.js",
         "frontend/classes_ex.js",
         "frontend/classes_undo.js",
