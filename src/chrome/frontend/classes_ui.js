@@ -358,29 +358,49 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	/*constructor*/function EditWrapper (mode) {
 		var compositionStartPos;
 		var leadingHeadPos;
+		var currentNode;
+		var currentCursorRect;
 
 		function relocateTextarea () {
-			var c = $(CONTAINER_ID).getBoundingClientRect();
+			var c = app.low.getContainerRect();
 			var r = buffer.rowNodes(buffer.selectionStart).getBoundingClientRect();
 			var x = buffer.charRectAt(leadingHeadPos);
 			var x0 = buffer.charRectAt(buffer.selectionStartRow, 0);
 
-			editCursor.style.display = 'block';
-			editCursor.style.left = Math.floor(x.left - c.left) + 'px';
-			editCursor.style.top = Math.floor(x.top - c.top - (x0.top - r.top)) + 'px';
-			editCursor.style.width = Math.floor(r.right - r.left) + 'px';
-			editCursor.style.height = Math.floor(docClientHeight() - x.top - 1) + 'px';
+			var p = {
+				display: 'block',
+				left: Math.floor(x.left - c.left) + 'px',
+				top: Math.floor(x.top - c.top - (x0.top - r.top)) + 'px',
+				width: Math.floor(r.right - r.left) + 'px',
+				height: Math.floor(docClientHeight() - x.top - 1) + 'px'
+			};
+
+			for (var i in p) {
+				if (editCursor.style[i] != p[i]) {
+					editCursor.style[i] = p[i];
+				}
+			}
 		}
 
 		function relocateLeadingSpan () {
-			buffer.unEmphasis(LEADING_CLASS);
+			removeLeadingSpan();
 
 			var n = buffer.selectionStart;
+			var node = buffer.rowNodes(n);
+			var cursorRect = buffer.charRectAt(n);
 
-			leadingHeadPos = buffer.getLineTopDenotativeOffset(n);
+			if (leadingHeadPos === undefined
+			|| currentNode != node
+			|| !currentCursorRect
+			|| currentCursorRect.top != cursorRect.top) {
+				leadingHeadPos = buffer.getLineTopDenotativeOffset(n);
+				currentNode = node;
+				currentCursorRect = cursorRect;
+			}
 
 			var span = buffer.emphasis(
-				leadingHeadPos, n.col - leadingHeadPos.col, LEADING_CLASS)[0];
+				leadingHeadPos,
+				n.col - leadingHeadPos.col, LEADING_CLASS)[0];
 
 			return span;
 		}
@@ -428,6 +448,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			editCursor.style.display = 'none';
 			removeLeadingSpan();
 			removeCompositionSpan();
+			leadingHeadPos = currentNode = currentCursorRect = undefined;
 		};
 		this.show = function () {
 			var leadingSpan = relocateLeadingSpan();
@@ -447,7 +468,9 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 
 			editCursor.focus();
 		};
-		this.windup =
+		this.windup = function () {
+			removeLeadingSpan();
+		};
 		this.lostFocus =
 		this.dispose = function () {};
 	}

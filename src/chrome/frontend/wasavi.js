@@ -126,7 +126,8 @@
 			registerMultiplexCallback:registerMultiplexCallback,
 			removeMultiplexCallback:removeMultiplexCallback,
 			interruptMultiplexCallback:interruptMultiplexCallback,
-			notifyError:handleWindowError
+			notifyError:handleWindowError,
+			getContainerRect:getContainerRect
 		}),
 
 		/*
@@ -1096,7 +1097,7 @@ white-space:pre-wrap; \
 visibility:hidden; \
 } \
 #wasavi_editor > div span.wasavi_composition { \
-background-color:green; \
+visibility:hidden; \
 } \
 #wasavi_editor.n > div:before { \
 display:block; \
@@ -1263,13 +1264,14 @@ margin:0; \
 padding:0; \
 ' + boxSizingPrefix + 'box-sizing:border-box; \
 border:none; \
-background-color:rgba(255,0,0,0.5)/*transparent*/; \
+background-color:transparent; \
 ' + fontStyle + ' \
 text-decoration:none; \
 text-shadow:none; \
 overflow-y:hidden; \
 resize:none; \
 outline:none; \
+word-break:break-all \
 } \
 #wasavi_cover { \
 position:fixed; \
@@ -1578,8 +1580,14 @@ function setupEventHandlers (install) {
 	document[method]('paste', handlePaste, false);
 
 	// key manager
-	install ? keyManager.install().addListener(handleKeydown) :
-			  keyManager.uninstall();
+	if (install) {
+		keyManager
+			.install({handlePasteEvent:false})
+			.addListener(handleKeydown);
+	}
+	else {
+		keyManager.uninstall();
+	}
 
 	// cover
 	var cover = $('wasavi_cover');
@@ -2639,6 +2647,12 @@ function getChdirHandler (id) {
 		exvm.inst.currentOpcode.worker = {req:req};
 		exvm.run();
 	};
+}
+function getContainerRect () {
+	if (!containerRect) {
+		containerRect = $(CONTAINER_ID).getBoundingClientRect();
+	}
+	return containerRect;
 }
 
 /*
@@ -4297,6 +4311,7 @@ function handleWindowResize (e) {
 		}
 		resizeHandlerInvokeTimer = null;
 	}
+	containerRect = null;
 	if (extensionChannel.isTopFrame()) {
 		if (!resizeHandlerInvokeTimer) {
 			resizeHandlerInvokeTimer = setTimeout(relocate, 100);
@@ -4939,6 +4954,7 @@ var literalInput;
 var notifier;
 var multiplexCallbackId;
 var compositionLevel;
+var containerRect;
 
 var isEditCompleted;
 var isVerticalMotion;
@@ -6350,7 +6366,7 @@ var commandMap = {
 		return (o.key == 'x' || o.key == '\u007f' ?
 			deleteCharsForward : deleteCharsBackward)(prefixInput.count, {yank:true});
 	},
-	'\u007f'/*delete*/:function () {return this.x.apply(this, arguments)},
+	'\u007f':function () {return this.x.apply(this, arguments)},
 	X:function () {return this.x.apply(this, arguments)},
 	p:function (c, o) {
 		if (!prefixInput.isEmptyOperation) {
@@ -7344,7 +7360,7 @@ var editMap = {
 		}
 	},
 	'\u0017'/*^W*/:function () {this['\u0008'].apply(this, arguments)},
-	'\u007f'/*delete*/:function (c) {
+	'\u007f':function (c) {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
 		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
@@ -7634,7 +7650,7 @@ var lineInputEditMap = {
 		//keyManager.init(o.target);
 		return true;
 	},
-	'\u007f'/*delete*/:function (c, o) {
+	'\u007f':function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
 			var n = Math.max(o.target.selectionStart, o.target.value.length - 1);
 			o.target.value = o.target.value.substring(0, o.target.selectionStart) +

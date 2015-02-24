@@ -50,6 +50,8 @@
 	};
 	var PRESTO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
 	var GECKO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
+
+	//
 	var WEBKIT_CTRL_MAP = {
 		32:  0,  65:  1,  66:  2,  67:  3,  68:  4,  69:  5,  70:  6,  71:  7,  72:  8,  73:  9,
 		74: 10,  75: 11,  76: 12,  77: 13,  78: 14,  79: 15,  80: 16,  81: 17,  82: 18,  83: 19,
@@ -63,6 +65,19 @@
 	var PRESTO_CTRL_MAP = WEBKIT_CTRL_MAP;
 	var GECKO_CTRL_MAP = null;
 
+	//
+	var WEBKIT_CODE_TO_CHAR_MAP = {
+		8: 8,
+		9: 9,
+		13: 13,
+		27: 27,
+		32: 32,
+		46: 127
+	};
+	var PRESTO_CODE_TO_CHAR_MAP = WEBKIT_CODE_TO_CHAR_MAP;
+	var GECKO_CODE_TO_CHAR_MAP = WEBKIT_CODE_TO_CHAR_MAP;
+
+	//
 	var FUNCTION_KEY_ALIASES = {
 		'bs':       'backspace',
 		'nl':       'enter',
@@ -112,22 +127,7 @@
 		t.value = this.before;
 		t.selectionStart = this.position;
 		t.selectionEnd = this.position;
-
-		var data = this.prefix + this.composition;
-		for (var i = 0, goal = data.length; i < goal; i++) {
-			var ev = new VirtualInputEvent(
-				e,
-				data.charCodeAt(i), data.charAt(i), data.charAt(i),
-				false, false, false,
-				false
-			);
-			ev.isCompositioned = true;
-			ev.isCompositionedFirst = i == 0;
-			ev.isCompositionedLast = i == goal - 1;
-			dequeue.push(ev);
-		}
-
-		sweep();
+		pushCompositionedString(e, this.prefix + this.composition);
 	};
 	// }}}
 
@@ -147,6 +147,7 @@
 	);
 	var functionKeyCodes = null;
 	var ctrlMap = null;
+	var codeToCharMap = null;
 	var consumed;
 	var lastReceivedEvent = '';
 	var dequeue = [];
@@ -158,6 +159,7 @@
 		composition: false,
 		input: false
 	};
+	var handlePasteEvent = true;
 
 	// for general composition
 	var isInComposition = false;
@@ -207,6 +209,12 @@
 		if (global.gecko) return GECKO_CTRL_MAP;
 	}
 
+	function getCodeToCharMap () {
+		if (global.chrome) return WEBKIT_CODE_TO_CHAR_MAP;
+		if (global.opera) return PRESTO_CODE_TO_CHAR_MAP;
+		if (global.gecko) return GECKO_CODE_TO_CHAR_MAP;
+	}
+
 	function getListenersSet () {
 		return {
 			keydown: getKeydownListener(),
@@ -215,7 +223,8 @@
 			compositionstart: compositionstart,
 			compositionupdate: compositionupdate,
 			compositionend: compositionend,
-			input: getInputListener()
+			input: getInputListener(),
+			paste: paste
 		};
 	}
 
@@ -314,6 +323,10 @@
 		return true;
 	}
 
+	function isPasteKeyStroke (code, e) {
+		return code == -45 && e.shiftKey && !e.ctrlKey && !e.altKey;
+	}
+
 	function insertCompositionedChar (e) {
 		if (!(e instanceof VirtualInputEvent)) return;
 		if (e.code < 0) return;
@@ -377,6 +390,23 @@
 			compositionResult.run(e);
 			compositionResult = null;
 		}, 1);
+	}
+
+	function pushCompositionedString (e, data) {
+		for (var i = 0, goal = data.length; i < goal; i++) {
+			var ev = new VirtualInputEvent(
+				e,
+				data.charCodeAt(i), data.charAt(i), data.charAt(i),
+				false, false, false,
+				false
+			);
+			ev.isCompositioned = true;
+			ev.isCompositionedFirst = i == 0;
+			ev.isCompositionedLast = i == goal - 1;
+			dequeue.push(ev);
+		}
+
+		sweep();
 	}
 	// }}}
 
@@ -549,18 +579,18 @@
 
 		// special keys which processed by keydown listener (for Webkit, Presto)
 		if (e.keyCode < 0) {
-			code = e.keyCode >= -32 ? -e.keyCode : e.keyCode;
+			code = codeToCharMap[-e.keyCode] || e.keyCode;
 			getModifiers(c, e);
-			char = '';
+			char = code < 0 ? '' : String.fromCharCode(code);
 			stroke = functionKeyCodes[-e.keyCode];
 			isSpecial = true;
 		}
 
 		// special keys (for Gecko)
 		else if (e.charCode == 0) {
-			code = e.keyCode < 32 ? e.keyCode : -e.keyCode;
+			code = codeToCharMap[e.keyCode] || -e.keyCode;
 			getModifiers(c, e);
-			char = '';
+			char = code < 0 ? '' : String.fromCharCode(code);
 			stroke = functionKeyCodes[e.keyCode];
 			isSpecial = true;
 		}
@@ -604,6 +634,7 @@
 		}
 
 		if (stroke == undefined) return;
+		if (isPasteKeyStroke(code, e)) return;
 
 		c.push(stroke);
 
@@ -829,13 +860,33 @@
 		lastReceivedEvent = e.type;
 	}
 
+	function paste (e) {
+		if (!isEditable(e)) return;
+
+		e.preventDefault();
+
+		if (!handlePasteEvent) return;
+
+		pushCompositionedString(e, e.clipboardData.getData('text/plain'));
+	}
 	// }}}
 
 	// {{{1 publics
-	function install () {
+	function install (opts) {
+		opts || (opts = {});
+		[
+			'log', 'logBasic', 'logComposition', 'logInput',
+			'handlePasteEvent'
+		].forEach(function (p) {
+			if (p in opts) {
+				this[p] = opts[p];
+			}
+		}, this);
+
 		functionKeyCodes = getFunctionKeyCodes();
 		if (functionKeyCodes) {
 			ctrlMap = getCtrlMap();
+			codeToCharMap = getCodeToCharMap();
 
 			var listenersSet = getListenersSet();
 			for (var i in listenersSet) {
@@ -985,7 +1036,7 @@
 			for (var i in functionKeyCodes) {
 				if (functionKeyCodes[i] == name) {
 					return {
-						code:-i,
+						code:codeToCharMap[i] || -i,
 						name:name,
 						shift:shift,
 						ctrl:ctrl,
@@ -1274,6 +1325,11 @@
 		logInput: {
 			get: function () {return logs.input},
 			set: function (v) {logs.input = !!v}
+		},
+
+		handlePasteEvent: {
+			get: function () {return handlePasteEvent},
+			set: function (v) {handlePasteEvent = !!v}
 		}
 	});
 })(this);
