@@ -997,12 +997,12 @@ function handleBackendMessage (req) {
 
 	case 'ready':
 		if (!wasaviFrame) break;
-		document.activeElement != wasaviFrame && focusToFrame(req);
 		locate(wasaviFrame, targetElement, {
 			isFullscreen: isFullscreen,
 			extraHeight: extraHeight
 		});
 		wasaviFrame.style.visibility = 'visible';
+		document.activeElement != wasaviFrame && focusToFrame(req);
 		info('wasavi started');
 		fireCustomEvent('WasaviStarted', 0);
 

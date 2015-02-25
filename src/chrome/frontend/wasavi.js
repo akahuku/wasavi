@@ -1303,15 +1303,15 @@ opacity:1; \
 } \
 #wasavi_focus_holder { \
 position:fixed; \
+visibility:hidden; \
 border:none; \
 outline:none; \
 resize:none; \
 padding:0; \
-left:-4px; \
+left:0; \
 top:0px; \
 width:100%; \
 height:32px; \
-background-color:transparent; \
 ime-mode:disabled; \
 }'
 	].join('')));
