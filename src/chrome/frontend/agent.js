@@ -56,13 +56,14 @@ var ACCEPTABLE_TYPES = {
 var extension;
 var isTestFrame;
 var isOptionsPage;
-var enableList;
+var allowedElements;
 var shortcutCode;
 var fontFamily;
 var quickActivation;
 var devMode;
 var logMode;
 var pageHooksCode;
+var canLaunch;
 
 var targetElement;
 var wasaviFrame;
@@ -661,7 +662,7 @@ function toPlainText (input) {
 }
 
 function isInBlacklist (blacklist) {
-	return blacklist.split('\n').some(function (url) {
+	var result = blacklist.split('\n').some(function (url) {
 		url = url.replace(/^\s+|\s+$/g, '');
 		if (url == '' || /^[#;]/.test(url)) return;
 
@@ -675,6 +676,7 @@ function isInBlacklist (blacklist) {
 		}
 		catch (e) {}
 	});
+	return result;
 }
 
 function matchWithShortcut (e) {
@@ -801,12 +803,12 @@ function createPageAgent (doHook) {
  */
 
 function handleKeydown (e) {
-	if (targetElement || !e || !e.target || !enableList || e.keyCode == 16 || e.keyCode == 17) return;
+	if (!canLaunch || targetElement || !e || !e.target || !allowedElements || e.keyCode == 16 || e.keyCode == 17) return;
 
-	if (e.target.isContentEditable && enableList.enableContentEditable
+	if (e.target.isContentEditable && allowedElements.enableContentEditable
 	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
 		&& e.target.type in ACCEPTABLE_TYPES
-		&& enableList[ACCEPTABLE_TYPES[e.target.type]]) {
+		&& allowedElements[ACCEPTABLE_TYPES[e.target.type]]) {
 
 		/*
 		 * <textarea>
@@ -858,12 +860,12 @@ function handleKeydown (e) {
  */
 
 function handleTargetFocus (e) {
-	if (!quickActivation || targetElement || !e || !e.target || !enableList) return;
+	if (!canLaunch || !quickActivation || targetElement || !e || !e.target || !allowedElements) return;
 
-	if (e.target.isContentEditable && enableList.enableContentEditable
+	if (e.target.isContentEditable && allowedElements.enableContentEditable
 	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
 		&& e.target.type in ACCEPTABLE_TYPES
-		&& enableList[ACCEPTABLE_TYPES[e.target.type]]) {
+		&& allowedElements[ACCEPTABLE_TYPES[e.target.type]]) {
 
 		var current = e.target.getAttribute(EXTENSION_CURRENT);
 		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
@@ -938,14 +940,14 @@ function handleAgentInitialized (req) {
  */
 
 function handleRequestLaunch () {
-	if (wasaviFrame || targetElement || !enableList) return;
+	if (!canLaunch || wasaviFrame || targetElement || !allowedElements) return;
 	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
 	var target = document.activeElement;
-	if (target.isContentEditable && enableList.enableContentEditable
+	if (target.isContentEditable && allowedElements.enableContentEditable
 	||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
 		&& target.type in ACCEPTABLE_TYPES
-		&& enableList[ACCEPTABLE_TYPES[target.type]]) {
+		&& allowedElements[ACCEPTABLE_TYPES[target.type]]) {
 
 		run(target);
 	}
@@ -1157,7 +1159,7 @@ function handleBackendMessage (req) {
 			var item = req.items[i];
 			switch (item.key) {
 			case 'targets':
-				enableList = item.value;
+				allowedElements = item.value;
 				logbuf.push(item.key);
 				break;
 
@@ -1182,8 +1184,8 @@ function handleBackendMessage (req) {
 				break;
 			}
 		}
-		if (quickActivation && qaBlacklist) {
-			quickActivation = !isInBlacklist(qaBlacklist);
+		if (qaBlacklist) {
+			canLaunch = !isInBlacklist(qaBlacklist);
 		}
 		logbuf.length && log(
 			'update-storage: consumed ', logbuf.join(', '));
@@ -1289,13 +1291,14 @@ function handleConnect (req) {
 	}
 
 	extension.tabId = req.tabId;
-	enableList = req.targets;
+	allowedElements = req.targets;
 	shortcutCode = req.shortcutCode;
 	fontFamily = req.fontFamily;
-	quickActivation = req.quickActivation && !isInBlacklist(req.qaBlacklist);
+	quickActivation = req.quickActivation;
 	devMode = req.devMode;
 	logMode = req.logMode;
 	pageHooksCode = req.pageHooksCode;
+	canLaunch = !isInBlacklist(req.qaBlacklist);
 
 	extension.ensureRun(handleAgentInitialized, req);
 }

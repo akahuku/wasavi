@@ -29,13 +29,13 @@
     "message": "when a key combination is entered",
     "description": "when a key combination is entered"
   },
-  "option_qa_blacklist_title": {
+  "option_exceptional_urls_head": {
     "message": "Exceptional URLs",
     "description": "Exceptional URLs"
   },
   "option_qa_blacklist_tips": {
-    "message": "* Put any URL to prevent from on-focus activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
-    "description": "* Put any URL to prevent from on-focus activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL."
+    "message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
+    "description": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL."
   },
   "option_target_elements_desc": {
     "message": "* Format is <(modifier-)* key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used:\n[c]backspace[/c] [c]bs[/c] [c]tab[/c] [c]enter[/c] [c]return[/c] [c]ret[/c] [c]pageup[/c] [c]pagedown[/c] [c]end[/c] [c]home[/c] [c]left[/c] [c]up[/c] [c]right[/c] [c]down[/c] [c]insert[/c] [c]ins[/c] [c]delete[/c] [c]del[/c] [c],[/c] [c]comma[/c] [c].[/c] [c]dot[/c] [c]period[/c] [c]/[/c] [c]slash[/c] [c]\\[[/c] [c]\\\\[/c] [c]backslash[/c] [c]\\][/c]\n[c]f1[/c] to [c]f12[/c], [c]a[/c] to [c]z[/c], [c]0[/c] to [c]9[/c]\n* Following keys can be used as modifier: [c]s[/c] (for SHIFT), [c]c[/c] (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used.",

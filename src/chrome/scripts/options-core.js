@@ -312,14 +312,18 @@ function handleKeyup (e) {
 }
 
 function handleCapture (e) {
-	if (e.target.classList.contains('wait')) {
-		e.target.classList.remove('wait');
+	var t = e.target;
+	while (t && t.nodeName.toLowerCase() != 'button') {
+		t = t.parentNode;
+	}
+	if (t.classList.contains('wait')) {
+		t.classList.remove('wait');
 		document.body.removeEventListener('keydown', handleKeydown, true);
 		document.body.removeEventListener('keyup', handleKeyup, true);
 
 	}
 	else {
-		e.target.classList.add('wait');
+		t.classList.add('wait');
 		$('capture-wait').textContent = $('capture-wait-buffer').textContent;
 		document.body.addEventListener('keydown', handleKeydown, true);
 		document.body.addEventListener('keyup', handleKeyup, true);

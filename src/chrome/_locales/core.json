@@ -29,12 +29,12 @@
         "message": "when a key combination is entered",
         "description": ""
     },
-    "option_qa_blacklist_title": {
+    "option_exceptional_urls_head": {
         "message": "Exceptional URLs",
         "description": ""
     },
     "option_qa_blacklist_tips": {
-        "message": "* Put any URL to prevent from on-focus activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
+        "message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
         "description": ""
     },
     "option_target_elements_desc": {
