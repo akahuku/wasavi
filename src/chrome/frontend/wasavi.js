@@ -1303,13 +1303,12 @@ opacity:1; \
 } \
 #wasavi_focus_holder { \
 position:fixed; \
-visibility:hidden; \
 border:none; \
 outline:none; \
 resize:none; \
 padding:0; \
 left:0; \
-top:0px; \
+top:-32px; \
 width:100%; \
 height:32px; \
 ime-mode:disabled; \
@@ -2872,7 +2871,7 @@ function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 		buffer.isLineOrientSelection = false;
 	}
 
-	if (updateSimpleCommand) {
+	if (updateSimpleCommand && recordedStrokes) {
 		lastSimpleCommand = recordedStrokes.strokes;
 	}
 
@@ -6679,7 +6678,9 @@ var commandMap = {
 		lastBoundMode = c;
 		requestInputMode(c == 'v' ? 'bound' : 'bound_line');
 		marks.setPrivate('<', buffer.selectionStart);
-		recordedStrokes = {internal:true, strokes:c};
+		if (!o.e.mapExpanded) {
+			recordedStrokes = {internal:true, strokes:c};
+		}
 	},
 	V:function () {return this.v.apply(this, arguments)}
 

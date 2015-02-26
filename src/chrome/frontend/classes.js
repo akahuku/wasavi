@@ -978,14 +978,17 @@ Wasavi.MapManager = function (app) {
 	}
 	function markExpanded (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
-			items[i].mapExpanded = true;
+			items[i].mapExpanded =
+			items[i].isCompositioned = true;
 		}
 		items.firstItem.isCompositionedFirst = true;
 		items.lastItem.isCompositionedLast = true;
 	}
 	function markExpandedNoremap (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
-			items[i].isNoremap = items[i].mapExpanded = true;
+			items[i].isNoremap =
+			items[i].mapExpanded =
+			items[i].isCompositioned = true;
 		}
 		items.firstItem.isCompositionedFirst = true;
 		items.lastItem.isCompositionedLast = true;
