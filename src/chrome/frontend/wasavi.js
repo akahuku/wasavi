@@ -4255,17 +4255,41 @@ function quickReplace (c, count, allowMultiLine) {
 		else {
 			var n = buffer.selectionStart;
 			var scaler = $('wasavi_singleline_scaler');
+			var widthCache = [0];
 			while (count > 0 && n.row < buffer.rowLength) {
 				var text = buffer.rows(n);
 				var original = text.substr(n.col, Math.min(count, text.length - n.col));
 
 				scaler.textContent = original;
 				var originalWidth = scaler.offsetWidth;
-				scaler.textContent = c;
-				var replacerWidth = scaler.offsetWidth;
+				var subCount = 0;
+				var subString = '';
+				var subWidth = 0;
 
-				if (originalWidth && replacerWidth) {
-					var replacer = multiply(c, Math.max(1, Math.floor(originalWidth / replacerWidth + 0.5)));
+				for (scaler.textContent = ''; true; ) {
+					subString += c;
+
+					if (widthCache.length > subString.length) {
+						subWidth = widthCache[subString.length];
+					}
+					else {
+						scaler.textContent = subString;
+						subWidth = widthCache[subString.length] = scaler.offsetWidth;
+					}
+
+					if (subWidth == 0) {
+						subCount = 0;
+						break;
+					}
+					if (subWidth > originalWidth) {
+						break;
+					}
+
+					subCount++;
+				}
+
+				if (originalWidth > 0 && subCount > 0) {
+					var replacer = multiply(c, subCount);
 					editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
 					buffer.setSelectionRange(buffer.leftPos(buffer.overwriteChars(n, replacer)));
 				}
