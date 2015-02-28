@@ -6768,6 +6768,7 @@ var boundMap = {
 			function (p1, p2, act) {
 				yank(act);
 				act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
+				buffer.setSelectionRange(p1);
 			},
 			function () {
 				isEditCompleted = false;
@@ -6828,6 +6829,7 @@ var boundMap = {
 				yank();
 				act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
 				buffer.isLineOrientSelection = false;
+				buffer.setSelectionRange(p1);
 			},
 			function () {
 				isEditCompleted = false;
