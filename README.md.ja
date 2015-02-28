@@ -10,26 +10,26 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
 * ネイティブな TEXTAREA があったとき
 
-  ![ネイティブな textarea](http://appsweets.net/wasavi/wasavi_native_textarea.jpg)
+  ![ネイティブな textarea](http://appsweets.net/wasavi/native-textarea.png)
 
 * TEXTAREA にフォーカスし、`Ctrl+Enter` を押すと wasavi が起動します
 
-  ![wasavi が実行中](http://appsweets.net/wasavi/wasavi.jpg)
+  ![wasavi が実行中](http://appsweets.net/wasavi/wasavi.png)
 
 込み入った使い方
 ----------------
 
 * wasavi はいくつかの ex コマンドをサポートします。これは `:set all` したところ
 
-  ![set all](http://appsweets.net/wasavi/wasavi_set_all.jpg)
+  ![set all](http://appsweets.net/wasavi/set-all.png)
 
 * Vim のインクリメンタルサーチ
 
-  ![インクリメンタルサーチ](http://appsweets.net/wasavi/wasavi_incremental_search.jpg)
+  ![インクリメンタルサーチ](http://appsweets.net/wasavi/isearch.png)
 
 * [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive アカウント上のファイルを読み書きできます。
 
-  ![stand alone](http://appsweets.net/wasavi/wasavi_stand_alone.png)
+  ![stand alone](http://appsweets.net/wasavi/web-app.png)
 
 
 インストール
@@ -113,7 +113,7 @@ Tips and Tricks
 	+ `:map [noremap] lhs rhs` も登録しますが、
 	  こちらは再帰しません
 	+ `:map` はノーマルモード用のマップを対象とします。一方、
-	  `:map!` は挿入モード用です
+	  `:map!` は挿入モード用です。これは vim の `:imap` に相当します
 * j k ^ $ はカーソルを物理行単位で移動させます。一方、gj gk g^ g$ は
   折り返し行単位で移動させます。この振る舞いを交換するには: `:set jkdenotative`
 * 日本語のための f/F/t/T の拡張: これらのコマンドはひらがな、カタカナ、および
@@ -157,7 +157,7 @@ Operation Aliases
 `cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
 
 Motions
-------
+-------
 
 `-` `+` `^` `<home>` `$` `<end>` `%` `|` `,` `;`
   `_` `/` `?` `'` `` ` `` `(` `)` `{` `}` `[[` `]]` `<enter>` `0`
@@ -165,8 +165,8 @@ Motions
   `<down>` `<up>` `<left>` `<right>` `<space>`
   `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `gi` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
 
-Vim text objects (range symbol)
--------------------------------
+Range symbols (Vim text objects)
+--------------------------------
 
 * `a"` `a'` `` a` `` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as`
 * `i"` `i'` `` i` `` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is`
