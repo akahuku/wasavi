@@ -608,6 +608,21 @@ public class BoundTest extends WasaviTest {
 	public void pasteIntoLineBoundP () {
 		_pasteIntoLineBound("P");
 	}
+
+	// https://github.com/akahuku/wasavi/issues/67
+	@Test
+	public void yankParagraph () {
+		Wasavi.send("17G1|");
+		Wasavi.send("vapy");
+		Wasavi.send("P:17,21ya\n");
+		assertEquals("#1-1",
+				"\tLorem ipsum dolor sit amet. consectetur adipisicing elit.  sed do eiusmod\n" +
+				"\ttempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\n" +
+				"\n" +
+				"\tLorem ipsum dolor sit amet. consectetur adipisicing elit.  sed do eiusmod\n" +
+				"\ttempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\n",
+				Wasavi.getRegister("\""));
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */
