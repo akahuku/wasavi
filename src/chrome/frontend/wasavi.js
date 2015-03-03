@@ -6111,7 +6111,7 @@ var commandMap = {
 	},
 	M:function (c) {
 		var v = getCurrentViewPositionIndices();
-		var index = v.top + parseInt(v.lines / 2);
+		var index = Math.floor((v.top + v.bottom) / 2);
 		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
