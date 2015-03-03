@@ -1712,7 +1712,6 @@ function setInputMode (newInputMode, opts) {
 	}
 
 	isEditCompleted = isVerticalMotion = isSmoothScrollRequested = false;
-	idealWidthPixels = -1;
 }
 function pushInputMode (context, newInputMode, newInputModeOpts) {
 	context.inputMode = inputMode;
@@ -2699,6 +2698,9 @@ function execMap (target, e, map, key, subkey, code, pos) {
 	}
 	return true;
 }
+function invalidateIdealWidthPixels () {
+	idealWidthPixels = -1;
+}
 function refreshIdealWidthPixels () {
 	if (idealWidthPixels >= 0) return;
 	var n = buffer.selectionStart;
@@ -2958,7 +2960,7 @@ function motionLeft (c, count) {
 	n.col = Math.max(n.col - count, 0);
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionRight (c, count) {
@@ -2969,7 +2971,7 @@ function motionRight (c, count) {
 	n.col = Math.min(n.col + count, length);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineStart (c, realTop) {
@@ -2977,13 +2979,13 @@ function motionLineStart (c, realTop) {
 		buffer.getLineTopOffset(buffer.selectionStart) :
 		buffer.getLineTopOffset2(buffer.selectionStart);
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineEnd (c) {
 	buffer.selectionEnd = buffer.getLineTailOffset(buffer.selectionEnd);
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineStartDenotative (c, realTop) {
@@ -2995,14 +2997,14 @@ function motionLineStartDenotative (c, realTop) {
 	}
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineEndDenotative (c) {
 	var n = buffer.getLineTailDenotativeOffset(buffer.selectionEnd);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionNextWord (c, count, bigWord, wordEnd) {
@@ -3134,7 +3136,7 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionPrevWord (c, count, bigWord, specialStops) {
@@ -3202,7 +3204,7 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionFindForward (c, count, stopBefore, continuous) {
@@ -3253,7 +3255,7 @@ function motionFindForward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.direction = 1;
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionFindBackward (c, count, stopBefore, continuous) {
@@ -3303,7 +3305,7 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 	lastHorzFindCommand.direction = -1;
 	lastHorzFindCommand.letter = c;
 	lastHorzFindCommand.stopBefore = stopBefore;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
@@ -3387,7 +3389,7 @@ function motionFindByRegexForward (c, count, opts) {
 			} while (loop);
 		}
 	}
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
 	return {offset:n, matchLength:len};
 }
@@ -3468,14 +3470,13 @@ function motionFindByRegexBackward (c, count, opts) {
 			} while (loop);
 		}
 	}
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
 	return {offset:n, matchLength:len};
 }
 function motionUpDown (c, count, isDown) {
 	count || (count = 1);
 	refreshIdealWidthPixels();
-	var textspan = $('wasavi_singleline_scaler');
 	var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
 	var goalWidth = idealWidthPixels;
 
@@ -3488,6 +3489,7 @@ function motionUpDown (c, count, isDown) {
 		n.row = Math.max(n.row - count, 0);
 	}
 
+	var textspan = $('wasavi_singleline_scaler');
 	var width = 0;
 	var widthp = 0;
 	var line = buffer.rows(n);
@@ -3496,11 +3498,10 @@ function motionUpDown (c, count, isDown) {
 	textspan.textContent = '';
 
 	while (index < line.length && !buffer.isNewline(n.row, index)) {
-		// TODO: more optimization
 		textspan.textContent += line.substr(index++, 1);
 		width = textspan.offsetWidth;
 		if (width >= goalWidth) {
-			index -= Math.abs(widthp - goalWidth) < Math.abs(width - goalWidth) ? 1 : 0;
+			index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
 			break;
 		}
 		widthp = width;
@@ -3526,56 +3527,207 @@ function motionUpDownDenotative (c, count, isDown) {
 	count || (count = 1);
 	refreshIdealWidthPixels();
 	var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
-	var goalWidth = idealDenotativeWidthPixels;
 	var overed = false;
-	var dir = isDown ? 1 : -1;
+
+	function findNextTopOfWrapLine (start) {
+		var n = start.clone();
+
+		var foundBoundary = false;
+		var rightText = buffer.emphasis(
+			new Position(n.row, n.col + 1),
+			buffer.rows(n).length - n.col - 1, 'wrapspan')[0];
+
+		if (rightText && rightText.firstChild) {
+			rightText = rightText.firstChild;
+
+			var left = buffer.emphasis(n, 1, 'wrapspan')[0];
+			var leftText = left.firstChild;
+			var initialHeight = left.offsetHeight;
+			var delta = 1;
+			var adjusting = false;
+
+			while (rightText.nodeValue.length) {
+				var length = Math.min(delta, rightText.nodeValue.length);
+				leftText.appendData(rightText.nodeValue.substr(0, length));
+
+				// over 2 lines
+				if (!adjusting && left.offsetHeight > initialHeight + lineHeight) {
+					leftText.deleteData(
+						leftText.nodeValue.length - length, length);
+					delta = Math.max(1, delta >> 1);
+					continue;
+				}
+
+				// 2 lines
+				if (left.offsetHeight > initialHeight) {
+					if (adjusting) {
+						rightText.deleteData(0, length);
+						n.col += length;
+						foundBoundary = true;
+						break;
+					}
+					else {
+						adjusting = true;
+						leftText.deleteData(
+							leftText.nodeValue.length - length, length);
+						delta = 1;
+						continue;
+					}
+				}
+
+				// 1 line
+				rightText.deleteData(0, length);
+				n.col += length;
+				if (!adjusting) delta <<= 1;
+			}
+		}
+
+		buffer.unEmphasis('wrapspan');
+
+		if (!foundBoundary) {
+			n.row++;
+			n.col = 0;
+
+			if (n.row >= buffer.rowLength) {
+				return true;
+			}
+		}
+
+		start.row = n.row;
+		start.col = n.col;
+		return false;
+	}
+
+	function findPrevTailOfWrapLine (start) {
+		var n = start.clone();
+
+		var foundBoundary = false;
+		var leftText = buffer.emphasis(
+			new Position(n.row, 0), n.col,
+			'wrapspan')[0];
+
+		if (leftText && leftText.firstChild) {
+			leftText = leftText.firstChild;
+
+			var right = buffer.emphasis(n, 1, 'wrapspan')[0];
+			var rightText = right.firstChild;
+			var initialHeight = right.offsetHeight;
+			var delta = 1;
+			var adjusting = false;
+
+			while (leftText.nodeValue.length) {
+				var length = Math.min(delta, leftText.nodeValue.length);
+				rightText.insertData(0, leftText.nodeValue.substr(-length));
+				leftText.deleteData(leftText.nodeValue.length - length, length);
+
+				// over 2 lines
+				if (!adjusting && right.offsetHeight > initialHeight + lineHeight) {
+					leftText.appendData(rightText.nodeValue.substr(0, length));
+					rightText.deleteData(0, length);
+					delta = Math.max(1, delta >> 1);
+					continue;
+				}
+
+				// 2 lines
+				if (right.offsetHeight > initialHeight) {
+					if (adjusting) {
+						n.col -= length;
+						foundBoundary = true;
+						break;
+					}
+					else {
+						adjusting = true;
+						leftText.appendData(rightText.nodeValue.substr(0, length));
+						rightText.deleteData(0, length);
+						delta = 1;
+						continue;
+					}
+				}
+
+				// 1 line
+				n.col -= length;
+				if (!adjusting) delta <<= 1;
+			}
+		}
+
+		buffer.unEmphasis('wrapspan');
+
+		if (!foundBoundary) {
+			if (n.row == 0) {
+				return true;
+			}
+
+			n.row--;
+			n.col = buffer.rows(n).length;
+		}
+
+		start.row = n.row;
+		start.col = n.col;
+		return false;
+	}
+
+	function findPrevTopOfWrapLine (start) {
+		for (var i = 0; i < 2; i++) {
+			if (findPrevTailOfWrapLine(start)) {
+				switch (i) {
+				case 0:
+					return true;
+				case 1:
+					start.row = start.col = 0;
+					return false;
+				}
+			}
+		}
+		var next = buffer.rightPos(start);
+		start.row = next.row;
+		start.col = next.col;
+		return false;
+	}
 
 	for (var i = 0; i < count; i++) {
-		var curRect = buffer.charRectAt(n);
-		var startn = n.clone();
-		while (isDown && !buffer.isEndOfText(n) && !buffer.isNewline(n) && ++n.col >= 0
-		|| !isDown && --n.col >= 0) {
-			// TODO: more optimization
-			var newRect = buffer.charRectAt(n);
-			if (isDown && newRect.top > curRect.top
-			||  !isDown && newRect.top < curRect.top) break;
+		if (isDown  && findNextTopOfWrapLine(n)
+		||  !isDown && findPrevTopOfWrapLine(n)) {
+			overed = true;
+			break;
 		}
-		if (isDown && buffer.isNewline(n) || !isDown && n.col < 0) {
-			if (isDown && n.row >= buffer.rowLength - 1 || !isDown && n.row <= 0) {
-				overed = i == 0;
-				n = startn;
-				break;
-			}
-			n.row += dir;
-			n.col = isDown ? 0 : Math.max(buffer.rows(n).length - 1, 0);
-		}
+	}
 
-		var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
+	if (overed) {
+		if (i == 0) {
+			requestRegisterNotice(
+				isDown ? _('Tail of text.') : _('Top of text.'));
+		}
+	}
+	else {
+		var goalWidth = idealDenotativeWidthPixels;
+		var textspan = $('wasavi_singleline_scaler');
+		var width = 0;
 		var widthp = 0;
-		while (isDown && !buffer.isEndOfText(n) && !buffer.isNewline(n)
-		|| !isDown && n.col >= 0) {
-			// TODO: more optimization
-			var newRect = buffer.charRectAt(n);
-			var width = newRect.left - curRectTop.left + parseInt((newRect.right - newRect.left) / 2);
-			if (isDown && width >= goalWidth || !isDown && width <= goalWidth) {
-				var closer = Math.abs(widthp - goalWidth) < Math.abs(width - goalWidth) ? 1 : 0;
-				n.col += closer * -dir;
+		var line = buffer.rows(n);
+		var index = n.col;
+
+		textspan.textContent = '';
+
+		while (index < line.length && !buffer.isNewline(n.row, index)) {
+			textspan.textContent += line.substr(index++, 1);
+			width = textspan.offsetWidth;
+
+			if (width >= goalWidth) {
+				index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
 				break;
 			}
 			widthp = width;
-			n.col += dir
+		}
+		n.col = index;
+		if (isDown) {
+			buffer.selectionEnd = n;
+		}
+		else {
+			buffer.selectionStart = n;
 		}
 	}
-
-	n.col = Math.max(0, Math.min(n.col, buffer.rows(n).length));
-	if (isDown) {
-		buffer.selectionEnd = n;
-	}
-	else {
-		buffer.selectionStart = n;
-	}
 	prefixInput.motion = c;
-	overed && requestRegisterNotice(isDown ? _('Tail of text.') : _('Top of text.'));
+	isVerticalMotion = true;
 	return true;
 }
 function scrollView (c, count) {
@@ -3897,7 +4049,7 @@ function reformat (width) {
 		marks.setPrivate(nextMark);
 	});
 	isEditCompleted = true;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	if (curpos.row >= buffer.rowLength) {
 		curpos.row = buffer.rowLength - 1;
 		curpos = buffer.getLineTailOffset(curpos);
@@ -4243,7 +4395,7 @@ function quickReplace (c, count, allowMultiLine) {
 	&& count > buffer.rows(buffer.selectionStartRow).length - buffer.selectionStartCol) {
 		requestRegisterNotice(_('Replace count too large.'));
 		isEditCompleted = true;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		return true;
 	}
 	editLogger.open('quickReplace', function () {
@@ -4301,7 +4453,7 @@ function quickReplace (c, count, allowMultiLine) {
 		}
 	});
 	isEditCompleted = true;
-	idealWidthPixels = -1;
+	invalidateIdealWidthPixels();
 	return true;
 }
 
@@ -4757,7 +4909,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['magic', 'b', true],
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
-			idealWidthPixels = -1;
+			invalidateIdealWidthPixels();
 			v && config.setData('norelativenumber');
 			return v;
 		}],
@@ -4839,7 +4991,7 @@ var config = new Wasavi.Configurator(appProxy,
 		}],
 		['quoteescape', 's', '\\'],
 		['relativenumber', 'b', false, function (v) {
-			idealWidthPixels = -1;
+			invalidateIdealWidthPixels();
 			v && config.setData('nonumber');
 			return v;
 		}],
@@ -5612,7 +5764,7 @@ var commandMap = {
 		}
 		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(result);
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		isSmoothScrollRequested = true;
 		return true;
 	},
@@ -5624,7 +5776,7 @@ var commandMap = {
 		n.col = Math.min(prefixInput.count - 1, buffer.rows(n).length);
 		buffer.extendSelectionTo(n);
 		prefixInput.motion = c;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		return true;
 	},
 	// invert of last find
@@ -5789,7 +5941,7 @@ var commandMap = {
 				if (o.key == "'") {
 					buffer.extendSelectionTo(buffer.getLineTopOffset2(offset));
 					isVerticalMotion = true;
-					idealWidthPixels = -1;
+					invalidateIdealWidthPixels();
 				}
 				else {
 					buffer.extendSelectionTo(offset);
@@ -5953,7 +6105,7 @@ var commandMap = {
 		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		prefixInput.motion = c;
 		return true;
 	},
@@ -5963,7 +6115,7 @@ var commandMap = {
 		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		prefixInput.motion = c;
 		return true;
 	},
@@ -5973,7 +6125,7 @@ var commandMap = {
 		marks.setJumpBaseMark();
 		buffer.extendSelectionTo(buffer.getLineTopOffset2(index, 0));
 		isVerticalMotion = true;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		prefixInput.motion = c;
 		return true;
 	},
@@ -5993,7 +6145,7 @@ var commandMap = {
 		}
 		isVerticalMotion = true;
 		isSmoothScrollRequested = true;
-		idealWidthPixels = -1;
+		invalidateIdealWidthPixels();
 		prefixInput.motion = c;
 		return true;
 	},
@@ -6141,7 +6293,7 @@ var commandMap = {
 				buffer.scrollLeft = 0;
 				scroller.run(current, function () {
 					buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-					idealWidthPixels = -1;
+					invalidateIdealWidthPixels();
 				});
 				break;
 
@@ -6151,7 +6303,7 @@ var commandMap = {
 					Math.max(current - parseInt((buffer.elm.clientHeight - lineHeight) / 2), 0),
 					function () {
 						buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-						idealWidthPixels = -1;
+						invalidateIdealWidthPixels();
 					}
 				);
 				break;
@@ -6162,7 +6314,7 @@ var commandMap = {
 					Math.max(current - (buffer.elm.clientHeight - lineHeight), 0),
 					function () {
 						buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-						idealWidthPixels = -1;
+						invalidateIdealWidthPixels();
 					}
 				);
 				break;
@@ -6200,7 +6352,7 @@ var commandMap = {
 					buffer.extendSelectionTo(buffer.getLineTopOffset2(n));
 				}
 				isVerticalMotion = true;
-				idealWidthPixels = -1;
+				invalidateIdealWidthPixels();
 				prefixInput.motion = o.key + c;
 				result = true;
 				break;
@@ -6448,7 +6600,7 @@ var commandMap = {
 		}
 		else {
 			requestShowMessage(_('{0} {operation:0} have reverted.', result));
-			idealWidthPixels= -1;
+			invalidateIdealWidthPixels();
 			config.setData(editLogger.isClean ? 'nomodified' : 'modified');
 			return true;
 		}
@@ -6463,7 +6615,7 @@ var commandMap = {
 		}
 		else {
 			requestShowMessage(_('{0} {operation:0} have executed again.', result));
-			idealWidthPixels= -1;
+			invalidateIdealWidthPixels();
 			config.setData(editLogger.isClean ? 'nomodified' : 'modified');
 			return true;
 		}
