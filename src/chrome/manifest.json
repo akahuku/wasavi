@@ -33,7 +33,6 @@
       ],
       "js": [
         "frontend/extension_wrapper.js",
-        "frontend/get_page_hook.js",
         "frontend/agent.js"
       ],
       "run_at": "document_start",

@@ -166,17 +166,6 @@ function initPage (req) {
 		el.checked = req.logMode;
 	}
 
-	// page hooks
-	el = $('page-hooks');
-	if (el && el.nodeName == 'TEXTAREA') {
-		el.value = req.pageHooks;
-	}
-	if (window.chrome && /\bopera\b/i.test(window.navigator.vendor)) {
-		$('page-hooks-rule').classList.remove('hidden');
-		$('page-hooks-head').classList.remove('hidden');
-		$('page-hooks-opts').classList.remove('hidden');
-	}
-
 	/*
 	 * replace all message ids to translated one
 	 */
@@ -433,12 +422,6 @@ function handleOptionsSave () {
 	el = $('log-mode');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'logMode', value:el.checked});
-	}
-
-	// page hooks
-	el = $('page-hooks');
-	if (el && el.nodeName == 'TEXTAREA') {
-		items.push({key:'pageHooks', value:el.value});
 	}
 
 	/*

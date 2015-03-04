@@ -147,10 +147,6 @@
 				width:640px;
 				height:160px;
 			}
-			textarea#page-hooks {
-				width:640px;
-				height:320px;
-			}
 			input#shortcut, input#font-family {
 				width:640px;
 			}
@@ -252,25 +248,6 @@
 			<label><input type="radio" name="fstab" id="fstab-dropbox" checked="checked" value="dropbox">Dropbox</label>
 			<label><input type="radio" name="fstab" id="fstab-gdrive" value="gdrive">Google Drive</label>
 			<label><input type="radio" name="fstab" id="fstab-onedrive" value="onedrive">Microsoft OneDrive</label>
-		</div>
-		<hr id="page-hooks-rule" class="hidden">
-		<h2 id="page-hooks-head" class="hidden">Keyboard hooks<br>(experimental)</h2>
-		<div id="page-hooks-opts" class="opt-unit hidden">
-			<textarea id="page-hooks" class="monospace"></textarea>
-			<div class="tips">
-				<ul>
-					<li>You can put any function which should be executed preferntially when key is pressed on a web page.</li>
-					<li>function name has special meaning: <i>type</i> _ (<i>modifier</i> _ )* <i>keyname</i>
-						<ul>
-						<li>type: <code>view</code> or <code>edit</code></li>
-						<li>modifier: <code>s</code> or <code>c</code> or <code>sc</code></li>
-						<li>keyname: one of <code>a</code> to <code>z</code></li>
-						</ul>
-					</li>
-					<li>function declaration must start from top of line.</li>
-					<li>function will be executed in content-script context.</li>
-				</ul>
-			</div>
 		</div>
 		<hr>
 		<h2>__MSG_option_init_head__</h2>
