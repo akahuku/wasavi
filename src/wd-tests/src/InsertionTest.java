@@ -1185,12 +1185,24 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("afoo\nbar\u001b1GyG");
 		Wasavi.send("O\u0012\"\u001b");
 		assertValue("#1-1", "foo\nbar\n\nfoo\nbar");
+
+		Wasavi.send("u");
+		assertValue("#2-1", "foo\nbar");
+
+		Wasavi.send("\u0012");
+		assertValue("#3-1", "foo\nbar\n\nfoo\nbar");
 	}
 
 	@Test
 	public void pasteCalcRegister () {
 		Wasavi.send("afoo\nbar\u001b1Go\u0012=99*99\nbaz\u001b");
 		assertValue("#1-1", "foo\n9801baz\nbar");
+
+		Wasavi.send("u");
+		assertValue("#2-1", "foo\nbar");
+
+		Wasavi.send("\u0012");
+		assertValue("#3-1", "foo\n9801baz\nbar");
 	}
 }
 
