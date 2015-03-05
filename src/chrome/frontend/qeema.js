@@ -113,6 +113,28 @@
 			this.nativeEvent.preventDefault();
 		}
 	};
+	VirtualInputEvent.prototype.code2letter = function (c, useSpecial) {
+		if (typeof c != 'number') {
+			return '';
+		}
+		if (c >= 0) {
+			return String.fromCharCode(c);
+		}
+		if (useSpecial && -c in functionKeyCodes) {
+			return '<' + functionKeyCodes[-c] + '>';
+		}
+		return '';
+	};
+	VirtualInputEvent.prototype.toInternalString = function () {
+		var c = this.code;
+		if (typeof c != 'number') {
+			return '';
+		}
+		if (this.isSpecial && c < 0) {
+			return '\ue000' + '<' + this.key + '>';
+		}
+		return String.fromCharCode(c);
+	};
 
 	function CompositionResult (e) {
 		this.prefix = '';
@@ -1094,6 +1116,10 @@
 		};
 	}
 
+	function isInputEvent (e) {
+		return e instanceof VirtualInputEvent;
+	}
+
 	// dequeue manipulators
 	function createSequences (s, asComposition) {
 		var result = [];
@@ -1280,12 +1306,11 @@
 		addListener: {value:addListener},
 		removeListener: {value:removeListener},
 
-		code2letter: {value:code2letter},
-		toInternalString: {value:toInternalString},
 		objectFromCode: {value:objectFromCode},
 		nopObject: {value:nopObject},
 		insertFnKeyHeader: {value:insertFnKeyHeader},
 		parseKeyDesc: {value:parseKeyDesc},
+		isInputEvent: {value:isInputEvent},
 
 		createSequences: {value:createSequences},
 		setDequeue: {value:setDequeue},

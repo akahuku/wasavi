@@ -137,7 +137,7 @@ Wasavi.EditLogger = function (app, max) {
 					this.toString() + '#undo: bad consistency!',
 					' position: ' + this.position,
 					'position2: ' + (this.position2 || '(N/A)'),
-					'       LO: ' + this.isLineOrient,
+					'       LO: ' + this.hasOwnProperty('isLineOrient') ? this.isLineOrient : '(N/A)',
 					'       ss: ' + ss,
 					'       se: ' + se,
 					'selection: "' + toVisibleString(t.getSelection(ss, se)) + '"',
@@ -432,7 +432,7 @@ Wasavi.EditLogger = function (app, max) {
 		},
 		dump: function (depth) {
 			depth || (depth = 0);
-			var result = [multiply(' ', depth) + this.toString()];
+			var result = [multiply(' ', depth) + '+ ' + this.toString()];
 			this.items.forEach(function (o) {
 				result.push(o.dump(depth + 1));
 			});

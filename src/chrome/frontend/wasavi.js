@@ -2167,8 +2167,8 @@ function processInput (e, ignoreAbbrev) {
 		needEmitEvent:false,
 		ignoreAbbrev:ignoreAbbrev,
 		code: e.code,
-		letter: keyManager.code2letter(e.code),
-		mapkey: keyManager.code2letter(e.code, true),
+		letter: e.code2letter(e.code),
+		mapkey: e.code2letter(e.code, true),
 		subkey: inputMode
 	};
 
@@ -2687,12 +2687,12 @@ function execMap (target, e, map, key, subkey, code, pos) {
 	switch (typeof map[key]) {
 	case 'function':
 		if (subkey == '' || subkey == inputMode) {
-			return map[key].call(map, keyManager.code2letter(code) || code, opts);
+			return map[key].call(map, e.code2letter(code) || code, opts);
 		}
 		break;
 	case 'object':
 		if (subkey != '' && subkey in map[key]) {
-			return map[key][subkey].call(map, keyManager.code2letter(code) || code, opts);
+			return map[key][subkey].call(map, e.code2letter(code) || code, opts);
 		}
 		break;
 	}
@@ -4555,7 +4555,7 @@ function handleKeydown (e) {
 	}
 
 	if (recordedStrokes && !e.mapExpanded) {
-		recordedStrokes.strokes += keyManager.toInternalString(e);
+		recordedStrokes.strokes += e.toInternalString();
 	}
 
 	isInteractive = true;
@@ -5289,7 +5289,9 @@ var modeHandlers = {
 			requestShowPrefixInput();
 			editLogger.close();// edit-wrapper
 			r.needEmitEvent = true;
-			//console.log(editLogger.dump());
+			//console.log('undo log:\n' + editLogger.dump());
+			//console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
+			//console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
 		}
 		else {
 			var letterActual = inputHandler.updateText(e);
@@ -5365,11 +5367,11 @@ var modeHandlers = {
 		else if (r.subkey == inputMode && (r.code == 0x0d || r.code == 0x0a)) {
 			var line = toNativeControl(input.value);
 			if (isComplete) {
-				prefixInput.trailer = line + keyManager.code2letter(r.code);
+				prefixInput.trailer = line + e.code2letter(r.code);
 			}
 			else {
 				line = line.replace(/\s+/g, ' ');
-				prefixInput.appendRegister(line + keyManager.code2letter(r.code));
+				prefixInput.appendRegister(line + e.code2letter(r.code));
 			}
 
 			execMap(
@@ -7433,6 +7435,8 @@ var editMap = {
 					}
 					else {
 						paste(1, {content: data, isForward: false});
+						inputHandler.updateText(data);
+						inputHandler.updateStroke(data);
 					}
 					keyManager.unlock();
 				});
@@ -7450,6 +7454,8 @@ var editMap = {
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				paste(1, {content: s, isForward: false});
+				inputHandler.updateText(s);
+				inputHandler.updateStroke(s);
 			}
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));

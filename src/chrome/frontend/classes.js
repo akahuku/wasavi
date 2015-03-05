@@ -2895,7 +2895,16 @@ Wasavi.InputHandler.prototype = {
 		this.prevLengthText[1] = o[3];
 	},
 	updateText: function (e) {
-		var result = e.code == 0x000d ? '\u000a' : this.app.keyManager.code2letter(e.code);
+		var result;
+		if (isString(e)) {
+			result = e;
+		}
+		else if (this.app.keyManager.isInputEvent(e)) {
+			result = e.code == 0x000d ? '\u000a' : e.code2letter(e.code);
+		}
+		else {
+			return;
+		}
 		this.prevLengthText[0] = this.text.length;
 		this.prevLengthText[1] = this.textFragment.length;
 		this.text += result;
@@ -2924,8 +2933,19 @@ Wasavi.InputHandler.prototype = {
 		this.prevLengthStroke = o[1];
 	},
 	updateStroke: function (e) {
+		var result;
+		if (isString(e)) {
+			result = e;
+		}
+		else if (this.app.keyManager.isInputEvent(e)) {
+			result = e.code == 0x000d ? '\u000a' : e.toInternalString();
+		}
+		else {
+			return;
+		}
 		this.prevLengthStroke = this.stroke.length;
-		this.stroke += e.code == 0x000d ? '\u000a' : this.app.keyManager.toInternalString(e);
+		this.stroke += result;
+		return result;
 	},
 	ungetStroke: function () {
 		if (this.prevLengthStroke !== undefined) {
