@@ -3551,7 +3551,7 @@ function motionUpDownDenotative (c, count, isDown) {
 				leftText.appendData(rightText.nodeValue.substr(0, length));
 
 				// over 2 lines
-				if (!adjusting && left.offsetHeight > initialHeight + lineHeight) {
+				if (!adjusting && delta > 1 && left.offsetHeight > initialHeight + lineHeight) {
 					leftText.deleteData(
 						leftText.nodeValue.length - length, length);
 					delta = Math.max(1, delta >> 1);
@@ -3621,7 +3621,7 @@ function motionUpDownDenotative (c, count, isDown) {
 				leftText.deleteData(leftText.nodeValue.length - length, length);
 
 				// over 2 lines
-				if (!adjusting && right.offsetHeight > initialHeight + lineHeight) {
+				if (!adjusting && delta > 1 && right.offsetHeight > initialHeight + lineHeight) {
 					leftText.appendData(rightText.nodeValue.substr(0, length));
 					rightText.deleteData(0, length);
 					delta = Math.max(1, delta >> 1);
