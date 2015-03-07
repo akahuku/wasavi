@@ -4283,7 +4283,11 @@ function startEdit (c, opts) {
 		cursor.ensureVisible();
 		cursor.update({type:'edit'});
 		prefixInput.isLocked = true;
-		inputHandler.reset(opts.repeatCount, opened ? '\n' : '', buffer.selectionStart, true);
+		inputHandler.reset(
+			'repeatCount' in opts ? opts.repeatCount : 1,
+			opened ? '\n' : '',
+			buffer.selectionStart,
+			true);
 		compositionLevel = 0;
 	}});
 
@@ -5287,6 +5291,7 @@ var modeHandlers = {
 
 			prefixInput.reset();
 			requestShowPrefixInput();
+			invalidateIdealWidthPixels();
 			editLogger.close();// edit-wrapper
 			r.needEmitEvent = true;
 			//console.log('undo log:\n' + editLogger.dump());
@@ -5316,11 +5321,11 @@ var modeHandlers = {
 				inputHandler.ungetText();
 				inputHandler.ungetStroke();
 			}
-			if (e.isCompositionedFirst) {
+			if (e.isCompositionedFirst && !e.isCompositionedLast) {
 				compositionLevel++;
 				cursor.editCursor.style.display = 'none';
 			}
-			else if (e.isCompositionedLast) {
+			else if (!e.isCompositionedFirst && e.isCompositionedLast) {
 				compositionLevel > 0 && compositionLevel--;
 			}
 			if (compositionLevel == 0) {
