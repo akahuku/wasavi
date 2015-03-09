@@ -155,9 +155,17 @@ function locate (iframe, target, opts) {
 	}
 	else {
 		var rect = target.getBoundingClientRect();
+		rect = {
+			left:   rect.left,
+			top:    rect.top,
+			width:  Math.max(MIN_WIDTH_PIXELS, rect.width),
+			height: Math.max(MIN_HEIGHT_PIXELS, rect.height)
+		};
+		rect.right = rect.left + rect.width;
+		rect.bottom = rect.top + rect.height;
+
 		var position = 'fixed';
 		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
-		var widthAdjusted = Math.max(MIN_WIDTH_PIXELS, opts.width || rect.width);
 		var heightAdjusted = Math.max(MIN_HEIGHT_PIXELS, (opts.height || rect.height) + extraHeight);
 
 		if (!isFixedPosition(target)) {
@@ -169,9 +177,9 @@ function locate (iframe, target, opts) {
 		centerTop = rect.top + offsetTop + rect.height / 2;
 
 		var result = {
-			left: Math.max(0, Math.floor(centerLeft - widthAdjusted / 2)),
+			left: Math.max(0, Math.floor(centerLeft - rect.width / 2)),
 			top: Math.max(0, Math.floor(centerTop - rect.height / 2)),
-			width: widthAdjusted,
+			width: rect.width,
 			height: rect.height
 		};
 
@@ -767,7 +775,8 @@ function createPageAgent (doHook) {
  */
 
 function handleKeydown (e) {
-	if (!canLaunch || targetElement || !e || !e.target || !allowedElements || e.keyCode == 16 || e.keyCode == 17) return;
+	if (!canLaunch || targetElement || !e || !e.target || !allowedElements) return;
+	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
 
 	if (e.target.isContentEditable && allowedElements.enableContentEditable
 	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
@@ -1255,7 +1264,7 @@ extension = WasaviExtensionWrapper.create();
 isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
 isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
-createPageAgent(!WasaviExtensionWrapper.HOTKEY_ENABLED);
+createPageAgent(true);
 extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);

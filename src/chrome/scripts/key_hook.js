@@ -60,13 +60,11 @@ function hook (target) {
 	};
 }
 
-if (win.chrome || win.opera) {
-	hook(win.HTMLInputElement && win.HTMLInputElement.prototype);
-	hook(win.HTMLTextAreaElement && win.HTMLTextAreaElement.prototype);
-	hook(win.Node && win.Node.prototype);
-	hook(win);
-	hook(doc);
-}
+hook(win.HTMLInputElement && win.HTMLInputElement.prototype);
+hook(win.HTMLTextAreaElement && win.HTMLTextAreaElement.prototype);
+hook(win.Node && win.Node.prototype);
+hook(win);
+hook(doc);
 
 doc.addEventListener('WasaviStarting', function () {wasaviRunning = true}, false);
 doc.addEventListener('WasaviTerminated', function () {wasaviRunning = false}, false);

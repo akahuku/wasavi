@@ -32,8 +32,8 @@
 	/* {{{1 variables */
 
 	/*
-	 * wasaviFrameSource is data scheme expression of iframe
-	 * source, which is used on Firefox.
+	 * wasaviFrameSource is a special url of iframe source,
+	 * which is used on Firefox.
 	 *
 	 * Other platforms, iframe sources are as follows:
 	 *
@@ -41,7 +41,7 @@
 	 * opera:   literal "http://wasavi.appsweets.net/" or
 	 *          literal "https://ss1.xrea.com/wasavi.appsweets.net"
 	 */
-	var wasaviFrameSource;
+	var wasaviFrameSource = 'about:blank?wasavi-frame-source';
 
 	/*
 	 * wasaviFrameHeader is content of head in wasavi frame.
@@ -435,11 +435,6 @@
 				.replace(/>\s+</g, '><')
 				.replace(/^\s+|\s+$/g, '');
 
-			wasaviFrameSource = data
-				.replace(/(<body[^>]*>).+?(<\/body>)/g, '$1$2');
-			wasaviFrameSource = 'data:text/html;charset=UTF-8;base64,' +
-				require('kosian/Utils').Utils.btoa(wasaviFrameSource);
-
 			wasaviFrameHeader = /<head[^>]*>(.+?)<\/head>/.exec(data)[1];
 			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
 		}, {noCache:true, sync:true});
@@ -482,18 +477,6 @@
 		});
 	}
 
-	/** {{{2 hotkey */
-
-	function initHotkey () {
-		hotkey.register(config.get('shortcut'));
-		hotkey.onPress = handleHotkeyPress;
-	}
-
-	function handleHotkeyPress (hotkey) {
-		ext.postMessage({type:'request-run'});
-	}
-
-
 	/** {{{2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
@@ -513,9 +496,7 @@
 
 			targets: config.get('targets'),
 			shortcut: config.get('shortcut'),
-			shortcutCode: hotkey.canProcess ?
-				null :
-				hotkey.getObjectsForDOM(config.get('shortcut')),
+			shortcutCode: hotkey.getObjectsForDOM(config.get('shortcut')),
 			fontFamily: config.get('fontFamily'),
 			quickActivation: config.get('quickActivation'),
 			
@@ -810,12 +791,11 @@
 		}
 
 		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
-		hotkey = require('./kosian/Hotkey').Hotkey();
+		hotkey = require('./kosian/Hotkey').Hotkey(true);
 		contextMenu = require('./ContextMenu').ContextMenu();
 
 		config = new Config(configInfo);
 
-		initHotkey();
 		initUnicodeDictData();
 
 		ext.receive(handleRequest);
