@@ -3490,29 +3490,50 @@ function motionUpDown (c, count, isDown) {
 	}
 
 	var textspan = $('wasavi_singleline_scaler');
-	var width = 0;
+	var text = textspan.firstChild;
 	var widthp = 0;
 	var line = buffer.rows(n);
+	var goal = line.length;
 	var index = 0;
+	var delta = 1;
+	var adjusting = false;
 
-	textspan.textContent = '';
+	text.nodeValue = '';
 
-	while (index < line.length && !buffer.isNewline(n.row, index)) {
-		textspan.textContent += line.substr(index++, 1);
-		width = textspan.offsetWidth;
-		if (width >= goalWidth) {
-			index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
-			break;
+	while (index < goal && !buffer.isNewline(n.row, index)) {
+		if (delta > 1 && index + delta >= goal) {
+			delta >>= 1;
+			continue;
 		}
+
+		text.appendData(line.substr(index, delta));
+		var width = textspan.offsetWidth;
+		if (width >= goalWidth) {
+			if (adjusting) {
+				index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
+				break;
+			}
+			else {
+				adjusting = true;
+				text.deleteData(index, text.nodeValue.length - index);
+				delta = 1;
+				continue;
+			}
+		}
+
 		widthp = width;
+		index += delta;
+		if (!adjusting) delta <<= 1;
 	}
-	n.col = index;
+
+	n.col = Math.min(index, goal);
 	if (isDown) {
 		buffer.selectionEnd = n;
 	}
 	else {
 		buffer.selectionStart = n;
 	}
+
 	prefixInput.motion = c;
 	isVerticalMotion = true;
 	return true;
