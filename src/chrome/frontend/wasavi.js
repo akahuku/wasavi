@@ -2878,8 +2878,7 @@ function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 	}
 
 	prefixInput.trailer = c;
-	var e = keyManager.objectFromCode(27);
-	processInput(e);
+	processInput(keyManager.objectFromCode(27));
 	isEditCompleted = true;
 
 	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
@@ -7065,6 +7064,7 @@ var boundMap = {
 					buffer.setSelectionRange(reformat(
 						prefixInput.isCountSpecified ? prefixInput.count : 0));
 				});
+				break;
 			case 'v':
 				var m1 = marks.get('<');
 				var m2 = marks.get('>');
