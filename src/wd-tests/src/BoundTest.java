@@ -623,6 +623,34 @@ public class BoundTest extends WasaviTest {
 				"\ttempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\n",
 				Wasavi.getRegister("\""));
 	}
+
+	// https://github.com/akahuku/wasavi/issues/69
+	@Test
+	public void reformat () {
+		//
+		Wasavi.send(
+			"i" +
+			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna liqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n" +
+			"Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur." +
+			"\u001b");
+
+		//
+		Wasavi.send("3G1|w");
+		Wasavi.send(":set tw=32\n");
+		Wasavi.send("vgq");
+		Wasavi.send("w");
+		assertValue("#1-1",
+			"Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna liqua.\n" +
+			"\n" +
+			"Ut enim ad minim veniam, quis\n" +
+			"nostrud exercitation ullamco\n" +
+			"laboris nisi ut aliquip ex ea\n" +
+			"commodo consequat.\n" +
+			"Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.");
+		assertPos("#1-2", 6, 5);
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */
