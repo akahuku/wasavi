@@ -140,15 +140,15 @@
 		this.prefix = '';
 		this.composition = '';
 		if (e) {
-			this.before = e.target.value;
-			this.position = e.target.selectionStart;
+			this.before = editable.value(e.target);
+			this.position = editable.selectionStart(e.target);
 		}
 	}
 	CompositionResult.prototype.run = function (e) {
 		var t = e.target;
-		t.value = this.before;
-		t.selectionStart = this.position;
-		t.selectionEnd = this.position;
+		var v = editable.value(t);
+		editable.delete(t, this.position, v.length - this.before.length);
+		editable.setSelectionRange(t, this.position);
 		pushCompositionedString(e, this.prefix + this.composition);
 	};
 	// }}}
@@ -195,6 +195,184 @@
 	var cop2 = {
 		before: '',
 		preEvents: []
+	};
+	// }}}
+
+	// {{{1 utils for content editable elements
+	var editable = {
+		isSimpleEdit: function (el) {
+			return 'selectionStart' in el
+				&& 'selectionEnd' in el
+				&& 'value' in el;
+		},
+		isComplexEdit: function (el) {
+			return el.isContentEditable;
+		},
+		getRoot: function (el) {
+			var p;
+			while (el) {
+				if (!el.isContentEditable) {
+					break;
+				}
+				p = el;
+				el = el.parentNode;
+			}
+			return p;
+		},
+		value: function (el, value) {
+			if (arguments.length == 1) {
+				if (this.isSimpleEdit(el)) {
+					return el.value;
+				}
+				else if (this.isComplexEdit(el)) {
+					return this.getRoot(el).textContent;
+				}
+				return undefined;
+			}
+			else {
+				if (this.isSimpleEdit(el)) {
+					el.value = value;
+				}
+				else if (this.isComplexEdit(el)) {
+					this.getRoot(el).textContent = value;
+				}
+			}
+		},
+		insert: function (el, pos, value) {
+			if (this.isSimpleEdit(el)) {
+				el.value = el.value.substring(0, pos) +
+						   value +
+						   el.value.substring(pos);
+			}
+			else if (this.isComplexEdit(el)) {
+				var r = this.setSelectionRange(el, pos);
+				r.insertNode(document.createTextNode(value));
+				el.normalize();
+			}
+		},
+		delete: function (el, pos, length) {
+			if (this.isSimpleEdit(el)) {
+				el.value = el.value.substring(0, pos) +
+						   el.value.substring(pos + length);
+			}
+			else if (this.isComplexEdit(el)) {
+				var r = this.setSelectionRange(el, pos, pos + length);
+				r.deleteContents();
+				el.normalize();
+			}
+		},
+		selectionStart: function (el) {
+			if (this.isSimpleEdit(el)) {
+				return el.selectionStart;
+			}
+			else if (this.isComplexEdit(el)) {
+				var caretRange = window.getSelection().getRangeAt(0);
+				var r = document.createRange();
+
+				r.setStartBefore(el.firstChild);
+				r.setEnd(caretRange.startContainer, caretRange.startOffset);
+				return r.toString().length;
+			}
+			return undefined;
+		},
+		selectionEnd: function (el) {
+			if (this.isSimpleEdit(el)) {
+				return el.selectionEnd;
+			}
+			else if (this.isComplexEdit(el)) {
+				var caretRange = window.getSelection().getRangeAt(0);
+				var r = document.createRange();
+
+				r.setStartBefore(el.firstChild);
+				r.setEnd(caretRange.endContainer, caretRange.endOffset);
+				return r.toString().length;
+			}
+			return undefined;
+		},
+		setSelectionRange: function (el, start, end) {
+			if (arguments.length == 2) {
+				return this.doSetSelectionPos(el, start);
+			}
+			else if (arguments.length > 2) {
+				return this.doSetSelectionRange(el, start, end);
+			}
+		},
+		doSetSelectionPos: function (el, value) {
+			if (this.isSimpleEdit(el)) {
+				el.selectionStart = value;
+				el.selectionEnd = value;
+			}
+			else if (this.isComplexEdit(el)) {
+				el = this.getRoot(el);
+
+				var iter = document.createNodeIterator(
+					el, window.NodeFilter.SHOW_TEXT, null, false);
+				var r = document.createRange();
+				var total = 0;
+				var node, nodep;
+				while ((node = iter.nextNode())) {
+					var next = total + node.nodeValue.length;
+					if (total <= value && value < next) {
+						r.setStart(node, value - total);
+						r.setEnd(node, value - total);
+						break;
+					}
+					nodep = node;
+					total = next;
+				}
+
+				if (!node && nodep && value >= total) {
+					r.setStartAfter(nodep);
+					r.setEndAfter(nodep);
+				}
+
+				var s = window.getSelection();
+				s.removeAllRanges();
+				s.addRange(r);
+				return r;
+			}
+		},
+		doSetSelectionRange: function (el, start, end) {
+			if (this.isSimpleEdit(el)) {
+				el.selectionStart = start;
+				el.selectionEnd = end;
+			}
+			else if (this.isComplexEdit(el)) {
+				el = this.getRoot(el);
+
+				var iter = document.createNodeIterator(
+					el, window.NodeFilter.SHOW_TEXT, null, false);
+				var r = document.createRange();
+				var total = 0;
+				var node, nodep;
+				while ((node = iter.nextNode())) {
+					var next = total + node.nodeValue.length;
+					if (total <= start && start < next) {
+						r.setStart(node, start - total);
+					}
+					if (total <= end && end < next) {
+						r.setEnd(node, end - total);
+					}
+					nodep = node;
+					total = next;
+				}
+
+				if (nodep) {
+					if (start >= total) {
+						r.setStartAfter(nodep);
+					}
+
+					if (end >= total) {
+						r.setEndAfter(nodep);
+					}
+				}
+
+				var s = window.getSelection();
+				s.removeAllRanges();
+				s.addRange(r);
+				return r;
+			}
+		}
 	};
 	// }}}
 
@@ -337,12 +515,10 @@
 
 	function isEditable (e) {
 		var t = e.target || e.nativeEvent && e.nativeEvent.target;
-		if (!t) return false;
-		if (!('selectionStart' in t
-			&& 'selectionEnd' in t
-			&& 'value' in t)) return false;
-
-		return true;
+		if (t) {
+			return editable.isSimpleEdit(t) || editable.isComplexEdit(t);
+		}
+		return false;
 	}
 
 	function isPasteKeyStroke (code, e) {
@@ -358,14 +534,22 @@
 		var t = e.nativeEvent.target;
 		if (t.readOnly) return;
 
-		var v = t.value;
-		var p = t.selectionStart;
+		var v = editable.value(t);
+		var ss = editable.selectionStart(t);
+		var se = editable.selectionEnd(t);
 
-		t.value = v.substring(0, t.selectionStart) +
-				  String.fromCharCode(e.code) +
-				  v.substring(t.selectionEnd);
-		t.selectionStart = p + 1;
-		t.selectionEnd = p + 1;
+		if (ss > se) {
+			var tmp = ss;
+			ss = se;
+			se = tmp;
+		}
+
+		if (ss != se) {
+			editable.delete(t, ss, se - ss);
+		}
+
+		editable.insert(t, ss, String.fromCharCode(e.code));
+		editable.setSelectionRange(t, ss + 1);
 	}
 
 	function removeCompositionCanceledChar (e) {
@@ -377,20 +561,22 @@
 		var t = e.nativeEvent.target;
 		if (t.readOnly) return;
 
-		var v = t.value;
+		var v = editable.value(t);
 		var p = e.position;
-		var ss = t.selectionStart;
-		var se = t.selectionEnd;
+		var ss = editable.selectionStart(t);
+		var se = editable.selectionEnd(t);
 
 		if (p >= 0 && p < v.length) {
-			t.value = v.substring(0, p) + v.substring(p + 1);
+			setElementValue(v.substring(0, p) + v.substring(p + 1));
 		}
 		if (ss > p && ss > 0) {
-			t.selectionStart = ss - 1;
+			ss = ss - 1;
 		}
 		if (se > p && se > 0) {
-			t.selectionEnd = se - 1;
+			se = se - 1;
 		}
+
+		setSelectionRange(t, ss, se);
 
 		for (var i = 0; i < dequeue.length; i++) {
 			var next = dequeue[i];
@@ -488,13 +674,14 @@
 		consumed = false;
 		var etype = '[ keydown]';
 
-		if (window.opera && e.keyCode == 229) {
+		if (window.opera && e.keyCode == 229 && editable.isSimpleEdit(e.target)) {
 			var value;
 			if (!isInComposition) {
-				if (!e.repeat && e.target.selectionStart > 0) {
-					var t = e.target;
-					value = t.value.substring(0, t.selectionStart - 1) +
-							t.value.substring(t.selectionStart);
+				var ss = editable.selectionStart(e.target);
+				if (!e.repeat && ss > 0) {
+					value = editable.value(e.target);
+					value = value.substring(0, ss - 1) +
+							value.substring(ss);
 				}
 				else {
 					value = '';
@@ -702,8 +889,8 @@
 
 		var etype = '[   keyup]';
 
-		if (cop2.preEvents.length) {
-			var current = e.target.value;
+		if (cop2.preEvents.length && editable.isSimpleEdit(e.target)) {
+			var current = editable.value(e.target);
 			var item = cop2.preEvents.shift();
 			var incPos = getIncreasePosition(cop2.before, current);
 			var composition = current.substr(
@@ -715,6 +902,7 @@
 
 			enableLog && logs.composition && logit([
 				etype,
+				'          keyCode: ' + e.keyCode,
 				'           before: "' + cop2.before + '"',
 				'          current: "' + current + '"',
 				'      composition: "' + composition + '"',
@@ -771,7 +959,8 @@
 				// canceling
 				// composition extinction
 				else if (item.inputEventCount == 2
-				|| e.keyCode == 27 && cop2.inputEventCount == 0
+				|| e.keyCode == 13
+				|| e.keyCode == 27
 				|| cop2.before == current) {
 					e.data = composition;
 					compositionend(e);
@@ -821,12 +1010,12 @@
 		var etype = '[   input]';
 
 		enableLog && logs.input && logit(
-			etype, ' value:"', e.target.value, '"'
+			etype, ' value:"', editable.value(e.target), '"'
 		);
 
 		switch (lastReceivedEvent) {
 		case 'keydown':
-			var current = e.target.value;
+			var current = editable.value(e.target);
 			var pos = getIncreasePosition(lastValue, current);
 			if (pos >= 0) {
 				var s = current.substr(pos, current.length - lastValue.length);
@@ -849,7 +1038,7 @@
 			break;
 		}
 
-		lastValue = e.target.value;
+		lastValue = editable.value(e.target);
 		lastReceivedEvent = e.type;
 	}
 
@@ -857,7 +1046,7 @@
 		var etype = '[   input]';
 
 		enableLog && logs.input && logit(
-			etype, ' value:"', e.target.value + '"'
+			etype, ' value:"', editable.value(e.target), '"'
 		);
 
 		if (cop2.preEvents.length) {
@@ -872,7 +1061,7 @@
 		var etype = '[   input]';
 
 		enableLog && logs.input && logit(
-			etype, ' value:"', e.target.value, '"'
+			etype, ' value:"', editable.value(e.target), '"'
 		);
 
 		if (lastReceivedEvent == 'compositionend') {
