@@ -500,13 +500,13 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 
 	function getCommandCursorCoord () {
 		var r = buffer.charRectAt(buffer.selectionStart);
-		var result3 = {
+		var result = {
 			left:r.left + buffer.scrollLeft,
 			top:r.top + buffer.scrollTop,
 			right:(r.right == r.left ? r.left + app.charWidth : r.right) + buffer.scrollLeft,
 			bottom:(r.bottom == r.top ? r.top + app.lineHeight : r.bottom) + buffer.scrollTop
 		};
-		return result3;
+		return result;
 	}
 	function ensureVisible (smooth) {
 		if (!buffer.selected) {

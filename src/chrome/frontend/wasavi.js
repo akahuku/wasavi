@@ -2878,8 +2878,7 @@ function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 	}
 
 	prefixInput.trailer = c;
-	var e = keyManager.objectFromCode(27);
-	processInput(e);
+	processInput(keyManager.objectFromCode(27));
 	isEditCompleted = true;
 
 	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
@@ -3489,8 +3488,6 @@ function motionUpDown (c, count, isDown) {
 		n.row = Math.max(n.row - count, 0);
 	}
 
-	var textspan = $('wasavi_singleline_scaler');
-	var text = textspan.firstChild;
 	var widthp = 0;
 	var line = buffer.rows(n);
 	var goal = line.length;
@@ -3498,6 +3495,9 @@ function motionUpDown (c, count, isDown) {
 	var delta = 1;
 	var adjusting = false;
 
+	var textspan = $('wasavi_singleline_scaler');
+	var text = textspan.firstChild
+		|| textspan.appendChild(document.createTextNode(''));
 	text.nodeValue = '';
 
 	while (index < goal && !buffer.isNewline(n.row, index)) {
@@ -3526,7 +3526,7 @@ function motionUpDown (c, count, isDown) {
 		if (!adjusting) delta <<= 1;
 	}
 
-	n.col = Math.min(index, goal);
+	n.col = Math.max(0, Math.min(index, goal));
 	if (isDown) {
 		buffer.selectionEnd = n;
 	}
@@ -7064,6 +7064,7 @@ var boundMap = {
 					buffer.setSelectionRange(reformat(
 						prefixInput.isCountSpecified ? prefixInput.count : 0));
 				});
+				break;
 			case 'v':
 				var m1 = marks.get('<');
 				var m2 = marks.get('>');
@@ -7906,6 +7907,12 @@ if (global.WasaviExtensionWrapper
 				 * Thus we leave innerHTML.
 				 */
 				if (!/^chrome-extension:/.test(window.location.protocol)) {
+					// force doctype to standard mode
+					var doctype = document.implementation.createDocumentType('html', '', '');
+					document.doctype ?
+						document.doctype.parentNode.replaceChild(doctype, document.doctype) :
+						document.insertBefore(doctype, document.childNodes[0]);
+
 					document.head.innerHTML = req.headHTML;
 					document.body.innerHTML = req.bodyHTML;
 				}
