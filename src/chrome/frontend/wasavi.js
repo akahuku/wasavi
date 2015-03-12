@@ -1039,7 +1039,6 @@ margin:0; \
 overflow-x:hidden; \
 overflow-y:scroll; \
 counter-reset:n; \
-word-break:break-all \
 } \
 #wasavi_textwidth_guide { \
 display:none; \
@@ -1090,6 +1089,9 @@ white-space:pre-wrap; \
 #wasavi_editor > div:nth-child(odd) { \
 } \
 #wasavi_editor > div.current { \
+} \
+#wasavi_editor > div:focus { \
+outline:none; \
 } \
 #wasavi_editor > div span.wasavi_em { \
 } \
@@ -1271,7 +1273,6 @@ text-shadow:none; \
 overflow-y:hidden; \
 resize:none; \
 outline:none; \
-word-break:break-all \
 } \
 #wasavi_cover { \
 position:fixed; \
@@ -3507,6 +3508,7 @@ function motionUpDown (c, count, isDown) {
 		}
 
 		text.appendData(line.substr(index, delta));
+		index += delta;
 		var width = textspan.offsetWidth;
 		if (width >= goalWidth) {
 			if (adjusting) {
@@ -3515,6 +3517,7 @@ function motionUpDown (c, count, isDown) {
 			}
 			else {
 				adjusting = true;
+				index -= delta;
 				text.deleteData(index, text.nodeValue.length - index);
 				delta = 1;
 				continue;
@@ -3522,7 +3525,6 @@ function motionUpDown (c, count, isDown) {
 		}
 
 		widthp = width;
-		index += delta;
 		if (!adjusting) delta <<= 1;
 	}
 
@@ -4489,7 +4491,7 @@ function quickReplace (c, count, allowMultiLine) {
 
 // window
 function handleWindowFocus (e) {
-	handleCoverClick(e);
+	//handleCoverClick(e);
 }
 function handleWindowBlur (e) {
 	if (quickActivation) {
@@ -5344,7 +5346,6 @@ var modeHandlers = {
 			}
 			if (e.isCompositionedFirst && !e.isCompositionedLast) {
 				compositionLevel++;
-				cursor.editCursor.style.display = 'none';
 			}
 			else if (!e.isCompositionedFirst && e.isCompositionedLast) {
 				compositionLevel > 0 && compositionLevel--;
@@ -7620,6 +7621,23 @@ var editMap = {
 		scrollView(c, function (v) {
 			return Math.max(parseInt(v.lines - 2), 1);
 		});
+	},
+
+	// experimental: this special key is sent when a composition via IME
+	// is completed on presto opera.
+	'<presto_contenteditable_changed>':function (c, o) {
+		var n = buffer.selectionStart;
+		var from = n.col;
+		var to = keyManager.editable.selectionStart(buffer.rowNodes(n));
+		if (to > from) {
+			var s = buffer.rows(n).substring(from, to);
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+			inputHandler.updateText(s);
+			inputHandler.updateStroke(s);
+			n.col = to;
+			buffer.setSelectionRange(n);
+		}
 	}
 };
 

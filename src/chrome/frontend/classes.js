@@ -2012,9 +2012,6 @@ Wasavi.Editor.prototype = new function () {
 		},
 
 		// method
-		focus: function () {
-			return $('wasavi_focus_holder').focus();
-		},
 		adjustBackgroundImage: function (lineHeight) {
 			var y = lineHeight;
 			if (this.elm.childNodes.length) {

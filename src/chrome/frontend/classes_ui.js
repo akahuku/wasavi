@@ -299,15 +299,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			cursorBlinkTimer && clearInterval(cursorBlinkTimer);
 			cursorBlinkTimer = null;
 		}
-		this.reset = function () {
-			cursorBlinkTimer = undefined;
-		};
-		this.hide = function () {
-			stopBlink();
-			buffer.unEmphasis(CURSOR_SPAN_CLASS);
-			comCursor.style.display = 'none';
-		};
-		this.show = function () {
+		function locate () {
 			var ch = buffer.charAt(buffer.selectionStart);
 			if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
 				comCursor.style.display = 'none';
@@ -334,12 +326,23 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.adjustWrapGuide(app.config.vars.textwidth, app.charWidth);
 			buffer.updateActiveRow();
+		}
 
+		this.reset = function () {
+			cursorBlinkTimer = undefined;
+		};
+		this.hide = function () {
+			stopBlink();
+			buffer.unEmphasis(CURSOR_SPAN_CLASS);
+			comCursor.style.display = 'none';
+		};
+		this.show = function () {
+			locate();
 			comFocusHolder.focus();
 			startBlink();
 		};
 		this.lostFocus = function () {
-			this.show();
+			locate();
 			stopBlink();
 			var span = getCursorSpan();
 			if (span) {
@@ -360,127 +363,28 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	}
 
 	/*constructor*/function EditWrapper () {
-		var compositionStartPos;
-		var leadingHeadPos;
-		var currentNode;
-		var currentCursorRect;
-
-		function relocateTextarea () {
-			var c = app.low.getContainerRect();
-			var r = buffer.rowNodes(buffer.selectionStart).getBoundingClientRect();
-			var x = buffer.charRectAt(leadingHeadPos);
-			var x0 = buffer.charRectAt(buffer.selectionStartRow, 0);
-
-			var p = {
-				display: 'block',
-				left: Math.floor(x.left - c.left) + 'px',
-				top: Math.floor(x.top - c.top - (x0.top - r.top)) + 'px',
-				width: Math.floor(r.right - r.left) + 'px',
-				height: Math.floor(docClientHeight() - x.top - 1) + 'px'
-			};
-
-			for (var i in p) {
-				if (editCursor.style[i] != p[i]) {
-					editCursor.style[i] = p[i];
-				}
-			}
-		}
-
-		function relocateLeadingSpan () {
-			removeLeadingSpan();
-
+		this.hide = function () {
+			window.getSelection().removeAllRanges();
 			var n = buffer.selectionStart;
 			var node = buffer.rowNodes(n);
-			var cursorRect = buffer.charRectAt(n);
-
-			if (leadingHeadPos === undefined
-			|| currentNode != node
-			|| !currentCursorRect
-			|| currentCursorRect.top != cursorRect.top) {
-				leadingHeadPos = buffer.getLineTopDenotativeOffset(n);
-				currentNode = node;
-				currentCursorRect = cursorRect;
-			}
-
-			var span = buffer.emphasis(
-				leadingHeadPos,
-				n.col - leadingHeadPos.col, LEADING_CLASS)[0];
-
-			return span;
-		}
-
-		function ensureCompositionSpan () {
-			var span = buffer.getSpans(COMPOSITION_CLASS)[0];
-
-			if (!span) {
-				compositionStartPos = buffer.selectionStart;
-				span = buffer.emphasis(
-					compositionStartPos, 0, COMPOSITION_CLASS)[0];
-			}
-
-			return span;
-		}
-
-		function removeLeadingSpan () {
-			buffer.unEmphasis(LEADING_CLASS);
-		}
-
-		function removeCompositionSpan () {
-			var span = buffer.getSpans(COMPOSITION_CLASS)[0];
-			span && removeChild(span);
-		}
-
-		this.reset = function () {
-			compositionStartPos =
-			leadingHeadPos =
-			currentNode =
-			currentCursorRect = undefined;
-			editCursor.value = '';
-		};
-		this.compositionUpdate = function (data) {
-			var span = ensureCompositionSpan();
-			if (!span) return;
-
-			span.textContent = data;
-
-			buffer.setSelectionRange(
-				buffer.offsetBy(compositionStartPos, span.textContent.length));
-			ensureVisible(false);
-			relocateTextarea();
-		};
-		this.compositionComplete = function (data) {
-			var span = ensureCompositionSpan();
-			if (!span) return;
-
-			removeCompositionSpan();
-			buffer.setSelectionRange(compositionStartPos);
-		};
-		this.hide = function () {
-			editCursor.style.display = 'none';
-			removeLeadingSpan();
-			removeCompositionSpan();
-			leadingHeadPos = currentNode = currentCursorRect = undefined;
+			node.removeAttribute('contenteditable');
+			node.blur();
 		};
 		this.show = function () {
-			var leadingSpan = relocateLeadingSpan();
-
-			relocateTextarea();
-
 			buffer.adjustBackgroundImage(app.lineHeight);
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.updateActiveRow();
 
-			if (!app.keyManager.isInComposition) {
-				editCursor.value = leadingSpan.textContent;
-				editCursor.selectionStart = editCursor.value.length;
-				editCursor.selectionEnd = editCursor.value.length;
-			}
-
-			editCursor.focus();
+			var n = buffer.selectionStart;
+			var node = buffer.rowNodes(n);
+			node.contentEditable = 'true';
+			node.focus();
+			app.keyManager.editable.setSelectionRange(node, n.col);
 		};
-		this.windup = function () {
-			removeLeadingSpan();
-		};
+		this.reset =
+		this.compositionUpdate =
+		this.compositionComplete =
+		this.windup =
 		this.lostFocus =
 		this.dispose = function () {};
 	}

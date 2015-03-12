@@ -46,7 +46,9 @@
 		112: 'f1', 113:  'f2', 114:  'f3', 115:  'f4',
 		116: 'f5', 117:  'f6', 118:  'f7', 119:  'f8',
 		120: 'f9', 121: 'f10', 122: 'f11', 123: 'f12',
-		145: 'scrolllock'
+		145: 'scrolllock',
+
+		8192: 'presto_contenteditable_changed'
 	};
 	var PRESTO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
 	var GECKO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
@@ -199,7 +201,7 @@
 	// }}}
 
 	// {{{1 utils for content editable elements
-	var editable = {
+	var editable = Object.freeze({
 		isSimpleEdit: function (el) {
 			return 'selectionStart' in el
 				&& 'selectionEnd' in el
@@ -373,7 +375,7 @@
 				return r;
 			}
 		}
-	};
+	});
 	// }}}
 
 	// {{{1 privates
@@ -674,7 +676,7 @@
 		consumed = false;
 		var etype = '[ keydown]';
 
-		if (window.opera && e.keyCode == 229 && editable.isSimpleEdit(e.target)) {
+		if (window.opera && e.keyCode == 229) {
 			var value;
 			if (!isInComposition) {
 				var ss = editable.selectionStart(e.target);
@@ -991,6 +993,19 @@
 
 				e.data = composition;
 				compositionupdate(e);
+			}
+		}
+
+		else if (cop2.preEvents.length && editable.isComplexEdit(e.target)) {
+			if (e.keyCode == 13) {
+				cop2.preEvents.length = 0;
+				dequeue.push(new VirtualInputEvent(
+					null,
+					-8192, PRESTO_FUNCTION_KEYCODES['8192'], PRESTO_FUNCTION_KEYCODES['8192'],
+					false, false, false,
+					true
+				));
+				sweep();
 			}
 		}
 
@@ -1500,6 +1515,8 @@
 		insertFnKeyHeader: {value:insertFnKeyHeader},
 		parseKeyDesc: {value:parseKeyDesc},
 		isInputEvent: {value:isInputEvent},
+
+		editable: {value:editable},
 
 		createSequences: {value:createSequences},
 		setDequeue: {value:setDequeue},
