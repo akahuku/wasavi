@@ -4491,7 +4491,7 @@ function quickReplace (c, count, allowMultiLine) {
 
 // window
 function handleWindowFocus (e) {
-	//handleCoverClick(e);
+	cursor.update({focused:true});
 }
 function handleWindowBlur (e) {
 	if (quickActivation) {
