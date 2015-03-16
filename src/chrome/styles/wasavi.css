@@ -19,10 +19,6 @@
  */
 
 #wasavi_container {
-	position:fixed;
-	display:flex;
-	left:0; top:0; right:0; bottom:0;
-	flex-direction:column;
 }
 
 #wasavi_textwidth_guide {
@@ -57,6 +53,8 @@
  */
 
 #wasavi_editor {
+	position:fixed;
+	left:0; top:0; right:0; bottom:0;
 	margin:0;
 	padding:0;
 	border:none;
@@ -64,7 +62,6 @@
 	overflow-x:hidden;
 	overflow-y:scroll;
 	counter-reset:n;
-	flex-grow:1;
 
 	background-color:#888;
 }
@@ -122,14 +119,16 @@
  */
 
 #wasavi_footer {
-	background-color:#ccc;
 }
 
 #wasavi_footer_status_container {
+	position:fixed;
 	display:flex;
-	align-items:center;
+	left:0; right:0; bottom:0;
 	padding:2px;
 	box-sizing:border-box;
+	align-items:stretch;
+	flex-direction:row;
 	line-height:1;
 	font-size:10pt;
 	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
@@ -151,13 +150,16 @@
 }
 
 #wasavi_footer_input_container {
+	position:fixed;
 	display:flex;
-	flex-direction:row;
+	left:0; right:0; bottom:0;
 	padding:2px;
 	box-sizing:border-box;
+	align-items:stretch;
+	flex-direction:row;
 	line-height:1;
 	font-size:10pt;
-	font-family:monospace;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
 }
 
 #wasavi_footer_input_indicator {
@@ -319,3 +321,4 @@
 	ime-mode:disabled;
 }
 
+/* vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=css fdm=marker : */

@@ -211,7 +211,8 @@ Wasavi.Theme = function (app) {
 
 		var statuslineBackground = getStatuslineBackground(colors.statusHue);
 		styles.push(
-			'#wasavi_footer{',
+			'#wasavi_footer_status_container,' +
+			'#wasavi_footer_input_container{',
 			'background:' + statuslineBackground,
 			'}');
 

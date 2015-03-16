@@ -1341,6 +1341,7 @@ function setGeometory (target) {
 		);
 	}
 
+	editor.style.bottom = statusLineHeight + 'px';
 	conCon.style.bottom = (statusLineHeight + 8) + 'px';
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
