@@ -259,6 +259,6 @@ Vim features in wasavi
   state of textwidth > 0
 * bound mode (aka, Vim visual mode)
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`,
-  `relativenumber`, `textwidth`, `expandtab`
+  `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`
 * writing to the register of A to Z
 * `gu` / `gU` + motion: lowerize or upperize a region

@@ -257,7 +257,6 @@ Vim 互換の機能
 * レジスタ `"`、`:`、`*`、`/`（特に `*` はクリップボードとのアクセスを行うので重要です）
 * textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ（gq コマンド）
 * 範囲選択モード（Vim でいうところのビジュアルモード）
-* オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、
-  `relativenumber`、`textwidth`、 `expandtab`
+* オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、`relativenumber`、`textwidth`、 `expandtab`、`cursorline`、`cursorcolumn`
 * A から Z レジスタへの書き込み
 * `gu` / `gU` + モーションは領域を小文字化または大文字化します

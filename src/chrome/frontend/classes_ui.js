@@ -243,7 +243,7 @@ Wasavi.Bell = function (app) {
 	publish(this, play);
 };
 
-Wasavi.CursorUI = function (app, comCursor, input, comFocusHolder) {
+Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comFocusHolder, input) {
 	var buffer = app.buffer;
 	var cursorType = 'command';
 	var locked = false;
@@ -251,8 +251,6 @@ Wasavi.CursorUI = function (app, comCursor, input, comFocusHolder) {
 	var visible = false;
 	var wrapper = null;
 	var wrappers = {};
-	var fixed = document.defaultView.getComputedStyle($(CONTAINER_ID), '')
-		.position == 'fixed';
 
 	/*constructor*/function CommandWrapper () {
 		var cursorBlinkTimer;
@@ -294,28 +292,53 @@ Wasavi.CursorUI = function (app, comCursor, input, comFocusHolder) {
 		}
 		function locate () {
 			var ch = buffer.charAt(buffer.selectionStart);
+			var cursorLine = 0;
+			var cursorColumn = 0;
 			if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
 				comCursor.style.display = 'none';
 				var span = getCursorSpan() || buffer.emphasis(undefined, 1, CURSOR_SPAN_CLASS)[0];
 				span.style.color = app.theme.colors.invertFg;
 				span.style.backgroundColor = app.theme.colors.invertBg;
 				span.setAttribute('data-blink-active', '1');
+
+				var coord = span.getBoundingClientRect();
+				cursorLine = coord.bottom;
+				cursorColumn = coord.left;
 			}
 			else {
 				buffer.unEmphasis(CURSOR_SPAN_CLASS);
 				comCursor.style.display = 'block';
 				comCursor.style.visibility = 'visible';
 				comCursor.childNodes[0].textContent = ' ';
+
 				var coord = getCommandCursorCoord();
-				coord.left -= fixed ? docScrollLeft() : 0;
-				coord.top -= fixed ? docScrollTop() : 0;
 				comCursor.style.left = (coord.left - buffer.elm.scrollLeft) + 'px';
 				comCursor.style.top = (coord.top - buffer.elm.scrollTop) + 'px';
 				comCursor.style.height = app.lineHeight + 'px';
 				comCursor.style.color = app.theme.colors.invertFg;
 				comCursor.style.backgroundColor = app.theme.colors.invertBg;
+
+				cursorLine = coord.bottom - buffer.elm.scrollTop;
+				cursorColumn = coord.left - buffer.elm.scrollLeft;
 			}
-			buffer.adjustBackgroundImage(app.lineHeight);
+
+			if (app.config.vars.cursorline && app.inputMode == 'command') {
+				comCursorLine.style.display = '';
+				comCursorLine.style.top = cursorLine + 'px';
+			}
+			else {
+				comCursorLine.style.display = 'none';
+			}
+
+			if (app.config.vars.cursorcolumn && app.inputMode == 'command') {
+				comCursorColumn.style.display = '';
+				comCursorColumn.style.left = cursorColumn + 'px';
+			}
+			else {
+				comCursorColumn.style.display = 'none';
+			}
+
+			buffer.adjustBackgroundImage();
 			buffer.adjustLineNumber(app.config.vars.relativenumber);
 			buffer.adjustWrapGuide(app.config.vars.textwidth, app.charWidth);
 			buffer.updateActiveRow();
@@ -327,7 +350,9 @@ Wasavi.CursorUI = function (app, comCursor, input, comFocusHolder) {
 		this.hide = function () {
 			stopBlink();
 			buffer.unEmphasis(CURSOR_SPAN_CLASS);
-			comCursor.style.display = 'none';
+			comCursor.style.display =
+			comCursorLine.style.display =
+			comCursorColumn.style.display = 'none';
 		};
 		this.show = function () {
 			locate();

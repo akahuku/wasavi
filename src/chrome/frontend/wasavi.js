@@ -1162,7 +1162,9 @@ function install (x, req) {
 		testMode || !('marks' in x) ? null : x.marks);
 
 	inputHandler = new Wasavi.InputHandler(appProxy);
-	cursor = new Wasavi.CursorUI(appProxy, cc, footerInput, focusHolder);
+	cursor = new Wasavi.CursorUI(appProxy,
+		cc, $('wasavi_cursor_line'), $('wasavi_cursor_column'),
+		focusHolder, footerInput);
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerStatusLine);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
 	exvm = new ExCommandExecutor(appProxy);
@@ -1333,9 +1335,11 @@ function setGeometory (target) {
 	var con = $('wasavi_console');
 	var conScaler = $('wasavi_console_scaler');
 	var fNotifier = $('wasavi_footer_notifier');
+	var curLine = $('wasavi_cursor_line');
+	var curCol = $('wasavi_cursor_column');
 
 	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !fNotifier) {
+	||  !fNotifier || !curLine || !curCol) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
@@ -1347,6 +1351,8 @@ function setGeometory (target) {
 	editor.style.bottom = statusLineHeight + 'px';
 	conCon.style.bottom = (statusLineHeight + 8) + 'px';
 	fNotifier.style.bottom = (statusLineHeight + 8) + 'px';
+	curLine.style.right = (editor.offsetWidth - editor.clientWidth) + 'px';
+	curCol.style.bottom = statusLineHeight + 'px';
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
 	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
@@ -4702,6 +4708,8 @@ var config = new Wasavi.Configurator(appProxy,
 		}],
 		['textwidth', 'i', 0],
 		['modified', 'b', false, null, true],
+		['cursorline', 'b', false],
+		['cursorcolumn', 'b', false],
 
 		/* defined by nvi */
 		//['altwerase', 'b', false],
@@ -4785,7 +4793,8 @@ var config = new Wasavi.Configurator(appProxy,
 		scs:'smartcase',		tw:'textwidth',		ul:'undolevels',
 		qe:'quoteescape',		rnu:'relativenumber',
 
-		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab'
+		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab',
+		cul:'cursorline',		cuc:'cursorcolumn'
 	}
 );
 // }}}

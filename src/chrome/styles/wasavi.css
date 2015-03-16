@@ -33,6 +33,22 @@
 	color:silver;
 }
 
+#wasavi_cursor_line {
+	position:fixed;
+	left:0;
+	right:0;
+	height:32px;
+	border-top:1px solid silver;
+}
+
+#wasavi_cursor_column {
+	position:fixed;
+	top:0;
+	bottom:0;
+	width:32px;
+	border-left:1px solid silver;
+}
+
 #wasavi_singleline_scaler {
 	position:fixed;
 	margin:0;
@@ -68,6 +84,7 @@
 	margin:0;
 	padding:0;
 	min-height:/*<LINE_HEIGHT>*/1px/*</LINE_HEIGHT>*/;
+	line-height:1.1;
 	white-space:pre-wrap;
 }
 

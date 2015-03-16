@@ -2012,7 +2012,7 @@ Wasavi.Editor.prototype = new function () {
 		},
 
 		// method
-		adjustBackgroundImage: function (lineHeight) {
+		adjustBackgroundImage: function () {
 			var y = 0;
 			if (this.elm.childNodes.length) {
 				var last = this.elm.childNodes[this.elm.childNodes.length - 1];
