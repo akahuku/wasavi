@@ -63,8 +63,7 @@
 		get externalUrl () {return externalFrameURL},
 		get externalSecureUrl () {return externalSecureFrameURL},
 		get isInternal () {
-			return this.eq(window.location.href, this.internalUrl)
-				|| /^data:text\/html;charset=UTF-8;base64,/.test(window.location.href);
+			return this.eq(window.location.href, this.internalUrl);
 		},
 		get isExternal () {
 			return this.eq(window.location.href, this.externalUrl)
@@ -297,7 +296,7 @@
 			var extensionId = chrome.runtime.id;
 			return new UrlInfo(
 				'chrome-extension://' + extensionId + '/options.html',
-				'chrome-extension://' + extensionId + '/wasavi_frame.html'
+				'chrome-extension://' + extensionId + '/wasavi.html'
 			);
 		};
 	}

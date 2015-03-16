@@ -63,13 +63,13 @@ var quickActivation;
 var devMode;
 var logMode;
 var canLaunch;
+var statusLineHeight;
 
 var targetElement;
 var wasaviFrame;
 var wasaviFrameInternalId;
 var widthOwn;
 var heightOwn;
-var extraHeight;
 var isFullscreen;
 var isSyncSize;
 var removeListener;
@@ -134,7 +134,6 @@ function locate (iframe, target, opts) {
 
 	opts || (opts = {});
 	var isFullscreen = !!opts.isFullscreen;
-	var extraHeight = opts.extraHeight || 0;
 
 	if (isFullscreen) {
 		var div = document.body.appendChild(document.createElement('div'));
@@ -159,14 +158,13 @@ function locate (iframe, target, opts) {
 			left:   rect.left,
 			top:    rect.top,
 			width:  Math.max(MIN_WIDTH_PIXELS, rect.width),
-			height: Math.max(MIN_HEIGHT_PIXELS, rect.height)
+			height: Math.max(MIN_HEIGHT_PIXELS, rect.height + statusLineHeight)
 		};
 		rect.right = rect.left + rect.width;
 		rect.bottom = rect.top + rect.height;
 
 		var position = 'fixed';
 		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
-		var heightAdjusted = Math.max(MIN_HEIGHT_PIXELS, (opts.height || rect.height) + extraHeight);
 
 		if (!isFixedPosition(target)) {
 			position = 'absolute';
@@ -198,12 +196,12 @@ function locate (iframe, target, opts) {
 		}
 
 		if (result.width > crect.width) result.width = crect.width;
-		if (heightAdjusted > crect.height) heightAdjusted = crect.height;
+		if (result.height > crect.height) result.height = crect.height;
 
 		if (result.left < crect.left) result.left = crect.left;
 		if (result.top  < crect.top ) result.top  = crect.top;
 		if (result.left + result.width > crect.right) result.left = crect.right - result.width;
-		if (result.top + heightAdjusted > crect.bottom) result.top = crect.bottom - heightAdjusted;
+		if (result.top + result.height > crect.bottom) result.top = crect.bottom - result.height;
 		cover.parentNode.removeChild(cover);
 
 		assign(
@@ -211,7 +209,7 @@ function locate (iframe, target, opts) {
 			'left', result.left + 'px',
 			'top', result.top + 'px',
 			'width', result.width + 'px',
-			'height', heightAdjusted + 'px');
+			'height', result.height + 'px');
 
 		return result;
 	}
@@ -317,7 +315,6 @@ function runCore (element, frameSource, value) {
 
 	//
 	widthOwn = heightOwn = null;
-	extraHeight = 0;
 	isFullscreen = false;
 	isSyncSize = true;
 	removeListener = createElementRemoveListener(wasaviFrame, handleWasaviFrameRemove);
@@ -373,7 +370,6 @@ function cleanup (value, isImplicit) {
 		resizeListener = resizeListener.disconnect();
 	}
 	window.removeEventListener('beforeunload', handleBeforeUnload, false);
-	extraHeight = 0;
 	isFullscreen = isSyncSize = null;
 	getValueCallback = null;
 }
@@ -839,7 +835,6 @@ function handleTargetResize (e) {
 	if (!wasaviFrame || !targetElement) return;
 	locate(wasaviFrame, targetElement, {
 		isFullscreen: isFullscreen,
-		extraHeight: extraHeight,
 		width: widthOwn,
 		height: heightOwn
 	});
@@ -932,11 +927,7 @@ function handleBackendMessage (req) {
 	 */
 	case 'initialized':
 		if (!wasaviFrame) break;
-		var currentHeight = wasaviFrame.offsetHeight;
-		var newHeight = req.height || targetElement.offsetHeight;
 		wasaviFrameInternalId = req.childInternalId;
-		extraHeight = newHeight - currentHeight;
-		wasaviFrame.style.height = newHeight + 'px';
 		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		wasaviFrame.setAttribute('data-wasavi-state', 'running');
 		resizeListener = createElementResizeListener(targetElement, handleTargetResize);
@@ -952,10 +943,6 @@ function handleBackendMessage (req) {
 
 	case 'ready':
 		if (!wasaviFrame) break;
-		locate(wasaviFrame, targetElement, {
-			isFullscreen: isFullscreen,
-			extraHeight: extraHeight
-		});
 		wasaviFrame.style.visibility = 'visible';
 		document.activeElement != wasaviFrame && focusToFrame(req);
 		info('wasavi started');
@@ -972,8 +959,7 @@ function handleBackendMessage (req) {
 		case 'normal':
 			isFullscreen = req.state == 'maximized';
 			locate(wasaviFrame, targetElement, {
-				isFullscreen: isFullscreen,
-				extraHeight: extraHeight
+				isFullscreen: isFullscreen
 			});
 			break;
 		}
@@ -1251,6 +1237,7 @@ function handleConnect (req) {
 	devMode = req.devMode;
 	logMode = req.logMode;
 	canLaunch = !isInBlacklist(req.qaBlacklist);
+	statusLineHeight = req.statusLineHeight;
 
 	extension.ensureRun(handleAgentInitialized, req);
 }

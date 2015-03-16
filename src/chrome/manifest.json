@@ -63,7 +63,7 @@
     }
   ],
   "web_accessible_resources": [
-    "wasavi_frame.html",
+    "wasavi.html",
     "scripts/key_hook.js"
   ],
   "options_page": "options.html",

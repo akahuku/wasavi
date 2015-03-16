@@ -1,0 +1,321 @@
+/*
+ * styles for wasavi
+ *
+ * @author akahuku@gmail.com
+ *
+ * Copyright 2012-2015 akahuku, akahuku@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#wasavi_container {
+	position:fixed;
+	display:flex;
+	left:0; top:0; right:0; bottom:0;
+	flex-direction:column;
+}
+
+#wasavi_textwidth_guide {
+	display:none;
+	position:fixed;
+	box-sizing:border-box;
+	left:0; top:0; width:32px;
+	padding:4px 0 0 4px;
+	border-left:1px solid silver;
+	font-size:xx-small;
+	font-style:italic;
+	color:silver;
+}
+
+#wasavi_singleline_scaler {
+	position:fixed;
+	margin:0;
+	padding:0;
+	/*<FONT_STYLE/>*/
+	text-decoration:none;
+	text-shadow:none;
+	white-space:pre;
+	color:#fff;
+	background-color:#000;
+	left:0px;
+	top:0px;
+	visibility:hidden;
+}
+
+/*
+ * editor screen
+ */
+
+#wasavi_editor {
+	margin:0;
+	padding:0;
+	border:none;
+	/*<FONT_STYLE/>*/
+	overflow-x:hidden;
+	overflow-y:scroll;
+	counter-reset:n;
+	flex-grow:1;
+
+	background-color:#888;
+}
+
+#wasavi_editor > div {
+	margin:0;
+	padding:0;
+	min-height:/*<LINE_HEIGHT>*/1px/*</LINE_HEIGHT>*/;
+	white-space:pre-wrap;
+}
+
+#wasavi_editor > div:nth-child(odd) {
+}
+
+#wasavi_editor > div.current {
+}
+
+#wasavi_editor > div:focus {
+	outline:none;
+}
+
+#wasavi_editor > div span.wasavi_em {
+}
+
+/*
+ * line number
+ */
+
+#wasavi_editor.n > div:before {
+	display:block;
+	float:left;
+	margin:0;
+	padding:0 /*<CHAR_WIDTH>*/1px/*</CHAR_WIDTH>*/ 0 0;
+	text-align:right;
+	/*<FONT_STYLE/>*/
+	content:counter(n);
+}
+
+#wasavi_editor.a > div:before {
+	counter-increment:n 1;
+}
+
+#wasavi_editor.r > div:before {
+	counter-increment:n -1;
+}
+
+#wasavi_editor.r > div.current ~ div:before {
+	counter-increment:n 1;
+}
+
+/*<LINE_NUMBERS/>*/
+
+/*
+ * status line
+ */
+
+#wasavi_footer {
+	background-color:#ccc;
+}
+
+#wasavi_footer_status_container {
+	display:flex;
+	align-items:center;
+	padding:2px;
+	box-sizing:border-box;
+	line-height:1;
+	font-size:10pt;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
+}
+
+#wasavi_footer_file_indicator {
+	flex-grow:1;
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+}
+
+#wasavi_footer_prefix_indicator {
+	flex-grow:1;
+	padding:0 0 0 8px;
+	line-height:1;
+	text-align:right;
+	white-space:pre;
+}
+
+#wasavi_footer_input_container {
+	display:flex;
+	flex-direction:row;
+	padding:2px;
+	box-sizing:border-box;
+	line-height:1;
+	font-size:10pt;
+	font-family:monospace;
+}
+
+#wasavi_footer_input_indicator {
+	background-color:rgba(0,0,0,0.5);
+	color:#fff;
+}
+
+#wasavi_footer_input {
+	flex-grow:1;
+	margin:0;
+	padding:0;
+	border:none;
+	outline:none;
+	background-color:rgba(0,0,0,0.5);
+	color:#fff;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
+	font-size:10pt;
+	line-height:1;
+	ime-mode:inactive;
+}
+
+#wasavi_footer_notifier {
+	visibility:hidden;
+	position:fixed;
+	left:8px;
+	padding:4px;
+	background-color:rgba(0,0,0,0.75);
+	color:#fff;
+	border-radius:3px;
+	font-size:8pt;
+	text-shadow:1px 1px #000;
+}
+
+/*
+ * console
+ */
+
+@-webkit-keyframes blink { 25% {opacity:0} 75% {opacity:1} }
+        @keyframes blink { 25% {opacity:0} 75% {opacity:1} }
+.blink {
+	-webkit-animation:blink 1s linear infinite;
+	animation:blink 1s linear infinite;
+}
+
+#wasavi_console_scaler {
+	position:fixed;
+	padding:0;
+	border:none;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
+	font-size:10pt;
+	left:16px;
+	top:16px;
+	right:16px;
+	white-space:pre-wrap;
+	overflow-x:auto;
+	color:#fff;
+	background-color:#000;
+	line-height:1;
+	visibility:hidden;
+}
+
+#wasavi_console_container {
+	visibility:hidden;
+	position:fixed;
+	display:flex;
+	margin:0;
+	padding:6px;
+	left:8px; top:8px; right:8px; bottom:8px;
+	box-sizing:border-box;
+	border:none;
+	border-radius:8px;
+	flex-direction:row;
+	justify-content:center;
+	align-items:stretch;
+}
+
+#wasavi_console {
+	margin:0;
+	padding:0;
+	border:none;
+	outline:none;
+	background-color:transparent;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
+	font-size:10pt;
+	overflow-y:hidden;
+	white-space:pre-wrap;
+	resize:none;
+	line-height:1;
+	flex-grow:1;
+}
+
+/*
+ * overlay
+ */
+
+#wasavi_cover {
+	position:fixed;
+	display:flex;
+	left:0; top:0; right:0; bottom:0;
+	background-color:rgba(0,0,0,0.0);
+	flex-direction:row;
+	justify-content:center;
+	align-items:center;
+}
+
+#wasavi_cover.dim {
+	transition:background-color .5s linear 0s;
+	background-color:rgba(0,0,0,0.25);
+}
+
+#wasavi_cover #wasavi_cover_button {
+	padding:4px;
+	color:#fff;
+	background-color:rgba(0,0,0,0.75);
+	border-radius:6px;
+	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
+	font-size:10pt;
+	line-height:1;
+	text-shadow:1px 1px #000;
+	opacity:0;
+}
+
+#wasavi_cover.dim #wasavi_cover_button {
+	transition:opacity .5s linear 5s;
+	opacity:1;
+}
+
+/*
+ * focus holders
+ */
+
+#wasavi_command_cursor {
+	position:absolute;
+	margin:0;
+	padding:0;
+	/*<FONT_STYLE/>*/
+	text-decoration:none;
+	text-shadow:none;
+	left:0px;
+	top:0px;
+}
+
+#wasavi_command_cursor_inner {
+	margin:0;
+	padding:0;
+	white-space:pre;
+}
+
+#wasavi_focus_holder {
+	position:fixed;
+	border:none;
+	outline:none;
+	resize:none;
+	padding:0;
+	left:0;
+	top:-32px;
+	width:100%;
+	height:32px;
+	ime-mode:disabled;
+}
+

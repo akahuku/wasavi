@@ -14,7 +14,7 @@
 	<access origin="https://dropbox.com/" subdomains="true" />
 	<access origin="https://google.com/" subdomains="true" />
 	<access origin="https://googleapis.com/" subdomains="true" />
-    <access origin="https://googleusercontent.com/" subdomains="true" />
+	<access origin="https://googleusercontent.com/" subdomains="true" />
 	<access origin="https://apis.live.net/"/>
 
 	<feature name="opera:contextmenus"/>

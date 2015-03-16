@@ -45,16 +45,26 @@
 
 	/*
 	 * wasaviFrameHeader is content of head in wasavi frame.
+	 * Only Presto Opera and Firefox uses this.
 	 */
 	var wasaviFrameHeader;
 
 	/*
 	 * wasaviFrameContent is content of body in wasavi frame.
+	 * Only Presto Opera and Firefox uses this.
 	 */
 	var wasaviFrameContent;
 
-	// initialize immediately
-	initWasaviFrame();
+	/*
+	 * wasaviFrameStyle is style sheet content of wasavi frame.
+	 */
+	var wasaviFrameStyle;
+
+	/*
+	 * statusLineHeight is height of status line which is calculated
+	 * dynamically.
+	 */
+	var statusLineHeight;
 
 	var defaultFont = '"Consolas","Monaco","Courier New","Courier",monospace';
 	var unicodeDictData;
@@ -67,6 +77,8 @@
 	var storageUpdatePayload = {};
 	var sounds;
 	var soundVolume;
+	var asyncInitCount = 0;
+	var asyncInitCallbacks = [];
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -105,7 +117,7 @@
 		 * different for every browser:
 		 *
 		 *   chrome:  manifest.json (app mode),
-		 *            wasavi_frame.html (textarea mode)
+		 *            wasavi.html (textarea mode)
 		 *
 		 *   opera:   a meta block in the each front-end script
 		 *
@@ -329,6 +341,19 @@
 		return src;
 	}
 
+	function asyncInitialized () {
+		asyncInitCount--;
+		if (asyncInitCount == 0) {
+			asyncInitCallbacks.forEach(function (cb) {cb()});
+			asyncInitCallbacks.length = 0;
+		}
+	}
+
+	function registerAsyncInitializer (fn) {
+		asyncInitCount++;
+		fn(asyncInitialized);
+	}
+
 	function playSound (key) {
 		if (key in sounds && sounds[key]) {
 			ext.sound.play(key, {volume: soundVolume});
@@ -419,30 +444,109 @@
 		];
 	}
 
-	/** {{{2 init wasavi frame */
+	/** {{{2 async initializer: init the content of wasavi frame */
 
-	function initWasaviFrame () {
-		require('kosian/ResourceLoader')
-		.ResourceLoader(global)
-		.get('wasavi_frame.html', function (data) {
+	function initWasaviFrame (callback) {
+		ext.resource('mock.html', function (data) {
 			if (typeof data != 'string' || data == '') {
-				throw new Error('Invalid wasaviFrame');
+				throw new Error('Invalid content of mock.html.');
 			}
 
 			data = data
-				.replace(/\n/g, '')
+				.replace(/\n+/g, '')
 				.replace(/<!--.*?-->/g, '')
+				.replace(/<script[^>]*>.*?<\/script>/g, '')
 				.replace(/>\s+</g, '><')
 				.replace(/^\s+|\s+$/g, '');
 
 			wasaviFrameHeader = /<head[^>]*>(.+?)<\/head>/.exec(data)[1];
 			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
-		}, {noCache:true, sync:true});
+
+			callback && callback();
+		}, {noCache:true});
 	}
 
-	/** {{{2 initialize f/F/t/T dictionary */
+	/** {{{2 async initializer: init the style sheet of wasavi frame */
 
-	function initUnicodeDictData () {
+	function initWasaviStyle (callback) {
+		ext.resource('styles/wasavi.css', function (style) {
+			if (typeof style != 'string' || style == '') {
+				throw new Error('Invalid content of wasavi.css.');
+			}
+
+			style = style
+				.replace(/\n+/g, ' ')
+				.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, config.get('fontFamily'));
+
+			if (require('sdk/self')) {
+				style = style.replace(/box-sizing:/g, '-moz-$&');
+			}
+
+			wasaviFrameStyle = style;
+
+			var loaded = function (d) {
+				// apply new styles
+				var s = d.getElementById('wasavi_global_styles');
+				if (!s) {
+					throw new Error('Cannot find global style element in mock.');
+				}
+				while (s.childNodes.length) {
+					s.removeChild(s.childNodes[0]);
+				}
+				s.appendChild(d.createTextNode(style));
+
+				// ensure container has a dimension
+				var container = d.getElementById('wasavi_container');
+				container.style.width = '640px';
+				container.style.height = '480px';
+
+				// calculate height of status line
+				statusLineHeight = Math.max.apply(Math, [
+					'wasavi_footer_status_container',
+					'wasavi_footer_input_container'
+				].map(function (id) {
+					var el = d.getElementById(id);
+					if (!el) {
+						throw new Error('Cannot find element #' + id);
+					}
+					return el.offsetHeight;
+				}));
+
+				callback && callback();
+			};
+
+			var iframe;
+
+			// Chrome, Opera
+			if (global.document && document.getElementById) {
+				loaded(document);
+			}
+
+			// Firefox
+			else if ((iframe = require('sdk/frame/hidden-frame'))) {
+				var hiddenFrame = iframe.add(iframe.HiddenFrame({
+					onReady: function () {
+						this.element.contentWindow.location.href =
+							require('sdk/self').data.url('mock.html');
+						this.element.addEventListener('DOMContentLoaded', function (e) {
+							loaded(e.target);
+							iframe.remove(hiddenFrame);
+							iframe = hiddenFrame = null;
+						}, true);
+					}
+				}));
+			}
+
+			//
+			else {
+				throw new Error('Cannot retrieve statusLineHeight calculator.');
+			}
+		}, {noCache:true});
+	}
+
+	/** {{{2 async initializer: init f/F/t/T dictionary */
+
+	function initUnicodeDictData (callback) {
 		unicodeDictData = {fftt:{}};
 
 		function ensureBinaryString (data) {
@@ -461,14 +565,20 @@
 				else if (name1) {
 					unicodeDictData[name1] = data;
 				}
+				if (--listLength == 0) {
+					callback && callback();
+				}
 			};
 		}
 
-		[
+		var list = [
 			['fftt_general.dat', 'fftt', 'General'],
 			['fftt_han_ja.dat', 'fftt', 'HanJa'],
 			['linebreak.dat', 'LineBreak']
-		].forEach(function (arg) {
+		];
+		var listLength = list.length;
+
+		list.forEach(function (arg) {
 			var file = arg.shift();
 			ext.resourceLoader.get(
 				'unicode/' + file,
@@ -480,11 +590,18 @@
 	/** {{{2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
+		if (asyncInitCount) {
+			asyncInitCallbacks.push(function () {
+				handleInit(command, data, sender, respond);
+			});
+			return true;
+		}
+
 		var isInit = command.type == 'init';
 		var isAgent = command.type == 'init-agent';
 		var isOptions = command.type == 'init-options';
 
-		respond({
+		var o = {
 			// basic variables
 			extensionId: ext.id,
 			tabId: sender,
@@ -499,32 +616,44 @@
 			shortcutCode: hotkey.getObjectsForDOM(config.get('shortcut')),
 			fontFamily: config.get('fontFamily'),
 			quickActivation: config.get('quickActivation'),
-			
-			// for options
-			sounds: isOptions ? config.get('sounds') : null,
-			soundVolume: isOptions ? config.get('soundVolume') : null,
-
-			// for wasavi and options
-			exrc: isAgent ? null : config.get('exrc'),
-			messageCatalog: isAgent ? null : ext.messageCatalog,
-			fstab: isAgent ? null : ext.fileSystem.getInfo(),
-
-			// for agent and options
-			qaBlacklist: isInit ? null : config.get('qaBlacklist'),
-
-			// for wasavi
-			ros: isInit && payload && payload.url != TEST_MODE_URL ?
-				runtimeOverwriteSettings.get(payload.url, payload.nodePath) :
-				'',
-			headHTML: isInit ? wasaviFrameHeader : null,
-			bodyHTML: isInit ? wasaviFrameContent : null,
-			unicodeDictData: isInit ? unicodeDictData : null,
-			lineInputHistories: isInit ? config.get('wasavi_lineinput_histories') : null,
-			registers: isInit ? config.get('wasavi_registers') : null,
+			statusLineHeight: statusLineHeight,
 
 			payload: payload || null
-		});
-		payload = null;
+		};
+
+		// for options
+		if (isOptions) {
+			o.sounds = config.get('sounds');
+			o.soundVolume = config.get('soundVolume');
+		}
+
+		// for wasavi and options
+		if (!isAgent) {
+			o.exrc = config.get('exrc');
+			o.messageCatalog = ext.messageCatalog;
+			o.fstab = ext.fileSystem.getInfo();
+		}
+
+		// for wasavi
+		if (isInit) {
+			if (payload && payload.url != TEST_MODE_URL) {
+				o.ros = runtimeOverwriteSettings.get(
+					payload.url, payload.nodePath);
+			}
+			o.headHTML = wasaviFrameHeader;
+			o.bodyHTML = wasaviFrameContent;
+			o.style = wasaviFrameStyle;
+			o.unicodeDictData = unicodeDictData;
+			o.lineInputHistories = config.get('wasavi_lineinput_histories');
+			o.registers = config.get('wasavi_registers');
+		}
+
+		// for agent and options
+		else {
+			o.qaBlacklist = config.get('qaBlacklist');
+		}
+
+		respond(o);
 	}
 
 	function handleTransfer (command, data, sender, respond) {
@@ -711,7 +840,7 @@
 			);
 		}
 		if (payload.isTopFrame) {
-			ext.closeTab(sender);
+			ext.closeTab(command.tabId);
 		}
 	}
 
@@ -777,47 +906,52 @@
 
 	/** {{{2 bootstrap */
 
-	function handleLoad (e) {
-		e && global.removeEventListener && global.removeEventListener(e.type, handleLoad, false);
-
+	function pre () {
+		// platform depends tweaks
 		switch (ext.kind) {
 		case 'Opera':
 			ext.resource('scripts/key_hook.js', function (data) {
 				widget.preferences['keyHookScript'] =
 					'data:text/javascript;base64,' +
 					btoa(getShrinkedCode(data));
-			}, {noCache:true});
+			}, {noCache:true, sync:true});
 			break;
 		}
+	}
 
+	function boot () {
+		// misc initializers
 		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 		hotkey = require('./kosian/Hotkey').Hotkey(true);
 		contextMenu = require('./ContextMenu').ContextMenu();
-
 		config = new Config(configInfo);
 
-		initUnicodeDictData();
+		// async initializers:
+		registerAsyncInitializer(initWasaviFrame);
+		registerAsyncInitializer(initUnicodeDictData);
+		registerAsyncInitializer(initWasaviStyle);
+		asyncInitCallbacks.push(function () {
+			if (ext.version != config.get('version')) {
+				ext.openTabWithUrl(
+					'http://appsweets.net/wasavi/' +
+					'?currentVersion=' + config.get('version') +
+					'&newVersion=' + ext.version);
+				ext.storage.setItem('version', ext.version);
+			}
+			ext.isDev && ext.log(
+				'!INFO: running with following filesystems:',
+				ext.fileSystem.getInfo()
+					.filter(function (f) {return f.enabled})
+					.map(function (f) {return f.name})
+					.join(', ')
+			);
+		});
 
 		ext.receive(handleRequest);
-		if (ext.version != config.get('version')) {
-			ext.openTabWithUrl(
-				'http://appsweets.net/wasavi/' +
-				'?currentVersion=' + config.get('version') +
-				'&newVersion=' + ext.version);
-			ext.storage.setItem('version', ext.version);
-		}
-		ext.isDev && ext.log(
-			'!INFO: running with following filesystems: ',
-			ext.fileSystem.getInfo()
-				.filter(function (f) {return f.enabled})
-				.map(function (f) {return f.name})
-				.join(', ')
-		);
 	}
 
-	global.addEventListener ?
-		global.addEventListener('load', handleLoad, false) :
-		handleLoad();
+	pre();
+	boot();
 
 })(this);
 

@@ -949,36 +949,34 @@ function install (x, req) {
 	 * DOM structure:
 	 *
 	 * style#wasavi_global_styles [style sheet]
+	 * style#wasavi_theme_styles [style sheet]
+	 * input#wasavi_focus_holder
 	 *
 	 * div#wasavi_container
 	 *   |
-	 *   + div#wasavi_editor [main editor screen] [POSITIONING TARGET]
+	 *   + div#wasavi_editor [main editor screen]
 	 *   |
-	 *   + div#wasavi_footer [POSITIONING TARGET]
-	 *   |   |
-	 *   |   + div#wasavi_footer_modeline
-	 *   |   |   |
-	 *   |   |   + div#wasavi_footer_prefix_indicator [prefix input indicator]
-	 *   |   |   |
-	 *   |   |   + div#wasavi_footer_file_indicator [file name indicator]
-	 *   |   |
-	 *   |   + div#wasavi_footer_alter
-	 *   |       |
-	 *   |       + table#wasavi_footer_alter_table
-	 *   |           |
-	 *   |           + tbody
-	 *   |             |
-	 *   |             + tr
-	 *   |                 |
-	 *   |                 + td#wasavi_footer_input_indicator [header indicator]
-	 *   |                 |
-	 *   |                 + td#wasavi_footer_input_container
-	 *   |                     |
-	 *   |                     + input#wasavi_footer_input [line input editor]
+	 *   + div#wasavi_textwidth_guide
 	 *   |
-	 *   + div#wasavi_console_container [POSITIONING TARGET]
+	 *   + div#wasavi_console_container
 	 *   |   |
 	 *   |   + textarea#wasavi_console
+	 *   |
+	 *   + div#wasavi_footer
+	 *   |   |
+	 *   |   + div#wasavi_footer_status_container
+	 *   |   |   |
+	 *   |   |   + div#wasavi_footer_file_indicator [file name indicator]
+	 *   |   |   |
+	 *   |   |   + div#wasavi_footer_prefix_indicator [prefix input indicator]
+	 *   |   |
+	 *   |   + div#wasavi_footer_input_container
+	 *   |   |   |
+	 *   |   |   + div#wasavi_footer_input_indicator [header indicator]
+	 *   |   |   |
+	 *   |   |   + input#wasavi_footer_input [line input editor]
+	 *   |   |
+	 *   |   + div#wasavi_footer_notifier
 	 *   |
 	 *   + span#wasavi_singleline_scaler
 	 *   |
@@ -988,10 +986,9 @@ function install (x, req) {
 	 *   |   |
 	 *   |   + span#wasavi_command_cursor_inner
 	 *   |
-	 *   + textarea#wasavi_edit_cursor [edit mode cursor]
-	 *   |
 	 *   + div#wasavi_cover [cover element]
-	 *
+	 *       |
+	 *       + span#wasavi_cover_button
 	 */
 
 	// container
@@ -999,10 +996,7 @@ function install (x, req) {
 	if (!cnt) throw new Error('wasavi container not found');
 
 	//
-	var borderStyles = 'border:none;';
-	var paddingStyle = 'padding:0;';
 	var fontStyle = 'font:' + x.fontStyle + ';';
-	var boxSizingPrefix = IS_GECKO ? '-moz-' : '';
 
 	// scale line height
 	var scaler = document.body.appendChild(document.createElement('span'));
@@ -1021,112 +1015,11 @@ function install (x, req) {
 
 	// style
 	var styleElement = $('wasavi_global_styles');
-	styleElement.appendChild(document.createTextNode([
-'body { visibility:visible; } \
-#wasavi_container { \
-line-height:1; \
-text-align:left; \
-text-indent:0; \
-text-decoration:none; \
-text-shadow:none; \
-} \
-#wasavi_editor { \
-display:block; \
-margin:0; \
-' + paddingStyle + borderStyles + ' \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-' + fontStyle + ' \
-overflow-x:hidden; \
-overflow-y:scroll; \
-counter-reset:n; \
-} \
-#wasavi_textwidth_guide { \
-display:none; \
-position:fixed; \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-left:0; top:0; width:32px; \
-padding:4px 0 0 4px; \
-border-left:1px solid silver; \
-font-size:xx-small; \
-font-style:italic; \
-color:silver; \
-} \
-#wasavi_singleline_scaler { \
-position:fixed; \
-margin:0; \
-padding:0; \
-' + fontStyle + ' \
-text-decoration:none; \
-text-shadow:none; \
-white-space:pre; \
-color:#fff; \
-background-color:#000; \
-left:0px; \
-top:0px; \
-visibility:hidden \
-} \
-#wasavi_console_scaler { \
-position:fixed; \
-padding:0; \
-border:none; \
-font-family:' + req.fontFamily + '; \
-font-size:10pt; \
-left:0; \
-top:0; \
-white-space:pre-wrap; \
-overflow-x:auto; \
-color:#fff; \
-background-color:#000; \
-line-height:1; \
-visibility:hidden \
-} \
-#wasavi_editor > div { \
-margin:0; \
-padding:0; \
-min-height:' + lineHeight + 'px; \
-white-space:pre-wrap; \
-} \
-#wasavi_editor > div:nth-child(odd) { \
-} \
-#wasavi_editor > div.current { \
-} \
-#wasavi_editor > div:focus { \
-outline:none; \
-} \
-#wasavi_editor > div span.wasavi_em { \
-} \
-#wasavi_editor > div span.wasavi_leading { \
-visibility:hidden; \
-} \
-#wasavi_editor > div span.wasavi_composition { \
-visibility:hidden; \
-} \
-#wasavi_editor.n > div:before { \
-display:block; \
-float:left; \
-margin:0; \
-padding:0 ' + charWidth + 'px 0 0; \
-text-align:right; \
-' + fontStyle + ' \
-content:counter(n); \
-} \
-#wasavi_editor.a > div:before { \
-counter-increment:n 1; \
-} \
-#wasavi_editor.r > div:before { \
-counter-increment:n -1; \
-} \
-#wasavi_editor.r > div.current ~ div:before { \
-counter-increment:n 1; \
-} \
-@-webkit-keyframes blink { 25% {opacity:0} 75% {opacity:1} } \
-@keyframes blink { 25% {opacity:0} 75% {opacity:1} } \
-.blink { \
--webkit-animation:blink 1s linear infinite; \
-animation:blink 1s linear infinite; \
-}',
-
-		(function () {
+	var styleSource = req.style
+		.replace(/\/\*<FONT_STYLE\/>\*\//g, fontStyle)
+		.replace(/\/\*<(LINE_HEIGHT)>\*\/.*?<\/\1>\*\//g, lineHeight + 'px')
+		.replace(/\/\*<(CHAR_WIDTH)>\*\/.*?<\/\1>\*\//g, charWidth + 'px')
+		.replace(/\/\*<LINE_NUMBERS\/\>\*\//g, function () {
 			var result = [];
 			for (var i = 1; i <= LINE_NUMBER_MAX_WIDTH; i++) {
 				result.push(
@@ -1144,177 +1037,10 @@ animation:blink 1s linear infinite; \
 				);
 			}
 			return result.join('\n');
-		})(),
+		})
+		.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, req.fontFamily)
 
-'#wasavi_footer { \
-padding:2px 2px 1px 2px; \
-font-family:' + req.fontFamily + '; \
-font-size:10pt; \
-line-height:1; \
-overflow:hidden; \
-' + boxSizingPrefix + 'box-sizing:content-box; \
-} \
-#wasavi_footer_modeline { \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-} \
-#wasavi_footer_alter { \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-} \
-#wasavi_footer_alter_table { \
-padding:0; \
-margin:0; \
-border-collapse:collapse; \
-border:none; \
-background-color:transparent \
-} \
-#wasavi_footer_alter>table td { \
-border:none; \
-padding:0; \
-line-height:1; \
-white-space:pre; \
-} \
-#wasavi_footer_file_indicator { \
-padding:0; \
-line-height:1; \
-text-align:left; \
-white-space:nowrap; \
-overflow:hidden; \
-text-overflow:ellipsis; \
-} \
-#wasavi_footer_prefix_indicator { \
-float:right; \
-padding:0 0 0 8px; \
-line-height:1; \
-text-align:right; \
-white-space:pre; \
-} \
-#wasavi_footer_input_indicator { \
-width:1px; \
-padding:0; \
-line-height:1; \
-background-color:rgba(0,0,0,0.5) \
-} \
-#wasavi_footer_input_container { \
-padding:0; \
-background-color:transparent \
-} \
-#wasavi_footer_input { \
-display:block; \
-margin:0; \
-padding:0; \
-border:none; \
-outline:none; \
-font-family:' + req.fontFamily + '; \
-font-size:10pt; \
-line-height:1; \
-width:100%; \
-ime-mode:inactive \
-} \
-#wasavi_footer_notifier { \
-visibility:hidden; \
-position:fixed; \
-left:8px; \
-padding:4px; \
-background-color:rgba(0,0,0,0.75); \
-color:#fff; \
-border-radius:3px; \
-font-size:8pt; \
-text-shadow:1px 1px #000; \
-} \
-#wasavi_console_container { \
-visibility:hidden; \
-position:absolute; \
-margin:0; \
-padding:6px; \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-border:none; \
-border-radius:8px; \
-} \
-#wasavi_console { \
-margin:0; \
-padding:0; \
-border:none; \
-outline:none; \
-background-color:transparent; \
-width:100%; \
-font-family:' + req.fontFamily + '; \
-font-size:10pt; \
-overflow-y:hidden; \
-white-space:pre-wrap; \
-resize:none; \
-line-height:1; \
-} \
-#wasavi_command_cursor { \
-position:absolute; \
-margin:0; \
-padding:0; \
-' + fontStyle + ' \
-text-decoration:none; \
-text-shadow:none; \
-left:0px; \
-top:0px; \
-} \
-#wasavi_command_cursor_inner { \
-margin:0; \
-padding:0; \
-white-space:pre \
-} \
-#wasavi_edit_cursor { \
-position:absolute; \
-display:none; \
-margin:0; \
-padding:0; \
-' + boxSizingPrefix + 'box-sizing:border-box; \
-border:none; \
-background-color:transparent; \
-' + fontStyle + ' \
-text-decoration:none; \
-text-shadow:none; \
-overflow-y:hidden; \
-resize:none; \
-outline:none; \
-} \
-#wasavi_cover { \
-position:fixed; \
-display:flex; \
-left:0; top:0; right:0; bottom:0; \
-background-color:rgba(0,0,0,0.0) \
-flex-direction:row; \
-justify-content:center; \
-align-items:center; \
-} \
-#wasavi_cover.dim { \
-' + (CSS_PREFIX ? CSS_PREFIX + 'transition:background-color .5s linear 0s;' : '') + ' \
-background-color:rgba(0,0,0,0.25); \
-} \
-#wasavi_cover #wasavi_cover_button { \
-padding:4px; \
-color:#fff; \
-background-color:rgba(0,0,0,0.75); \
-border-radius:6px; \
-font-family:' + req.fontFamily + '; \
-font-size:10pt; \
-line-height:1; \
-text-shadow:1px 1px #000; \
-opacity:0; \
-} \
-#wasavi_cover.dim #wasavi_cover_button { \
-' + (CSS_PREFIX ? CSS_PREFIX + 'transition:opacity .5s linear 5s;' : '') + ' \
-opacity:1; \
-} \
-#wasavi_focus_holder { \
-position:fixed; \
-border:none; \
-outline:none; \
-resize:none; \
-padding:0; \
-left:0; \
-top:-32px; \
-width:100%; \
-height:32px; \
-ime-mode:disabled; \
-}'
-	].join('')));
+	styleElement.appendChild(document.createTextNode(styleSource));
 
 	// theme
 	theme.fontStyle = fontStyle;
@@ -1336,18 +1062,16 @@ ime-mode:disabled; \
 	conscaler.textContent = '#';
 
 	// footer (default indicator)
-	var footerDefault = $('wasavi_footer_modeline');
+	var footerStatusLine = $('wasavi_footer_status_container');
 	$('wasavi_footer_file_indicator').textContent = '#';
-	//footerDefault.textContent = '#';
 
-	// footer (alter: line input)
-	var footerAlter = $('wasavi_footer_alter');
+	// footer alter contents: line input container
+	var footerAlter = $('wasavi_footer_input_container');
+	footerAlter.style.display = 'none';
 
-	// footer alter contents: indicator
 	var footerIndicator = $('wasavi_footer_input_indicator');
 	footerIndicator.textContent = '/';
 
-	// footer alter contents: line input
 	var footerInput = $('wasavi_footer_input');
 
 	// footer notifier
@@ -1364,23 +1088,13 @@ ime-mode:disabled; \
 	var ccInner = $('wasavi_command_cursor_inner');
 	ccInner.style.height = lineHeight + 'px';
 
-	// textarea for insert mode
-	var ec = $('wasavi_edit_cursor');
-
-	// fix height
-	if (footerDefault.offsetHeight < footerAlter.offsetHeight) {
-		footerDefault.style.height = footerAlter.offsetHeight + 'px';
-	}
-	else if (footerAlter.offsetHeight < footerDefault.offsetHeight ) {
-		footerAlter.style.height = footerDefault.offsetHeight + 'px';
-	}
-	footerAlter.style.display = 'none';
-
 	/*
 	 * visual settings
 	 */
 
 	setTabStop(config.vars.tabstop);
+	statusLineHeight = req.statusLineHeight;
+	footerStatusLine.style.height = footerAlter.style.height = statusLineHeight + 'px';
 	setGeometory(x);
 
 	/*
@@ -1445,8 +1159,8 @@ ime-mode:disabled; \
 		appProxy, testMode ? null : x.marks);
 
 	inputHandler = new Wasavi.InputHandler(appProxy);
-	cursor = new Wasavi.CursorUI(appProxy, cc, ec, footerInput, focusHolder);
-	scroller = new Wasavi.Scroller(appProxy, cursor, footerDefault);
+	cursor = new Wasavi.CursorUI(appProxy, cc, footerInput, focusHolder);
+	scroller = new Wasavi.Scroller(appProxy, cursor, footerStatusLine);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
 	exvm = new ExCommandExecutor(appProxy);
 	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
@@ -1476,6 +1190,7 @@ ime-mode:disabled; \
 		childInternalId: extensionChannel.internalId
 	});
 	extensionChannel.isTopFrame() && runExrc();
+
 }
 function runExrc () {
 	/*
@@ -1614,61 +1329,19 @@ function setGeometory (target) {
 	var conCon = $('wasavi_console_container');
 	var con = $('wasavi_console');
 	var conScaler = $('wasavi_console_scaler');
-	var faltTable = $('wasavi_footer_alter_table');
 	var fNotifier = $('wasavi_footer_notifier');
 
 	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !faltTable || !fNotifier) {
+	||  !fNotifier) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
-				container, editor, footer, con, conScaler, fmodTable, faltTable, fNotifier
+				container, editor, footer, conCon, con, conScaler, fNotifier
 			].join(', ')
 		);
 	}
 
-	var rect = target.rect;
-
-	if (extensionChannel.isTopFrame()) {
-		rect.height -= footer.offsetHeight;
-	}
-
-	style(container, {
-		width:rect.width + 'px',
-		height:(rect.height + footer.offsetHeight) + 'px'
-	});
-
-	style(editor, {
-		width:rect.width + 'px',
-		height:rect.height + 'px'
-	});
-
-	style(footer, {
-		width:(rect.width - 4) + 'px'
-	});
-
-	style(conCon, {
-		left:'8px',
-		top:'8px',
-		width:(rect.width - 16) + 'px',
-		height:(rect.height - 16) + 'px'
-	});
-
-	style(con, {
-		height:(rect.height - (16 + 12)) + 'px'
-	});
-
-	style(conScaler, {
-		width:(rect.width - 16) + 'px'
-	});
-
-	style(faltTable, {
-		width:(rect.width - 4) + 'px'
-	});
-
-	style(fNotifier, {
-			bottom:(footer.offsetHeight + 4) + 'px'
-	});
+	conCon.style.bottom = (statusLineHeight + 8) + 'px';
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
 	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
@@ -1766,8 +1439,8 @@ function getDefaultPrefixInputString () {
 }
 function showPrefixInput (message) {
 	if (state != 'normal') return;
-	var line = $('wasavi_footer_modeline');
-	var alter = $('wasavi_footer_alter');
+	var line = $('wasavi_footer_status_container');
+	var alter = $('wasavi_footer_input_container');
 	var indf = $('wasavi_footer_file_indicator');
 	var indp = $('wasavi_footer_prefix_indicator');
 	line.style.display = indf.style.display = indp.style.display = '';
@@ -1795,8 +1468,8 @@ function showPrefixInput (message) {
 }
 function showMessage (message, emphasis, pseudoCursor, volatile_) {
 	if (state != 'normal' && state != 'console_wait') return;
-	var line = $('wasavi_footer_modeline');
-	var alter = $('wasavi_footer_alter');
+	var line = $('wasavi_footer_status_container');
+	var alter = $('wasavi_footer_input_container');
 	var indf = $('wasavi_footer_file_indicator');
 	var indp = $('wasavi_footer_prefix_indicator');
 	line.style.display = indf.style.display = indp.style.display = '';
@@ -1826,10 +1499,10 @@ function showMessage (message, emphasis, pseudoCursor, volatile_) {
 }
 function showLineInput (prefix, value, curpos) {
 	if (state != 'line_input') return;
-	var line = $('wasavi_footer_alter');
-	var alter = $('wasavi_footer_modeline');
+	var line = $('wasavi_footer_input_container');
+	var alter = $('wasavi_footer_status_container');
 	var input = $(LINE_INPUT_ID);
-	line.style.display = 'block';
+	line.style.display = '';
 	alter.style.display = 'none';
 	prefix || (prefix = '>');
 	value || (value = '');
@@ -5157,6 +4830,7 @@ var notifier;
 var multiplexCallbackId;
 var compositionLevel;
 var containerRect;
+var statusLineHeight;
 
 var isEditCompleted;
 var isVerticalMotion;

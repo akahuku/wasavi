@@ -250,7 +250,7 @@ Wasavi.Bell = function (app) {
 	publish(this, play);
 };
 
-Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
+Wasavi.CursorUI = function (app, comCursor, input, comFocusHolder) {
 	var buffer = app.buffer;
 	var cursorType = 'command';
 	var locked = false;
@@ -537,7 +537,7 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 	}
 	function dispose () {
 		wrapper && wrapper.dispose();
-		app = buffer = comCursor = editCursor = wrapper = null;
+		app = buffer = comCursor = wrapper = null;
 	}
 
 	publish(this,
@@ -547,7 +547,6 @@ Wasavi.CursorUI = function (app, comCursor, editCursor, input, comFocusHolder) {
 			focused:function () {return focused},
 			visible:function () {return visible},
 			commandCursor:function () {return comCursor},
-			editCursor:function () {return editCursor},
 			locked:[function () {return locked}, function (v) {locked = v}]
 		}
 	);
