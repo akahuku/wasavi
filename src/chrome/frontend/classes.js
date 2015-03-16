@@ -2013,14 +2013,14 @@ Wasavi.Editor.prototype = new function () {
 
 		// method
 		adjustBackgroundImage: function (lineHeight) {
-			var y = lineHeight;
+			var y = 0;
 			if (this.elm.childNodes.length) {
 				var last = this.elm.childNodes[this.elm.childNodes.length - 1];
 				y = last.offsetTop + last.offsetHeight;
 			}
-			var desc = '100% ' + y + 'px';
-			if (this.elm.style.backgroundSize != desc) {
-				this.elm.style.backgroundSize = desc;
+			var desc = '0 ' + y + 'px';
+			if (this.elm.style.backgroundPosition != desc) {
+				this.elm.style.backgroundPosition = desc;
 			}
 		},
 		adjustLineNumberWidth: function (width, isRelative) {

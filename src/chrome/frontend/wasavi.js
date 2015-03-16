@@ -1043,7 +1043,7 @@ function install (x, req) {
 	styleElement.appendChild(document.createTextNode(styleSource));
 
 	// theme
-	theme.fontStyle = fontStyle;
+	theme.fontStyle = x.fontStyle;
 	theme.lineHeight = lineHeight;
 	theme.useStripe = config.vars.stripe;
 
@@ -1151,12 +1151,15 @@ function install (x, req) {
 	buffer.selectionEnd = x.selectionEnd || 0;
 
 	registers = new Wasavi.Registers(
-		appProxy, testMode ? null : req.registers);
+		appProxy,
+		testMode || !('registers' in req) ? null : req.registers);
 	lineInputHistories = new Wasavi.LineInputHistories(
-		appProxy, config.vars.history, ['/', ':', 'e'],
-		testMode ? null : req.lineInputHistories);
+		appProxy,
+		config.vars.history, ['/', ':', 'e'],
+		testMode || !('lineInputHistories' in req) ? null : req.lineInputHistories);
 	marks = new Wasavi.Marks(
-		appProxy, testMode ? null : x.marks);
+		appProxy,
+		testMode || !('marks' in x) ? null : x.marks);
 
 	inputHandler = new Wasavi.InputHandler(appProxy);
 	cursor = new Wasavi.CursorUI(appProxy, cc, footerInput, focusHolder);
@@ -1343,6 +1346,7 @@ function setGeometory (target) {
 
 	editor.style.bottom = statusLineHeight + 'px';
 	conCon.style.bottom = (statusLineHeight + 8) + 'px';
+	fNotifier.style.bottom = (statusLineHeight + 8) + 'px';
 
 	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
 	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);

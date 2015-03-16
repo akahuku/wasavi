@@ -62,8 +62,6 @@
 	overflow-x:hidden;
 	overflow-y:scroll;
 	counter-reset:n;
-
-	background-color:#888;
 }
 
 #wasavi_editor > div {

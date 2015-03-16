@@ -130,22 +130,20 @@ Wasavi.Theme = function (app) {
 	}
 	function getOverTextMarker (forecolor, backcolor) {
 		return getImageFromCanvas(function (canvas, ctx) {
-			canvas.height = lineHeight;
 			ctx.font = fontStyle;
 			canvas.width = ctx.measureText('~').width;
+			canvas.height = window.screen.height;
+
+			ctx.font = fontStyle;
 			ctx.fillStyle = backcolor;
 			ctx.fillRect(0, 0, canvas.width, canvas.height);
 			ctx.fillStyle = forecolor;
 			ctx.textBaseline = 'top';
 			ctx.textAlign = 'left';
-			ctx.fillText('~', 0, 0);
-		});
-	}
-	function getBackgroundImage (backcolor) {
-		return getImageFromCanvas(function (canvas, ctx) {
-			canvas.width = canvas.height = 8;
-			ctx.fillStyle = backcolor;
-			ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+			for (var i = 0, goal = canvas.height; i < goal; i += lineHeight) {
+				ctx.fillText('~', 0, i);
+			}
 		});
 	}
 	function getMirror () {
@@ -199,21 +197,15 @@ Wasavi.Theme = function (app) {
 
 		var otm = getOverTextMarker(colors.overTextMarkerFg, colors.background);
 		styles.push(
-			'#wasavi_container{',
-			'background:' + colors.background + ' url(' + otm + ') left top repeat-y;',
-			'}');
-
-		var bgImage = getBackgroundImage(colors.rowBg[1]);
-		styles.push(
 			'#wasavi_editor{',
-			'background:url(' + bgImage + ') left top no-repeat;',
+			'background:' + colors.background + ' url(' + otm + ') left top no-repeat;',
 			'}');
 
 		var statuslineBackground = getStatuslineBackground(colors.statusHue);
 		styles.push(
-			'#wasavi_footer_status_container,' +
+			'#wasavi_footer_status_container,',
 			'#wasavi_footer_input_container{',
-			'background:' + statuslineBackground,
+			'background:' + statuslineBackground + ';',
 			'}');
 
 		var node = getStyleElement();
