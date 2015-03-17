@@ -3672,6 +3672,8 @@ function unshift (rowCount, shiftCount) {
 }
 function reformat (width) {
 	var curpos = buffer.selectionStart;
+	var isline = buffer.isLineOrientSelection;
+	buffer.isLineOrientSelection = false;
 	width || (width = config.vars.textwidth);
 	width > 0 && editLogger.open('reformat', function () {
 		var seMark = 'reformat-end';
@@ -3757,6 +3759,7 @@ function reformat (width) {
 		marks.setPrivate(seMark);
 		marks.setPrivate(nextMark);
 	});
+	buffer.isLineOrientSelection = isline;
 	isEditCompleted = true;
 	invalidateIdealWidthPixels();
 	if (curpos.row >= buffer.rowLength) {
