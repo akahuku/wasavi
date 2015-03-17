@@ -672,7 +672,7 @@ public class WasaviTest {
 		WebDriver driver = null;
 
 		if (name.equals("opera")) {
-			DesiredCapabilities cap = DesiredCapabilities.opera();
+			DesiredCapabilities cap = DesiredCapabilities.operaPresto();
 			cap.setCapability("opera.profile",
 					new OperaProfile(System.getProperty("wasavi.tests.opera.profile_path")));
 			cap.setCapability("opera.logging.level",
