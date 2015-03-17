@@ -1088,6 +1088,9 @@ function install (x, req) {
 	var ccInner = $('wasavi_command_cursor_inner');
 	ccInner.style.height = lineHeight + 'px';
 
+	// cover
+	$('wasavi_cover_button').textContent = _('Press ^C to interrupt.');
+
 	/*
 	 * visual settings
 	 */
@@ -1316,7 +1319,6 @@ function setupEventHandlers (install) {
 		cover[method]('click', handleCoverClick, false);
 		cover[method]('mousewheel', handleCoverMousewheel, false);
 	}
-	$('wasavi_cover_button').textContent = _('Press ^C to interrupt.');
 
 	cursor.setupEventHandlers(install);
 }
