@@ -84,7 +84,7 @@
 	margin:0;
 	padding:0;
 	min-height:/*<LINE_HEIGHT>*/1px/*</LINE_HEIGHT>*/;
-	line-height:1.1;
+	line-height:1.2;
 	white-space:pre-wrap;
 }
 
@@ -144,7 +144,7 @@
 	box-sizing:border-box;
 	align-items:stretch;
 	flex-direction:row;
-	line-height:1;
+	line-height:1.2;
 	font-size:10pt;
 	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
 }
@@ -159,7 +159,6 @@
 #wasavi_footer_prefix_indicator {
 	flex-grow:1;
 	padding:0 0 0 8px;
-	line-height:1;
 	text-align:right;
 	white-space:pre;
 }
@@ -172,13 +171,14 @@
 	box-sizing:border-box;
 	align-items:stretch;
 	flex-direction:row;
-	line-height:1;
+	line-height:1.2;
 	font-size:10pt;
 	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
 }
 
 #wasavi_footer_input_indicator {
 	background-color:rgba(0,0,0,0.5);
+	padding:0 0 0 2px;
 	color:#fff;
 }
 
@@ -190,9 +190,9 @@
 	outline:none;
 	background-color:rgba(0,0,0,0.5);
 	color:#fff;
+	line-height:1.2;
 	font-family:/*<FONT_FAMILY>*/monospace/*</FONT_FAMILY>*/;
 	font-size:10pt;
-	line-height:1;
 	ime-mode:inactive;
 }
 
