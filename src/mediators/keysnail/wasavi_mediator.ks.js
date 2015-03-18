@@ -12,7 +12,7 @@ let PLUGIN_INFO = <KeySnailPlugin>
 
 /**
  * wasavi mediator: ensure running wasavi on environment of Firefox + KeySnail.
- * this plugin for vimperator is a part of wasavi <http://appsweets.net/wasavi/>.
+ * this plugin for KeySnail is a part of wasavi <http://appsweets.net/wasavi/>.
  * =============================================================================
  *
  * @author akahuku@gmail.com
