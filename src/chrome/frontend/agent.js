@@ -751,7 +751,7 @@ function connect () {
 		handleConnect(req);
 	};
 	var timeout = function () {
-		if (connected || retryRect <= 0) return;
+		if (connected || retryRest <= 0) return;
 		retryRest--;
 		wait += 1000;
 		setTimeout(timeout, wait);
