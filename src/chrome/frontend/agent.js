@@ -740,29 +740,53 @@ function createElementResizeListener (element, callback) {
 	return {connect: connect, disconnect: disconnect, fire: fireIfResized};
 }
 
+function connect () {
+	var connected = false;
+	var retryRest = 5;
+	var wait = 1000;
+	var eventName = isOptionsPage ? 'init-options' : 'init-agent';
+	var gotInit = function (req) {
+		if (connected) return;
+		connected = true;
+		handleConnect(req);
+	};
+	var timeout = function () {
+		if (connected || retryRect <= 0) return;
+		retryRest--;
+		wait += 1000;
+		setTimeout(timeout, wait);
+		extension.connect(eventName, gotInit);
+	}
+
+	setTimeout(timeout, wait);
+	extension.connect(eventName, gotInit);
+}
+
 /**
  * page agent creator
  * ----------------
  */
 
-function createPageAgent (doHook) {
+function createPageAgent (listenKeydown, hookKeyEvents) {
 	var parent = document.head || document.body || document.documentElement;
 	if (!parent) return;
 
-	if (doHook) {
+	window.addEventListener('focus', handleTargetFocus, true);
+
+	if (listenKeydown) {
 		window.addEventListener('keydown', handleKeydown, true);
 	}
 
-	window.addEventListener('focus', handleTargetFocus, true);
-
-	var s = document.createElement('script');
-	s.onload = function () {
-		this.onload = null;
-		this.parentNode && this.parentNode.removeChild(this);
-	};
-	s.type = 'text/javascript';
-	s.src = extension.getKeyHookScriptSrc();
-	parent.appendChild(s);
+	if (hookKeyEvents) {
+		var s = document.createElement('script');
+		s.onload = function () {
+			this.onload = null;
+			this.parentNode && this.parentNode.removeChild(this);
+		};
+		s.type = 'text/javascript';
+		s.src = extension.getKeyHookScriptSrc();
+		parent.appendChild(s);
+	}
 }
 
 /**
@@ -798,6 +822,7 @@ function handleKeydown (e) {
 
 		if (matchWithShortcut(e)) {
 			e.preventDefault();
+			e.stopPropagation();
 			run(e.target);
 		}
 	}
@@ -1251,15 +1276,12 @@ extension = WasaviExtensionWrapper.create();
 isTestFrame = window.location.href.indexOf('http://wasavi.appsweets.net/test_frame.html') == 0;
 isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
-createPageAgent(true);
+createPageAgent(true, false);
 extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
 
-extension.connect(
-	isOptionsPage ? 'init-options' : 'init-agent',
-	handleConnect
-);
+connect();
 
 })(this);
 

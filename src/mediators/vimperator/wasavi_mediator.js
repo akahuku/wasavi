@@ -47,7 +47,6 @@
 
 	function isWasaviExists (wnd) {
 		if (!(wnd.document instanceof HTMLDocument)) return;
-		if (!/^(?:interactive|complete)$/.test(wnd.document.readyState)) return;
 
 		if (wnd.location.href == TARGET_URL_HTTP
 		||  wnd.location.href == TARGET_URL_HTTPS) {
@@ -78,11 +77,11 @@
 	function locationChange () {
 		delayTimer && clearTimeout(delayTimer);
 		delayTimer = setTimeout(function () {
-			log('started...');
 			delayTimer = null;
 			var wnd = getWindow();
 			if (wnd) {
 				if (isWasaviExists(wnd)) {
+					log('vimperator is in suspend state on ' + wnd.location.href);
 					suspend();
 				}
 				if (registerEvents(wnd)) {

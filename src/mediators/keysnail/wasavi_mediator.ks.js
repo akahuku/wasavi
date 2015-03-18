@@ -35,7 +35,7 @@ let PLUGIN_INFO = <KeySnailPlugin>
 
 (function () {
 	// consts
-	const OUTPUT_LOG = true;
+	const OUTPUT_LOG = false;
 	const TARGET_URL_HTTP = 'http://wasavi.appsweets.net/';
 	const TARGET_URL_HTTPS = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	const TARGET_IFRAME = 'body>iframe[src="about:blank?wasavi-frame-source"]';
@@ -59,7 +59,6 @@ let PLUGIN_INFO = <KeySnailPlugin>
 
 	function isWasaviExist (wnd) {
 		if (!(wnd.document instanceof HTMLDocument)) return false;
-		if (!/^(?:interactive|complete)$/.test(wnd.document.readyState)) return false;
 
 		if (wnd.location.href == TARGET_URL_HTTP
 		||  wnd.location.href == TARGET_URL_HTTPS) {
@@ -92,11 +91,11 @@ let PLUGIN_INFO = <KeySnailPlugin>
 	function locationChange () {
 		delayTimer && clearTimeout(delayTimer);
 		delayTimer = setTimeout(function () {
-			log('started...');
 			delayTimer = null;
 			var wnd = getWindow();
 			if (wnd) {
 				if (isWasaviExist(wnd)) {
+					log('keysnail is in suspend state on ' + wnd.location.href);
 					suspend();
 				}
 				if (registerEvents(wnd)) {
