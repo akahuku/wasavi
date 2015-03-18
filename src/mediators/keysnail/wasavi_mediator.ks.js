@@ -1,5 +1,17 @@
+let PLUGIN_INFO = <KeySnailPlugin>
+    <name>wasavi mediator</name>
+    <description>Controls suspend state depending on wasavi existence</description>
+    <updateURL>https://github.com/akahuku/wasavi/raw/master/src/mediators/keysnail/wasavi_mediator.ks.js</updateURL>
+    <iconURL>https://github.com/akahuku/wasavi/raw/master/src/chrome/images/icon048.png</iconURL>
+    <version>1.0.0</version>
+    <minVersion>1.8.5</minVersion>
+    <author mail="akahuku@gmail.com" homepage="http://appsweets.net/">akahuku</author>
+    <license>Apache License version 2.0</license>
+    <detail><![CDATA[Controls suspend state depending on wasavi existence]]></detail>
+</KeySnailPlugin>;
+
 /**
- * wasavi mediator: ensure running wasavi on environment of Firefox + vimperator.
+ * wasavi mediator: ensure running wasavi on environment of Firefox + KeySnail.
  * this plugin for vimperator is a part of wasavi <http://appsweets.net/wasavi/>.
  * =============================================================================
  *
@@ -23,31 +35,31 @@
 
 (function () {
 	// consts
-	var OUTPUT_LOG = false;
-	var TARGET_URL_HTTP = 'http://wasavi.appsweets.net/';
-	var TARGET_URL_HTTPS = 'https://ss1.xrea.com/wasavi.appsweets.net/';
-	var TARGET_IFRAME = 'body>iframe[src="about:blank?wasavi-frame-source"]';
-	var DELAY_MSECS = 250;
+	const OUTPUT_LOG = true;
+	const TARGET_URL_HTTP = 'http://wasavi.appsweets.net/';
+	const TARGET_URL_HTTPS = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	const TARGET_IFRAME = 'body>iframe[src="about:blank?wasavi-frame-source"]';
+	const DELAY_MSECS = 250;
 
 	// privates
 	var delayTimer = null;
 	var initialized = false;
 
 	function log (message) {
-		OUTPUT_LOG && liberator.log('wasavi_mediator: ' + message, 0);
+		OUTPUT_LOG && console.log('wasavi_mediator: ' + message);
 	}
 
 	function toBracket (obj) {
 		return Object.prototype.toString.call(obj);
 	}
 
-	function getWindow () {
+	function getWindow (obj) {
 		return window.content instanceof Window ? window.content : null;
 	}
 
-	function isWasaviExists (wnd) {
-		if (!(wnd.document instanceof HTMLDocument)) return;
-		if (!/^(?:interactive|complete)$/.test(wnd.document.readyState)) return;
+	function isWasaviExist (wnd) {
+		if (!(wnd.document instanceof HTMLDocument)) return false;
+		if (!/^(?:interactive|complete)$/.test(wnd.document.readyState)) return false;
 
 		if (wnd.location.href == TARGET_URL_HTTP
 		||  wnd.location.href == TARGET_URL_HTTPS) {
@@ -58,20 +70,22 @@
 	}
 
 	function registerEvents (wnd) {
-		if (!(wnd.document instanceof HTMLDocument)) return;
+		if (!(wnd.document instanceof HTMLDocument)) return false;
 		wnd.document.addEventListener('WasaviStarted', wasaviStarted, false);
 		wnd.document.addEventListener('WasaviTerminated', wasaviTerminated, false);
 		return true;
 	}
 
 	function suspend () {
-		liberator.modules.modes.passAllKeys = true;
-		log('vimp passAllKeys set to ' + liberator.modules.modes.passAllKeys);
+		key.suspended = true;
+		key.updateStatusDisplay();
+		log('keysnail key.suspended set to ' + key.suspended);
 	}
 
 	function resume () {
-		liberator.modules.modes.passAllKeys = false;
-		log('vimp passAllKeys set to ' + liberator.modules.modes.passAllKeys);
+		key.suspended = false;
+		key.updateStatusDisplay();
+		log('keysnail key.suspended set to ' + key.suspended);
 	}
 
 	// event handlers
@@ -82,7 +96,7 @@
 			delayTimer = null;
 			var wnd = getWindow();
 			if (wnd) {
-				if (isWasaviExists(wnd)) {
+				if (isWasaviExist(wnd)) {
 					suspend();
 				}
 				if (registerEvents(wnd)) {
@@ -94,23 +108,22 @@
 		}, DELAY_MSECS);
 	}
 
-	function wasaviStarted (e) {
+	function wasaviStarted () {
 		log('catched wasavi launching');
 		suspend();
 	}
 
-	function wasaviTerminated (e) {
+	function wasaviTerminated () {
 		log('catched wasavi termination');
 		resume();
 	}
 
 	//
 	if (!initialized) {
-		liberator.modules.autocommands.add('LocationChange', /^/, locationChange);
+		hook.addToHook('LocationChange', locationChange);
 		initialized = true;
 		log('registered the wasavi mediator.');
 	}
-
 })();
 
 // vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript :
