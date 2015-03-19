@@ -30,6 +30,11 @@
 'use strict';
 (function (global) {
 
+function diag (s) {try {window.parent.postMessage(s, '*')} catch (e) {}}
+diag('starting wasavi.js');
+
+diag('defining classes');
+
 /*
  * classes {{{1
  * ----------------
@@ -915,6 +920,8 @@ function ExCommandExecutor (app) {
 	);
 }
 
+diag('defining functions');
+
 /*
  * low-level functions for application management {{{1
  * ----------------
@@ -990,6 +997,8 @@ function install (x, req) {
 	 *       |
 	 *       + span#wasavi_cover_button
 	 */
+
+	diag('entering install()');
 
 	// container
 	var cnt = $(CONTAINER_ID);
@@ -1199,8 +1208,11 @@ function install (x, req) {
 	});
 	extensionChannel.isTopFrame() && runExrc();
 
+	diag('leaving install()');
 }
 function runExrc () {
+	diag('entering runExrc()');
+
 	/*
 	 * set up event handlers
 	 */
@@ -1238,7 +1250,10 @@ function runExrc () {
 		 */
 
 		notifyToParent('ready');
+		diag('ready');
 	});
+
+	diag('leaving runExrc()');
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
@@ -4422,6 +4437,8 @@ function handleBackendMessage (req) {
 	}
 }
 
+diag('defining variables');
+
 /*
  * variables {{{1
  * ----------------
@@ -7596,6 +7613,8 @@ var lineInputEditMap = {
 	'<end>':function () {return this['\u0005'].apply(this, arguments)}
 };
 
+diag('entering start up section');
+
 /*
  * startup {{{1
  * ----------------
@@ -7604,10 +7623,14 @@ var lineInputEditMap = {
 if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
+	diag('connecting to extension');
 	extensionChannel.connect('init', function (req) {
+		diag('connected to extension');
 		if (!req) return;
 		function run (callback) {
 			function doRun () {
+				diag('entering doRun()');
+
 				/*
 				 * an issue of security risk about innerHTML
 				 * =========================================
@@ -7630,10 +7653,12 @@ if (global.WasaviExtensionWrapper
 				callback();
 			}
 
+			diag('entering run()');
 			extensionChannel.ensureRun(doRun);
 		}
 
 		if (extensionChannel.isTopFrame()) {
+			diag('running wasavi as app mode');
 			testMode = req.testMode;
 			run(function() {
 				!targetElement && install({
@@ -7659,6 +7684,7 @@ if (global.WasaviExtensionWrapper
 			});
 		}
 		else if (req.payload) {
+			diag('running wasavi in iframe');
 			testMode = req.payload.testMode;
 			run(function() {install(req.payload, req);});
 		}

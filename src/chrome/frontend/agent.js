@@ -77,6 +77,7 @@ var resizeListener;
 var wasaviFrameTimeoutTimer;
 var getValueCallback;
 var stateClearTimer;
+var diagMessages;
 
 function log () {
 	logMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
@@ -218,6 +219,9 @@ function locate (iframe, target, opts) {
 function run (element) {
 	fireCustomEvent('WasaviStarting', 0);
 
+	diagMessages = ['agent: entering run()'];
+	window.addEventListener('message', handlePostMessage, false);
+
 	var isPseudoTextarea = false;
 	for (var e = element; e; e = e.parentNode) {
 		if (!e.classList) continue;
@@ -253,9 +257,13 @@ function run (element) {
 	else if (element.isContentEditable) {
 		runCore(element, extension.urlInfo.frameSource, toPlainText(element));
 	}
+
+	diagMessages.push('agent: leaving run()');
 }
 
 function runCore (element, frameSource, value) {
+	diagMessages.push('agent: entering runCore()');
+
 	/*
 	 * boot sequence:
 	 *
@@ -344,6 +352,8 @@ function runCore (element, frameSource, value) {
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
 		marks:element.getAttribute(MARKS_ID)
 	});
+
+	diagMessages.push('agent: leaving runCore()');
 }
 
 function cleanup (value, isImplicit) {
@@ -874,6 +884,10 @@ function handleWasaviFrameRemove () {
 	wasaviFrame = null;
 	cleanup();
 	error('wasavi terminated abnormally.');
+	if (diagMessages) {
+		error(diagMessages.join('\n'));
+		diagMessages = undefined;
+	}
 }
 function handleWasaviFrameInitTimeout () {
 	wasaviFrame.parentNode.removeChild(wasaviFrame);
@@ -910,6 +924,7 @@ function handleAgentInitialized (req) {
 
 /**
  * handler for launch request event
+ * ----------------
  */
 
 function handleRequestLaunch () {
@@ -928,6 +943,7 @@ function handleRequestLaunch () {
 
 /**
  * handler for response from element content retriever
+ * ----------------
  */
 
 function handleResponseGetContent (e) {
@@ -939,6 +955,7 @@ function handleResponseGetContent (e) {
 
 /*
  * handler for messages comes from backend
+ * ----------------
  */
 
 function handleBackendMessage (req) {
@@ -975,6 +992,9 @@ function handleBackendMessage (req) {
 
 		clearTimeout(wasaviFrameTimeoutTimer);
 		wasaviFrameTimeoutTimer = null;
+
+		window.removeEventListener('message', handlePostMessage, false);
+		diagMessages = undefined;
 		break;
 
 	case 'window-state':
@@ -1236,6 +1256,30 @@ function handleBackendMessage (req) {
 		break;
 	}
 }
+
+/*
+ * handler for cross messaging, for debug
+ * ----------------
+ */
+
+function handlePostMessage (e) {
+	if (window.chrome) {
+		if (e.origin != 'chrome-extension://' + chrome.runtime.id) return;
+	}
+	else if (window.opera) {
+		if (e.origin != 'http://wasavi.appsweets.net'
+		&&  e.origin != 'https://ss1.xrea.com') return;
+	}
+	else if (WasaviExtensionWrapper.IS_GECKO) {
+		// on Firefox, e.origin is always null. maybe a bug?
+	}
+	diagMessages.push('wasavi: ' + e.data);
+}
+
+/*
+ * handler for connection to extension
+ * ----------------
+ */
 
 function handleConnect (req) {
 	if (!req || !('tabId' in req) || !req.tabId) {
