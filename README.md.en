@@ -83,10 +83,15 @@ This plugin will control the pass-through mode of Vimperator according to the st
 
 On [wasavi online app](http://wasavi.appsweets.net/), enter `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` in Vimperator. Then Vimperator will always use pass-through mode for the online app. `ignorekeys` settings is stored automatically therefore you will not have to reenter it.
 
-
 ## How to use wasavi as an independent text editor
 
 Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
+
+## About autimatic setting override
+
+The `:set` commands which you input while wasavi is running are stored to extension's persistent storage, and those are regenerated when you launch wasavi next time.
+
+This setting override mechanism is works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in you exrc. Then overriding will be skipped.
 
 ## I Have noticed a bug
 
@@ -132,6 +137,14 @@ Tips and Tricks
 	+ `T` register: title string
 	+ `U` register: URL string
 	+ `W` register: version string of wasavi
+* To return a setting to default state:
+	+ `:set <option-name>&`
+	+ `:set <option-name>&default`
+	+ `:set all&`
+	+ `:set all&default`
+* To return a setting to the state just after evaluation of exrc:
+	+ `:set <option-name>&exrc`
+	+ `:set all&exrc`
 
 
 
@@ -255,10 +268,8 @@ Vim features in wasavi
 * incremental search
 * range symbols (aka, Vim text objects)
 * register `"`, `:`, `*`, `/` (`*` is used to access system clipboard)
-* auto-reformat in input mode, and reformat operator (gq command) on the
-  state of textwidth > 0
+* auto-reformat in input mode, and reformat operator (gq command) on the state of textwidth > 0
 * bound mode (aka, Vim visual mode)
-* options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`,
-  `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`
+* options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`
 * writing to the register of A to Z
 * `gu` / `gU` + motion: lowerize or upperize a region

@@ -83,10 +83,15 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) では、Vimperator に対して `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは Vimperator は常にパススルーモードになります。`ignorekeys` の設定は自動的に保存されるので、コマンドは再入力する必要はありません。
 
-
 ## 単体のテキストエディタとしての利用
 
 wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive のファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive へのアクセスのために OAuth による承認が必要です。
+
+## 自動的な設定の上書き
+
+wasavi の実行時に入力された `:set` コマンドは、エクステンションに永続的に記憶され、wasavi の次回の実行時に再生されます。
+
+この設定の上書き機構は最大 30 の各 URL ごとに機能します。この機能が不要であるならば、exrc に `:set nooverride` を追加してください。上書きは無効になります。
 
 ## バグを見つけた
 
@@ -132,6 +137,14 @@ Tips and Tricks
 	+ `T` register: タイトル文字列
 	+ `U` register: URL 文字列
 	+ `W` register: wasavi のバージョン文字列
+* 設定をデフォルトの状態へ戻すには：
+	+ `:set <option>&`
+	+ `:set <option>&default`
+	+ `:set all&`
+	+ `:set all&default`
+* 設定を exrc の評価直後の状態へ戻すには:
+	+ `:set <option>&exrc`
+	+ `:set all&exrc`
 
 
 
