@@ -67,6 +67,58 @@ public class BasicsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testNoOverride () {
+		// quit
+		Wasavi.sendNoWait(":q!\n");
+		sleep(1000);
+
+		// nativate to new url
+		String currentUrl = driver.getCurrentUrl();
+		driver.navigate().to(currentUrl + "?nooverride");
+
+		/*
+		 * phase 1
+		 */
+
+		// #1-1 launch wasavi
+		WebElement wasaviFrame = invokeWasavi();
+		if (wasaviFrame == null) {
+			fail("testNoOverride: cannot find wasaviFrame, phase 1");
+		}
+
+		// #1-2 set option be different from its default value
+		Wasavi.send(":set nu\n");
+
+		// #1-3 quit
+		Wasavi.sendNoWait(":q!\n");
+		sleep(1000);
+
+		// #1-4 refresh
+		driver.navigate().refresh();
+		sleep(1000);
+
+		/*
+		 * phase 2
+		 */
+
+		// #2-1 launch wasavi again
+		wasaviFrame = invokeWasavi();
+		if (wasaviFrame == null) {
+			fail("testNoOverride: cannot find wasaviFrame, phase 2");
+		}
+
+		// #2-2 query the state of number option
+		// and ensure `set nu` at #1-2 is ignored
+		Wasavi.send(":set nu?\n");
+		assertEquals("#1-1", "nonumber", Wasavi.getLastMessage());
+
+		// #2-3 quit and restore original url
+		Wasavi.sendNoWait(":q!\n");
+		sleep(1000);
+		driver.navigate().to(currentUrl);
+	}
+
+	@Test
 	public void launchAppMode () {
 		Wasavi.sendNoWait(":q\n");
 		sleep(1000);

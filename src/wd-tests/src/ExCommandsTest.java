@@ -1603,6 +1603,76 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testSetResetToDefault () {
+		Wasavi.send(":set list?\n");
+		assertEquals("#1-1", "  list", Wasavi.getLastMessage());
+
+		// reset to default #1 (nolist)
+		Wasavi.send(":set list&\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#2-1", "nolist", Wasavi.getLastMessage());
+
+		// set to default
+		Wasavi.send(":set list\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#3-1", "  list", Wasavi.getLastMessage());
+
+		// reset to default #2 (nolist)
+		Wasavi.send(":set list&default\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#4-1", "nolist", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void testSetResetToExrc () {
+		Wasavi.send(":set list?\n");
+		assertEquals("#1-1", "  list", Wasavi.getLastMessage());
+
+		Wasavi.send(":set nolist\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#2-1", "nolist", Wasavi.getLastMessage());
+
+		Wasavi.send(":set list&exrc\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#3-1", "  list", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void testSetResetAllToDefault () {
+		Wasavi.send(":set list?\n");
+		assertEquals("#1-1", "  list", Wasavi.getLastMessage());
+
+		// reset to default #1 (nolist)
+		Wasavi.send(":set all&\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#2-1", "nolist", Wasavi.getLastMessage());
+
+		// set to default
+		Wasavi.send(":set list\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#3-1", "  list", Wasavi.getLastMessage());
+
+		// reset to default #2 (nolist)
+		Wasavi.send(":set all&default\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#4-1", "nolist", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void testSetResetAllToExrc () {
+		Wasavi.send(":set list?\n");
+		assertEquals("#1-1", "  list", Wasavi.getLastMessage());
+
+		Wasavi.send(":set nolist\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#2-1", "nolist", Wasavi.getLastMessage());
+
+		Wasavi.send(":set all&exrc\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#3-1", "  list", Wasavi.getLastMessage());
+	}
+
+	@Test
 	public void testRegisters () {
 		Wasavi.send(":registers\n");
 		assertEquals("#1-1", join("\n",
