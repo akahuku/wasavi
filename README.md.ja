@@ -142,12 +142,12 @@ Tips and Tricks
 	+ `U` register: URL 文字列
 	+ `W` register: wasavi のバージョン文字列
 * 設定をデフォルトの状態へ戻すには：
-	+ `:set <option>&`
-	+ `:set <option>&default`
-	+ `:set all&`
-	+ `:set all&default`
+	+ `:set <オプション名>&` または `:set <オプション名>&default`
+* 全ての設定をデフォルトの状態へ戻すには：
+	+ `:set all&` または `:set all&default`
 * 設定を exrc の評価直後の状態へ戻すには:
-	+ `:set <option>&exrc`
+	+ `:set <オプション名>&exrc`
+* 全ての設定を exrc の評価直後の状態へ戻すには:
 	+ `:set all&exrc`
 
 

@@ -142,12 +142,12 @@ Tips and Tricks
 	+ `U` register: URL string
 	+ `W` register: version string of wasavi
 * To return a setting to default state:
-	+ `:set <option-name>&`
-	+ `:set <option-name>&default`
-	+ `:set all&`
-	+ `:set all&default`
+	+ `:set <option-name>&` or `:set <option-name>&default`
+* To return all settings to default state:
+	+ `:set all&` or `:set all&default`
 * To return a setting to the state just after evaluation of exrc:
 	+ `:set <option-name>&exrc`
+* To return all settings to the state just after evaluation of exrc:
 	+ `:set all&exrc`
 
 
