@@ -81,7 +81,11 @@ Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediat
 
 This plugin will control the pass-through mode of Vimperator according to the state of wasavi.
 
-On [wasavi online app](http://wasavi.appsweets.net/), enter `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` in Vimperator. Then Vimperator will always use pass-through mode for the online app. `ignorekeys` settings is stored automatically therefore you will not have to reenter it.
+## How to use wasavi with Keysnail on Firefox
+
+Put [wasavi_mediator.ks.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/keysnail/wasavi_mediator.ks.js) in your Keysnail plugin directory.
+
+This plugin will control suspend mode of Keysnail according to the state of wasavi.
 
 ## How to use wasavi as an independent text editor
 

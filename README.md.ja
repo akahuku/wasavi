@@ -81,7 +81,11 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 このプラグインは wasavi の状態に従って Vimperator のパススルーモードを制御します。
 
-[オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) では、Vimperator に対して `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは Vimperator は常にパススルーモードになります。`ignorekeys` の設定は自動的に保存されるので、コマンドは再入力する必要はありません。
+## Firefox で Keysnail と共存する
+
+[wasavi_mediator.ks.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/keysnail/wasavi_mediator.ks.js) を Keysnail のプラグインディレクトリに置いてください。
+
+このプラグインは wasavi の状態に従って Keysanil のサスペンドモードを制御します。
 
 ## 単体のテキストエディタとしての利用
 
