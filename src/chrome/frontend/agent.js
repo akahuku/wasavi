@@ -640,7 +640,7 @@ function toPlainText (input) {
 }
 
 function isInBlacklist (blacklist) {
-	var result = blacklist.split('\n').some(function (url) {
+	var result = (blacklist || '').split('\n').some(function (url) {
 		url = url.replace(/^\s+|\s+$/g, '');
 		if (url == '' || /^[#;]/.test(url)) return;
 

@@ -1590,24 +1590,60 @@ var cache = {};
 		else if (a.argv.some(function (o) {return o == 'all';})) {
 			messages = app.config.dump(app.backlog.cols, true);
 		}
+		else if (a.argv.some(function (o) {return /^all&(default|exrc)?$/.test(o)})) {
+			switch (RegExp.$1) {
+			case '':
+			case 'default':
+				app.config.reset();
+				messages = [_('All options are reset to {0}.', 'default')];
+				break;
+
+			case 'exrc':
+				app.config.loadSnapshot('exrc');
+				messages = [_('All options are reset to {0}.', RegExp.$1)];
+				break;
+			}
+		}
 		else {
 			messages = [];
 			for (var i = 0; i < a.argv.length; i++) {
 				var arg = a.argv[i];
-				var re = /^([^=?]+)([=?])/.exec(arg) || ['', arg, ''];
+				var re = /^([^=?]+)([=?]|&(?:default|exrc)?)/.exec(arg) || ['', arg, ''];
 				var info = app.config.getInfo(re[1]);
 				if (!info) {
 					messages.push(_('Unknown option: {0}', re[1]));
 					emphasis = true;
 					continue;
 				}
-				if (re[2] == '?') {
+
+				// query
+				if (re[2] == '?'
+				|| i + 1 < a.argv.length && a.argv[i + 1] == '?') {
 					messages.push(app.config.getData(re[1], true));
+					re[2] != '?' && i++;
 				}
-				else if (i + 1 < a.argv.length && a.argv[i + 1] == '?') {
-					messages.push(app.config.getData(re[1], true));
-					i++;
+
+				// reset
+				else if (re[2].charAt(0) == '&'
+				|| i + 1 < a.argv.length && a.argv[i + 1].charAt(0) == '&') {
+					if (re[2].charAt(0) != '&') {
+						re[2] = a.argv[i + 1];
+						i++;
+					}
+
+					switch (re[2]) {
+					case '&':
+					case '&default':
+						app.config.reset(re[1]);
+						break;
+
+					case '&exrc':
+						app.config.loadSnapshot('exrc', re[1]);
+						break;
+					}
 				}
+
+				// others
 				else {
 					if (re[2] == ''
 					&& i + 1 < a.argv.length

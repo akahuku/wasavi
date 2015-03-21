@@ -195,6 +195,7 @@ function ExCommandExecutor (app) {
 	var EX_SYNC = 1;
 	var EX_ASYNC = 2;
 
+	var self = this;
 	var running = false;
 	var async = false;
 	var suspended = false;
@@ -871,7 +872,9 @@ function ExCommandExecutor (app) {
 		lastError && requestShowMessage(lastError, true);
 		async && processInput(app.keyManager.nopObject);
 
-		executes.forEach(function (a) {a(this)}, this);
+		setTimeout(function (executes) {
+			executes.forEach(function (a) {a(self)});
+		}, 1, executes);
 	}
 	function isClipboardAccess (args) {
 		return args.flags.register && args.register == '*';
@@ -882,9 +885,10 @@ function ExCommandExecutor (app) {
 			suspended = true;
 		}
 	}
+	function toString () {return '[object ExCommandExecutor]'}
 
 	publish(this,
-		clone, run, showOverlay, hideOverlay,
+		clone, run, showOverlay, hideOverlay, toString,
 		{
 			EX_SYNC: EX_SYNC,
 			EX_ASYNC: EX_ASYNC,
@@ -1237,8 +1241,7 @@ function runExrc () {
 	 * execute exrc
 	 */
 
-	isInteractive = false;
-	exvm.run(exrc.join('\n'), function (ex) {
+	function finish (ex) {
 		!ex.async && processInput(keyManager.nopObject);
 
 		exrc = null;
@@ -1251,6 +1254,18 @@ function runExrc () {
 
 		notifyToParent('ready');
 		diag('ready');
+	}
+
+	isInteractive = false;
+	exvm.run(exrc[0], function (ex) {
+		config.saveSnapshot('exrc');
+
+		if (config.vars.override && exrc[1] && exrc[1] != '') {
+			exvm.run(exrc[1], finish);
+		}
+		else {
+			finish(ex);
+		}
 	});
 
 	diag('leaving runExrc()');
@@ -4694,8 +4709,7 @@ var config = new Wasavi.Configurator(appProxy,
 			targetElement &&
 			notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
-				state:v ? 'maximized' : 'normal',
-				modelineHeight:$('wasavi_footer').offsetHeight
+				state:v ? 'maximized' : 'normal'
 			});
 			return v;
 		}],
@@ -4710,6 +4724,7 @@ var config = new Wasavi.Configurator(appProxy,
 			notifyToParent('set-size', {isSyncSize: v});
 			return v;
 		}],
+		['override', 'b', true, null, true],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
