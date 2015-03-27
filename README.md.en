@@ -91,11 +91,11 @@ This plugin will control suspend mode of Keysnail according to the state of wasa
 
 Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
 
-## About autimatic setting override
+## About automatic setting override
 
 The `:set` commands which you input while wasavi is running are stored to extension's persistent storage, and those are regenerated when you launch wasavi next time.
 
-This setting override mechanism is works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in you exrc. Then overriding will be skipped.
+This setting override mechanism works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in you exrc. Then overriding will be skipped.
 
 ## I Have noticed a bug
 
@@ -180,7 +180,7 @@ Motions
   `_` `/` `?` `'` `` ` `` `(` `)` `{` `}` `[[` `]]` `<enter>` `0`
   `j` `k` `h` `l` `^N` `^P` `^H`
   `<down>` `<up>` `<left>` `<right>` `<space>`
-  `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `gi` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
+  `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
 
 Range symbols (Vim text objects)
 -------------------------------
@@ -196,7 +196,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
 
 ex commands
 -----------

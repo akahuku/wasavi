@@ -487,11 +487,18 @@ Wasavi.RegexConverter = function (app) {
 		'?':   '\\?',
 		'+':   '\\+'
 	};
+	function fixup (s) {
+		return s
+			.replace(/\\s/g, '[\\t\\v\\f\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]');
+	}
 	function toJsRegexString (s) {
 		if (typeof s == 'string') {
-			return s.replace(/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g, function ($0) {
-				return flips[$0] || $0;
-			});
+			return fixup(
+				s.replace(
+					/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g,
+					function ($0) { return flips[$0] || $0 }
+				)
+			);
 		}
 		else if (s instanceof RegExp) {
 			return s.source;
@@ -521,7 +528,7 @@ Wasavi.RegexConverter = function (app) {
 		};
 	}
 
-	publish(this, toJsRegexString, toJsRegex, getCS, getDefaultOption);
+	publish(this, fixup, toJsRegexString, toJsRegex, getCS, getDefaultOption);
 };
 
 Wasavi.PrefixInput = function () {

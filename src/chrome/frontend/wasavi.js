@@ -2011,7 +2011,7 @@ function getFindRegex (src) {
 	}
 	try {
 		result = new RegExp(
-			magic ? pattern : regexConverter.toJsRegexString(pattern),
+			regexConverter[magic ? 'fixup' : 'toJsRegexString'](pattern),
 			caseSensibility + global + multiline);
 	}
 	catch (e) {
