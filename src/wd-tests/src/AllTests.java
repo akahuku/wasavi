@@ -23,6 +23,7 @@ import org.junit.runners.Suite.SuiteClasses;
 	,LearningTheViEditor6th.class
 	,LineInputEditingTest.class
 	,BoundTest.class
+	,SurroundingTest.class
 })
 public class AllTests {
 	public static void main (String[] args) {

@@ -316,6 +316,8 @@ class WasaviWrapper {
 				|| "backlog_prompt".equals(s)
 				|| "ex_s_prompt".equals(s)
 				|| "write handler".equals(s)
+				|| "bound".equals(s)
+				|| "bound_line".equals(s)
 			) {
 				inputModeOfWacthTarget.add(s);
 			}
@@ -556,7 +558,7 @@ class WasaviAsserts {
 				expected, actual);
 	}
 
-	public static void assertEqualst(String expected, String actual) {
+	public static void assertEquals (String expected, String actual) {
 		assertEquals("", expected, actual);
 	}
 

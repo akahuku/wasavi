@@ -949,9 +949,6 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send(":set noai\nSreplaced\u001b");
 		assertPos("#1-1", 0, 7);
 		assertEquals("#1-2", "replaced", Wasavi.getValue());
-
-		Wasavi.send("dS");
-		assertTrue("#2-1", Wasavi.getLastMessage().length() > 0);
 	}
 
 	@Test
