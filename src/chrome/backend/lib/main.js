@@ -360,6 +360,12 @@
 		}
 	}
 
+	function isTestUrl (url) {
+		if (url.indexOf(TEST_MODE_URL) === 0) return true;
+		if ((url.indexOf(APP_MODE_URL) === 0 || url.indexOf(APP_MODE_URL_SECURE) === 0) && /[?&]testmode/.test(url)) return true;
+		return false;
+	}
+
 	/** {{{2 returns frontend script list for firefox */
 
 	function getContentScriptOptions () {
@@ -608,8 +614,7 @@
 			version: ext.version,
 			devMode: ext.isDev,
 			logMode: ext.logMode,
-			testMode: data.url == TEST_MODE_URL
-				|| ((data.url.indexOf(APP_MODE_URL) === 0 || data.url.indexOf(APP_MODE_URL_SECURE) === 0) && /[?&]testmode/.test(data.url)),
+			testMode: isTestUrl(data.url),
 
 			targets: config.get('targets'),
 			shortcut: config.get('shortcut'),
@@ -632,11 +637,19 @@
 			o.exrc = config.get('exrc');
 			o.messageCatalog = ext.messageCatalog;
 			o.fstab = ext.fileSystem.getInfo();
+
+			// for tests
+			if (payload && isTestUrl(payload.url)) {
+				o.exrc += '\nset list';
+				if (/[?&]nooverride\b/.test(payload.url)) {
+					o.exrc += '\nset nooverride';
+				}
+			}
 		}
 
 		// for wasavi
 		if (isInit) {
-			if (payload && payload.url != TEST_MODE_URL) {
+			if (payload && (!isTestUrl(payload.url) || /[?&]ros\b/.test(payload.url))) {
 				o.ros = runtimeOverwriteSettings.get(
 					payload.url, payload.nodePath);
 			}

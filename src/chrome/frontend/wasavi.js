@@ -30,6 +30,11 @@
 'use strict';
 (function (global) {
 
+function diag (s) {try {window.parent.postMessage(s, '*')} catch (e) {}}
+diag('starting wasavi.js');
+
+diag('defining classes');
+
 /*
  * classes {{{1
  * ----------------
@@ -190,6 +195,7 @@ function ExCommandExecutor (app) {
 	var EX_SYNC = 1;
 	var EX_ASYNC = 2;
 
+	var self = this;
 	var running = false;
 	var async = false;
 	var suspended = false;
@@ -866,7 +872,9 @@ function ExCommandExecutor (app) {
 		lastError && requestShowMessage(lastError, true);
 		async && processInput(app.keyManager.nopObject);
 
-		executes.forEach(function (a) {a(this)}, this);
+		setTimeout(function (executes) {
+			executes.forEach(function (a) {a(self)});
+		}, 1, executes);
 	}
 	function isClipboardAccess (args) {
 		return args.flags.register && args.register == '*';
@@ -877,9 +885,10 @@ function ExCommandExecutor (app) {
 			suspended = true;
 		}
 	}
+	function toString () {return '[object ExCommandExecutor]'}
 
 	publish(this,
-		clone, run, showOverlay, hideOverlay,
+		clone, run, showOverlay, hideOverlay, toString,
 		{
 			EX_SYNC: EX_SYNC,
 			EX_ASYNC: EX_ASYNC,
@@ -914,6 +923,8 @@ function ExCommandExecutor (app) {
 		}
 	);
 }
+
+diag('defining functions');
 
 /*
  * low-level functions for application management {{{1
@@ -990,6 +1001,8 @@ function install (x, req) {
 	 *       |
 	 *       + span#wasavi_cover_button
 	 */
+
+	diag('entering install()');
 
 	// container
 	var cnt = $(CONTAINER_ID);
@@ -1199,8 +1212,11 @@ function install (x, req) {
 	});
 	extensionChannel.isTopFrame() && runExrc();
 
+	diag('leaving install()');
 }
 function runExrc () {
+	diag('entering runExrc()');
+
 	/*
 	 * set up event handlers
 	 */
@@ -1225,8 +1241,7 @@ function runExrc () {
 	 * execute exrc
 	 */
 
-	isInteractive = false;
-	exvm.run(exrc.join('\n'), function (ex) {
+	function finish (ex) {
 		!ex.async && processInput(keyManager.nopObject);
 
 		exrc = null;
@@ -1238,7 +1253,22 @@ function runExrc () {
 		 */
 
 		notifyToParent('ready');
+		diag('ready');
+	}
+
+	isInteractive = false;
+	exvm.run(exrc[0], function (ex) {
+		config.saveSnapshot('exrc');
+
+		if (config.vars.override && exrc[1] && exrc[1] != '') {
+			exvm.run(exrc[1], finish);
+		}
+		else {
+			finish(ex);
+		}
 	});
+
+	diag('leaving runExrc()');
 }
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
@@ -1981,7 +2011,7 @@ function getFindRegex (src) {
 	}
 	try {
 		result = new RegExp(
-			magic ? pattern : regexConverter.toJsRegexString(pattern),
+			regexConverter[magic ? 'fixup' : 'toJsRegexString'](pattern),
 			caseSensibility + global + multiline);
 	}
 	catch (e) {
@@ -4422,6 +4452,8 @@ function handleBackendMessage (req) {
 	}
 }
 
+diag('defining variables');
+
 /*
  * variables {{{1
  * ----------------
@@ -4677,8 +4709,7 @@ var config = new Wasavi.Configurator(appProxy,
 			targetElement &&
 			notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
-				state:v ? 'maximized' : 'normal',
-				modelineHeight:$('wasavi_footer').offsetHeight
+				state:v ? 'maximized' : 'normal'
 			});
 			return v;
 		}],
@@ -4693,6 +4724,7 @@ var config = new Wasavi.Configurator(appProxy,
 			notifyToParent('set-size', {isSyncSize: v});
 			return v;
 		}],
+		['override', 'b', true, null, true],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
@@ -7596,6 +7628,8 @@ var lineInputEditMap = {
 	'<end>':function () {return this['\u0005'].apply(this, arguments)}
 };
 
+diag('entering start up section');
+
 /*
  * startup {{{1
  * ----------------
@@ -7604,10 +7638,14 @@ var lineInputEditMap = {
 if (global.WasaviExtensionWrapper
 &&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
+	diag('connecting to extension');
 	extensionChannel.connect('init', function (req) {
+		diag('connected to extension');
 		if (!req) return;
 		function run (callback) {
 			function doRun () {
+				diag('entering doRun()');
+
 				/*
 				 * an issue of security risk about innerHTML
 				 * =========================================
@@ -7630,10 +7668,12 @@ if (global.WasaviExtensionWrapper
 				callback();
 			}
 
+			diag('entering run()');
 			extensionChannel.ensureRun(doRun);
 		}
 
 		if (extensionChannel.isTopFrame()) {
+			diag('running wasavi as app mode');
 			testMode = req.testMode;
 			run(function() {
 				!targetElement && install({
@@ -7659,6 +7699,7 @@ if (global.WasaviExtensionWrapper
 			});
 		}
 		else if (req.payload) {
+			diag('running wasavi in iframe');
 			testMode = req.payload.testMode;
 			run(function() {install(req.payload, req);});
 		}

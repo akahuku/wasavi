@@ -681,8 +681,15 @@ loop:		do {
 		}
 		function setColor () {
 			var nodes = buffer.getSpans(EMPHASIS_CLASS);
-			var fg = visible ? app.theme.colors.highlightFg : '';
-			var bg = visible ? app.theme.colors.highlightBg : '';
+			var fg, bg;
+			if (visible) {
+				fg = app.theme.colors.highlightFg;
+				bg = app.theme.colors.highlightBg;
+			}
+			else {
+				fg = app.theme.colors.rowFg;
+				bg = 'transparent';
+			}
 			for (var i = 0; i < nodes.length; i++) {
 				nodes[i].style.color = fg;
 				nodes[i].style.backgroundColor = bg;

@@ -81,12 +81,21 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 このプラグインは wasavi の状態に従って Vimperator のパススルーモードを制御します。
 
-[オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) では、Vimperator に対して `:ignorekeys add ^http://wasavi\\.appsweets\\.net/` を与えてください。このページは Vimperator は常にパススルーモードになります。`ignorekeys` の設定は自動的に保存されるので、コマンドは再入力する必要はありません。
+## Firefox で Keysnail と共存する
 
+[wasavi_mediator.ks.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/keysnail/wasavi_mediator.ks.js) を Keysnail のプラグインディレクトリに置いてください。
+
+このプラグインは wasavi の状態に従って Keysanil のサスペンドモードを制御します。
 
 ## 単体のテキストエディタとしての利用
 
 wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive のファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive へのアクセスのために OAuth による承認が必要です。
+
+## 自動的な設定の上書き
+
+wasavi の実行時に入力された `:set` コマンドは、エクステンションに永続的に記憶され、wasavi の次回の実行時に再生されます。
+
+この設定の上書き機構は最大 30 の各 URL ごとに機能します。この機能が不要であるならば、exrc に `:set nooverride` を追加してください。上書きは無効になります。
 
 ## バグを見つけた
 
@@ -132,6 +141,14 @@ Tips and Tricks
 	+ `T` register: タイトル文字列
 	+ `U` register: URL 文字列
 	+ `W` register: wasavi のバージョン文字列
+* 設定をデフォルトの状態へ戻すには：
+	+ `:set <オプション名>&` または `:set <オプション名>&default`
+* 全ての設定をデフォルトの状態へ戻すには：
+	+ `:set all&` または `:set all&default`
+* 設定を exrc の評価直後の状態へ戻すには:
+	+ `:set <オプション名>&exrc`
+* 全ての設定を exrc の評価直後の状態へ戻すには:
+	+ `:set all&exrc`
 
 
 
@@ -163,7 +180,7 @@ Motions
   `_` `/` `?` `'` `` ` `` `(` `)` `{` `}` `[[` `]]` `<enter>` `0`
   `j` `k` `h` `l` `^N` `^P` `^H`
   `<down>` `<up>` `<left>` `<right>` `<space>`
-  `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `gi` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
+  `w` `W` `b` `B` `e` `E` `gg` `gj` `gk` `g^` `g$` `G` `H` `M` `L` `f` `F` `t` `T` `n` `N`
 
 Range symbols (Vim text objects)
 --------------------------------
@@ -179,7 +196,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
 
 ex commands
 -----------

@@ -166,6 +166,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		this.defaultValue = defaultValue;
 		this.subSetter = subSetter;
 		this.nativeValue = defaultValue;
+		this.snapshots = undefined;
 	}
 	VariableItem.prototype = {
 		get value () {
@@ -241,6 +242,26 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			default:
 				throw new Error('*invalid type for getBinder: ' + this.type + ' *');
 			}
+		},
+		reset: function () {
+			if (this.isDynamic) return;
+			this.nativeValue = this.defaultValue;
+		},
+		saveSnapshot: function (name) {
+			if (this.isDynamic) return;
+
+			if (!this.snapshots) {
+				this.snapshots = {};
+			}
+
+			this.snapshots[name] = this.value;
+		},
+		loadSnapshot: function (name) {
+			if (this.isDynamic) return;
+			if (!this.snapshots) return;
+			if (!(name in this.snapshots)) return;
+
+			this.nativeValue = this.snapshots[name];
 		}
 	};
 
@@ -408,9 +429,37 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		}
 		return result;
 	}
+	function reset (name) {
+		if (name == undefined) {
+			for (var i = 0, goal = internals.length; i < goal; i++) {
+				internals[i].reset();
+			}
+		}
+		else {
+			var item = getItem(name);
+			item && item.reset();
+		}
+	}
+	function saveSnapshot (snapshot) {
+		for (var i = 0, goal = internals.length; i < goal; i++) {
+			internals[i].saveSnapshot(snapshot);
+		}
+	}
+	function loadSnapshot (snapshot, name) {
+		if (name == undefined) {
+			for (var i = 0, goal = internals.length; i < goal; i++) {
+				internals[i].loadSnapshot(snapshot);
+			}
+		}
+		else {
+			var item = getItem(name);
+			item && item.loadSnapshot(snapshot);
+		}
+	}
 
 	publish(this,
 		getInfo, getData, setData, dump, dumpData, dumpScript,
+		reset, saveSnapshot, loadSnapshot,
 		{
 			vars:function () {return vars},
 			abbrevs:function () {return abbrevs}
@@ -438,11 +487,18 @@ Wasavi.RegexConverter = function (app) {
 		'?':   '\\?',
 		'+':   '\\+'
 	};
+	function fixup (s) {
+		return s
+			.replace(/\\s/g, '[\\t\\v\\f\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]');
+	}
 	function toJsRegexString (s) {
 		if (typeof s == 'string') {
-			return s.replace(/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g, function ($0) {
-				return flips[$0] || $0;
-			});
+			return fixup(
+				s.replace(
+					/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g,
+					function ($0) { return flips[$0] || $0 }
+				)
+			);
 		}
 		else if (s instanceof RegExp) {
 			return s.source;
@@ -472,7 +528,7 @@ Wasavi.RegexConverter = function (app) {
 		};
 	}
 
-	publish(this, toJsRegexString, toJsRegex, getCS, getDefaultOption);
+	publish(this, fixup, toJsRegexString, toJsRegex, getCS, getDefaultOption);
 };
 
 Wasavi.PrefixInput = function () {
