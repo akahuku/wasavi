@@ -81,6 +81,7 @@ diag('defining classes');
 		get exvm () {return exvm},
 		get recordedStrokes () {return recordedStrokes},
 		get notifier () {return notifier},
+		get searchUtils () {return searchUtils},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -109,6 +110,7 @@ diag('defining classes');
 			getLocalStorage:getLocalStorage,
 			setLocalStorage:setLocalStorage,
 			isEditing:isEditing,
+			isBound:isBound,
 			pushInputMode:pushInputMode,
 			popInputMode:popInputMode,
 			showPrefixInput:showPrefixInput,
@@ -163,6 +165,8 @@ diag('defining classes');
 		 */
 		edit:Object.freeze({
 			deleteSelection:deleteSelection,
+			deleteCharsForward:deleteCharsForward,
+			deleteCharsBackward:deleteCharsBackward,
 			insert:insert,
 			overwrite:overwrite,
 			shift:shift,
@@ -1154,7 +1158,7 @@ function install (x, req) {
 	idealWidthPixels = idealDenotativeWidthPixels = -1;
 	isEditCompleted = isVerticalMotion = isReadonlyWarned =
 	isSmoothScrollRequested = isJumpBaseUpdateRequested = false;
-	recordedStrokes = false;
+	recordedStrokes = new Wasavi.StrokeRecorder;
 	lastSimpleCommand = '';
 	lastHorzFindCommand = {direction:0, letter:'', stopBefore:false};
 	lastRegexFindCommand = new Wasavi.RegexFinderInfo;
@@ -1171,7 +1175,7 @@ function install (x, req) {
 		testMode || !('registers' in req) ? null : req.registers);
 	lineInputHistories = new Wasavi.LineInputHistories(
 		appProxy,
-		config.vars.history, ['/', ':', 'e'],
+		config.vars.history, '/:es'.split(''),
 		testMode || !('lineInputHistories' in req) ? null : req.lineInputHistories);
 	marks = new Wasavi.Marks(
 		appProxy,
@@ -1187,6 +1191,7 @@ function install (x, req) {
 	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
 	searchUtils = new Wasavi.SearchUtils(appProxy);
 	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
+	surrounding = new Wasavi.Surrounding(appProxy);
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 
 	refreshIdealWidthPixels();
@@ -1260,7 +1265,7 @@ function runExrc () {
 	exvm.run(exrc[0], function (ex) {
 		config.saveSnapshot('exrc');
 
-		if (config.vars.override && exrc[1] && exrc[1] != '') {
+		if (config.vars.override && isString(exrc[1]) && exrc[1] != '') {
 			exvm.run(exrc[1], finish);
 		}
 		else {
@@ -1302,6 +1307,8 @@ function uninstall (save, implicit) {
 	theme = theme.dispose();
 	l10n = l10n.dispose();
 	completer = completer.dispose();
+	recordedStrokes = recordedStrokes.dispose();
+	surrounding = surrounding.dispose();
 
 	//
 	targetElement.tabId = extensionChannel.tabId;
@@ -1405,17 +1412,9 @@ function setInputMode (newInputMode, opts) {
 	opts || (opts = {});
 
 	inputMode = newInputMode;
+	cursor.update({type:newInputMode, visible:false});
 	if (newState != state) {
 		state = newState;
-		switch (newState) {
-		case 'normal':
-			cursor.update({type:newInputMode, focused:true, visible:!backlog.visible});
-			showPrefixInput();
-			break;
-		case 'console_wait':
-			cursor.update({type:newInputMode, visible:!backlog.visible && inputMode != 'ex_s_prompt'});
-			break;
-		}
 	}
 
 	switch (inputMode) {
@@ -1424,11 +1423,10 @@ function setInputMode (newInputMode, opts) {
 		showLineInput.apply(null, ['prefix', 'value', 'curpos'].map(function (a) {
 			return a in opts ? opts[a] : undefined;
 		}));
-		cursor.update({type:newInputMode, focused:true, visible:true});
 		break;
 	}
 
-	isEditCompleted = isVerticalMotion = isSmoothScrollRequested = false;
+	isEditCompleted = isSmoothScrollRequested = false;
 }
 function pushInputMode (context, newInputMode, newInputModeOpts) {
 	context.inputMode = inputMode;
@@ -1475,7 +1473,7 @@ function getCursorPositionString () {
 }
 function getDefaultPrefixInputString () {
 	// 000000,0000xxx000%
-	return (recordedStrokes && !recordedStrokes.internal ? _('[RECORDING]') + ' ' : '') +
+	return (recordedStrokes.items('q') ? _('[RECORDING]') + ' ' : '') +
 		 ('     ' + (buffer.selectionStartRow + 1)).substr(-6) +
 		 ',' + ((getLogicalColumn() + 1) + '   ').substr(0, 4) +
 		 '   ' + getCursorPositionString();
@@ -1558,6 +1556,7 @@ function showLineInput (prefix, value, curpos) {
 		input.selectionStart = input.selectionEnd = value.length;
 	}
 	dataset(input, 'current', value);
+	dataset(input, 'internalPrefix', null);
 }
 function requestShowPrefixInput (message) {
 	if (!requestedState.modeline) {
@@ -1593,7 +1592,6 @@ function requestInputMode (mode, opts) {
 			mode:mode,
 			modeOpts:opts.modeOpts || {},
 			overrides:opts.overrides || {},
-			updateCursor:!!opts.updateCursor,
 			callback:opts.callback
 		};
 	}
@@ -1617,17 +1615,24 @@ function executeViCommand (arg) {
 	keyManager.sweep();
 }
 function completeSelectionRange (ss, se) {
-	if (buffer.selectionStart.gt(ss) && buffer.selectionStart.gt(se)) {
+	var s = buffer.selectionStart;
+	var e = buffer.selectionEnd;
+
+	if (s.gt(ss) && s.gt(se)) {
+		buffer.setSelectionRange(s);
+	}
+	else if (e.lt(ss) && e.lt(se)) {
+		buffer.setSelectionRange(e);
+	}
+	else if (s.ne(ss) && e.eq(se)) {
+		buffer.setSelectionRange(s);
+	}
+	else if (s.eq(ss) && e.ne(se)) {
+		buffer.setSelectionRange(e);
+	}
+
+	if (buffer.selectionStart.ne(buffer.selectionEnd)) {
 		buffer.setSelectionRange(buffer.selectionStart);
-	}
-	else if (buffer.selectionEnd.lt(ss) && buffer.selectionEnd.lt(se)) {
-		buffer.setSelectionRange(buffer.selectionEnd);
-	}
-	else if (buffer.selectionStart.ne(ss) && buffer.selectionEnd.eq(se)) {
-		buffer.setSelectionRange(buffer.selectionStart);
-	}
-	else if (buffer.selectionStart.eq(ss) && buffer.selectionEnd.ne(se)) {
-		buffer.setSelectionRange(buffer.selectionEnd);
 	}
 }
 function doEditComplete () {
@@ -1826,6 +1831,8 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 			isEditCompleted && doEditComplete();
 			completeSelectionRange(ss, se);
 
+			cursor.ensureVisible(isSmoothScrollRequested);
+
 			buffer.isLineOrientSelection =
 			isEditCompleted =
 			isVerticalMotion =
@@ -1835,41 +1842,42 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 				lastSimpleCommand = requestedState.simpleCommand.initial
 					+ prefixInput.toString();
 				delete requestedState.simpleCommand;
+//console.log('execCommandMap: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
 			}
 
 			r.needEmitEvent = true;
 			prefixInput.reset();
 			requestShowPrefixInput();
+
+//console.log('execCommandMap: undo log:\n' + editLogger.dump());
 		}
 	}
 
 	var im;
-	if (/^bound(?:_line)?$/.test(im = inputMode)
-	|| requestedState.inputMode && /^bound(?:_line)?$/.test(im = requestedState.inputMode.mode)) {
+	if (isBound(im = inputMode)
+	|| requestedState.inputMode && isBound(im = requestedState.inputMode.mode)) {
 		var p = buffer.selectionStart;
 		extendBound(p, im);
 		marks.setPrivate('>', p);
 	}
+
 	if (requestedState.inputMode) {
 		cursor.ensureVisible(false);
 	}
 	else {
 		cursor.ensureVisible(isSmoothScrollRequested);
 	}
-	if (!requestedState.inputMode || !requestedState.inputMode.updateCursor) {
-		cursor.update(scroller.running || state != 'normal' ?
-			{visible:false} : {focused:true, visible:true});
+	if (!keyManager.isLocked) {
+		requestedState.updateCursor = true;
 	}
 }
 function execEditMap (r, e, key, subkey, code) {
 	if (!editMap[key]) return false;
 	var ss = buffer.selectionStart;
 	var se = buffer.selectionEnd;
-	cursor.update({visible:false});
+	cursor.windup();
 	execMap(buffer, e, editMap, key, subkey, code);
 	completeSelectionRange(ss, se);
-	cursor.ensureVisible();
-	cursor.update({focused:true, visible:true});
 	return true;
 }
 function execLineInputEditMap (r, e, key, subkey, code) {
@@ -1906,7 +1914,7 @@ function processInput (e, ignoreAbbrev) {
 		pushInputMode(context, im.mode, im.modeOpts);
 		requestShowPrefixInput(getDefaultPrefixInputString());
 		im.callback && im.callback();
-		im.updateCursor && cursor.update({focused:true, visible:true});
+		requestedState.updateCursor = true;
 		requestedState.inputMode = null;
 	}
 	if (requestedState.modeline) {
@@ -1941,25 +1949,28 @@ function processInput (e, ignoreAbbrev) {
 		if (requestedState.console.open && backlog.queued) {
 			if (backlog.buffer.length > 1) {
 				backlog.write(false, messageUpdated);
-				pushInputMode(result, ['backlog_prompt']);
+				pushInputMode(result, 'backlog_prompt');
 			}
 			else {
 				backlog.buffer.length && showMessage(backlog.buffer[0]);
 				backlog.hide();
 				backlog.clear();
-				cursor.update({focused:true, visible:true});
 			}
 		}
 		else if (!requestedState.console.open) {
 			backlog.hide();
 			backlog.clear();
-			cursor.update({focused:true, visible:true});
 		}
 		requestedState.console = null;
 	}
 	if (!keyManager.isLocked && (result.needEmitEvent !== false || prefixInput == '')) {
+		requestedState.updateCursor = true;
 		notifyCommandComplete(
 			isString(result.needEmitEvent) ? result.needEmitEvent : null);
+	}
+	if (requestedState.updateCursor) {
+		cursor.update({focused:true, visible:true});
+		requestedState.updateCursor = null;
 	}
 }
 function processInputSupplement () {
@@ -1968,8 +1979,9 @@ function processInputSupplement () {
 	var e = keyManager.nopObject;
 	var last = inputModeStack.lastItem;
 	var map = getMap(last.inputMode);
-	execMap(buffer, e, map, last.mapkey, '$' + inputMode + '_reset', input.value);
-	execMap(buffer, e, map, last.mapkey, '$' + inputMode + '_notify', input.value);
+	var line = toNativeControl(input.value);
+	execMap(input, e, map, last.mapkey, '$' + inputMode + '_reset', line);
+	execMap(input, e, map, last.mapkey, '$' + inputMode + '_notify', line);
 }
 function getFindRegex (src) {
 	var result;
@@ -2380,6 +2392,7 @@ function getMap (mode) {
 	case 'command':
 		return commandMap;
 	case 'bound':
+	case 'bound_line':
 		return boundMap;
 	case 'edit':
 	case 'overwrite':
@@ -2391,8 +2404,17 @@ function getMap (mode) {
 	}
 }
 function execMap (target, e, map, key, subkey, code, pos) {
-	if (!map[key]) return false;
+	if (isArray(map)) {
+		map = map.filter(function (m) {return !!m[key]});
+		if (map.length == 0) return false;
+		map = map[0];
+	}
+	else {
+		if (!map[key]) return false;
+	}
+
 	subkey || (subkey = '');
+
 	var opts = {
 		target:target,
 		e:e,
@@ -2401,18 +2423,31 @@ function execMap (target, e, map, key, subkey, code, pos) {
 		selectionStart:pos && pos.s || buffer.selectionStart,
 		selectionEnd:pos && pos.e || buffer.selectionEnd
 	};
+	var letter = e.code2letter(code) || code;
+
+/*console.log([
+	'*** execMap ***',
+	'target: ' + getObjectType(target),
+	'   key: ' + (JSON.stringify(key)),
+	'subkey: ' + (JSON.stringify(subkey)),
+	'  code: ' + (JSON.stringify(code)),
+	'  mode: ' + inputMode,
+	'prefix: ' + prefixInput.toString(),
+	'typeof map item: ' + typeof map[key]
+].join('\n'));*/
 	switch (typeof map[key]) {
 	case 'function':
 		if (subkey == '' || subkey == inputMode) {
-			return map[key].call(map, e.code2letter(code) || code, opts);
+			return map[key].call(map, letter, opts);
 		}
 		break;
 	case 'object':
 		if (subkey != '' && subkey in map[key]) {
-			return map[key][subkey].call(map, e.code2letter(code) || code, opts);
+			return map[key][subkey].call(map, letter, opts);
 		}
 		break;
 	}
+
 	return true;
 }
 function invalidateIdealWidthPixels () {
@@ -2556,6 +2591,17 @@ function isEditing (mode) {
 	}
 	return false;
 }
+function isBound (mode) {
+	function o (mode) {
+		return mode == 'bound' || mode == 'bound_line';
+	}
+	if (mode) return o(mode);
+	if (o(inputMode)) return true;
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (o(inputModeStack[i].inputMode)) return true;
+	}
+	return false;
+}
 function isAlias (c, op) {
 	return prefixInput.motion == '' && c == (op || prefixInput.operation);
 }
@@ -2580,7 +2626,6 @@ function ensureBoundPosition (p1, p2, mode) {
 function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 	var p = ensureBoundPosition(marks.getPrivate('<'), marks.getPrivate('>'));
 	var act = p[1].row - p[0].row + 1;
-
 	buffer.unEmphasis(BOUND_CLASS);
 
 	if (callback1) {
@@ -2590,13 +2635,14 @@ function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 		buffer.isLineOrientSelection = false;
 	}
 
-	if (updateSimpleCommand && recordedStrokes) {
-		lastSimpleCommand = recordedStrokes.strokes;
+	if (updateSimpleCommand && !o.e.mapExpanded) {
+		lastSimpleCommand = recordedStrokes.items('bound').strokes;
+//console.log('operateToBound: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
 	}
 
-	prefixInput.trailer = c;
+	var isEditCompletedSaved = isEditCompleted;
 	processInput(keyManager.objectFromCode(27));
-	isEditCompleted = true;
+	isEditCompleted = isEditCompletedSaved;
 
 	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
 }
@@ -2662,6 +2708,64 @@ function insertNewlineWithIndent (origin, selfIndent) {
 		insert(indent);
 		insert('\n', {keepPosition:true});
 	}
+}
+function startSurrounding (c, o) {
+	var result;
+	switch (prefixInput.operation) {
+	case 'd': // operation surrounding-prefix surrunding-symbol
+	case 'c':
+		prefixInput.motion = c;
+		requestInputMode('wait_a_letter');
+		requestShowPrefixInput(
+			_('{0}: surrounding symbol', prefixInput.operation + o.e.key));
+		break;
+	case 'y': // operation surrounding-prefix (motion | range symbol) surrunding-string
+		prefixInput.appendOperation(c);
+		requestShowPrefixInput();
+		break;
+	case 'ys':
+		result = commandMap._(c);
+		isVerticalMotion = false;
+		buffer.setSelectionRange(
+			buffer.getLineTopOffset2(buffer.selectionStart),
+			buffer.getLineTailOffset(buffer.selectionEnd));
+		break;
+	case 'yS':
+		result = commandMap._(c);
+		break;
+	default:
+		result = inputEscape(o.e.key);
+		break;
+	}
+	return result;
+}
+function adjustSurroundingInputForNotify (original) {
+	var indicator = $('wasavi_footer_input_indicator');
+	var adjusted = original;
+
+	if (surrounding.isTagPrefix(original)) {
+		prefixInput.appendMotion(original);
+		showLineInput(indicator.textContent + '<', '', 0);
+		dataset($(LINE_INPUT_ID), 'internalPrefix', original);
+		original = '';
+	}
+
+	if (surrounding.isTagPrefix(indicator.textContent.substr(-1))) {
+		adjusted = '<' + original;
+	}
+
+	return adjusted;
+}
+function adjustSurroundingInput (original) {
+	var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+	original = original.replace(/\n$/, '');
+	var adjusted = original;
+
+	if (surrounding.isTagPrefix(prefix)) {
+		adjusted = '<' + original.substring(1);
+	}
+
+	return adjusted;
 }
 
 /*
@@ -3567,6 +3671,7 @@ function deleteSelection (isSubseq) {
 					buffer.selectionEndRow == buffer.rowLength - 1 && buffer.selectionEndCol > 0,
 					deleteMarksDest
 				);
+				isEditCompleted = true;
 			});
 		});
 	});
@@ -3622,6 +3727,7 @@ function insert (s, opts) {
 				break;
 			}
 		}
+		isEditCompleted = true;
 		keepPosition && buffer.setSelectionRange(startn);
 	});
 }
@@ -3999,7 +4105,7 @@ function paste (count, opts) {
 function startEdit (c, opts) {
 	if (buffer.selected) return inputEscape(opts.e.key);
 
-	requestInputMode('edit', {updateCursor:true, callback:function () {
+	requestInputMode('edit', {callback:function () {
 		opts || (opts = {});
 		var isAppend = !!opts.isAppend;
 		var isAlter = !!opts.isAlter;
@@ -4023,7 +4129,6 @@ function startEdit (c, opts) {
 		}
 		buffer.setSelectionRange(n);
 		cursor.ensureVisible();
-		cursor.update({type:'edit'});
 		prefixInput.isLocked = true;
 		inputHandler.reset(
 			'repeatCount' in opts ? opts.repeatCount : 1,
@@ -4300,8 +4405,8 @@ function handleKeydown (e) {
 		return false;
 	}
 
-	if (recordedStrokes && !e.mapExpanded) {
-		recordedStrokes.strokes += e.toInternalString();
+	if (!e.mapExpanded) {
+		recordedStrokes.appendStroke(e.toInternalString());
 	}
 
 	isInteractive = true;
@@ -4390,15 +4495,7 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'focus-me-response':
-		switch (state) {
-		case 'normal':
-			cursor.update({focused:true, visible:!backlog.visible});
-			break;
-		case 'line_input':
-			cursor.update({focused:false, visible:false});
-			$(LINE_INPUT_ID).focus();
-			break;
-		}
+		handleWindowFocus();
 		break;
 
 	case 'read-response':
@@ -4882,6 +4979,7 @@ var multiplexCallbackId;
 var compositionLevel;
 var containerRect;
 var statusLineHeight;
+var surrounding;
 
 var isEditCompleted;
 var isVerticalMotion;
@@ -4947,6 +5045,7 @@ var modeHandlers = {
 		else {
 			r.letter != ':' && backlog.hide();
 			popInputMode();
+			requestShowPrefixInput();
 			if (r.letter != '\u000d' && r.letter != ' ' && state == 'normal') {
 				keyManager.push(e);
 			}
@@ -4963,11 +5062,9 @@ var modeHandlers = {
 		if (r.subkey == inputMode && r.code == 0x1b) {
 			buffer.unEmphasis(BOUND_CLASS);
 			popInputMode();
-			cursor.ensureVisible();
-			cursor.update({type:inputMode, visible:true});
 			requestShowPrefixInput();
 			r.needEmitEvent = true;
-			recordedStrokes = false;
+			recordedStrokes.remove('bound');
 
 			var p1 = marks.getPrivate('<'), p2 = marks.getPrivate('>');
 			if (p1 && p2) {
@@ -5025,7 +5122,6 @@ var modeHandlers = {
 			registers.set('.', finalStroke);
 
 			cursor.ensureVisible();
-			cursor.update({type:inputMode, visible:true});
 
 			if (requestedState.simpleCommand) {
 				lastSimpleCommand = requestedState.simpleCommand.initial
@@ -5042,9 +5138,10 @@ var modeHandlers = {
 			invalidateIdealWidthPixels();
 			editLogger.close();// edit-wrapper
 			r.needEmitEvent = true;
-			//console.log('undo log:\n' + editLogger.dump());
-			//console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
-			//console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
+			isVerticalMotion = false;
+//console.log('undo log:\n' + editLogger.dump());
+//console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
+//console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
 		}
 		else {
 			var letterActual = inputHandler.updateText(e);
@@ -5077,7 +5174,6 @@ var modeHandlers = {
 			}
 			if (compositionLevel == 0) {
 				cursor.ensureVisible();
-				cursor.update({visible:true, focused:true});
 				requestShowPrefixInput(getDefaultPrefixInputString());
 				r.needEmitEvent = true;
 			}
@@ -5099,25 +5195,29 @@ var modeHandlers = {
 			|| r.code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
 		var isComplete = prefixInput.operation != ''
 			|| prefixInput.motion != '';
+		var line = toNativeControl(input.value);
 
 		dataset(input, 'current', input.value);
 		isCompleteResetCanceled = false;
 
 		if (r.subkey == inputMode && canEscape) {
-			backlog.hide();
-			execMap(
-				buffer, e,
-				getMap(inputModeStack.lastItem.inputMode),
-				inputModeStack.lastItem.mapkey,
-				'$' + inputMode + '_escape',
-				input.value);
+			var targetMode = inputModeStack.lastItem.inputMode;
+			var targetMap = getMap(targetMode);
+			var targetKey = inputModeStack.lastItem.mapkey;
+			var currentSubkey = inputMode;
 
 			popInputMode();
+			cursor.windup();
+			backlog.hide();
+			execMap(
+				input, e,
+				targetMap, targetKey, '$' + currentSubkey + '_escape',
+				line);
+
 			prefixInput.reset();
 			requestShowPrefixInput();
 		}
 		else if (r.subkey == inputMode && (r.code == 0x0d || r.code == 0x0a)) {
-			var line = toNativeControl(input.value);
 			if (isComplete) {
 				prefixInput.trailer = line + e.code2letter(r.code);
 			}
@@ -5126,21 +5226,26 @@ var modeHandlers = {
 				prefixInput.appendRegister(line + e.code2letter(r.code));
 			}
 
+			var internalPrefix = dataset(input, 'internalPrefix');
+			if (isString(internalPrefix)) {
+				line = internalPrefix + line;
+			}
+
+			var targetMode = inputModeStack.lastItem.inputMode;
+			var targetMap = getMap(targetMode);
+			var targetKey = inputModeStack.lastItem.mapkey;
+			var currentSubkey = inputMode;
+
+			popInputMode();
+			cursor.windup();
 			execMap(
-				buffer, e,
-				getMap(inputModeStack.lastItem.inputMode),
-				inputModeStack.lastItem.mapkey,
-				'$' + inputMode + '_reset',
+				input, e,
+				targetMap, targetKey, '$' + currentSubkey + '_reset',
 				line);
 			execCommandMap(
 				r, e,
-				getMap(inputModeStack.lastItem.inputMode),
-				inputModeStack.lastItem.mapkey,
-				inputMode,
+				targetMap, targetKey, currentSubkey,
 				line);
-
-			popInputMode();
-			isComplete && prefixInput.reset();
 		}
 		else if (execLineInputEditMap(r, e, r.mapkey, r.subkey, r.code)) {
 			setTimeout(function () {
@@ -5169,7 +5274,7 @@ var modeHandlers = {
 				}
 			}, 1);
 		}
-		else if (r.code >= 32) {
+		else if (r.code >= 1) {
 			lineInputHistories.isInitial = true;
 			insertToLineInput(input, r.letter);
 			processInputSupplement();
@@ -5428,6 +5533,48 @@ var commandMap = {
 			return this['<'].$op.apply(this, arguments);
 		}
 	},
+	ys:{
+		$op:function (c, o) {
+			requestInputMode('line_input', {
+				modeOpts:{
+					prefix:_('surround with:'),
+					historyName:'s'
+				},
+				overrides:{mapkey:prefixInput.operation}
+			});
+			return false;
+		},
+		$line_input_notify:function (c, o) {return this.s[o.subkey].apply(this, arguments)},
+		line_input:function (c, o) {
+			var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+			var isMultiline =
+				/S$/.test(prefixInput.operation)
+				|| isVerticalMotion
+				|| surrounding.isLinewiseTagPrefix(prefix);
+
+			if (isVerticalMotion) {
+				buffer.setSelectionRange(
+					buffer.getLineTopOffset2(buffer.selectionStart),
+					buffer.getLineTailOffset(buffer.selectionEnd));
+			}
+
+			var result = surrounding.insert(
+				adjustSurroundingInput(c), isMultiline);
+			if (result) {
+				requestSimpleCommandUpdate(prefixInput.toString());
+			}
+			else {
+				inputEscape('surrounding');
+			}
+			prefixInput.reset();
+			return true;
+		}
+	},
+	yS:{
+		$op:function (c, o) {return this.ys.$op.apply(this, arguments)},
+		$line_input_notify:function (c, o) {return this.s.$line_input_notify.apply(this, arguments)},
+		line_input:function (c, o) {return this.ys.line_input.apply(this, arguments)}
+	},
 
 	/*
 	 * operator shortcuts
@@ -5604,7 +5751,7 @@ var commandMap = {
 				offset:buffer.selectionStart,
 				scrollTop:buffer.scrollTop,
 				scrollLeft:buffer.scrollLeft,
-				updateBound:/^bound(?:_line)?$/.test(inputMode) && inputMode
+				updateBound:isBound(inputMode) && inputMode
 			});
 		},
 		bound:function (c, o) {return this['/'].command.apply(this, arguments)},
@@ -5662,7 +5809,6 @@ var commandMap = {
 				buffer.selectionStart, lastRegexFindCommand.updateBound);
 			buffer.scrollTop = lastRegexFindCommand.scrollTop;
 			buffer.scrollLeft = lastRegexFindCommand.scrollLeft;
-			cursor.update({visible:true});
 			cursor.ensureVisible();
 		}
 	},
@@ -6152,7 +6298,7 @@ var commandMap = {
 					marks.setPrivate('<', m1);
 					marks.setPrivate('>', m2);
 					buffer.setSelectionRange(m2);
-					recordedStrokes = {internal:true, strokes:o.key + c};
+					recordedStrokes.add('bound').strokes = o.key + c;
 				}
 				else {
 					requestRegisterNotice(_('Last bound is undefined.'));
@@ -6273,7 +6419,6 @@ var commandMap = {
 			return inputEscape(o.e.key);
 		}
 		requestInputMode('overwrite', {callback:function () {
-			cursor.update({type:'overwrite'});
 			prefixInput.isLocked = true;
 			inputHandler.reset(prefixInput.count, '', buffer.selectionStart, true);
 			editLogger.open('edit-wrapper');
@@ -6470,12 +6615,13 @@ var commandMap = {
 				return /^g/.test(prefixInput.operation) ?
 					true : inputEscape(o.e.key);
 			}
-			if (recordedStrokes) {
-				var stroke = recordedStrokes.strokes.replace(/q$/, '');
-				registers.get('"').locked = recordedStrokes.register != '"';
-				registers.set(recordedStrokes.register, stroke);
+			var rs = recordedStrokes.items('q');
+			if (rs) {
+				var stroke = rs.strokes.replace(/q$/, '');
+				registers.get('"').locked = rs.register != '"';
+				registers.set(rs.register, stroke);
 				registers.get('"').locked = false;
-				recordedStrokes = false;
+				recordedStrokes.remove('q');
 				return true;
 			}
 			requestInputMode('wait_a_letter');
@@ -6493,7 +6639,7 @@ var commandMap = {
 				requestShowMessage(_('Invalid register name: {0}', c), true);
 				return inputEscape();
 			}
-			recordedStrokes = {register:c, strokes:''};
+			recordedStrokes.add('q', {register:c});
 			return true;
 		}
 	},
@@ -6536,23 +6682,97 @@ var commandMap = {
 		return true;
 	},
 	// substitute text for whole lines (equivalents to cc)
-	S:function (c, o) {
-		if (!prefixInput.isEmptyOperation) {
-			return inputEscape(o.e.key);
+	// or surrounding extension
+	S:{
+		command:function (c, o) {
+			if (prefixInput.isEmptyOperation) {
+				prefixInput.operation = c;
+				isVerticalMotion = true;
+				return this.c.$op.call(this, c, buffer);
+			}
+
+			return startSurrounding(c, o);
+		},
+		wait_a_letter:function (c, o) {
+			return this.s[o.subkey].apply(this, arguments);
+		},
+		line_input:function (c, o) {
+			return this.s[o.subkey].apply(this, arguments);
 		}
-		prefixInput.operation = c;
-		isVerticalMotion = true;
-		return this.c.$op.call(this, c, buffer);
 	},
 	// substitute characters
-	s:function (c, o) {
-		if (!prefixInput.isEmptyOperation) {
-			return inputEscape(o.e.key);
+	// or surrounding extension
+	s:{
+		command:function (c, o) {
+			if (prefixInput.isEmptyOperation) {
+				editLogger.open('substitute');
+				deleteCharsForward(prefixInput.count, {yank:true});
+				requestSimpleCommandUpdate();
+				return startEdit(c);
+			}
+
+			return startSurrounding(c, o);
+		},
+		wait_a_letter:function (c) {
+			var result;
+
+			prefixInput.trailer = c;
+
+			switch (prefixInput.operation) {
+			case 'd':
+				if (surrounding.remove(prefixInput.trailer)) {
+					requestSimpleCommandUpdate(prefixInput.toString());
+				}
+				else {
+					inputEscape('surrounding');
+				}
+				prefixInput.reset();
+				result = true;
+				break;
+			case 'c':
+				requestInputMode('line_input', {
+					modeOpts:{
+						prefix:_('re-surround with:'),
+						historyName:'s'
+					}
+				});
+				break;
+			default:
+				break;
+			}
+
+			return result;
+		},
+		$line_input_notify:function (c, o) {
+			var adjusted = adjustSurroundingInputForNotify(c);
+			if (/^<.*>$/.test(adjusted) || /^ ?[^ <]$/.test(adjusted)) {
+				keyManager.push('\n');
+			}
+		},
+		line_input:function (c) {
+			var result;
+
+			prefixInput.appendTrailer(c);
+			switch (prefixInput.operation) {
+			case 'c':
+				result = surrounding.replace(
+					prefixInput.trailer.charAt(0),
+					prefixInput.trailer.substring(1).replace(/\n$/, ''));
+				if (result) {
+					requestSimpleCommandUpdate(prefixInput.toString());
+				}
+				else {
+					inputEscape('surrounding');
+				}
+				prefixInput.reset();
+				result = true;
+				break;
+			default:
+				break;
+			}
+
+			return result;
 		}
-		editLogger.open('substitute');
-		deleteCharsForward(prefixInput.count, {yank:true});
-		requestSimpleCommandUpdate();
-		return startEdit(c);
 	},
 	// equivalents to :x
 	//   ZZ
@@ -6609,7 +6829,7 @@ var commandMap = {
 		requestInputMode(c == 'v' ? 'bound' : 'bound_line');
 		marks.setPrivate('<', buffer.selectionStart);
 		if (!o.e.mapExpanded) {
-			recordedStrokes = {internal:true, strokes:c};
+			recordedStrokes.add('bound').strokes = c;
 		}
 	},
 	V:function () {return this.v.apply(this, arguments)}
@@ -6670,17 +6890,11 @@ var boundMap = {
 	},
 	y:function (c, o) {
 		if (inputMode == 'bound_line') return this.Y.apply(this, arguments);
-		return operateToBound(c, o, true,
-			function (p1, p2, act) {
-				yank(act);
-				act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
-				buffer.setSelectionRange(p1);
-			},
-			function () {
-				isEditCompleted = false;
-				return true;
-			}
-		);
+		return operateToBound(c, o, true, function (p1, p2, act) {
+			yank(act);
+			act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
+			buffer.setSelectionRange(p1);
+		});
 	},
 	'<':function (c, o) {
 		return operateToBound(c, o, true, function (p1, p2, act) {
@@ -6716,7 +6930,32 @@ var boundMap = {
 			}
 		);
 	},
-	S:function () {return this.C.apply(this, arguments)},
+	S:{
+		bound:function (c, o) {
+			requestInputMode('line_input', {
+				modeOpts:{
+					prefix:_('surround with:'),
+					historyName:'s'
+				}
+			});
+			return false;
+		},
+		bound_line:function () {return this.S.bound.apply(this, arguments)},
+		$line_input_notify:commandMap.s.$line_input_notify,
+		line_input:function (c, o) {
+			return operateToBound(c, o, true, function (p1, p2, act) {
+				var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+				var isMultiline =
+					inputMode == 'bound_line'
+					|| surrounding.isLinewiseTagPrefix(prefix);
+				var result = surrounding.insert(
+					adjustSurroundingInput(c), isMultiline);
+				if (!result) {
+					inputEscape('surrounding');
+				}
+			});
+		}
+	},
 	R:function () {return this.C.apply(this, arguments)},
 	D:function (c, o) {
 		return operateToBound(c, o, true, function (p1, p2, act) {
@@ -6729,19 +6968,13 @@ var boundMap = {
 	},
 	X:function () {return this.D.apply(this, arguments)},
 	Y:function (c, o) {
-		return operateToBound(c, o, true,
-			function (p1, p2, act) {
-				buffer.isLineOrientSelection = true;
-				yank();
-				act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
-				buffer.isLineOrientSelection = false;
-				buffer.setSelectionRange(p1);
-			},
-			function () {
-				isEditCompleted = false;
-				return true;
-			}
-		);
+		return operateToBound(c, o, true, function (p1, p2, act) {
+			buffer.isLineOrientSelection = true;
+			yank();
+			act >= config.vars.report && requestShowMessage(_('Yanked {0} {line:0}.', act));
+			buffer.isLineOrientSelection = false;
+			buffer.setSelectionRange(p1);
+		});
 	},
 
 	/* motions */
@@ -6807,10 +7040,31 @@ var boundMap = {
 				}
 				result = true;
 				break;
+			case 'S':
+				requestInputMode('line_input', {
+					modeOpts:{
+						prefix:_('surround:'),
+						historyName:'s'
+					},
+					overrides:{mapkey:o.key + c}
+				});
+				break;
 			default:
 				result = commandMap.g.wait_a_letter.apply(this, arguments);
 			}
 			return result;
+		},
+	},
+	gS:{
+		$line_input_notify:commandMap.s.$line_input_notify,
+		line_input:function (c, o) {
+			return operateToBound(c, o, true, function (p1, p2, act) {
+				var result = surrounding.insert(
+					adjustSurroundingInput(c), true);
+				if (!result) {
+					inputEscape('surrounding');
+				}
+			});
 		}
 	},
 
@@ -7184,7 +7438,7 @@ var editMap = {
 					registers.get('*').set(data);
 					if (data == '') {
 						showMessage(_('Register {0} is empty.', c));
-						cursor.update({visible:true, focused:true});	// for opera
+						cursor.update({visible:true, focused:true});
 					}
 					else {
 						paste(1, {content: data, isForward: false});

@@ -615,6 +615,269 @@ loop:		do {
 		buffer.setSelectionRange(startPos, endPos);
 		return true;
 	}
+	function isInTag (p) {
+		var text = app.lastRegexFindCommand.text;
+		var start, end, content;
+
+		//
+		var ss;
+		if (p != undefined) {
+			if (isNumber(p)) {
+				ss = p;
+			}
+			else if (p instanceof Wasavi.Position) {
+				ss = buffer.binaryPositionToLinearPosition(p);
+			}
+			else {
+				return false;
+			}
+		}
+		else {
+			ss = buffer.binaryPositionToLinearPosition(buffer.selectionStart);
+		}
+
+		//
+		switch (text.charAt(ss)) {
+		case '<':
+			start = ss;
+			end = ss + 1;
+			break;
+		case '>':
+			start = ss - 1;
+			end = ss;
+			break;
+		default:
+			start = ss - 1;
+			end = ss + 1;
+			break;
+		}
+
+		//
+		while (start >= 0 && text.charAt(start) != '<' && text.charAt(start) != '>') {
+			start--;
+		}
+		if (start < 0) return false;
+
+		//
+		while (end < text.length && text.charAt(end) != '<' && text.charAt(end) != '>') {
+			end++;
+		}
+		if (end >= text.length) return false;
+		end++;
+
+		//
+		content = text.substring(start, end).replace(/\n/g, ' ');
+
+		// close tag: </tag>
+		if (/^<\/.*?>$/.test(content)) {
+			return {start:start, end:end, id:1, content:content};
+		}
+
+		// XML Declaration: <? ... ?>
+		else if (/^<\?.*?\?>$/.test(content)) {
+			return false;
+		}
+
+		// XML Null End Tag: <tag/>
+		else if (/^<.*?\/>$/.test(content)) {
+			return {start:start, end:end, id:2, content:content};
+		}
+
+		// SGML Comment Declaration: <! ... >
+		else if (/^<!.*?>$/.test(content)) {
+			return false;
+		}
+
+		// open tag: <tag>
+		else if (/^<.*?>$/.test(content)) {
+			return {start:start, end:end, id:0, content:content};
+		}
+
+		return false;
+	}
+	function findCloseTag (tagName, start, end) {
+		var text = app.lastRegexFindCommand.text;
+		var regex = new RegExp('<(/)?' + tagName + '(?:[\\s\\n][^>]*>|>)', 'ig');
+		var nestLevel = 0;
+		var re;
+
+		regex.lastIndex = start;
+		while ((re = regex.exec(text))) {
+			if (re[1] == undefined || re[1] == '') {
+				nestLevel++;
+			}
+			else {
+				nestLevel--;
+				if (nestLevel < 0) {
+					break;
+				}
+				if (nestLevel == 0 && re.index >= end) {
+					return {offset:re.index, matchLength:re[0].length};
+				}
+			}
+		}
+		return false;
+	}
+	function skipIndent (p) {
+		var p1 = buffer.getLineTopOffset(p);
+		var p2 = buffer.getLineTopOffset2(p);
+		return p1.le(p) && p.lt(p2) ? p2 : p;
+	}
+	function tag (count, includeAnchor, recursive) {
+/*
+ *** test case ***
+<html>
+ <head>
+ </head>
+ <body>
+  <div class="outer-div">
+   <div>inner div</div>
+   <p>paragraph</p>
+  </div>
+ </body>
+</html>
+
+sequential it:
+	#1  6,6  - 6,14  paragraph
+	#2  6,3  - 6,18  <p>paragraph</p>
+	#3  4,25 - 7,1   ...<div> ~ </p>\n..
+	#4  4,2  - 7,7   <div class ~ </div>
+	#5  3,7  - 8,0   ..<div class ~ </div>\n.
+	#6  3,1  - 8,7   <body> ~ </body>
+	#7  0,6  - 8,8   .<head> ~ </body>\n
+	#8  0,0  - 9,6   <html> ~ </html>
+
+sequential at:
+	#1  6,3  - 6,18  <p>paragraph</p>
+	#2  4,2  - 7,7   <div class ~ </div>
+	#3  3,1  - 8,7   <body> ~ </body>
+	#4  0,0  - 9,6   <html> ~ </html>
+ */
+		var result = app.low.isBound();
+		var ss, se;
+		if (app.low.isBound()) {
+			ss = app.marks.getPrivate('<');
+			se = app.marks.getPrivate('>');
+		}
+		else {
+			ss = buffer.selectionStart;
+			se = buffer.selectionEnd;
+		}
+
+		app.motion.findByRegexForward(/./g, 1, {});
+
+		try {
+			var startPos = recursive ? ss.clone() : skipIndent(ss);
+			var tagp = isInTag(startPos);
+			var startOffset;
+			var currentOffset;
+			var openTagInfo;
+			var closeTagInfo;
+
+			if (tagp) {
+				switch (tagp.id) {
+				case 0: // open tag
+				case 2: // shorten tag
+					// cursor is on an open tag. move to just after '>'
+					// <tag>
+					//      ^
+					startOffset = tagp.end;
+					break;
+
+				case 1: // close tag
+					// cursor is on a close tag. move to '<'
+					// </tag>
+					// ^
+					startOffset = tagp.start;
+					break;
+				}
+			}
+
+			if (startOffset == undefined) {
+				startOffset = buffer.binaryPositionToLinearPosition(startPos);
+			}
+
+			currentOffset = startOffset;
+
+			for (var i = 0; i < count; ) {
+				buffer.setSelectionRange(currentOffset);
+				openTagInfo = app.motion.findByRegexBackward(/<[^!?\/][^>]*>/g, 1, {});
+				if (!openTagInfo) return result;
+
+				tagp = isInTag(openTagInfo.offset);
+				if (tagp && tagp.id == 0) {
+					closeTagInfo = findCloseTag(
+						/^<([^>\s\n]*)/.exec(tagp.content)[1],
+						openTagInfo.offset,
+						startOffset);
+
+					closeTagInfo && i++;
+				}
+
+				currentOffset = openTagInfo.offset;
+			}
+
+			if (!openTagInfo || !closeTagInfo) {
+				return result;
+			}
+
+			var ss2, se2;
+			if (includeAnchor) {
+				ss2 = buffer.linearPositionToBinaryPosition(
+					openTagInfo.offset);
+				se2 = buffer.linearPositionToBinaryPosition(
+					closeTagInfo.offset + closeTagInfo.matchLength);
+			}
+			else {
+				ss2 = buffer.linearPositionToBinaryPosition(
+					openTagInfo.offset + openTagInfo.matchLength);
+				se2 = buffer.linearPositionToBinaryPosition(
+					closeTagInfo.offset);
+
+			}
+			if (app.low.isBound()) {
+				se2 = buffer.leftPos(se2);
+				if (buffer.rows(se2).length && buffer.isNewline(se2)) {
+					se2 = buffer.leftPos(se2);
+				}
+			}
+
+			//
+			if (!recursive && ss.le(ss2) && se2.le(se)) {
+				buffer.setSelectionRange(ss, se);
+				var nestedResult;
+				if (includeAnchor) {
+					nestedResult = tag(count + 1, true, true);
+				}
+				else {
+					if (buffer.charAt(ss) == '<' && buffer.charAt(se) == '>') {
+						nestedResult = tag(count + 1, false, true);
+					}
+					else {
+						nestedResult = tag(count, true, true);
+					}
+				}
+				if (!nestedResult) return result;
+
+				ss2 = buffer.selectionStart;
+				se2 = buffer.selectionEnd;
+			}
+
+			//
+			if (app.low.isBound()) {
+				buffer.unEmphasis(BOUND_CLASS);
+				app.marks.setPrivate('<', ss2);
+				app.marks.setPrivate('>', se2);
+			}
+			ss = ss2;
+			se = se2;
+			result = true;
+			return result;
+		}
+		finally {
+			buffer.setSelectionRange(ss, se);
+		}
+	}
 	function dispatchRangeSymbol (count, targetChar, includeAnchor) {
 		switch (targetChar) {
 		case '"': case "'": case '`':
@@ -636,8 +899,9 @@ loop:		do {
 			return paragraph(count, includeAnchor);
 		case 's':
 			return sentence(count, includeAnchor);
+
 		case 't':
-			break // not implemented
+			return tag(count, includeAnchor);
 		}
 		return false;
 	}

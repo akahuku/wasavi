@@ -93,7 +93,7 @@ Wasavi.Theme = function (app) {
 			rowFg:'#fff', rowBg:'#333',
 			highlightFg:'highlight', highlightBg:'highlighttext',
 			lineInputFg:'black', lineInputBg:'rgba(255,255,255,0.5)',
-			consoleFg:'black', consoleBg:'rgba(159,205,74,0.8)',
+			consoleFg:'black', consoleBg:'rgba(159,205,74,0.9)',
 			boundFg:'black', boundBg:'#f5b338'
 		}
 	};
@@ -245,14 +245,26 @@ Wasavi.Bell = function (app) {
 
 Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comFocusHolder, input) {
 	var buffer = app.buffer;
-	var cursorType = 'command';
 	var locked = false;
 	var focused = false;
 	var visible = false;
 	var wrapper = null;
 	var wrappers = {};
 
-	/*constructor*/function CommandWrapper () {
+	/*constructor*/function CursorBase () {
+	}
+	CursorBase.prototype = {
+		reset: function () {},
+		hide: function () {},
+		show: function () {},
+		lostFocus: function () {},
+		windup: function () {},
+		compositionUpdate: function () {},
+		compositionComplete: function () {},
+		dispose: function () {}
+	};
+
+	/*constructor*/function CommandCursor () {
 		var cursorBlinkTimer;
 
 		function getCursorSpan () {
@@ -355,11 +367,15 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			comCursorColumn.style.display = 'none';
 		};
 		this.show = function () {
+			if (app.backlog.visible) return;
+
 			locate();
 			comFocusHolder.focus();
 			startBlink();
 		};
 		this.lostFocus = function () {
+			if (app.backlog.visible) return;
+
 			locate();
 			stopBlink();
 			var span = getCursorSpan();
@@ -376,11 +392,11 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			stopBlink();
 		};
 		this.windup = this.hide;
-		this.compositionUpdate =
-		this.compositionComplete = function () {};
 	}
+	CommandCursor.prototype = Object.create(CursorBase.prototype);
+	CommandCursor.prototype.constructor = CursorBase;
 
-	/*constructor*/function EditWrapper () {
+	/*constructor*/function InputCursor () {
 		this.hide = function () {
 			window.getSelection().removeAllRanges();
 			var n = buffer.selectionStart;
@@ -399,26 +415,17 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			node.focus();
 			app.keyManager.editable.setSelectionRange(node, n.col);
 		};
-		this.reset =
-		this.compositionUpdate =
-		this.compositionComplete =
-		this.windup =
-		this.lostFocus =
-		this.dispose = function () {};
 	}
+	InputCursor.prototype = Object.create(CursorBase.prototype);
+	InputCursor.prototype.constructor = CursorBase;
 
-	/*constructor*/function LineInputWrapper () {
+	/*constructor*/function LineInputCursor () {
 		this.show = function () {
 			input.focus();
 		};
-		this.reset =
-		this.hide =
-		this.windup =
-		this.lostFocus =
-		this.dispose =
-		this.compositionUpdate =
-		this.compositionComplete = function () {};
 	}
+	LineInputCursor.prototype = Object.create(CursorBase.prototype);
+	LineInputCursor.prototype.constructor = CursorBase;
 
 	function getCommandCursorCoord () {
 		var r = buffer.charRectAt(buffer.selectionStart);
@@ -478,9 +485,43 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			}
 		}
 	}
+	function getTypeInfo (mode) {
+		var type;
+		var ctor;
+
+		switch (mode) {
+		default:
+			type = 'command';
+			ctor = CommandCursor;
+			break;
+
+		case 'edit':
+		case 'overwrite':
+			type = 'input';
+			ctor = InputCursor;
+			break;
+
+		case 'line_input':
+			type = 'line_input';
+			ctor = LineInputCursor;
+			break;
+
+		case 'ex_s_prompt':
+			type = 'null';
+			ctor = CursorBase;
+			break;
+		}
+
+		return {
+			type: type,
+			ctor: ctor
+		};
+	}
 
 	function update (opts) {
 		if (locked) return;
+
+		var typeInfo;
 
 		if (opts) {
 			if ('visible' in opts) {
@@ -490,35 +531,20 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 				focused = opts.focused;
 			}
 			if ('type' in opts) {
-				if (!wrapper || opts.type != cursorType) {
+				typeInfo = getTypeInfo(opts.type);
+				if (!wrapper || typeInfo.type != wrapper.type) {
 					wrapper && wrapper.hide();
-					wrapper = null;
-					cursorType = opts.type;
+				}
+				else {
+					typeInfo = undefined;
 				}
 			}
 		}
 
-		if (!wrapper) {
-			switch (cursorType) {
-			default:
-				cursorType = 'command';
-				wrapper = wrappers[cursorType]
-					|| (wrappers[cursorType] = new CommandWrapper());
-				break;
-
-			case 'edit':
-			case 'overwrite':
-				cursorType = 'edit';
-				wrapper = wrappers[cursorType]
-					|| (wrappers[cursorType] = new EditWrapper());
-				break;
-
-			case 'line_input':
-				cursorType = 'line_edit';
-				wrapper = wrappers[cursorType]
-					|| (wrappers[cursorType] = new LineInputWrapper());
-				break;
-			}
+		if (typeInfo) {
+			wrapper = wrappers[typeInfo.type]
+				|| (wrappers[typeInfo.type] = new typeInfo.ctor);
+			wrapper.type = typeInfo.type
 			wrapper.reset();
 		}
 
@@ -561,7 +587,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 	publish(this,
 		ensureVisible, update, setupEventHandlers, windup, dispose,
 		{
-			type:function () {return cursorType},
+			type:function () {return wrapper ? wrapper.type : null},
 			focused:function () {return focused},
 			visible:function () {return visible},
 			commandCursor:function () {return comCursor},

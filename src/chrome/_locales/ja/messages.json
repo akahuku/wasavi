@@ -240,6 +240,10 @@
     "message": "{1} 行内を {0} 回置換しました。",
     "description": "{0} {substitution:0} on {1} {line:1}."
   },
+  "@0_surrounding_symbol": {
+    "message": "{0}: 包囲識別子",
+    "description": "{0}: surrounding symbol"
+  },
   "@0_unknown_command": {
     "message": "{0}: 未知のコマンドです。",
     "description": "{0}: unknown command."
@@ -283,6 +287,10 @@
   "all": {
     "message": "全て",
     "description": "All"
+  },
+  "all_options_are_reset_to_@0": {
+    "message": "All options are reset to {0}.",
+    "description": "All options are reset to {0}."
   },
   "already_in_a_pending_state": {
     "message": "すでにペンディング状態です。",
@@ -796,6 +804,10 @@
     "message": "置き換える文字数が多すぎます。",
     "description": "Replace count too large."
   },
+  "resurround_with": {
+    "message": "囲み直す文字列:",
+    "description": "re-surround with:"
+  },
   "ro": {
     "message": "読専",
     "description": "RO"
@@ -811,6 +823,10 @@
   "substitute_yes_no_quit": {
     "message": "置き換えますか? ([y]はい、[n]いいえ、[q]終了)",
     "description": "Substitute? ([y]es, [n]o, [q]uit)"
+  },
+  "surround_with": {
+    "message": "囲む文字列:",
+    "description": "surround with:"
   },
   "tail_of_history": {
     "message": "履歴の末尾です。",

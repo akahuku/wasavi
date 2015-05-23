@@ -3449,4 +3449,488 @@ Wasavi.Completer = function (appProxy, alist) {
 	init(alist);
 };
 
+Wasavi.StrokeRecorder = function () {
+	var storage = {};
+
+	function add (key, opts) {
+		return storage[key] = extend({strokes:''}, opts || {});
+	}
+
+	function remove (key) {
+		delete storage[key];
+	}
+
+	function items (key) {
+		return key in storage ? storage[key] : null;
+	}
+
+	function appendStroke (stroke) {
+		for (var i in storage) {
+			storage[i].strokes += stroke;
+		}
+	}
+
+	function dispose () {
+		storage = null;
+	}
+
+	publish(this,
+		add, remove, items, appendStroke, dispose
+	);
+};
+
+Wasavi.Surrounding = function (app) {
+	var charwiseTagPrefix = '<Tt';
+	var linewiseTagPrefix = '\u0014,';
+	var singleCharsTable = '!#$%&*+,\\-.:;=?@^_|~"\'`';
+
+	var basicTable = {
+		'a':'<>',
+		'b':'()',
+		'B':'{  }',
+		'r':'[]',
+		't':'<>',
+		'[':'[  ]',
+		']':'[]',
+		'{':'{  }',
+		'}':'{}',
+		'(':'(  )',
+		')':'()'
+	};
+
+	var insertionTable = {
+		'p':['\n', '\n\n'],
+		's':[' ', ''],
+		':':[':', '']
+	};
+
+	/*
+	 * private methods
+	 */
+
+	function getPair (item) {
+		var head = '', tail = '';
+		if (isString(item)) {
+			head = item.substr(0, Math.floor(item.length / 2));
+			tail = item.substr(Math.floor(item.length / 2));
+		}
+		else if (isArray(item)) {
+			head = item[0];
+			tail = item[1];
+		}
+		else if (isObject(item)) {
+			head = item.head;
+			tail = item.tail;
+		}
+		return [head, tail];
+	}
+
+	function getPairFromId (id) {
+		var head = '', tail = '';
+		if (id in basicTable) {
+			var pair = getPair(basicTable[id]);
+			head = pair[0];
+			tail = pair[1];
+		}
+		else if (singleCharsTable.indexOf(id) >= 0) {
+			head = tail = id;
+		}
+		return [head, tail];
+	}
+
+	function getPairFromString (s) {
+		var head = '', tail = '', extra = '';
+		var re;
+		if (/^ .+/.test(s)) {
+			s = s.substring(1);
+			extra = ' ';
+		}
+		if ((re = /^<([^ >]*)([^>]*)>$/.exec(s))) {
+			head = re[0];
+			tail = '</' + re[1] + '>';
+		}
+		else if (s in insertionTable) {
+			var pair = getPair(insertionTable[s]);
+			head = pair[0];
+			tail = pair[1];
+		}
+		else {
+			var pair = getPairFromId(s);
+			head = pair[0];
+			tail = pair[1];
+		}
+
+		if (extra != '' && (head != '' || tail != '')) {
+			head = (head + ' ').replace(/ +$/, ' ');
+			tail = (' ' + tail).replace(/^ +/, ' ');
+		}
+
+		return [head, tail];
+	}
+
+	function getPositions (id) {
+		var pair = getPairFromId(id);
+
+		if (pair[0] == '' && pair[1] == '') {
+			return false;
+		}
+
+		if (id == 'r') {
+			id = '[';
+		}
+		else if (id == 'a') {
+			id = '<';
+		}
+
+		var buffer = app.buffer;
+		var outerStart, outerEnd;
+		var innerStart, innerEnd;
+
+		// range symbol
+		if ('"\'`[]{}<>()Bbt'.indexOf(id) >= 0) {
+			var ss = buffer.selectionStart;
+
+			// <a href="...">content</a>
+			// ^             ^      ^   ^
+			// |             |      |   +---- outerEnd
+			// |             |      +-------- innerEnd
+			// |             +--------------- innerStart
+			// +----------------------------- outerStart
+
+			// inner positions
+			if (!app.searchUtils.dispatchRangeSymbol(1, id)) {
+				buffer.setSelectionRange(ss);
+				return false;
+			}
+			innerStart = buffer.selectionStart;
+			innerEnd = buffer.selectionEnd;
+
+			// outer positions
+			if (!app.searchUtils.dispatchRangeSymbol(1, id, true)) {
+				buffer.setSelectionRange(ss);
+				return false;
+			}
+			outerStart = buffer.selectionStart;
+			outerEnd = buffer.selectionEnd;
+
+			// adjust the outerStart
+			while (outerStart.col < innerStart.col) {
+				if (!/[ \t]/.test(buffer.charAt(outerStart))) {
+					break;
+				}
+				outerStart.col++;
+			}
+
+			// adjust the outerEnd
+			while (outerEnd.col - 1 > innerEnd.col) {
+				outerEnd.col--;
+				if (!/[ \t]/.test(buffer.charAt(outerEnd))) {
+					outerEnd.col++;
+					break;
+				}
+			}
+		}
+
+		// simple one char
+		else {
+			var ss = buffer.selectionStart;
+			var range = app.searchUtils.findQuoteRange(buffer.rows(ss), ss.col, id);
+			if (!range) {
+				return false;
+			}
+
+			outerStart = new Wasavi.Position(ss.row, range.start);
+			innerStart = new Wasavi.Position(ss.row, range.start + 1);
+			innerEnd = new Wasavi.Position(ss.row, range.end);
+			outerEnd = new Wasavi.Position(ss.row, range.end + 1);
+		}
+
+		return {
+			outerStart: outerStart,
+			innerStart: innerStart,
+			innerEnd: innerEnd,
+			outerEnd: outerEnd
+		};
+	}
+
+	function doInsertAsCharwise (pair) {
+		var buffer = app.buffer;
+		var ss = buffer.selectionStart;
+		var se = buffer.selectionEnd;
+		var mark = 'surround-right';
+
+		buffer.isLineOrientSelection = false;
+
+		// mark the position of right item
+		app.marks.setPrivate(mark, se.clone());
+
+		// insert left item
+		buffer.setSelectionRange(ss);
+		app.edit.insert(pair[0]);
+
+		// insert right item
+		buffer.setSelectionRange(app.marks.getPrivate(mark));
+		app.edit.insert(pair[1]);
+
+		// locate a cursor on the left item
+		buffer.setSelectionRange(ss);
+		app.marks.setPrivate(mark);
+	}
+
+	function doInsertAsLinewise (pair) {
+		var buffer = app.buffer;
+		var ss = buffer.selectionStart;
+		var se = buffer.selectionEnd;
+		var indent = app.config.vars.autoindent ?
+			buffer.getIndent(buffer.selectionStart) : '';
+		var mark = 'surround-left';
+
+		buffer.isLineOrientSelection = false;
+
+		// mark the position of left item
+		app.marks.setPrivate(mark, ss.clone());
+
+		// insert right item
+		buffer.setSelectionRange(se);
+		app.edit.insert('\n' + indent + pair[1].replace(/^[ \t]+/, ''));
+
+		// insert left item
+		var content = buffer.rows(ss);
+		buffer.setSelectionRange(
+			new Wasavi.Position(ss.row, 0),
+			new Wasavi.Position(ss.row, /^[ \t]*/.exec(content)[0].length));
+		app.edit.insert(indent + pair[0].replace(/[ \t]+$/, '') + '\n');
+
+		// shift right the inner contents
+		var indentExpanded = indent;
+		var regex = /^\t+/;
+		var re = regex.exec(indent);
+		if (re) {
+			indentExpanded = indentExpanded.replace(
+				regex,
+				multiply(' ', re[0].length * app.config.vars.tabstop));
+		}
+		var shiftCount = Math.floor(indentExpanded.length / app.config.vars.shiftwidth);
+		buffer.setSelectionRange(app.marks.getPrivate(mark));
+		app.edit.shift(se.row - ss.row + 1, shiftCount + 1);
+
+		// locate a cursor on the left item
+		buffer.setSelectionRange(ss);
+		app.marks.setPrivate(mark);
+	}
+
+	function doRemoveSingleLine (outerStart, innerStart, innerEnd, outerEnd) {
+		var buffer = app.buffer;
+
+		buffer.isLineOrientSelection = false;
+
+		// delete left item
+		buffer.setSelectionRange(outerStart, innerStart);
+		app.edit.deleteSelection();
+
+		// delete right item
+		innerEnd.col -= innerStart.col - outerStart.col;
+		outerEnd.col -= innerStart.col - outerStart.col;
+		buffer.setSelectionRange(innerEnd, outerEnd);
+		app.edit.deleteSelection();
+
+		// locate a cursor on the left item
+		buffer.setSelectionRange(outerStart);
+	}
+
+	function doRemoveMultiLine (outerStart, innerStart, innerEnd, outerEnd) {
+		var buffer = app.buffer;
+
+		buffer.isLineOrientSelection = false;
+
+		var line = buffer.rows(outerStart);
+		var indent = /^[ \t]*/.exec(line)[0];
+		var mid = outerStart.clone();
+
+		// left item
+		if (/^[ \t]*$/.test(line.substring(0, outerStart.col))
+		&&  /^[ \t]*$/.test(line.substring(innerStart.col))) {
+			// orphan, delete a whole line
+			buffer.isLineOrientSelection = true;
+			buffer.setSelectionRange(
+				new Wasavi.Position(outerStart.row, 0),
+				new Wasavi.Position(outerStart.row, line.length + 1));
+			app.edit.deleteSelection();
+			buffer.isLineOrientSelection = false;
+
+			innerEnd.row--;
+			outerEnd.row--;
+		}
+		else {
+			// not a orphan, delete left item and trailing spaces
+			// ....{....zzz
+			//     ^^^^^
+
+			while (/^[ \t]$/.test(line.charAt(innerStart.col))) {
+				innerStart.col++;
+			}
+			buffer.setSelectionRange(outerStart, innerStart);
+			app.edit.deleteSelection();
+
+			mid.row++;
+		}
+
+		// middle block
+		while (mid.row < outerEnd.row) {
+			var re = /^[ \t]*/.exec(buffer.rows(mid));
+
+			buffer.setSelectionRange(
+				new Wasavi.Position(mid.row, 0),
+				new Wasavi.Position(mid.row, re[0].length));
+			app.edit.insert(indent);
+
+			mid.row++;
+		}
+
+		// right item
+		var line = buffer.rows(outerEnd);
+		if (/^[ \t]*$/.test(line.substring(0, innerEnd.col))
+		&&  /^[ \t]*$/.test(line.substring(outerEnd.col))) {
+			// orphan, delete a whole line
+			buffer.isLineOrientSelection = true;
+			buffer.setSelectionRange(
+				new Wasavi.Position(outerEnd.row, 0),
+				new Wasavi.Position(outerEnd.row, line.length + 1));
+			app.edit.deleteSelection();
+			buffer.isLineOrientSelection = false;
+		}
+		else {
+			// not a orphan, delete leading spaces and right item
+			// zzz....}....
+			//    ^^^^^
+
+			while (innerEnd.col > 0 && /^[ \t]$/.test(line.charAt(innerEnd.col - 1))) {
+				innerEnd.col--;
+			}
+			buffer.setSelectionRange(innerEnd, outerEnd);
+			app.edit.deleteSelection();
+		}
+
+		// locate a cursor on the left item
+		buffer.setSelectionRange(outerStart);
+	}
+
+	function doReplace (pair, outerStart, innerStart, innerEnd, outerEnd) {
+		var buffer = app.buffer;
+		var ss, se;
+		var mark = 'surround-right';
+
+		buffer.isLineOrientSelection = false;
+
+		// mark the position of right item
+		app.marks.setPrivate(mark + '-1', innerEnd.clone());
+		app.marks.setPrivate(mark + '-2', outerEnd.clone());
+
+		// replace left item
+		ss = outerStart;
+		se = innerStart;
+		buffer.setSelectionRange(ss, se);
+		if (/^[ \t]*$/.test(buffer.rows(se).substring(se.col))) {
+			pair[0] = pair[0].replace(/[ \t]*$/, '');
+		}
+		app.edit.insert(pair[0]);
+
+		// replace right item
+		ss = app.marks.getPrivate(mark + '-1');
+		se = app.marks.getPrivate(mark + '-2');
+		buffer.setSelectionRange(ss, se);
+		if (/^[ \t]*$/.test(buffer.rows(ss).substring(0, ss.col))) {
+			pair[1] = pair[1].replace(/^[ \t]*/, '');
+		}
+		app.edit.insert(pair[1]);
+
+		// locate a cursor on the left item
+		buffer.setSelectionRange(outerStart);
+		app.marks.setPrivate(mark + '-1');
+		app.marks.setPrivate(mark + '-2');
+	}
+
+	/*
+	 * public methods
+	 */
+
+	function insert (s, isLineOrient) {
+		var pair = getPairFromString(s);
+		if (pair[0] == '' && pair[1] == '') {
+			return false;
+		}
+
+		app.editLogger.open('surround', function () {
+			(isLineOrient ? doInsertAsLinewise : doInsertAsCharwise)(
+				pair
+			);
+		});
+
+		return true;
+	}
+
+	function remove (id) {
+		var p = getPositions(id);
+		if (!p) {
+			return false;
+		}
+
+		app.editLogger.open('desurround', function () {
+			(p.outerStart.row == p.outerEnd.row ? doRemoveSingleLine : doRemoveMultiLine)(
+				p.outerStart, p.innerStart, p.innerEnd, p.outerEnd
+			);
+		});
+
+		console.log('undo log:\n' + app.editLogger.dump());
+
+		return true;
+	}
+
+	function replace (id, s) {
+		var p = getPositions(id);
+		if (!p) {
+			return false;
+		}
+
+		var pair = getPairFromString(s);
+		if (pair[0] == '' && pair[1] == '') {
+			return false;
+		}
+
+		app.editLogger.open('resurround', function () {
+			doReplace(
+				pair, p.outerStart, p.innerStart, p.innerEnd, p.outerEnd
+			);
+		});
+
+		return true;
+	}
+
+	function isCharwiseTagPrefix (line) {
+		return isString(line) && line.length == 1
+			&& charwiseTagPrefix.indexOf(line.charAt(0)) >= 0;
+	}
+
+	function isLinewiseTagPrefix (line) {
+		return isString(line) && line.length == 1
+			&& linewiseTagPrefix.indexOf(line.charAt(0)) >= 0;
+	}
+
+	function isTagPrefix (line) {
+		return isString(line) && line.length == 1
+			&& (   charwiseTagPrefix.indexOf(line.charAt(0)) >= 0
+				|| linewiseTagPrefix.indexOf(line.charAt(0)) >= 0);
+	}
+
+	function dispose () {
+		app = null;
+	}
+
+	publish(this,
+		insert, remove, replace,
+		isCharwiseTagPrefix, isLinewiseTagPrefix, isTagPrefix,
+		dispose
+	);
+};
+
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

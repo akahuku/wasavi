@@ -157,6 +157,9 @@ Commands implemented
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
+* [count] _surround-operation_ [count] _surround_identifier_ _surround_string_
+* [count] _de-surround-operation_ [count] _surround_identifier_
+* [count] _re-surround-operation_ [count] _surround_identifier_
 * [count] _operation-alias_
 * [count] _motion_
 * [count] _scroll-command_
@@ -173,6 +176,13 @@ Operation Aliases
 
 `cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
 
+Surround Operations
+-------------------
+
+* to surround: `ys` `yS` `yss` `ySS`
+* to remove a surround: `d`
+* to change a surround: `c`
+
 Motions
 -------
 
@@ -185,8 +195,8 @@ Motions
 Range symbols (Vim text objects)
 -------------------------------
 
-* `a"` `a'` `` a` `` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as`
-* `i"` `i'` `` i` `` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is`
+* `a"` `a'` `` a` `` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as` `at`
+* `i"` `i'` `` i` `` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is` `it`
 
 Scroll commands
 ---------------
@@ -264,6 +274,19 @@ Bound mode is similar to vim's visual mode.
 * `v`: character wise bound mode
 * `V`: line wise bound mode
 * `x`: same as `d`
+
+Surrounding identifiers
+-----------------------
+
+* quotations: one of `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* brackets: one of `abBrt[]{}()`
+
+Surrounding string
+-----------------------
+
+* quotations: one of `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* brackets: one of `abBr[]{}()`
+* tags: one of `^T` `,<Tt`
 
 Vim features in wasavi
 ----------------------

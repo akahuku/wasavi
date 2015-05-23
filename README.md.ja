@@ -157,6 +157,9 @@ Tips and Tricks
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
+* [count] _surround-operation_ [count] _surround_identifier_ _surround_string_
+* [count] _de-surround-operation_ [count] _surround_identifier_
+* [count] _re-surround-operation_ [count] _surround_identifier_
 * [count] _operation-alias_
 * [count] _motion_
 * [count] _scroll-command_
@@ -173,6 +176,13 @@ Operation Aliases
 
 `cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
 
+Surround Operations
+-------------------
+
+* 囲む: `ys` `yS` `yss` `ySS`
+* 囲みを除去する: `d`
+* 囲みを変更する: `c`
+
 Motions
 -------
 
@@ -185,8 +195,8 @@ Motions
 Range symbols (Vim text objects)
 --------------------------------
 
-* `a"` `a'` `` a` `` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as`
-* `i"` `i'` `` i` `` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is`
+* `a"` `a'` `` a` `` `a[` `a]` `a{` `a}` `aB` `a<` `a>` `a(` `a)` `ab` `aw` `aW` `ap` `as` `at`
+* `i"` `i'` `` i` `` `i[` `i]` `i{` `i}` `iB` `i<` `i>` `i(` `i)` `ib` `iw` `iW` `ip` `is` `it`
 
 Scroll commands
 ---------------
@@ -264,6 +274,19 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 * `v`: 文字単位の選択に切り替える
 * `V`: 行単位の選択に切り替える
 * `x`: `d` と同じ
+
+囲み識別子
+----------
+
+* 次のいずれかの記号類: `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* 次のいずれかの括弧類: `abBrt[]{}()`
+
+囲み文字列
+----------
+
+* 次のいずれかの記号類: `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* 次のいずれかの括弧類 `abBr[]{}()`
+* 次のいずれかで始まるタグ: `^T` `,<Tt`
 
 Vim 互換の機能
 --------------
