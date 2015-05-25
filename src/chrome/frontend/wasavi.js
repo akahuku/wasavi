@@ -4822,6 +4822,7 @@ var config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['override', 'b', true, null, true],
+		['datetime', 's', '%c'],
 
 		/* defined by vim */
 		['expandtab', 'b', false],

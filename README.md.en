@@ -137,7 +137,7 @@ Tips and Tricks
 	  for instance, `:read dropbox:/hello.txt`.
 * When you read from the register of A to Z, some registers returns special content:
 	+ `B` register: user agent string
-	+ `D` register: current date time string
+	+ `D` register: current date time string (formatted by using `datetime` option as template of strftime(3))
 	+ `T` register: title string
 	+ `U` register: URL string
 	+ `W` register: version string of wasavi

@@ -1346,7 +1346,7 @@ Wasavi.Registers = function (app, value) {
 					item.set(window.navigator.userAgent);
 					break;
 				case 'D':
-					item.set(new Date().toLocaleString());
+					item.set(strftime(app.config.vars.datetime));
 					break;
 				case 'T':
 					item.set(app.targetElement.title);

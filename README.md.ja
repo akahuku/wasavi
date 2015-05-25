@@ -137,7 +137,7 @@ Tips and Tricks
 	+ ファイル名の先頭にファイルシステム名を明示することができます: `:read dropbox:/hello.txt`
 * A から Z までのレジスタを読み込む際、いくつかのレジスタは特別な内容を返します:
 	+ `B` register: ユーザーエージェント文字列
-	+ `D` register: 現在の日付時刻文字列
+	+ `D` register: 現在の日付時刻文字列（`datetime` オプションを strftime(3) のテンプレートとして使用します）
 	+ `T` register: タイトル文字列
 	+ `U` register: URL 文字列
 	+ `W` register: wasavi のバージョン文字列

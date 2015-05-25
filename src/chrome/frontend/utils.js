@@ -440,5 +440,157 @@ loop:	while (true) {
 		return {error: e.message};
 	}
 }
+var strftime = (function (global) {
+	var weekdays = {
+		long:'Sunday Monday Tuesday Wednesday Thursday Friday Saturday'.split(' '),
+		short:'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
+	};
+	var months = {
+		long:'January February March April May June July August September October November December'.split(' '),
+		short:'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
+	};
+	var nummap = {
+		'_':function (s,w) {return s.length < w ? (multiply(' ', w) + s).substr(-w) : s},
+		'-':function (s,w) {return s.replace(/^[ 0]+/, '') || '0'},
+		'0':function (s,w) {return s.length < w ? (multiply('0', w) + s).substr(-w) : s}
+	};
+	var strmap = {
+		'^':function (s) {return s.toUpperCase()},
+		'#':function (s) {
+			return s.replace(/./g, function ($0) {
+				var l = $0.toLowerCase();
+				var u = $0.toUpperCase();
+				if (l != $0) return l;
+				if (u != $0) return u;
+				return $0;
+			});
+		}
+	};
+	var translators = {
+		'%':function () {return '%'},
+		a:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {weekday:'short'}).format(d), f)},
+		A:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {weekday:'long'}).format(d), f)},
+		b:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {month:'short'}).format(d), f)},
+		B:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {month:'long'}).format(d), f)},
+		c:function (d,l,f,w) {return ff(d.toLocaleString(), f)},
+		C:function (d,l,f,w) {return ff(d.getFullYear().toString().substring(0, 2), setdef(f, '0'), w)},
+		d:function (d,l,f,w) {return ff(d.getDate(), setdef(f, '0'), w || 2)},
+		D:function (d,l,f,w) {return 'mdy'.split('').map(function(a){return this[a](d, l, f)}, this).join('/')},
+		e:function (d,l,f,w) {return ff(d.getDate(), setdef(f, '_'), w || 2)},
+		F:function (d,l,f,w) {return 'Ymd'.split('').map(function(a){return this[a](d, l, f)}, this).join('-')},
+		g:function (d,l,f,w) {return ff((parseInt(this.G(d, '-', 0), 10)) % 100, setdef(f, '0'), w || 2)},
+		G:function (d,l,f,w) {
+			var y = d.getFullYear();
+			var V = parseInt(this.V(d, '-', 0), 10);
+			var W = parseInt(this.W(d, '-', 0), 10);
+			if (W > V) y++;
+			else if (W == 0 && V >= 52) y--;
+			return ff(y, setdef(f, '0'), w || 4);
+		},
+		h:function (d,l,f,w) {return this.b(d,l,f,w)},
+		H:function (d,l,f,w) {return ff(d.getHours(), setdef(f, '0'), w || 2)},
+		I:function (d,l,f,w) {return ff(d.getHours() % 12, setdef(f, '0'), w || 2)},
+		j:function (d,l,f,w) {return ff((Math.ceil((d.getTime() - (new Date(d.getFullYear(), 0, 1)).getTime()) / (24 * 60 * 60 * 1000))), setdef(f, '0'), w || 3)},
+		k:function (d,l,f,w) {return ff(d.getHours(), setdef(f, '_'), w || 2)},
+		l:function (d,l,f,w) {return ff(d.getHours() % 12, setdef(f, '_'), w || 2)},
+		m:function (d,l,f,w) {return ff(d.getMonth() + 1, setdef(f, '0'), w || 2)},
+		M:function (d,l,f,w) {return ff(d.getMinutes(), setdef(f, '0'), w || 2)},
+		n:function (d,l,f,w) {return '\n'},
+		p:function (d,l,f,w) {return ff(d.getHours() < 12 ? 'AM' : 'PM', f)},
+		P:function (d,l,f,w) {return ff(this.p(d).toLowerCase(), f)},
+		r:function (d,l,f,w) {return [this.I(d, l, '', 0), ':', this.M(d, l, '', 0), ':', this.S(d, l, '', 0), ' ', this.p(d, l, '', 0)].join('')},
+		R:function (d,l,f,w) {return 'HM'.split('').map(function(a){return this[a](d, l, f)}, this).join(':')},
+		s:function (d,l,f,w) {return ff(Math.floor(d.getTime() / 1000), setdef(f, '-'), 0)},
+		S:function (d,l,f,w) {return ff(d.getSeconds(), setdef(f, '0'), w || 2)},
+		t:function (d,l,f,w) {return '\t'},
+		T:function (d,l,f,w) {return 'HMS'.split('').map(function(a){return this[a](d, l, f)}, this).join(':')},
+		u:function (d,l,f,w) {return ff(d.getDay() == 0 ? 7 : d.getDay(), setdef(f, '0'), w || 0)},
+		U:function (d,l,f,w) {return ff(Math.floor(((parseInt(this.j(d, l, '-', 0), 10)) + (6 - d.getDay())) / 7), setdef(f, '0'), w || 2)},
+		V:function (d,l,f,w) {
+			var woy = parseInt(this.W(d, l, '-', 0), 10);
+			var dow1_1 = (new Date('' + d.getFullYear() + '/1/1')).getDay();
+			var idow = woy + (dow1_1 > 4 || dow1_1 <= 1 ? 0 : 1);
+			if (idow == 53 && (new Date('' + d.getFullYear() + '/12/31')).getDay() < 4) {
+				idow = 1;
+			}
+			else if (idow === 0) {
+				idow = this.V(new Date('' + (d.getFullYear() - 1) + '/12/31'), l, '-', 0);
+			}
+			return ff(idow, setdef(f, '0'), w || 2);
+		},
+		w:function (d,l,f,w) {return ff(d.getDay(), setdef(f, '0'), w || 1)},
+		W:function (d,l,f,w) {return ff(parseInt(((parseInt(this.j(d, '-', 0), 10)) + (7 - this.u(d, '-', 0))) / 7, 10), setdef(f, '0'), w || 2)},
+		x:function (d,l,f,w) {return ff(d.toLocaleDateString(), f)},
+		X:function (d,l,f,w) {return ff(d.toLocaleTimeString(), f)},
+		y:function (d,l,f,w) {return ff(d.getFullYear() % 100, setdef(f, '0'), w || 2)},
+		Y:function (d,l,f,w) {return ff(d.getFullYear(), setdef(f, '0'), w || 4)},
+		z:function (d,l,f,w) {
+			var t = d.getTimezoneOffset();
+			var sign = t < 0 ? '+' : '-';
+			t = Math.abs(t);
+			return sign + ('00' + Math.floor(t / 60)).substr(-2) + ('00' + (t % 60)).substr(-2);
+		},
+		Z:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {timeZoneName:'long'}).format(d), f)}
+	}
+	function setdef (f, def) {
+		f = (f || '').replace(/[^_\-0^#]/g, '');
+		return f == '' ? def : f;
+	}
+	function ff (s, f, w) {
+		s = '' + s;
+		if (isNumber(w) && w > 1 && /^\d+$/.test(s) && f in nummap) {
+			s = nummap[f](s, w);
+		}
+		else if (f in strmap) {
+			s = strmap[f](s);
+		}
+		return s;
+	}
+	function strftime () {
+		var format = arguments[0];
+		var datetime = arguments[1] || new Date;
+		var locale;
+		if (!isString(format)) return false;
+		if (!(datetime instanceof Date)) return false;
+		return format
+			.replace(/%\{locale:([^}]+)\}/g, function ($0, alocale) {
+				if (locale == undefined) {
+					locale = alocale;
+				}
+				else if (isArray(locale)) {
+					locale.push(alocale);
+				}
+				else {
+					locale = [locale];
+					locale.push(alocale);
+				}
+				return '';
+			})
+			.replace(/%([_\-0^#]?)(\d*)(.)/g, function ($0, f, w, key) {
+				try {
+					return key in translators ?
+						translators[key](datetime, locale, f, parseInt(w, 10) || 0) :
+						key;
+				}
+				catch (e) {
+					return $0;
+				}
+			});
+	}
+	if (typeof Intl == 'undefined') {
+		global.Intl = {
+			DateTimeFormat:function (locale, opts) {
+				return {
+					format:function (d) {
+						if ('weekday' in opts) return weekdays[opts.weekday][d.getDay()];
+						if ('month' in opts) return months[opts.month][d.getMonth()];
+						return '*Intl-fallback*';
+					}
+				}
+			}
+		};
+	}
+	return strftime;
+})(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
