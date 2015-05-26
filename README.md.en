@@ -157,9 +157,9 @@ Commands implemented
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
-* [count] _surround-operation_ [count] _surround_identifier_ _surround_string_
-* [count] _de-surround-operation_ [count] _surround_identifier_
-* [count] _re-surround-operation_ [count] _surround_identifier_
+* [count] _surround-operation_ [count] _surround-identifier_ _surround-string_
+* [count] _de-surround-operation_ [count] _surround-identifier_
+* [count] _re-surround-operation_ [count] _surround-identifier_
 * [count] _operation-alias_
 * [count] _motion_
 * [count] _scroll-command_
@@ -255,7 +255,7 @@ Bound mode is similar to vim's visual mode.
 * `<`: unshift the bound
 * `>`: shift the bound
 * `C`: delete the line-wise bound, and switch to insert mode
-* `S`: same as `C`
+* `S`: surround the bound
 * `R`: same as `C`
 * `D`: delete the line-wise bound
 * `X`: same as `D`
@@ -278,13 +278,13 @@ Bound mode is similar to vim's visual mode.
 Surrounding identifiers
 -----------------------
 
-* quotations: one of `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* quotations: one of ``!#$%&*+,\\-.:;=?@^_|~"'` ``
 * brackets: one of `abBrt[]{}()`
 
 Surrounding string
 -----------------------
 
-* quotations: one of `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* quotations: one of ``!#$%&*+,\\-.:;=?@^_|~"'` ``
 * brackets: one of `abBr[]{}()`
 * tags: one of `^T` `,<Tt`
 

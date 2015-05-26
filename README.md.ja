@@ -157,9 +157,9 @@ Tips and Tricks
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
-* [count] _surround-operation_ [count] _surround_identifier_ _surround_string_
-* [count] _de-surround-operation_ [count] _surround_identifier_
-* [count] _re-surround-operation_ [count] _surround_identifier_
+* [count] _surround-operation_ [count] _surround-identifier_ _surround-string_
+* [count] _de-surround-operation_ [count] _surround-identifier_
+* [count] _re-surround-operation_ [count] _surround-identifier_
 * [count] _operation-alias_
 * [count] _motion_
 * [count] _scroll-command_
@@ -255,7 +255,7 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 * `<`: 選択範囲を unshift する
 * `>`: 選択範囲を shift する
 * `C`: 選択範囲行を削除し、insert モードに移る
-* `S`: `C` と同じ
+* `S`: 選択範囲を囲む
 * `R`: `C` と同じ
 * `D`: 選択範囲行を削除する
 * `X`: `D` と同じ
@@ -278,13 +278,13 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 囲み識別子
 ----------
 
-* 次のいずれかの記号類: `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* 次のいずれかの記号類: ``!#$%&*+,\\-.:;=?@^_|~"'` ``
 * 次のいずれかの括弧類: `abBrt[]{}()`
 
 囲み文字列
 ----------
 
-* 次のいずれかの記号類: `!#$%&*+,\\-.:;=?@^_|~"'&#96;`
+* 次のいずれかの記号類: ``!#$%&*+,\\-.:;=?@^_|~"'` ``
 * 次のいずれかの括弧類 `abBr[]{}()`
 * 次のいずれかで始まるタグ: `^T` `,<Tt`
 

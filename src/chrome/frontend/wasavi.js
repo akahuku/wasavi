@@ -1831,8 +1831,6 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 			isEditCompleted && doEditComplete();
 			completeSelectionRange(ss, se);
 
-			cursor.ensureVisible(isSmoothScrollRequested);
-
 			buffer.isLineOrientSelection =
 			isEditCompleted =
 			isVerticalMotion =
