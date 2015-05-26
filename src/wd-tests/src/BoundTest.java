@@ -168,11 +168,6 @@ public class BoundTest extends WasaviTest {
 	}
 
 	@Test
-	public void changeBoundLinewiseS () {
-		_changeBoundLinewise("S");
-	}
-
-	@Test
 	public void changeBoundLinewiseR () {
 		_changeBoundLinewise("R");
 	}
@@ -433,11 +428,6 @@ public class BoundTest extends WasaviTest {
 	@Test
 	public void changeLineBoundLinewise () {
 		_changeLineBound("C");
-	}
-
-	@Test
-	public void changeLineBoundLinewiseS () {
-		_changeLineBound("S");
 	}
 
 	@Test
