@@ -819,6 +819,15 @@
 		else {
 			code = e.charCode;
 
+			// very very special behavior for Opera 12.16 on Linux:
+			// translate invalid plus sign (+) to equal sign (=).
+			// TODO: It is bad idea to patch strange browser behavior
+			// by the following code.
+			if (window.opera && window.navigator.platform == 'Linux'
+			&& !shiftKey && !ctrlKey && !altKey && code == 43) {
+				code = 61;
+			}
+
 			// ctrl code directly
 			if (code >= 0 && code <= 31) {
 				char = String.fromCharCode(code);

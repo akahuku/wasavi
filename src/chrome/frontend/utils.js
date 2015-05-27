@@ -118,7 +118,21 @@ function toVisibleString (s) {
 		})
 		.replace(/\ue000/g, 'Fn:');
 }
-function toVisibleControl (code) {
+function toVisibleControl (s) {
+	return typeof s == 'number' ?
+		_toVisibleControl(s) :
+		(s || '').replace(/[\u0000-\u001f\u007f]/g, function (a) {
+			return _toVisibleControl(a.charCodeAt(0));
+		});
+}
+function toNativeControl (s) {
+	return typeof s == 'number' ?
+		_toNativeControl(s) :
+		(s || '').replace(/[\u2400-\u241f\u2421]/g, function (a) {
+			return _toNativeControl(a.charCodeAt(0));
+		});
+}
+function _toVisibleControl (code) {
 	// U+2400 - U+243F: Unicode Control Pictures
 	if (code == 0x7f) {
 		return String.fromCharCode(0x2421);
@@ -128,10 +142,14 @@ function toVisibleControl (code) {
 	}
 	return String.fromCharCode(code);
 }
-function toNativeControl (s) {
-	return s.replace(/[\u2400-\u241f]/g, function (a) {
-		return String.fromCharCode(a.charCodeAt(0) & 0x00ff);
-	}).replace(/\u2421/g, '\u007f');
+function _toNativeControl (code) {
+	if (code == 0x2421) {
+		return '\u007f';
+	}
+	if (code >= 0x2400 && code <= 0x241f) {
+		return String.fromCharCode(code & 0x00ff);
+	}
+	return String.fromCharCode(code);
 }
 function ensureNewline (s) {
 	if (s.length && s.substr(-1) != '\n') {

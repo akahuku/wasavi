@@ -7699,9 +7699,9 @@ var lineInputEditMap = {
 				requestRegisterNotice(_('Invalid history item.'));
 			}
 			else {
-				o.target.value = line;
-				o.target.selectionStart = line.length;
-				o.target.selectionEnd = line.length;
+				o.target.value = toVisibleControl(line);
+				o.target.selectionStart = o.target.value.length;
+				o.target.selectionEnd = o.target.value.length;
 				//keyManager.init(o.target);
 			}
 		}
@@ -7716,9 +7716,9 @@ var lineInputEditMap = {
 			requestRegisterNotice(_('Top of history.'));
 		}
 		else {
-			o.target.value = line;
-			o.target.selectionStart = line.length;
-			o.target.selectionEnd = line.length;
+			o.target.value = toVisibleControl(line);
+			o.target.selectionStart = o.target.value.length;
+			o.target.selectionEnd = o.target.value.length;
 			//keyManager.init(o.target);
 		}
 		return true;
