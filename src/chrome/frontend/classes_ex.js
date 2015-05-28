@@ -110,15 +110,73 @@ ExCommand.prototype = {
 			}
 		}
 		function push_words (s) {
-			while ((s = s.replace(/^\s+/, '')) != '') {
-				var re = /(?:\u0016.|\S)*/.exec(s);
-				result.argv.push(re[0]);
-				s = s.substring(re[0].length);
+			var index = 0;
+			var anchor = 0;
+			var mode = 0;
+			while (index < s.length) {
+				switch (mode) {
+				case 0:
+					if (/\s/.test(s.charAt(index))) {
+						if (index > anchor) {
+							result.argv.push(
+								s.substring(anchor, index)
+									.replace(/\\(.)/g, '$1'));
+						}
+						mode = 1;
+					}
+					else if ('"\''.indexOf(s.charAt(index)) >= 0) {
+						mode = s.charAt(index++) == '"' ? 2 : 3;
+					}
+					else {
+						mode = 4;
+					}
+					break;
+				case 1:
+					while (index < s.length && /\s/.test(s.charAt(index))) {
+						index++;
+					}
+					mode = 0;
+					anchor = index;
+					break;
+				case 2:
+					while (index < s.length && s.charAt(index) != '"') {
+						index++;
+					}
+					if (s.charAt(index - 1) != '\\') {
+						mode = 0;
+					}
+					index++;
+					break;
+				case 3:
+					while (index < s.length && s.charAt(index) != "'") {
+						index++;
+					}
+					if (s.charAt(index - 1) != '\\') {
+						mode = 0;
+					}
+					index++;
+					break;
+				case 4:
+					while (index < s.length) {
+						if ((index == 0 || s.charAt(index - 1) != '\\')
+						&& /[\s"']/.test(s.charAt(index))) {
+							mode = 0;
+							break;
+						}
+						index++;
+					}
+					break;
+				}
+			}
+			if (index > anchor) {
+				result.argv.push(
+					s.substring(anchor, index)
+						.replace(/\\(.)/g, '$1'));
 			}
 		}
 		function push_paths (s) {
 			while ((s = s.replace(/^\s+/, '')) != '') {
-				var re = /(?:\\(.)|\S)*/.exec(s);
+				var re = /(?:\\.|\S)*/.exec(s);
 				result.argv.push(stripp(re[0]));
 				s = s.substring(re[0].length);
 			}
@@ -1656,9 +1714,23 @@ var cache = {};
 						messages.push(app.config.getData(re[1], true));
 					}
 					else {
-						var result = app.config.setData(
-							re[1],
-							re[2] == '=' ? arg.substring(re[0].length) : undefined);
+						var value;
+						if (re[2] == '=') {
+							value = arg.substring(re[0].length);
+							'\'"'.split('').some(function (q) {
+								if (value.charAt(0) != q) return;
+								value = value.substr(-1) == q ?
+									value.substring(1, value.length - 1) :
+									undefined;
+								return true;
+							});
+							if (value == undefined) {
+								messages.push(_('Incomplete quoted value: {0}', arg));
+								emphasis = true;
+								break;
+							}
+						}
+						var result = app.config.setData(re[1], value);
 						if (typeof result == 'string') {
 							messages.push(result.replace(/\.$/, '') + ': ' + arg);
 							emphasis = true;
