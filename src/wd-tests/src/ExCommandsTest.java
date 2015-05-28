@@ -1589,17 +1589,31 @@ public class ExCommandsTest extends WasaviTest {
 			"#6-1", 
 			"An extra value assigned to redraw option: redraw=5", 
 			Wasavi.getLastMessage());
+	}
 
+	@Test
+	public void testSetAssignment () {
 		Wasavi.send(":set report=10\n");
-		assertEquals("#7-1", "", Wasavi.getLastMessage());
+		assertEquals("#1-1", "", Wasavi.getLastMessage());
 		Wasavi.send(":set report ?\n");
-		assertEquals("#7-2", "  report=10", Wasavi.getLastMessage());
+		assertEquals("#1-2", "  report=10", Wasavi.getLastMessage());
 		Wasavi.send(":set report = 6\n");
-		assertEquals("#7-3", "Invalid integer value: report=", Wasavi.getLastMessage());
+		assertEquals("#1-3", "Invalid integer value: report=", Wasavi.getLastMessage());
 		Wasavi.send(":set report =6\n");
-		assertEquals("#7-4", "", Wasavi.getLastMessage());
+		assertEquals("#1-4", "", Wasavi.getLastMessage());
 		Wasavi.send(":set report\n");
-		assertEquals("#7-5", "  report=6", Wasavi.getLastMessage());
+		assertEquals("#1-5", "  report=6", Wasavi.getLastMessage());
+
+		Wasavi.send(":set datetime='quoted \\'value\\''\n");
+		Wasavi.send(":set datetime?\n");
+		assertEquals("#2-1", "  datetime=quoted 'value'", Wasavi.getLastMessage());
+
+		Wasavi.send(":set datetime='incomplete quote\n");
+		assertEquals("#3-1", "Incomplete quoted value: datetime='incomplete quote", Wasavi.getLastMessage());
+
+		Wasavi.send(":set datetime=escaped\\ space\n");
+		Wasavi.send(":set datetime?\n");
+		assertEquals("#4-1", "  datetime=escaped space", Wasavi.getLastMessage());
 	}
 
 	@Test
