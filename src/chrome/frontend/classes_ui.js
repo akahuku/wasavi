@@ -296,7 +296,9 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 		}
 		function startBlink () {
 			stopBlink();
-			cursorBlinkTimer = setInterval(handleBlink, 500);
+			if (app.config.vars.cursorblink) {
+				cursorBlinkTimer = setInterval(handleBlink, 500);
+			}
 		}
 		function stopBlink () {
 			cursorBlinkTimer && clearInterval(cursorBlinkTimer);

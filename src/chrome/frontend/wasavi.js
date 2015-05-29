@@ -4821,6 +4821,7 @@ var config = new Wasavi.Configurator(appProxy,
 		}],
 		['override', 'b', true, null, true],
 		['datetime', 's', '%c'],
+		['cursorblink', 'b', true],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
