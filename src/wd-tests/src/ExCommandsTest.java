@@ -908,6 +908,7 @@ public class ExCommandsTest extends WasaviTest {
 		assertPos("#4-1", 3, 0);
 	}
 
+	// https://github.com/akahuku/wasavi/issues/55
 	@Test
 	public void testMapAmbiguousIssue55 () {
 		Wasavi.send(":map [clear]\n");
@@ -915,6 +916,17 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("i,zz\u001b");
 
 		assertValue("#1-1", "\nbb, cc\n");
+	}
+
+	// https://github.com/akahuku/wasavi/issues/79
+	@Test
+	public void testMapControlShortcut () {
+		Wasavi.send(":map [clear]\n");
+		Wasavi.send(":map! <C-c> <esc>\n");
+		Wasavi.send(":map! <C-t> <tab>\n");
+		Wasavi.send("ifoo", Keys.chord(Keys.CONTROL, "t"), "bar", Keys.chord(Keys.CONTROL, "c"));
+
+		assertValue("#1-1", "foo\tbar");
 	}
 
 	@Test
