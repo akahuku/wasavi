@@ -1,4 +1,15 @@
-0.6.xxx
+0.6.430
+
+	* fix the bug \s meta character matches to newline
+	* fix the bug that matched parenthesis does not blink
+	* port some maps from surround.vim
+	* introduce datetime option and use strftime when reading from the D register
+	* fix the bug control codes in the line input history collapses
+	* make the set command accept a backslash as escape character
+	* fix the bug a letter with dead key can not input on Chrome
+	* fix the bug control code shortcut is rejected as LHS of map
+	* introduce cursorblink option
+	* fix the bug multiple set command assignment fails
 
 	* 正規表現のメタ文字 \s が改行にマッチするのを修正
 	* input モード中に対応する括弧の点滅が効いていないのを修正
@@ -9,6 +20,8 @@
 	* set コマンド中のエスケープ文字として \ を使用するようにした
 	* Chrome で dead キー経由の入力ができないのを修正
 	* map コマンドの左辺で制御コードの代替表現を使用できるようにした
+	* cursorblink オプションを新設
+	* 複数の項目を set コマンドに与えた時にエラーになるのを修正
 
 0.6.406
 
