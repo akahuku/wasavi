@@ -1714,7 +1714,7 @@ var cache = {};
 						messages.push(app.config.getData(re[1], true));
 					}
 					else {
-						var value;
+						var value = undefined;
 						if (re[2] == '=') {
 							value = arg.substring(re[0].length);
 							'\'"'.split('').some(function (q) {
