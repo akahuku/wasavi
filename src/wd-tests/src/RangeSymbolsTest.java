@@ -135,11 +135,11 @@ public class RangeSymbolsTest extends WasaviTest {
 	}
 
 	@Test
-	public void word_All_Error () {
+	public void word_All_NonWord () {
 		Wasavi.send("i!@#   #+.   &*_\u001b");
 		Wasavi.send("8|yaw");
 
-		assertEquals("#1", "+", Wasavi.getRegister("\""));
+		assertEquals("#1", "#+.   ", Wasavi.getRegister("\""));
 	}
 
 	//
@@ -177,11 +177,11 @@ public class RangeSymbolsTest extends WasaviTest {
 	}
 
 	@Test
-	public void word_Inner_Error () {
+	public void word_Inner_NonWord () {
 		Wasavi.send("i!@#   #+.   &*_\u001b");
 		Wasavi.send("8|yiw");
 
-		assertEquals("#1", "+", Wasavi.getRegister("\""));
+		assertEquals("#1", "#+.", Wasavi.getRegister("\""));
 	}
 
 	//
