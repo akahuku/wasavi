@@ -75,6 +75,12 @@ public class LineInputEditingTest extends WasaviTest {
 	}
 
 	@Test
+	public void commandlineDelete () {
+		Wasavi.send(":versiooon" + Keys.ARROW_LEFT + Keys.ARROW_LEFT + Keys.DELETE + Keys.BACK_SPACE + "\n");
+		assertTrue("#1-1", Wasavi.getLastMessage().matches(".*wasavi/.*"));
+	}
+
+	@Test
 	public void commandlineNextHistory () {
 		Wasavi.send(":wow!\n");
 		Wasavi.send(":version" + Keys.ARROW_UP + Keys.ARROW_DOWN + "\n");
