@@ -7687,6 +7687,7 @@ var lineInputEditMap = {
 	'\u0009'/*^I, tab*/:function (c, o) {
 		lineInputHistories.isInitial = true;
 		isCompleteResetCanceled = true;
+		debugger;
 		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
 			if (!compl) {
 				notifier.show(_('No completions'));
@@ -7879,7 +7880,7 @@ var lineInputEditMap = {
 	},
 	'\u007f':function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
-			var n = Math.max(o.target.selectionStart, o.target.value.length - 1);
+			var n = o.target.selectionStart;
 			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
 				o.target.value.substring(o.target.selectionEnd + 1);
 			o.target.selectionStart = o.target.selectionEnd = n;
