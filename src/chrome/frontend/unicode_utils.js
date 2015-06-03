@@ -30,27 +30,10 @@
 'use strict';
 
 var unicodeUtils = (function () {
-	/*const*/var LATIN1_PROPS = [
-		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-		'Cc', 'Zs', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-		'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc', 'Cc',
-		'Zs', 'Po', 'Po', 'Po', 'Sc', 'Po', 'Po', 'Po', //  !"#$%&'
-		'Ps', 'Pe', 'Po', 'Sm', 'Po', 'Pd', 'Po', 'Po', // ()*+,-./
-		'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', 'Ld', // 01234567
-		'Ld', 'Ld', 'Po', 'Po', 'Sm', 'Sm', 'Sm', 'Po', // 89:;<=>?
-		'Po', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // @ABCDEFG
-		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // HIJKLMNO
-		'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', 'Lu', // PQRSTUVW
-		'Lu', 'Lu', 'Lu', 'Ps', 'Po', 'Pe', 'Sk', 'Pc', // XYZ[\]^_
-		'Sk', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // `abcdefg
-		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // hijklmno
-		'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', 'Ll', // pqrstuvw
-		'Ll', 'Ll', 'Ll', 'Ps', 'Sm', 'Pe', 'Sm', 'Cc'  // xyz{|}~
-	];
-
 	// letters of General_Category == Zs, in UnicodeData.txt of Unicode 6.2.0
+	// and tab (U+0009)
 	/*const*/var REGEX_ZS = new RegExp('[' + [
+		'\\u0009',
 		'\\u0020', '\\u00A0', '\\u1680', '\\u180E',
 		'\\u2000', '\\u2001', '\\u2002', '\\u2003',
 		'\\u2004', '\\u2005', '\\u2006', '\\u2007',
@@ -118,35 +101,35 @@ var unicodeUtils = (function () {
 	// ideographic letters
 	/*const*/var REGEX_HAN_FAMILY = new RegExp('[' + [
 		/* Chinese */
+		'\\u2E80-\\u2EFF',		// CJK Radicals Supplement
+		'\\u2F00-\\u2FDF',		// CJK Radicals / KangXi Radicals
+		'\\u2FF0-\\u2FFF',		// Ideographic Description Characters
 		'\\u3100-\\u312F',		// Bopomofo
 		'\\u31A0-\\u31BF',		// Bopomofo Extended
-		'\\u4E00-\\u9FCF',		// CJK Unified Ideographs (Han)
+		'\\u31C0-\\u31EF',		// CJK Strokes
 		'\\u3400-\\u4DBF',		// CJK Extension-A
+		'\\u4E00-\\u9FCF',		// CJK Unified Ideographs (Han)
+		'\\uF900-\\uFAFF',		// CJK Compatibility Ideographs
 		//'\\u20000-\\u2A6DF',	// CJK Extension-B
 		//'\\u2A700-\\u2B73F',	// CJK Extension-C
 		//'\\u2B740-\\u2B81F',	// CJK Extension-D
-		'\\uF900-\\uFAFF',		// CJK Compatibility Ideographs
 		//'\\u2F800-\\u2FA1F',	// CJK Compatibility Ideographs Supplement
-		'\\u2F00-\\u2FDF',		// CJK Radicals / KangXi Radicals
-		'\\u2E80-\\u2EFF',		// CJK Radicals Supplement
-		'\\u31C0-\\u31EF',		// CJK Strokes
-		'\\u2FF0-\\u2FFF',		// Ideographic Description Characters
 
 		/* Korean */
 		'\\u1100-\\u11FF',		// Hangul Jamo
-		'\\uA960-\\uA97F',		// Hangul Jamo Extended-A
-		'\\uD7B0-\\uD7FF',		// Hangul Jamo Extended-B
 		'\\u3130-\\u318F',		// Hangul Compatibility Jamo
-		'\\uFFA0-\\uFFDC',		// Halfwidth Jamo
+		'\\uA960-\\uA97F',		// Hangul Jamo Extended-A
 		'\\uAC00-\\uD7AF',		// Hangul Syllables
+		'\\uD7B0-\\uD7FF',		// Hangul Jamo Extended-B
+		'\\uFFA0-\\uFFDC',		// Halfwidth Jamo
 
 		/* Japanese */
 		'\\u3040-\\u309F',		// Hiragana
 		'\\u30A0-\\u30FF',		// Katakana
-		'\\u31F0-\\u31FF',		// Katakana Phonetic Extensions
-		//'\\u1B000-\\u1B0FF',	// Kana Supplement
-		'\\uFF65-\\uFF9F',		// Halfwidth Katakana
 		'\\u3190-\\u319F',		// Kanbun
+		'\\u31F0-\\u31FF',		// Katakana Phonetic Extensions
+		'\\uFF65-\\uFF9F',		// Halfwidth Katakana
+		//'\\u1B000-\\u1B0FF',	// Kana Supplement
 
 		/* Lisu */
 		'\\uA4D0-\\uA4FF',		// Lisu
@@ -158,6 +141,244 @@ var unicodeUtils = (function () {
 		'\\uA000-\\uA48F',		// Yi Syllables
 		'\\uA490-\\uA4CF'			// Yi Radicals
 	].join('') + ']');
+
+	// [^ZLN] of General Category in Scripts.txt of Unicode 6.2.0
+	/*const*/var REGEX_NON_LETTER = new RegExp('[' + [
+		'\\u0000-\\u001f\\u0021-\\u002f\\u003a-\\u0040\\u005b-\\u0060\\u007b-\\u009f\\u00a1-\\u00a9',
+		'\\u00ab-\\u00b1\\u00b4\\u00b6-\\u00b8\\u00bb\\u00bf\\u00d7\\u00f7\\u02c2-\\u02c5\\u02d2-\\u02df',
+		'\\u02e5-\\u02eb\\u02ed\\u02ef-\\u036f\\u0375\\u037e\\u0384\\u0385\\u0387\\u03f6\\u0482-\\u0489',
+		'\\u055a-\\u055f\\u0589\\u058a\\u058f\\u0591-\\u05c7\\u05f3\\u05f4\\u0600-\\u0604\\u0606-\\u061b',
+		'\\u061e\\u061f\\u064b-\\u065f\\u066a-\\u066d\\u0670\\u06d4\\u06d6-\\u06e4\\u06e7-\\u06ed',
+		'\\u06fd\\u06fe\\u0700-\\u070d\\u070f\\u0711\\u0730-\\u074a\\u07a6-\\u07b0\\u07eb-\\u07f3',
+		'\\u07f6-\\u07f9\\u0816-\\u0819\\u081b-\\u0823\\u0825-\\u0827\\u0829-\\u082d\\u0830-\\u083e',
+		'\\u0859-\\u085b\\u085e\\u08e4-\\u08fe\\u0900-\\u0903\\u093a-\\u093c\\u093e-\\u094f\\u0951-\\u0957',
+		'\\u0962-\\u0965\\u0970\\u0981-\\u0983\\u09bc\\u09be-\\u09c4\\u09c7\\u09c8\\u09cb-\\u09cd',
+		'\\u09d7\\u09e2\\u09e3\\u09f2\\u09f3\\u09fa\\u09fb\\u0a01-\\u0a03\\u0a3c\\u0a3e-\\u0a42',
+		'\\u0a47\\u0a48\\u0a4b-\\u0a4d\\u0a51\\u0a70\\u0a71\\u0a75\\u0a81-\\u0a83\\u0abc\\u0abe-\\u0ac5',
+		'\\u0ac7-\\u0ac9\\u0acb-\\u0acd\\u0ae2\\u0ae3\\u0af0\\u0af1\\u0b01-\\u0b03\\u0b3c\\u0b3e-\\u0b44',
+		'\\u0b47\\u0b48\\u0b4b-\\u0b4d\\u0b56\\u0b57\\u0b62\\u0b63\\u0b70\\u0b82\\u0bbe-\\u0bc2',
+		'\\u0bc6-\\u0bc8\\u0bca-\\u0bcd\\u0bd7\\u0bf3-\\u0bfa\\u0c01-\\u0c03\\u0c3e-\\u0c44\\u0c46-\\u0c48',
+		'\\u0c4a-\\u0c4d\\u0c55\\u0c56\\u0c62\\u0c63\\u0c7f\\u0c82\\u0c83\\u0cbc\\u0cbe-\\u0cc4',
+		'\\u0cc6-\\u0cc8\\u0cca-\\u0ccd\\u0cd5\\u0cd6\\u0ce2\\u0ce3\\u0d02\\u0d03\\u0d3e-\\u0d44',
+		'\\u0d46-\\u0d48\\u0d4a-\\u0d4d\\u0d57\\u0d62\\u0d63\\u0d79\\u0d82\\u0d83\\u0dca\\u0dcf-\\u0dd4',
+		'\\u0dd6\\u0dd8-\\u0ddf\\u0df2-\\u0df4\\u0e31\\u0e34-\\u0e3a\\u0e3f\\u0e47-\\u0e4f\\u0e5a\\u0e5b',
+		'\\u0eb1\\u0eb4-\\u0eb9\\u0ebb\\u0ebc\\u0ec8-\\u0ecd\\u0f01-\\u0f1f\\u0f34-\\u0f3f\\u0f71-\\u0f87',
+		'\\u0f8d-\\u0f97\\u0f99-\\u0fbc\\u0fbe-\\u0fcc\\u0fce-\\u0fda\\u102b-\\u103e\\u104a-\\u104f',
+		'\\u1056-\\u1059\\u105e-\\u1060\\u1062-\\u1064\\u1067-\\u106d\\u1071-\\u1074\\u1082-\\u108d',
+		'\\u108f\\u109a-\\u109f\\u10fb\\u135d-\\u1368\\u1390-\\u1399\\u1400\\u166d\\u166e\\u169b\\u169c',
+		'\\u16eb-\\u16ed\\u1712-\\u1714\\u1732-\\u1736\\u1752\\u1753\\u1772\\u1773\\u17b4-\\u17d6',
+		'\\u17d8-\\u17db\\u17dd\\u1800-\\u180d\\u18a9\\u1920-\\u192b\\u1930-\\u193b\\u1940\\u1944\\u1945',
+		'\\u19b0-\\u19c0\\u19c8\\u19c9\\u19de-\\u19ff\\u1a17-\\u1a1b\\u1a1e\\u1a1f\\u1a55-\\u1a5e',
+		'\\u1a60-\\u1a7c\\u1a7f\\u1aa0-\\u1aa6\\u1aa8-\\u1aad\\u1b00-\\u1b04\\u1b34-\\u1b44\\u1b5a-\\u1b7c',
+		'\\u1b80-\\u1b82\\u1ba1-\\u1bad\\u1be6-\\u1bf3\\u1bfc-\\u1bff\\u1c24-\\u1c37\\u1c3b-\\u1c3f',
+		'\\u1c7e\\u1c7f\\u1cc0-\\u1cc7\\u1cd0-\\u1ce8\\u1ced\\u1cf2-\\u1cf4\\u1dc0-\\u1de6\\u1dfc-\\u1dff',
+		'\\u1fbd\\u1fbf-\\u1fc1\\u1fcd-\\u1fcf\\u1fdd-\\u1fdf\\u1fed-\\u1fef\\u1ffd\\u1ffe\\u200b-\\u2027',
+		'\\u202a-\\u202e\\u2030-\\u205e\\u2060-\\u2064\\u206a-\\u206f\\u207a-\\u207e\\u208a-\\u208e',
+		'\\u20a0-\\u20ba\\u20d0-\\u20f0\\u2100\\u2101\\u2103-\\u2106\\u2108\\u2109\\u2114\\u2116-\\u2118',
+		'\\u211e-\\u2123\\u2125\\u2127\\u2129\\u212e\\u213a\\u213b\\u2140-\\u2144\\u214a-\\u214d',
+		'\\u214f\\u2190-\\u23f3\\u2400-\\u2426\\u2440-\\u244a\\u249c-\\u24e9\\u2500-\\u26ff\\u2701-\\u2775',
+		'\\u2794-\\u2b4c\\u2b50-\\u2b59\\u2ce5-\\u2cea\\u2cef-\\u2cf1\\u2cf9-\\u2cfc\\u2cfe\\u2cff',
+		'\\u2d70\\u2d7f\\u2de0-\\u2e2e\\u2e30-\\u2e3b\\u2e80-\\u2e99\\u2e9b-\\u2ef3\\u2f00-\\u2fd5',
+		'\\u2ff0-\\u2ffb\\u3001-\\u3004\\u3008-\\u3020\\u302a-\\u3030\\u3036\\u3037\\u303d-\\u303f',
+		'\\u3099-\\u309c\\u30a0\\u30fb\\u3190\\u3191\\u3196-\\u319f\\u31c0-\\u31e3\\u3200-\\u321e',
+		'\\u322a-\\u3247\\u3250\\u3260-\\u327f\\u328a-\\u32b0\\u32c0-\\u32fe\\u3300-\\u33ff\\u4dc0-\\u4dff',
+		'\\ua490-\\ua4c6\\ua4fe\\ua4ff\\ua60d-\\ua60f\\ua66f-\\ua67e\\ua69f\\ua6f0-\\ua6f7\\ua700-\\ua716',
+		'\\ua720\\ua721\\ua789\\ua78a\\ua802\\ua806\\ua80b\\ua823-\\ua82b\\ua836-\\ua839\\ua874-\\ua877',
+		'\\ua880\\ua881\\ua8b4-\\ua8c4\\ua8ce\\ua8cf\\ua8e0-\\ua8f1\\ua8f8-\\ua8fa\\ua926-\\ua92f',
+		'\\ua947-\\ua953\\ua95f\\ua980-\\ua983\\ua9b3-\\ua9cd\\ua9de\\ua9df\\uaa29-\\uaa36\\uaa43',
+		'\\uaa4c\\uaa4d\\uaa5c-\\uaa5f\\uaa77-\\uaa79\\uaa7b\\uaab0\\uaab2-\\uaab4\\uaab7\\uaab8',
+		'\\uaabe\\uaabf\\uaac1\\uaade\\uaadf\\uaaeb-\\uaaf1\\uaaf5\\uaaf6\\uabe3-\\uabed\\ufb1e',
+		'\\ufb29\\ufbb2-\\ufbc1\\ufd3e\\ufd3f\\ufdfc\\ufdfd\\ufe00-\\ufe19\\ufe20-\\ufe26\\ufe30-\\ufe52',
+		'\\ufe54-\\ufe66\\ufe68-\\ufe6b\\ufeff\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65'
+	].join('') + ']');
+
+	// Scripts of Unicode 6.2.0
+	/*const*/var SCRIPT_TABLE = [
+		0x0041, 0x005a,  1, // Latin
+		0x0061, 0x007a,  1, // Latin
+		0x00aa, 0x00aa,  1, // Latin
+		0x00ba, 0x00ba,  1, // Latin
+		0x00c0, 0x00d6,  1, // Latin
+		0x00d8, 0x00f6,  1, // Latin
+		0x00f8, 0x02b8,  1, // Latin
+		0x02e0, 0x02e4,  1, // Latin
+		0x02ea, 0x02eb,  2, // Bopomofo
+		0x0300, 0x036f,  3, // Inherited
+		0x0370, 0x0373,  4, // Greek
+		0x0375, 0x037d,  4, // Greek
+		0x0384, 0x0384,  4, // Greek
+		0x0386, 0x0386,  4, // Greek
+		0x0388, 0x03e1,  4, // Greek
+		0x03e2, 0x03ef,  5, // Coptic
+		0x03f0, 0x03ff,  4, // Greek
+		0x0400, 0x0484,  6, // Cyrillic
+		0x0485, 0x0486,  3, // Inherited
+		0x0487, 0x0527,  6, // Cyrillic
+		0x0531, 0x0587,  7, // Armenian
+		0x058a, 0x058f,  7, // Armenian
+		0x0591, 0x05f4,  8, // Hebrew
+		0x0600, 0x060b,  9, // Arabic
+		0x060d, 0x061a,  9, // Arabic
+		0x061e, 0x061e,  9, // Arabic
+		0x0620, 0x063f,  9, // Arabic
+		0x0641, 0x064a,  9, // Arabic
+		0x064b, 0x0655,  3, // Inherited
+		0x0656, 0x065f,  9, // Arabic
+		0x066a, 0x066f,  9, // Arabic
+		0x0670, 0x0670,  3, // Inherited
+		0x0671, 0x06dc,  9, // Arabic
+		0x06de, 0x06ff,  9, // Arabic
+		0x0700, 0x074f, 10, // Syriac
+		0x0750, 0x077f,  9, // Arabic
+		0x0780, 0x07b1, 11, // Thaana
+		0x07c0, 0x07fa, 12, // Nko
+		0x0800, 0x083e, 13, // Samaritan
+		0x0840, 0x085e, 14, // Mandaic
+		0x08a0, 0x08fe,  9, // Arabic
+		0x0900, 0x0950, 15, // Devanagari
+		0x0951, 0x0952,  3, // Inherited
+		0x0953, 0x0963, 15, // Devanagari
+		0x0966, 0x097f, 15, // Devanagari
+		0x0981, 0x09fb, 16, // Bengali
+		0x0a01, 0x0a75, 17, // Gurmukhi
+		0x0a81, 0x0af1, 18, // Gujarati
+		0x0b01, 0x0b77, 19, // Oriya
+		0x0b82, 0x0bfa, 20, // Tamil
+		0x0c01, 0x0c7f, 21, // Telugu
+		0x0c82, 0x0cf2, 22, // Kannada
+		0x0d02, 0x0d7f, 23, // Malayalam
+		0x0d82, 0x0df4, 24, // Sinhala
+		0x0e01, 0x0e3a, 25, // Thai
+		0x0e40, 0x0e5b, 25, // Thai
+		0x0e81, 0x0edf, 26, // Lao
+		0x0f00, 0x0fd4, 27, // Tibetan
+		0x0fd9, 0x0fda, 27, // Tibetan
+		0x1000, 0x109f, 28, // Myanmar
+		0x10a0, 0x10fa, 29, // Georgian
+		0x10fc, 0x10ff, 29, // Georgian
+		0x1100, 0x11ff, 30, // Hangul
+		0x1200, 0x1399, 31, // Ethiopic
+		0x13a0, 0x13f4, 32, // Cherokee
+		0x1400, 0x167f, 33, // Canadian_Aboriginal
+		0x1680, 0x169c, 34, // Ogham
+		0x16a0, 0x16ea, 35, // Runic
+		0x16ee, 0x16f0, 35, // Runic
+		0x1700, 0x1714, 36, // Tagalog
+		0x1720, 0x1734, 37, // Hanunoo
+		0x1740, 0x1753, 38, // Buhid
+		0x1760, 0x1773, 39, // Tagbanwa
+		0x1780, 0x17f9, 40, // Khmer
+		0x1800, 0x1801, 41, // Mongolian
+		0x1804, 0x1804, 41, // Mongolian
+		0x1806, 0x18aa, 41, // Mongolian
+		0x18b0, 0x18f5, 33, // Canadian_Aboriginal
+		0x1900, 0x194f, 42, // Limbu
+		0x1950, 0x1974, 43, // Tai_Le
+		0x1980, 0x19df, 44, // New_Tai_Lue
+		0x19e0, 0x19ff, 40, // Khmer
+		0x1a00, 0x1a1f, 45, // Buginese
+		0x1a20, 0x1aad, 46, // Tai_Tham
+		0x1b00, 0x1b7c, 47, // Balinese
+		0x1b80, 0x1bbf, 48, // Sundanese
+		0x1bc0, 0x1bff, 49, // Batak
+		0x1c00, 0x1c4f, 50, // Lepcha
+		0x1c50, 0x1c7f, 51, // Ol_Chiki
+		0x1cc0, 0x1cc7, 48, // Sundanese
+		0x1cd0, 0x1cd2,  3, // Inherited
+		0x1cd4, 0x1ce0,  3, // Inherited
+		0x1ce2, 0x1ce8,  3, // Inherited
+		0x1ced, 0x1ced,  3, // Inherited
+		0x1cf4, 0x1cf4,  3, // Inherited
+		0x1d00, 0x1d25,  1, // Latin
+		0x1d26, 0x1d2a,  4, // Greek
+		0x1d2b, 0x1d2b,  6, // Cyrillic
+		0x1d2c, 0x1d5c,  1, // Latin
+		0x1d5d, 0x1d61,  4, // Greek
+		0x1d62, 0x1d65,  1, // Latin
+		0x1d66, 0x1d6a,  4, // Greek
+		0x1d6b, 0x1d77,  1, // Latin
+		0x1d78, 0x1d78,  6, // Cyrillic
+		0x1d79, 0x1dbe,  1, // Latin
+		0x1dbf, 0x1dbf,  4, // Greek
+		0x1dc0, 0x1dff,  3, // Inherited
+		0x1e00, 0x1eff,  1, // Latin
+		0x1f00, 0x1ffe,  4, // Greek
+		0x200c, 0x200d,  3, // Inherited
+		0x2071, 0x2071,  1, // Latin
+		0x207f, 0x207f,  1, // Latin
+		0x2090, 0x209c,  1, // Latin
+		0x20d0, 0x20f0,  3, // Inherited
+		0x2126, 0x2126,  4, // Greek
+		0x212a, 0x212b,  1, // Latin
+		0x2132, 0x2132,  1, // Latin
+		0x214e, 0x214e,  1, // Latin
+		0x2160, 0x2188,  1, // Latin
+		0x2800, 0x28ff, 52, // Braille
+		0x2c00, 0x2c5e, 53, // Glagolitic
+		0x2c60, 0x2c7f,  1, // Latin
+		0x2c80, 0x2cff,  5, // Coptic
+		0x2d00, 0x2d2d, 29, // Georgian
+		0x2d30, 0x2d7f, 54, // Tifinagh
+		0x2d80, 0x2dde, 31, // Ethiopic
+		0x2de0, 0x2dff,  6, // Cyrillic
+		0x2e80, 0x2fd5, 55, // Han
+		0x3005, 0x3005, 55, // Han
+		0x3007, 0x3007, 55, // Han
+		0x3021, 0x3029, 55, // Han
+		0x302a, 0x302d,  3, // Inherited
+		0x302e, 0x302f, 30, // Hangul
+		0x3038, 0x303b, 55, // Han
+		0x3041, 0x3096, 56, // Hiragana
+		0x3099, 0x309a,  3, // Inherited
+		0x309d, 0x309f, 56, // Hiragana
+		0x30a1, 0x30fa, 57, // Katakana
+		0x30fd, 0x30ff, 57, // Katakana
+		0x3105, 0x312d,  2, // Bopomofo
+		0x3131, 0x318e, 30, // Hangul
+		0x31a0, 0x31ba,  2, // Bopomofo
+		0x31f0, 0x31ff, 57, // Katakana
+		0x3200, 0x321e, 30, // Hangul
+		0x3260, 0x327e, 30, // Hangul
+		0x32d0, 0x3357, 57, // Katakana
+		0x3400, 0x4db5, 55, // Han
+		0x4e00, 0x9fcc, 55, // Han
+		0xa000, 0xa4c6, 58, // Yi
+		0xa4d0, 0xa4ff, 59, // Lisu
+		0xa500, 0xa62b, 60, // Vai
+		0xa640, 0xa69f,  6, // Cyrillic
+		0xa6a0, 0xa6f7, 61, // Bamum
+		0xa722, 0xa787,  1, // Latin
+		0xa78b, 0xa7ff,  1, // Latin
+		0xa800, 0xa82b, 62, // Syloti_Nagri
+		0xa840, 0xa877, 63, // Phags_Pa
+		0xa880, 0xa8d9, 64, // Saurashtra
+		0xa8e0, 0xa8fb, 15, // Devanagari
+		0xa900, 0xa92f, 65, // Kayah_Li
+		0xa930, 0xa95f, 66, // Rejang
+		0xa960, 0xa97c, 30, // Hangul
+		0xa980, 0xa9df, 67, // Javanese
+		0xaa00, 0xaa5f, 68, // Cham
+		0xaa60, 0xaa7b, 28, // Myanmar
+		0xaa80, 0xaadf, 69, // Tai_Viet
+		0xaae0, 0xaaf6, 70, // Meetei_Mayek
+		0xab01, 0xab2e, 31, // Ethiopic
+		0xabc0, 0xabf9, 70, // Meetei_Mayek
+		0xac00, 0xd7fb, 30, // Hangul
+		0xf900, 0xfad9, 55, // Han
+		0xfb00, 0xfb06,  1, // Latin
+		0xfb13, 0xfb17,  7, // Armenian
+		0xfb1d, 0xfb4f,  8, // Hebrew
+		0xfb50, 0xfd3d,  9, // Arabic
+		0xfd50, 0xfdfc,  9, // Arabic
+		0xfe00, 0xfe0f,  3, // Inherited
+		0xfe20, 0xfe26,  3, // Inherited
+		0xfe70, 0xfefc,  9, // Arabic
+		0xff21, 0xff3a,  1, // Latin
+		0xff41, 0xff5a,  1, // Latin
+		0xff66, 0xff6f, 57, // Katakana
+		0xff71, 0xff9d, 57, // Katakana
+		0xffa0, 0xffdc, 30  // Hangul
+	];
 
 	// line break property in Unicode 6.2.0
 	/*const*/var BREAK_PROP = {
@@ -641,6 +862,12 @@ var unicodeUtils = (function () {
 	}
 
 	/*
+	 * variables
+	 */
+
+	var scriptClassCache = {};
+
+	/*
 	 * functions
 	 */
 
@@ -653,188 +880,39 @@ var unicodeUtils = (function () {
 			|  data.charCodeAt(index + 1) << 8
 			|  data.charCodeAt(index + 2) << 16;
 	}
-	function getLatin1Prop (cp) {
-		return cp <= 0x7f ? LATIN1_PROPS[cp] : '';
-	}
-	function getUnicodeBlock (cp) {
-		if (cp >= 0x0000 && cp <= 0x007f) return   1;	// Basic Latin
-		if (cp >= 0x0080 && cp <= 0x00ff) return   1;	// Latin-1 Supplement
-		if (cp >= 0x0100 && cp <= 0x017f) return   1;	// Latin Extended-A
-		if (cp >= 0x0180 && cp <= 0x024f) return   1;	// Latin Extended-B
-		if (cp >= 0xa720 && cp <= 0xa7ff) return   1;	// Latin Extended-D
-		if (cp >= 0x1e00 && cp <= 0x1eff) return   1;	// Latin Extended Additional
-		if (cp >= 0x2c60 && cp <= 0x2c7f) return   1;	// Latin Extended-C
+	function getScriptClass (cp) {
+		//                    0: space
+		// (script-id << 8) | 1: letter (word component)
+		// (script-id << 8) | 2: other
 
-		if (cp >= 0x0250 && cp <= 0x02af) return   5;	// IPA Extensions
-		if (cp >= 0x02b0 && cp <= 0x02ff) return   6;	// Spacing Modifier Letters
+		var ch = String.fromCharCode(cp);
+		if (ch in scriptClassCache)  return scriptClassCache[ch];
+		if (isSpace(ch)) return 0;
 
-		if (cp >= 0x0300 && cp <= 0x036f) return   7;	// Combining Diacritical Marks
-		if (cp >= 0x1dc0 && cp <= 0x1dff) return   7;	// Combining Diacritical Marks Supplement
-		if (cp >= 0x20d0 && cp <= 0x20ff) return   7;	// Combining Diacritical Marks for Symbols
+		var result = isNonLetter(ch) ? 2 : 1;
+		var low = 0;
+		var high = SCRIPT_TABLE.length / 3 - 1;
+		var mid;
+		while (low <= high) {
+			mid = Math.floor((low + high) / 2);
+			if (cp < SCRIPT_TABLE[mid * 3]) {
+				high = mid - 1;
+			}
+			else if (cp > SCRIPT_TABLE[mid * 3 + 1]) {
+				low = mid + 1;
+			}
+			else {
+				mid *= 3;
+				if (0 <= mid && mid < SCRIPT_TABLE.length - 2
+				&& SCRIPT_TABLE[mid] <= cp && cp <= SCRIPT_TABLE[mid + 1]) {
+					result |= SCRIPT_TABLE[mid + 2] << 8;
+				}
+				break;
+			}
+		}
 
-		if (cp >= 0x0370 && cp <= 0x03ff) return   8;	// Greek and Coptic
-		if (cp >= 0x1f00 && cp <= 0x1fff) return   8;	// Greek Extended
-
-		if (cp >= 0x0400 && cp <= 0x04ff) return   9;	// Cyrillic
-		if (cp >= 0x0500 && cp <= 0x052f) return   9;	// Cyrillic Supplement
-		if (cp >= 0x2de0 && cp <= 0x2dff) return   9;	// Cyrillic Extended-A
-		if (cp >= 0xa640 && cp <= 0xa69f) return   9;	// Cyrillic Extended-B
-
-		if (cp >= 0x0530 && cp <= 0x058f) return  11;	// Armenian
-		if (cp >= 0x0590 && cp <= 0x05ff) return  12;	// Hebrew
-
-		if (cp >= 0x0600 && cp <= 0x06ff) return  13;	// Arabic
-		if (cp >= 0x0750 && cp <= 0x077f) return  13;	// Arabic Supplement
-		if (cp >= 0xfb50 && cp <= 0xfdff) return  13;	// Arabic Presentation Forms-A
-		if (cp >= 0xfe70 && cp <= 0xfeff) return  13;	// Arabic Presentation Forms-B
-
-		if (cp >= 0x0700 && cp <= 0x074f) return  14;	// Syriac
-		if (cp >= 0x0780 && cp <= 0x07bf) return  16;	// Thaana
-		if (cp >= 0x07c0 && cp <= 0x07ff) return  17;	// NKo
-		if (cp >= 0x0800 && cp <= 0x083f) return  18;	// Samaritan
-
-		if (cp >= 0x0900 && cp <= 0x097f) return  19;	// Devanagari
-		if (cp >= 0xa8e0 && cp <= 0xa8ff) return  19;	// Devanagari Extended
-
-		if (cp >= 0x0980 && cp <= 0x09ff) return  20;	// Bengali
-		if (cp >= 0x0a00 && cp <= 0x0a7f) return  21;	// Gurmukhi
-		if (cp >= 0x0a80 && cp <= 0x0aff) return  22;	// Gujarati
-		if (cp >= 0x0b00 && cp <= 0x0b7f) return  23;	// Oriya
-		if (cp >= 0x0b80 && cp <= 0x0bff) return  24;	// Tamil
-		if (cp >= 0x0c00 && cp <= 0x0c7f) return  25;	// Telugu
-		if (cp >= 0x0c80 && cp <= 0x0cff) return  26;	// Kannada
-		if (cp >= 0x0d00 && cp <= 0x0d7f) return  27;	// Malayalam
-		if (cp >= 0x0d80 && cp <= 0x0dff) return  28;	// Sinhala
-		if (cp >= 0x0e00 && cp <= 0x0e7f) return  29;	// Thai
-		if (cp >= 0x0e80 && cp <= 0x0eff) return  30;	// Lao
-		if (cp >= 0x0f00 && cp <= 0x0fff) return  31;	// Tibetan
-
-		if (cp >= 0x1000 && cp <= 0x109f) return  32;	// Myanmar
-		if (cp >= 0xaa60 && cp <= 0xaa7f) return  32;	// Myanmar Extended-A
-
-		if (cp >= 0x10a0 && cp <= 0x10ff) return  33;	// Georgian
-		if (cp >= 0x2d00 && cp <= 0x2d2f) return  33;	// Georgian Supplement
-
-		if (cp >= 0x1100 && cp <= 0x11ff) return  34;	// Hangul Jamo
-		if (cp >= 0x3130 && cp <= 0x318f) return  34;	// Hangul Compatibility Jamo
-		if (cp >= 0xa960 && cp <= 0xa97f) return  34;	// Hangul Jamo Extended-A
-		if (cp >= 0xac00 && cp <= 0xd7af) return  34;	// Hangul Syllables
-		if (cp >= 0xd7b0 && cp <= 0xd7ff) return  34;	// Hangul Jamo Extended-B
-
-		if (cp >= 0x1200 && cp <= 0x137f) return  35;	// Ethiopic
-		if (cp >= 0x1380 && cp <= 0x139f) return  35;	// Ethiopic Supplement
-		if (cp >= 0x2d80 && cp <= 0x2ddf) return  35;	// Ethiopic Extended
-
-		if (cp >= 0x13a0 && cp <= 0x13ff) return  37;	// Cherokee
-
-		if (cp >= 0x1400 && cp <= 0x167f) return  38;	// Unified Canadian Aboriginal Syllabics
-		if (cp >= 0x18b0 && cp <= 0x18ff) return  38;	// Unified Canadian Aboriginal Syllabics Extended
-
-		if (cp >= 0x1680 && cp <= 0x169f) return  39;	// Ogham
-		if (cp >= 0x16a0 && cp <= 0x16ff) return  40;	// Runic
-		if (cp >= 0x1700 && cp <= 0x171f) return  41;	// Tagalog
-		if (cp >= 0x1720 && cp <= 0x173f) return  42;	// Hanunoo
-		if (cp >= 0x1740 && cp <= 0x175f) return  43;	// Buhid
-		if (cp >= 0x1760 && cp <= 0x177f) return  44;	// Tagbanwa
-		if (cp >= 0x1780 && cp <= 0x17ff) return  45;	// Khmer
-		if (cp >= 0x1800 && cp <= 0x18af) return  46;	// Mongolian
-		if (cp >= 0x1900 && cp <= 0x194f) return  48;	// Limbu
-		if (cp >= 0x1950 && cp <= 0x197f) return  49;	// Tai Le
-		if (cp >= 0x1980 && cp <= 0x19df) return  50;	// New Tai Lue
-		if (cp >= 0x19e0 && cp <= 0x19ff) return  51;	// Khmer Symbols
-		if (cp >= 0x1a00 && cp <= 0x1a1f) return  52;	// Buginese
-		if (cp >= 0x1a20 && cp <= 0x1aaf) return  53;	// Tai Tham
-		if (cp >= 0x1b00 && cp <= 0x1b7f) return  54;	// Balinese
-		if (cp >= 0x1b80 && cp <= 0x1bbf) return  55;	// Sundanese
-		if (cp >= 0x1c00 && cp <= 0x1c4f) return  56;	// Lepcha
-		if (cp >= 0x1c50 && cp <= 0x1c7f) return  57;	// Ol Chiki
-		if (cp >= 0x1cd0 && cp <= 0x1cff) return  58;	// Vedic Extensions
-
-		if (cp >= 0x1d00 && cp <= 0x1d7f) return  59;	// Phonetic Extensions
-		if (cp >= 0x1d80 && cp <= 0x1dbf) return  59;	// Phonetic Extensions Supplement
-
-		if (cp >= 0x2000 && cp <= 0x206f) return  64;	// General Punctuation
-		if (cp >= 0x2070 && cp <= 0x209f) return  65;	// Superscripts and Subscripts
-		if (cp >= 0x20a0 && cp <= 0x20cf) return  66;	// Currency Symbols
-		if (cp >= 0x2100 && cp <= 0x214f) return  68;	// Letterlike Symbols
-		if (cp >= 0x2150 && cp <= 0x218f) return  69;	// Number Forms
-
-		if (cp >= 0x2190 && cp <= 0x21ff) return  70;	// Arrows
-		if (cp >= 0x27f0 && cp <= 0x27ff) return  70;	// Supplemental Arrows-A
-		if (cp >= 0x2900 && cp <= 0x297f) return  70;	// Supplemental Arrows-B
-
-		if (cp >= 0x2200 && cp <= 0x22ff) return  71;	// Mathematical Operators
-		if (cp >= 0x2a00 && cp <= 0x2aff) return  71;	// Supplemental Mathematical Operators
-
-		if (cp >= 0x2300 && cp <= 0x23ff) return  72;	// Miscellaneous Technical
-		if (cp >= 0x2400 && cp <= 0x243f) return  73;	// Control Pictures
-		if (cp >= 0x2440 && cp <= 0x245f) return  74;	// Optical Character Recognition
-		if (cp >= 0x2460 && cp <= 0x24ff) return  75;	// Enclosed Alphanumerics
-		if (cp >= 0x2500 && cp <= 0x257f) return  76;	// Box Drawing
-		if (cp >= 0x2580 && cp <= 0x259f) return  77;	// Block Elements
-		if (cp >= 0x25a0 && cp <= 0x25ff) return  78;	// Geometric Shapes
-		if (cp >= 0x2600 && cp <= 0x26ff) return  79;	// Miscellaneous Symbols
-		if (cp >= 0x2700 && cp <= 0x27bf) return  80;	// Dingbats
-
-		if (cp >= 0x27c0 && cp <= 0x27ef) return  81;	// Miscellaneous Mathematical Symbols-A
-		if (cp >= 0x2980 && cp <= 0x29ff) return  81;	// Miscellaneous Mathematical Symbols-B
-
-		if (cp >= 0x2800 && cp <= 0x28ff) return  83;	// Braille Patterns
-		if (cp >= 0x2b00 && cp <= 0x2bff) return  87;	// Miscellaneous Symbols and Arrows
-		if (cp >= 0x2c00 && cp <= 0x2c5f) return  88;	// Glagolitic
-		if (cp >= 0x2c80 && cp <= 0x2cff) return  90;	// Coptic
-		if (cp >= 0x2d30 && cp <= 0x2d7f) return  92;	// Tifinagh
-		if (cp >= 0x2e00 && cp <= 0x2e7f) return  95;	// Supplemental Punctuation
-		if (cp >= 0x2e80 && cp <= 0x2eff) return  96;	// CJK Radicals Supplement
-		if (cp >= 0x2f00 && cp <= 0x2fdf) return  97;	// Kangxi Radicals
-		if (cp >= 0x2ff0 && cp <= 0x2fff) return  98;	// Ideographic Description Characters
-		if (cp >= 0x3000 && cp <= 0x303f) return  99;	// CJK Symbols and Punctuation
-		if (cp >= 0x3040 && cp <= 0x309f) return 100;	// Hiragana
-		if (cp >= 0x30a0 && cp <= 0x30ff) return 101;	// Katakana
-
-		if (cp >= 0x3100 && cp <= 0x312f) return 102;	// Bopomofo
-		if (cp >= 0x31a0 && cp <= 0x31bf) return 102;	// Bopomofo Extended
-
-		if (cp >= 0x3190 && cp <= 0x319f) return 104;	// Kanbun
-		if (cp >= 0x31c0 && cp <= 0x31ef) return 106;	// CJK Strokes
-		if (cp >= 0x31f0 && cp <= 0x31ff) return 107;	// Katakana Phonetic Extensions
-		if (cp >= 0x3200 && cp <= 0x32ff) return 108;	// Enclosed CJK Letters and Months
-		if (cp >= 0x3300 && cp <= 0x33ff) return 109;	// CJK Compatibility
-		if (cp >= 0x3400 && cp <= 0x4dbf) return 110;	// CJK Unified Ideographs Extension A
-		if (cp >= 0x4dc0 && cp <= 0x4dff) return 111;	// Yijing Hexagram Symbols
-		if (cp >= 0x4e00 && cp <= 0x9fff) return 112;	// CJK Unified Ideographs
-
-		if (cp >= 0xa000 && cp <= 0xa48f) return 113;	// Yi Syllables
-		if (cp >= 0xa490 && cp <= 0xa4cf) return 113;	// Yi Radicals
-
-		if (cp >= 0xa4d0 && cp <= 0xa4ff) return 115;	// Lisu
-		if (cp >= 0xa500 && cp <= 0xa63f) return 116;	// Vai
-		if (cp >= 0xa6a0 && cp <= 0xa6ff) return 118;	// Bamum
-		if (cp >= 0xa700 && cp <= 0xa71f) return 119;	// Modifier Tone Letters
-		if (cp >= 0xa800 && cp <= 0xa82f) return 121;	// Syloti Nagri
-		if (cp >= 0xa830 && cp <= 0xa83f) return 122;	// Common Indic Number Forms
-		if (cp >= 0xa840 && cp <= 0xa87f) return 123;	// Phags-pa
-		if (cp >= 0xa880 && cp <= 0xa8df) return 124;	// Saurashtra
-		if (cp >= 0xa900 && cp <= 0xa92f) return 126;	// Kayah Li
-		if (cp >= 0xa930 && cp <= 0xa95f) return 127;	// Rejang
-		if (cp >= 0xa980 && cp <= 0xa9df) return 129;	// Javanese
-		if (cp >= 0xaa00 && cp <= 0xaa5f) return 130;	// Cham
-		if (cp >= 0xaa80 && cp <= 0xaadf) return 132;	// Tai Viet
-		if (cp >= 0xabc0 && cp <= 0xabff) return 133;	// Meetei Mayek
-		if (cp >= 0xd800 && cp <= 0xdb7f) return 136;	// High Surrogates             // TBD
-		if (cp >= 0xdb80 && cp <= 0xdbff) return 137;	// High Private Use Surrogates // TBD
-		if (cp >= 0xdc00 && cp <= 0xdfff) return 138;	// Low Surrogates              // TBD
-		if (cp >= 0xe000 && cp <= 0xf8ff) return 139;	// Private Use Area
-		if (cp >= 0xf900 && cp <= 0xfaff) return 140;	// CJK Compatibility Ideographs
-		if (cp >= 0xfb00 && cp <= 0xfb4f) return 141;	// Alphabetic Presentation Forms
-		if (cp >= 0xfe00 && cp <= 0xfe0f) return 143;	// Variation Selectors         // TBD
-		if (cp >= 0xfe10 && cp <= 0xfe1f) return 144;	// Vertical Forms
-		if (cp >= 0xfe20 && cp <= 0xfe2f) return 145;	// Combining Half Marks
-		if (cp >= 0xfe30 && cp <= 0xfe4f) return 146;	// CJK Compatibility Forms
-		if (cp >= 0xfe50 && cp <= 0xfe6f) return 147;	// Small Form Variants
-		if (cp >= 0xff00 && cp <= 0xffef) return 149;	// Halfwidth and Fullwidth Forms
-		if (cp >= 0xfff0 && cp <= 0xffff) return 150;	// Specials
-		return 0;
+//console.log('getScriptClass: "' + toVisibleString(ch) + '" (' + cp + ',0x' + cp.toString(16) + '): script/' + (result >> 8) + ', class/' + (result & 255));
+		return scriptClassCache[ch] = result;
 	}
 	function isSpace (ch) {
 		return REGEX_ZS.test(ch.charAt(0));
@@ -850,6 +928,9 @@ var unicodeUtils = (function () {
 	}
 	function isIdeograph (ch) {
 		return REGEX_HAN_FAMILY.test(ch.charAt(0));
+	}
+	function isNonLetter (ch) {
+		return REGEX_NON_LETTER.test(ch.charAt(0));
 	}
 	function isHighSurrogate (cp) {
 		return cp >= 0xd800 && cp <= 0xdb7f;
@@ -876,13 +957,13 @@ var unicodeUtils = (function () {
 		LineBreaker:LineBreaker,
 		FfttDictionary:FfttDictionary,
 
-		getUnicodeBlock:getUnicodeBlock,
-		getLatin1Prop:getLatin1Prop,
+		getScriptClass:getScriptClass,
 		isSpace:isSpace,
 		isClosedPunct:isClosedPunct,
 		isSTerm:isSTerm,
 		isPTerm:isPTerm,
 		isIdeograph:isIdeograph,
+		isNonLetter:isNonLetter,
 		isHighSurrogate:isHighSurrogate,
 		isLowSurrogate:isLowSurrogate,
 		toUCS32:toUCS32,

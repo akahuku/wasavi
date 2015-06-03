@@ -70,8 +70,7 @@ Wasavi.SearchUtils = function (app) {
 		var c = buffer.charAt(n);
 		if (spaces.test(c)) return 0;
 		if (bigword) return 1;
-		if (app.config.vars.iskeyword.test(c)) return 2;
-		return buffer.charClassAt(n);
+		return buffer.charClassAt(n, false, app.config.vars.iskeyword) | 0x10000;
 	}
 	function backToBoundary (bigword) {
 		var n = buffer.selectionStart;

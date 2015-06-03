@@ -1830,17 +1830,19 @@ Wasavi.Editor.prototype = new function () {
 			}
 			return this.elm.childNodes[a.row].textContent.charCodeAt(a.col);
 		},
-		charClassAt: function (a, treatNewlineAsSpace) {
-			var text = this.elm.childNodes[a.row].textContent;
-			var cp = text.charCodeAt(a.col);
-
-			if (treatNewlineAsSpace && cp == 0x0a) {
-				return 'Z';
+		charClassAt: function (a, treatNewlineAsSpace, extraWordRegex) {
+			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+				return undefined;
 			}
-
-			return cp <= 0x7f ?
-				unicodeUtils.getLatin1Prop(cp).charAt(0) :
-				unicodeUtils.getUnicodeBlock(cp);
+			var ch = this.elm.childNodes[a.row].textContent.charAt(a.col);
+			var cp = ch.charCodeAt(0);
+			if (treatNewlineAsSpace && cp == 0x0a) {
+				return 0;
+			}
+			if (extraWordRegex instanceof RegExp && extraWordRegex.test(ch)) {
+				return 0x100 + 1; // treat as latin1 word component
+			}
+			return unicodeUtils.getScriptClass(cp);
 		},
 		charRectAt: function () {
 			var a = arg2pos(arguments);

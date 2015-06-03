@@ -2765,6 +2765,22 @@ function adjustSurroundingInput (original) {
 
 	return adjusted;
 }
+function getNextProp (n) {
+	var ikw = config.vars.iskeyword;
+	var p = buffer.charClassAt(n, true, ikw);
+	var sid = p & ~0xff;
+	var type = p & 0xff;
+	switch (sid) {
+	// special method for common script (0) and inherited script (3)
+	case 0: case 3:
+		if (type != 0 && n.col > 0) {
+			var p2 = buffer.charClassAt(buffer.leftPos(n), true, ikw);
+			p = (p2 & ~0xff) | type;
+		}
+		break;
+	}
+	return p;
+}
 
 /*
  * low-level functions for cursor motion {{{1
@@ -2827,13 +2843,14 @@ function motionLineEndDenotative (c) {
 }
 function motionNextWord (c, count, bigWord, wordEnd) {
 	var n = buffer.selectionEnd;
+	var ikw = config.vars.iskeyword;
 	count || (count = 1);
 	n.col >= buffer.rows(n).length - 1 && n.row >= buffer.rowLength - 1 && requestRegisterNotice(_('Tail of text.'));
 
 	function doBigWord () {
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true);
-			var foundSpace = prop === 'Z';
+			var prop = buffer.charClassAt(n, true, ikw);
+			var foundSpace = prop === 0;
 
 			while (!buffer.isEndOfText(n)) {
 				if (buffer.isNewline(n)) {
@@ -2849,11 +2866,11 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 				n = buffer.rightPos(n);
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (nextprop === 'Z' && !foundSpace) {
+				var nextprop = getNextProp(n);
+				if (nextprop === 0 && !foundSpace) {
 					foundSpace = true;
 				}
-				else if (nextprop !== 'Z' && foundSpace) {
+				else if (nextprop !== 0 && foundSpace) {
 					break;
 				}
 			}
@@ -2862,7 +2879,7 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 	function doWord () {
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true);
+			var prop = buffer.charClassAt(n, true, ikw);
 
 			while (!buffer.isEndOfText(n)) {
 				if (buffer.isNewline(n)) {
@@ -2878,8 +2895,8 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 				n = buffer.rightPos(n);
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (prop !== nextprop && nextprop !== 'Z') {
+				var nextprop = getNextProp(n);
+				if (prop !== nextprop && nextprop !== 0) {
 					break;
 				}
 				prop = nextprop;
@@ -2889,15 +2906,15 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 	function doBigWordEnd () {
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true);
+			var prop = buffer.charClassAt(n, true, ikw);
 			var startn = n;
 
 			while (!buffer.isEndOfText(n)) {
 				var prevn = n;
 				n = buffer.rightPos(n);
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (prop !== nextprop && nextprop === 'Z' && buffer.getSelection(startn, n).length > 1) {
+				var nextprop = getNextProp(n);
+				if (prop !== nextprop && nextprop === 0 && buffer.getSelection(startn, n).length > 1) {
 					n = prevn;
 					break;
 				}
@@ -2917,15 +2934,15 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 
 	function doWordEnd () {
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true);
+			var prop = buffer.charClassAt(n, true, ikw);
 			var startn = n;
 
 			while (!buffer.isEndOfText(n)) {
 				var prevn = n;
 				n = buffer.rightPos(n);
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (prop !== nextprop && prop !== 'Z' && buffer.getSelection(startn, n).length > 1) {
+				var nextprop = getNextProp(n);
+				if (prop !== nextprop && prop !== 0 && buffer.getSelection(startn, n).length > 1) {
 					n = prevn;
 					break;
 				}
@@ -2959,6 +2976,7 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 }
 function motionPrevWord (c, count, bigWord, specialStops) {
 	var n = buffer.selectionStart;
+	var ikw = config.vars.iskeyword;
 	count || (count = 1);
 	n.col <= 0 && n.row <= 0 && requestRegisterNotice(_('Top of text.'));
 
@@ -2970,8 +2988,8 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 	if (bigWord) {
 		for (var i = 0; i < count; i++) {
 			n = buffer.leftPos(n);
-			var prop = buffer.charClassAt(n, true);
-			var nonSpaceFound = prop !== 'Z';
+			var prop = buffer.charClassAt(n, true, ikw);
+			var nonSpaceFound = prop !== 0;
 
 			while (n.row > 0 || n.col > 0) {
 				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
@@ -2981,11 +2999,11 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 				n = buffer.leftPos(n);
 				if (n.eq(prevn)) {break;}
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (nextprop !== 'Z' && !nonSpaceFound) {
+				var nextprop = getNextProp(n);
+				if (nextprop !== 0 && !nonSpaceFound) {
 					nonSpaceFound = true;
 				}
-				else if (nextprop === 'Z' && nonSpaceFound) {
+				else if (nextprop === 0 && nonSpaceFound) {
 					n = prevn;
 					break;
 				}
@@ -2996,8 +3014,8 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 	else {
 		for (var i = 0; i < count; i++) {
 			n = buffer.leftPos(n);
-			var prop = buffer.charClassAt(n, true);
-			var nonSpaceFound = prop !== 'Z';
+			var prop = buffer.charClassAt(n, true, ikw);
+			var nonSpaceFound = prop !== 0;
 
 			while (n.row > 0 || n.col > 0) {
 				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
@@ -3007,8 +3025,8 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 				n = buffer.leftPos(n);
 				if (n.eq(prevn)) {break;}
 
-				var nextprop = buffer.charClassAt(n, true);
-				if (nextprop !== 'Z' && !nonSpaceFound) {
+				var nextprop = getNextProp(n);
+				if (nextprop !== 0 && !nonSpaceFound) {
 					nonSpaceFound = true;
 				}
 				else if (prop !== nextprop) {
