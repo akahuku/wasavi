@@ -398,10 +398,7 @@
 					APP_MODE_URL, APP_MODE_URL + '?testmode',
 					APP_MODE_URL_SECURE,
 					self.data.url('options.html') + '*',
-					function (url) {
-						return url.substring(0, 256) ==
-							wasaviFrameSource.substring(0, 256);
-					}
+					wasaviFrameSource
 				],
 				js: [
 					'frontend/extension_wrapper.js',
@@ -414,10 +411,7 @@
 				matches: [
 					APP_MODE_URL, APP_MODE_URL + '?testmode',
 					APP_MODE_URL_SECURE,
-					function (url) {
-						return url.substring(0, 256) ==
-							wasaviFrameSource.substring(0, 256);
-					}
+					wasaviFrameSource
 				],
 				js: [
 					'frontend/extension_wrapper.js',
