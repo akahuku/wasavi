@@ -95,6 +95,25 @@ Wasavi.Theme = function (app) {
 			lineInputFg:'black', lineInputBg:'rgba(255,255,255,0.5)',
 			consoleFg:'black', consoleBg:'rgba(159,205,74,0.9)',
 			boundFg:'black', boundBg:'#f5b338'
+		},
+		// contributed by @biell
+		matrix: {
+			statusHue:'#2ba',
+			background:'#050505',
+			overTextMarkerFg:'#2ba',
+			warnedStatusFg:'#fff', warnedStatusBg:'#e30',
+			invertFg:'#000', invertBg:'#1e4',
+			blurFg:'#0f0', blurBg:'#050505',
+
+			rowBgOdd:'#0a0a0a',
+			editCursorFg:'#2ba',
+			statusFg:'#000',
+			lineNumberFg:'#2ba', lineNumberBg:'#080808',
+			rowFg:'#0f0', rowBg:'#050505',
+			highlightFg:'highlight', highlightBg:'highlighttext',
+			lineInputFg:'#0f0', lineInputBg:'rgba(0,0,0,0.9)',
+			consoleFg:'#0f0', consoleBg:'#111',
+			boundFg:'#0f0', boundBg:'#011'
 		}
 	};
 
