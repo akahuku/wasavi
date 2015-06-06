@@ -1,4 +1,4 @@
-#!/bin/php
+#!/usr/bin/php
 <?php
 $file_name = dirname(__FILE__) . "/ucd/LineBreak.txt";
 $out_file = dirname(__FILE__) . "/../chrome/unicode/linebreak.dat";
