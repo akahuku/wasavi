@@ -111,7 +111,7 @@ Tips and Tricks
 
 * to maximize the wasavi: `:set fullscreen` or `:set fs`
 * to restore the wasavi: `:set nofullscreen` or `:set nofs`
-* to change a color theme: `:set theme=blight` or `:set theme=charcoal`
+* to change a color theme: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix`
 * to modify initial settings:
   open preference wasavi extension (or enter `:options` on wasavi), and edit "exrc" textbox.
 * abbreviate syntax is
@@ -132,7 +132,10 @@ Tips and Tricks
   gj gk g^ g$ moves by wrapped row. To swap the behavior: `:set jkdenotative`
 * f/F/t/T extension for Japanese: these commands recognizes reading (ro-ma ji
   expression) of hiragana, katakana, and kanji. For example, `fk` will place
-  a cursor on '漢'.
+  a cursor on 'か', 'カ', '漢' and so on.
+* f/F/t/T extension for Latin script: these commands recognizes the base alphabet
+  of diacritical marked letter. For exapmple, `fa` will place a cursor on
+  'å', 'ä', 'à', 'â', 'ā' and so on.
 * use a online storage as file system:
 	+ `:filesystem status` shows all file systems currently available.
 	+ `:filesystem default` shows default file system. You can set default file system
@@ -179,12 +182,14 @@ Operations
 Operation Aliases
 ------------------
 
-`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
+`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU` `yss` `ySS`
+
+A counter can be inserted in front of the last 1 character.
 
 Surround Operations
 -------------------
 
-* to surround: `ys` `yS` `yss` `ySS`
+* to surround: `ys` `yS`
 * to remove a surround: `d`
 * to change a surround: `c`
 
@@ -283,13 +288,13 @@ Bound mode is similar to vim's visual mode.
 Surrounding identifiers
 -----------------------
 
-* quotations: one of ``!#$%&*+,\\-.:;=?@^_|~"'` ``
+* quotations: one of ``!#$%&*+,\-.:;=?@^_|~"'` ``
 * brackets: one of `abBrt[]{}()`
 
 Surrounding string
 -----------------------
 
-* quotations: one of ``!#$%&*+,\\-.:;=?@^_|~"'` ``
+* quotations: one of ``!#$%&*+,\-.:;=?@^_|~"'` ``
 * brackets: one of `abBr[]{}()`
 * tags: one of `^T` `,<Tt`
 
@@ -305,3 +310,4 @@ Vim features in wasavi
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`
 * writing to the register of A to Z
 * `gu` / `gU` + motion: lowerize or upperize a region
+* partial functionality of [Surround.vim](https://github.com/tpope/vim-surround)
