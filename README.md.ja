@@ -111,7 +111,7 @@ Tips and Tricks
 
 * wasavi の最大化: `:set fullscreen` or `:set fs`
 * wasavi を元に戻す: `:set nofullscreen` or `:set nofs`
-* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal`
+* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix`
 * 初期設定を変更する:
   各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
   （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集する
@@ -131,8 +131,11 @@ Tips and Tricks
 * j k ^ $ はカーソルを物理行単位で移動させます。一方、gj gk g^ g$ は
   折り返し行単位で移動させます。この振る舞いを交換するには: `:set jkdenotative`
 * 日本語のための f/F/t/T の拡張: これらのコマンドはひらがな、カタカナ、および
-  漢字の読み（ローマ字での表現）を認識します。たとえば、`fk` は「漢」の上に
-  カーソルを置きます。
+  漢字の読み（ローマ字での表現）を認識します。たとえば、`fk` は
+  「か」「カ」「漢」などの上にカーソルを置きます。
+* ラテン文字のための f/F/t/T の拡張: これらのコマンドはダイアクリティカルマーク
+  が付されたアルファベットの基底文字を認識します。たとえば `fa` は
+  「å」、「ä」、「à」、「â」、「ā」などの上にカーソルを置きます。
 * オンラインストレージをファイルシステムとして使用する:
 	+ `:filesystem status` は、現在使用可能なファイルシステムを表示します
 	+ `:filesystem default` は、デフォルトのファイルシステムを取得します。
@@ -162,10 +165,12 @@ Tips and Tricks
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
-* [count] _surround-operation_ [count] _surround-identifier_ _surround-string_
+* [count] _surround-operation_ [count] _motion_ _surround-string_
+* [count] _surround-operation_ [count] _range-symbol_ _surround-string_
 * [count] _de-surround-operation_ [count] _surround-identifier_
-* [count] _re-surround-operation_ [count] _surround-identifier_
+* [count] _re-surround-operation_ [count] _surround-identifier_ _surround-string_
 * [count] _operation-alias_
+* [count] _surround-operation-alias_ _surround-string_
 * [count] _motion_
 * [count] _scroll-command_
 * [count] _edit-command_
@@ -179,12 +184,14 @@ Operations
 Operation Aliases
 ------------------
 
-`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU`
+`cc` `yy` `dd` `>>` `<<` `C` `Y` `D` `gqq` `guu` `gUU` `yss` `ySS`
+
+最後の 1 文字の前にカウンタを挿入することができます。
 
 Surround Operations
 -------------------
 
-* 囲む: `ys` `yS` `yss` `ySS`
+* 囲む: `ys` `yS`
 * 囲みを除去する: `d`
 * 囲みを変更する: `c`
 
@@ -283,13 +290,13 @@ ex コマンドのアドレス指定は絶対行番号、相対行番号、正�
 囲み識別子
 ----------
 
-* 次のいずれかの記号類: ``!#$%&*+,\\-.:;=?@^_|~"'` ``
+* 次のいずれかの記号類: ``!#$%&*+,\-.:;=?@^_|~"'` ``
 * 次のいずれかの括弧類: `abBrt[]{}()`
 
 囲み文字列
 ----------
 
-* 次のいずれかの記号類: ``!#$%&*+,\\-.:;=?@^_|~"'` ``
+* 次のいずれかの記号類: ``!#$%&*+,\-.:;=?@^_|~"'` ``
 * 次のいずれかの括弧類 `abBr[]{}()`
 * 次のいずれかで始まるタグ: `^T` `,<Tt`
 
@@ -305,3 +312,4 @@ Vim 互換の機能
 * オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、`relativenumber`、`textwidth`、 `expandtab`、`cursorline`、`cursorcolumn`
 * A から Z レジスタへの書き込み
 * `gu` / `gU` + モーションは領域を小文字化または大文字化します
+* [Surround.vim](https://github.com/tpope/vim-surround) の一部の機能
