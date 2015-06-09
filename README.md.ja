@@ -165,10 +165,12 @@ Tips and Tricks
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
-* [count] _surround-operation_ [count] _surround-identifier_ _surround-string_
+* [count] _surround-operation_ [count] _motion_ _surround-string_
+* [count] _surround-operation_ [count] _range-symbol_ _surround-string_
 * [count] _de-surround-operation_ [count] _surround-identifier_
-* [count] _re-surround-operation_ [count] _surround-identifier_
+* [count] _re-surround-operation_ [count] _surround-identifier_ _surround-string_
 * [count] _operation-alias_
+* [count] _surround-operation-alias_ _surround-string_
 * [count] _motion_
 * [count] _scroll-command_
 * [count] _edit-command_

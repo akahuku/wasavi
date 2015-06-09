@@ -100,7 +100,7 @@ Install wasavi extension and open the link to [wasavi online app](http://wasavi.
 
 The `:set` commands which you input while wasavi is running are stored to extension's persistent storage, and those are regenerated when you launch wasavi next time.
 
-This setting override mechanism works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in you exrc. Then overriding will be skipped.
+This setting override mechanism works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in your exrc. Then overriding will be skipped.
 
 ## I Have noticed a bug
 
@@ -165,10 +165,12 @@ Commands implemented
 
 * [count] _operation_ [count] _motion_
 * [count] _operation_ [count] _range-symbol_
-* [count] _surround-operation_ [count] _surround-identifier_ _surround-string_
+* [count] _surround-operation_ [count] _motion_ _surround-string_
+* [count] _surround-operation_ [count] _range-symbol_ _surround-string_
 * [count] _de-surround-operation_ [count] _surround-identifier_
-* [count] _re-surround-operation_ [count] _surround-identifier_
+* [count] _re-surround-operation_ [count] _surround-identifier_ _surround-string_
 * [count] _operation-alias_
+* [count] _surround-operation-alias_ _surround-string_
 * [count] _motion_
 * [count] _scroll-command_
 * [count] _edit-command_
