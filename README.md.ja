@@ -192,8 +192,8 @@ Surround Operations
 -------------------
 
 * 囲む: `ys` `yS`
-* 囲みを除去する: `d`
-* 囲みを変更する: `c`
+* 囲みを除去する: `ds`
+* 囲みを変更する: `cs`
 
 Motions
 -------
@@ -225,7 +225,18 @@ ex commands
 
 `abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
 
-ex コマンドのアドレス指定は絶対行番号、相対行番号、正規表現、マーク参照のいずれも可能です。さらに、オフセットを付加することも可能です。
+ex コマンドでのアドレス指定はフルサポートされています:
+
+* バッファ全体: `%s/re/rep/`
+* 現在行: `.p`
+* バッファの最終行: `$p`
+* 絶対的な行番号: `1,2p`
+* 相対的な行番号: `+1,+2p`
+* 正規表現: `/re/p` `?re?p`
+* マークの参照: `'a,'bp`
+
+さらに、`/re/+1p` のようにオフセットも受け付けます。
+2 つのアドレスは通常 `,` で繋ぎますが `;` で繋ぐこともできます。
 
 
 入力モードのコマンド

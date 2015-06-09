@@ -4593,7 +4593,7 @@ var completer = new Wasavi.Completer(appProxy,
 
 		// theme option
 		[
-			/^(\s*)(set?.*\s+theme=)((?:\u2416.|\S)*)(.*)$/, 3,
+			/^(\s*)(set?.*\s+theme=)((?:\\.|\S)*)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
 				notifyCandidates(theme.colorSets.sort());
 			}
@@ -4603,13 +4603,18 @@ var completer = new Wasavi.Completer(appProxy,
 		[
 			/^(\s*)(set?\s+)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
-				notifyCandidates(Object.keys(config.vars).sort());
+				var src = [];
+				Object.keys(config.vars).forEach(function (v) {
+					src.push(v);
+					config.getInfo(v).type == 'b' && src.push('no' + v);
+				});
+				notifyCandidates(src.sort());
 			},
 			{
 				onFoundContext:function (s, offset) {
-					var COMPLETION_INDEX = 1;
+					var COMPLETION_INDEX = 0;
 
-					var regex = /(no)?([^=?\s]*)(\?|=(?:\u2416.|\S)*)?(\s*)/g, re;
+					var regex = /([^=?\s]*)(\?|=(?:\\.|\S)*)?(\s*)/g, re;
 					var pieceOffset = 0;
 					var found = false;
 					var result = {
@@ -4648,17 +4653,16 @@ var completer = new Wasavi.Completer(appProxy,
 					return result;
 				},
 				onComplete:function (newValue, oldValue) {
-					var abbrevs = Object.keys(config.abbrevs).sort();
-
-					if (oldValue != '') {
-						for (var i = 0, goal = abbrevs.length; i < goal; i++) {
-							if (abbrevs[i].indexOf(oldValue) == 0) {
-								return config.abbrevs[abbrevs[i]];
-							}
-						}
+					var result = null;
+					var prefix = '';
+					if (/^(no)(.+)/.test(oldValue)) {
+						prefix = RegExp.$1;
+						oldValue = RegExp.$2;
 					}
-
-					return null;
+					if (oldValue != '' && oldValue in config.abbrevs) {
+						result = prefix + config.abbrevs[oldValue];
+					}
+					return result;
 				}
 			}
 		],
@@ -4946,7 +4950,7 @@ var config = new Wasavi.Configurator(appProxy,
 		qe:'quoteescape',		rnu:'relativenumber',
 
 		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab',
-		cul:'cursorline',		cuc:'cursorcolumn'
+		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink'
 	}
 );
 // }}}
@@ -7687,7 +7691,6 @@ var lineInputEditMap = {
 	'\u0009'/*^I, tab*/:function (c, o) {
 		lineInputHistories.isInitial = true;
 		isCompleteResetCanceled = true;
-		debugger;
 		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
 			if (!compl) {
 				notifier.show(_('No completions'));

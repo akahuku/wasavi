@@ -3297,7 +3297,7 @@ Wasavi.Completer = function (appProxy, alist) {
 			/*
 			 * rest
 			 */
-			var rest = /^(?:\u2416\||[^\|])*/.exec(value);
+			var rest = /^(?:\\\||[^\|])*/.exec(value);
 			value = value.substring(rest[0].length);
 			result.push({range:range[0], rest:rest[0]});
 			if (value.charAt(0) == '|') {

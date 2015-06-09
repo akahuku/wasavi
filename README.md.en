@@ -134,7 +134,7 @@ Tips and Tricks
   expression) of hiragana, katakana, and kanji. For example, `fk` will place
   a cursor on 'か', 'カ', '漢' and so on.
 * f/F/t/T extension for Latin script: these commands recognizes the base alphabet
-  of diacritical marked letter. For exapmple, `fa` will place a cursor on
+  of diacritical marked letter. For example, `fa` will place a cursor on
   'å', 'ä', 'à', 'â', 'ā' and so on.
 * use a online storage as file system:
 	+ `:filesystem status` shows all file systems currently available.
@@ -192,8 +192,8 @@ Surround Operations
 -------------------
 
 * to surround: `ys` `yS`
-* to remove a surround: `d`
-* to change a surround: `c`
+* to remove a surround: `ds`
+* to change a surround: `cs`
 
 Motions
 -------
@@ -225,7 +225,18 @@ ex commands
 
 `abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
 
-ex commands to specify address are fully supported: absolute line number, relative line number, regal expression, and mark referencing. In addition to this, wasavi also accepts offset.
+The addressing in ex command is fully supported:
+
+* whole buffer: `%s/re/rep/`
+* current line: `.p`
+* the last line of buffer: `$p`
+* absolute line number: `1,2p`
+* relative line number: `+1,+2p`
+* regal expression: `/re/p` `?re?p`
+* mark referencing: `'a,'bp`
+
+In addition to this wasavi also accepts offset, for example: `/re/+1p`.
+Two addresses are usually connected by a `,`, wasavi also supports `;`.
 
 
 Input mode commands
