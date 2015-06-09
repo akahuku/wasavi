@@ -151,22 +151,39 @@ public class LineInputEditingTest extends WasaviTest {
 	@Test
 	public void completeOptionNameFromEmpty () {
 		Wasavi.setInputModeOfWatchTarget("line_input");
-		Wasavi.send(":set \t");
-		assertEquals("#1-1", "set autoindent", Wasavi.getLineInput());
+		Wasavi.send(":set \t-\u0005");
+		assertEquals("#1-1", "set autoindent-", Wasavi.getLineInput());
+	}
+
+	@Test
+	public void completeNegativeOptionNameFromEmpty () {
+		Wasavi.setInputModeOfWatchTarget("line_input");
+		Wasavi.send(":set no\t-\u0005");
+		assertEquals("#1-1", "set noautoindent-", Wasavi.getLineInput()); // must be first boolean option in alphabetical order
 	}
 
 	@Test
 	public void completeOptionNameWithPrefix () {
-		Wasavi.setInputModeOfWatchTarget("line_input");
-		Wasavi.send(":set textw\t");
-		assertEquals("#1-1", "set textwidth", Wasavi.getLineInput());
+		Wasavi.send(":set fullsc\t?\n");
+		assertEquals("#1-1", "nofullscreen", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void completeNegativeOptionNameWithPrefix () {
+		Wasavi.send(":set noautoi\t?\n");
+		assertEquals("#1-1", "noautoindent", Wasavi.getLastMessage());
 	}
 
 	@Test
 	public void completeAbbreviatedOptionName () {
-		Wasavi.setInputModeOfWatchTarget("line_input");
-		Wasavi.send(":set sw\t");
-		assertEquals("#1-1", "set shiftwidth", Wasavi.getLineInput());
+		Wasavi.send(":set nu\t?\n");
+		assertEquals("#1-1", "nonumber", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void completeAbbreviatedNegativeOptionName () {
+		Wasavi.send(":set nocub\t?\n");
+		assertEquals("#1-1", "nocursorblink", Wasavi.getLastMessage());
 	}
 
 	@Test
