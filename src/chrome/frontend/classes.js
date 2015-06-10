@@ -221,7 +221,11 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			case 'b':
 				return (this.nativeValue ? '  ' : 'no') + this.name;
 			case 'i': case 'I': case 's': case 'r':
-				return '  ' + this.name + '=' + this.nativeValue.toString();
+				var value = this.nativeValue.toString();
+				if (/[\s"']/.test(value)) {
+					value = "'" + value.replace(/["']/g, '\\$&') + "'";
+				}
+				return '  ' + this.name + '=' + value;
 			default:
 				throw new Error('*invalid type for visibleString: ' + this.type + ' *');
 			}
