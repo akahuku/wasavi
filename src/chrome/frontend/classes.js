@@ -395,29 +395,29 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		return result;
 	}
 	function dumpData () {
-		var result = [];
+		var index = [];
+		var content = [];
 		var ab = reverseObject(abbrevs);
+		index.push('** version: ' + app.version + '**', '', '');
 		for (var i = 0, goal = internals.length; i < goal; i++) {
 			var v = internals[i];
-			var type = '';
+			index.push('* <a href="#' + v.name + '">' + v.name + '</a>');
+			content.push('<a href="#" id="' + v.name + '">#</a> ' + v.name);
+			content.push('--------');
+			content.push('');
 			switch (v.type) {
-			case 'b': type = 'boolean'; break;
-			case 'i': type = 'integer'; break;
-			case 'I': type = 'natural number'; break;
-			case 's': type = 'string'; break;
-			case 'r': type = 'string (regal expression)'; break;
+			case 'b': content.push('* type: boolean'); break;
+			case 'i': content.push('* type: integer (greater or equals to 0)'); break;
+			case 'I': content.push('* type: natural number'); break;
+			case 's': content.push('* type: string'); break;
+			case 'r': content.push('* type: string (regal expression)'); break;
 			}
-			var tmp = {
-				name:v.name,
-				type:type,
-				defaultValue:v.defaultValue
-			};
-			if (v.name in ab) {
-				tmp.abbrev = ab[v.name];
-			}
-			result.push(tmp);
+			content.push('* default value: `' + v.defaultValue + '`');
+			v.name in ab && content.push('* abbreviation: `' + ab[v.name] + '`');
+			content.push('');
 		}
-		return result;
+		index.push('');
+		return [].concat(index, content).join('\n');
 	}
 	function dumpScript (modifiedOnly) {
 		var result = [];
@@ -1344,6 +1344,9 @@ Wasavi.Registers = function (app, value) {
 				switch (name) {
 				case 'B':
 					item.set(window.navigator.userAgent);
+					break;
+				case 'C':
+					app.devMode && item.set(app.config.dumpData());
 					break;
 				case 'D':
 					item.set(strftime(app.config.vars.datetime));
