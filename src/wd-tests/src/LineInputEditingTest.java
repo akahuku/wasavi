@@ -171,7 +171,7 @@ public class LineInputEditingTest extends WasaviTest {
 	@Test
 	public void completeNegativeOptionNameWithPrefix () {
 		Wasavi.send(":set noautoi\t?\n");
-		assertEquals("#1-1", "noautoindent", Wasavi.getLastMessage());
+		assertEquals("#1-1", "  autoindent", Wasavi.getLastMessage());
 	}
 
 	@Test
@@ -183,7 +183,7 @@ public class LineInputEditingTest extends WasaviTest {
 	@Test
 	public void completeAbbreviatedNegativeOptionName () {
 		Wasavi.send(":set nocub\t?\n");
-		assertEquals("#1-1", "nocursorblink", Wasavi.getLastMessage());
+		assertEquals("#1-1", "  cursorblink", Wasavi.getLastMessage());
 	}
 
 	@Test
