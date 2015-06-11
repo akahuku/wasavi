@@ -1945,7 +1945,7 @@ function processInput (e, ignoreAbbrev) {
 	}
 	if (requestedState.console) {
 		if (requestedState.console.open && backlog.queued) {
-			if (backlog.buffer.length > 1) {
+			if (backlog.buffer.length > 1 || backlog.visible) {
 				backlog.write(false, messageUpdated);
 				pushInputMode(result, 'backlog_prompt');
 			}

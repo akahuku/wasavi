@@ -1741,11 +1741,11 @@ var cache = {};
 			}
 		}
 		if (messages.length) {
-			if (messages.length == 1) {
+			if (messages.length == 1 && !app.backlog.visible) {
 				app.low.requestShowMessage(messages[0], emphasis);
 				app.low.requestConsoleState(true);
 			}
-			else if (messages.length > 1) {
+			else {
 				app.backlog.push(messages);
 				app.low.requestConsoleState();
 			}
