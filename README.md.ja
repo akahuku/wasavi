@@ -75,10 +75,15 @@ Chrome は Ctrl+T や Ctrl+W などの基本的なショートカットを予約
 
 TEXTAREA にフォーカスし、`Ctrl+Enter` を押してください。
 
-
 ## wasavi の終了
 
 wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマンドを入力してください。
+
+## wasavi が `:set` コマンドで受け入れるオプションは？
+
+[表](https://github.com/akahuku/wasavi/wiki/All-Options-which-wasavi-recognizes) を参照してください。
+
+注意: 受け入れるが、まだ何の効力も持たないオプションもあります。
 
 ## Firefox で Vimperator と共存する
 
@@ -135,7 +140,7 @@ Tips and Tricks
   「か」「カ」「漢」などの上にカーソルを置きます。
 * ラテン文字のための f/F/t/T の拡張: これらのコマンドはダイアクリティカルマーク
   が付されたアルファベットの基底文字を認識します。たとえば `fa` は
-  「å」、「ä」、「à」、「â」、「ā」などの上にカーソルを置きます。
+  「å」、「ä」、「à」、「â」、「ā」などの上にカーソルを置きます。[対応表](https://github.com/akahuku/wasavi/wiki/Latin-1-alternative-presentation-in-f-F-t-T-command) も参照してください。
 * オンラインストレージをファイルシステムとして使用する:
 	+ `:filesystem status` は、現在使用可能なファイルシステムを表示します
 	+ `:filesystem default` は、デフォルトのファイルシステムを取得します。

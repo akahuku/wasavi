@@ -75,10 +75,15 @@ Frequently Asked Questions
 
 Focus TEXTAREA and press `Ctrl+Enter`.
 
-
 ## How to quit wasavi
 
 To quit wasavi press `ZZ` or `:q` or `:wq` or any other VI quit command.
+
+## What are options which wasavi accepts via `:set` command?
+
+See [this table](https://github.com/akahuku/wasavi/wiki/All-Options-which-wasavi-recognizes).
+
+Note: there are also options which accepts but doesn't have any effect yet.
 
 ## How to use wasavi with Vimperator on Firefox
 
@@ -135,7 +140,7 @@ Tips and Tricks
   a cursor on 'か', 'カ', '漢' and so on.
 * f/F/t/T extension for Latin script: these commands recognizes the base alphabet
   of diacritical marked letter. For example, `fa` will place a cursor on
-  'å', 'ä', 'à', 'â', 'ā' and so on.
+  'å', 'ä', 'à', 'â', 'ā' and so on. Also see [mapping table](https://github.com/akahuku/wasavi/wiki/Latin-1-alternative-presentation-in-f-F-t-T-command).
 * use a online storage as file system:
 	+ `:filesystem status` shows all file systems currently available.
 	+ `:filesystem default` shows default file system. You can set default file system
