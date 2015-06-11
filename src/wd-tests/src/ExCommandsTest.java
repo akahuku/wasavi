@@ -1618,14 +1618,14 @@ public class ExCommandsTest extends WasaviTest {
 
 		Wasavi.send(":set datetime='quoted \\'value\\''\n");
 		Wasavi.send(":set datetime?\n");
-		assertEquals("#2-1", "  datetime=quoted 'value'", Wasavi.getLastMessage());
+		assertEquals("#2-1", "  datetime='quoted \\'value\\''", Wasavi.getLastMessage());
 
 		Wasavi.send(":set datetime='incomplete quote\n");
 		assertEquals("#3-1", "Incomplete quoted value: datetime='incomplete quote", Wasavi.getLastMessage());
 
 		Wasavi.send(":set datetime=escaped\\ space\n");
 		Wasavi.send(":set datetime?\n");
-		assertEquals("#4-1", "  datetime=escaped space", Wasavi.getLastMessage());
+		assertEquals("#4-1", "  datetime='escaped space'", Wasavi.getLastMessage());
 	}
 
 	@Test
