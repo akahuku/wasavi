@@ -219,7 +219,15 @@ function locate (iframe, target, opts) {
 function run (element) {
 	fireCustomEvent('WasaviStarting', 0);
 
-	diagMessages = ['agent: entering run()'];
+	diagMessages = [];
+	diagMessages._lastPush = Date.now();
+	diagMessages._p = function (s) {
+		var now = Date.now();
+		this.push(((now - this._lastPush) / 1000).toFixed(3) + 's\t' + s);
+		this._lastPush = now;
+	};
+	diagMessages._p('agent: entering run()');
+
 	window.addEventListener('message', handlePostMessage, false);
 
 	var isPseudoTextarea = false;
@@ -258,11 +266,11 @@ function run (element) {
 		runCore(element, extension.urlInfo.frameSource, toPlainText(element));
 	}
 
-	diagMessages.push('agent: leaving run()');
+	diagMessages._p('agent: leaving run()');
 }
 
 function runCore (element, frameSource, value) {
-	diagMessages.push('agent: entering runCore()');
+	diagMessages._p('agent: entering runCore()');
 
 	/*
 	 * boot sequence:
@@ -353,7 +361,7 @@ function runCore (element, frameSource, value) {
 		marks:element.getAttribute(MARKS_ID)
 	});
 
-	diagMessages.push('agent: leaving runCore()');
+	diagMessages._p('agent: leaving runCore()');
 }
 
 function cleanup (value, isImplicit) {
@@ -994,7 +1002,10 @@ function handleBackendMessage (req) {
 		wasaviFrameTimeoutTimer = null;
 
 		window.removeEventListener('message', handlePostMessage, false);
-		diagMessages = undefined;
+		if (diagMessages) {
+			error(diagMessages.join('\n'));
+			diagMessages = undefined;
+		}
 		break;
 
 	case 'window-state':
@@ -1273,7 +1284,7 @@ function handlePostMessage (e) {
 	else if (WasaviExtensionWrapper.IS_GECKO) {
 		// on Firefox, e.origin is always null. maybe a bug?
 	}
-	diagMessages.push('wasavi: ' + e.data);
+	diagMessages._p('wasavi: ' + e.data);
 }
 
 /*
