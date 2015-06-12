@@ -149,7 +149,7 @@
 	CompositionResult.prototype.run = function (e) {
 		var t = e.target;
 		var v = editable.value(t);
-		editable.delete(t, this.position, v.length - this.before.length);
+		editable.delete(t, this.position, this.prefix.length + this.composition.length);
 		editable.setSelectionRange(t, this.position);
 		pushCompositionedString(e, this.prefix + this.composition);
 	};
