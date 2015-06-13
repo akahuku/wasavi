@@ -1278,8 +1278,7 @@ function runExrc () {
 function uninstall (save, implicit) {
 	// apply the edited content to target textarea
 	if (save && config.vars.modified) {
-		targetElement.value = targetElement.isContentEditable ?
-			buffer.value.split('\n') : buffer.value;
+		targetElement.value = buffer.value;
 	}
 
 	// remove all event handlers
@@ -2336,7 +2335,9 @@ function getWriteHandler (id) {
 			removeMultiplexCallback(id);
 			showMessage(_.apply(null, req.error), true, false);
 			notifyActivity('', '', 'write handler error: ' + req.error);
-			notifyCommandComplete(null, req.meta.path == '' ? null : 'write handler');
+			notifyCommandComplete(
+				null,
+				!('meta' in req) || !req.meta || req.meta.path == '' ? null : 'write handler');
 			return;
 		}
 
@@ -7065,7 +7066,7 @@ var boundMap = {
 			case 'S':
 				requestInputMode('line_input', {
 					modeOpts:{
-						prefix:_('surround:'),
+						prefix:_('surround with:'),
 						historyName:'s'
 					},
 					overrides:{mapkey:o.key + c}

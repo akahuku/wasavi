@@ -356,6 +356,10 @@
     "message": "パスのメタ情報を取得できません",
     "description": "Cannot retrieve path metadata"
   },
+  "cannot_rewrite_the_page_itself": {
+    "message": "ページそのものを書き換えることはできません。",
+    "description": "Cannot rewrite the page itself."
+  },
   "cannot_use_the_global_or_v_command_recursively": {
     "message": "global や v コマンドを入れ子で使うことはできません。",
     "description": "Cannot use the global or v command recursively."
@@ -475,6 +479,10 @@
   "in_command_mode": {
     "message": "コマンドモードです。",
     "description": "In command mode."
+  },
+  "incomplete_quoted_value_@0": {
+    "message": "不正な引用符付きの値: {0}",
+    "description": "Incomplete quoted value: {0}"
   },
   "insert": {
     "message": "--挿入モード--",

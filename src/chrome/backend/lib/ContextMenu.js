@@ -52,7 +52,6 @@
 
 			chrome.contextMenus.removeAll(function () {
 				chrome.contextMenus.create({
-					contexts:['editable'],
 					title:chrome.i18n.getMessage(MENU_EDIT_WITH_WASAVI),
 					onclick:function (info, tab) {
 						if (!info.editable) return;
@@ -78,7 +77,6 @@
 				opera.contexts.menu.removeItem(0);
 			}
 			opera.contexts.menu.addItem(opera.contexts.menu.createItem({
-				contexts:['editable'],
 				icon:'images/icon016.png',
 				title:this.getMenuLabel(MENU_EDIT_WITH_WASAVI),
 				onclick:function (e) {
@@ -100,7 +98,7 @@
 			var cm = require('sdk/context-menu');
 			var that = this;
 			cm.Item({
-				context:cm.SelectorContext('input,textarea'),
+				context:cm.PageContext(),
 				image:self.data.url('images/icon016.png'),
 				label:'#',
 				contentScriptFile:self.data.url('scripts/context_menu.js'),

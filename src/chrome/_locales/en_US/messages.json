@@ -356,6 +356,10 @@
     "message": "Cannot retrieve path metadata",
     "description": "Cannot retrieve path metadata"
   },
+  "cannot_rewrite_the_page_itself": {
+    "message": "Cannot rewrite the page itself.",
+    "description": "Cannot rewrite the page itself."
+  },
   "cannot_use_the_global_or_v_command_recursively": {
     "message": "Cannot use the global or v command recursively.",
     "description": "Cannot use the global or v command recursively."
@@ -475,6 +479,10 @@
   "in_command_mode": {
     "message": "In command mode.",
     "description": "In command mode."
+  },
+  "incomplete_quoted_value_@0": {
+    "message": "Incomplete quoted value: {0}",
+    "description": "Incomplete quoted value: {0}"
   },
   "insert": {
     "message": "--INSERT--",

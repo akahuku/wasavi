@@ -50,7 +50,8 @@ var ACCEPTABLE_TYPES = {
 	url:      'enableUrl',
 	email:    'enableEmail',
 	password: 'enablePassword',
-	number:   'enableNumber'
+	number:   'enableNumber',
+	body:     'enablePage'
 };
 
 var extension;
@@ -137,13 +138,7 @@ function locate (iframe, target, opts) {
 	var isFullscreen = !!opts.isFullscreen;
 
 	if (isFullscreen) {
-		var div = document.body.appendChild(document.createElement('div'));
-		div.style.position = 'fixed';
-		div.style.left = div.style.top =
-		div.style.right = div.style.bottom = FULLSCREEN_MARGIN + 'px';
-		var rect = div.getBoundingClientRect();
-		div.parentNode.removeChild(div);
-
+		var rect = getFullscreenRect();
 		assign(
 			'position', 'fixed',
 			'left', FULLSCREEN_MARGIN + 'px',
@@ -182,11 +177,7 @@ function locate (iframe, target, opts) {
 			height: rect.height
 		};
 
-		var cover = document.body.appendChild(document.createElement('div'));
-		cover.style.position = 'fixed';
-		cover.style.left = cover.style.top =
-		cover.style.right = cover.style.bottom = '0';
-		var crect = cover.getBoundingClientRect();
+		var crect = getFullscreenRect();
 		crect = {
 			left:   crect.left   + offsetLeft,
 			top:    crect.top    + offsetTop,
@@ -203,7 +194,6 @@ function locate (iframe, target, opts) {
 		if (result.top  < crect.top ) result.top  = crect.top;
 		if (result.left + result.width > crect.right) result.left = crect.right - result.width;
 		if (result.top + result.height > crect.bottom) result.top = crect.bottom - result.height;
-		cover.parentNode.removeChild(cover);
 
 		assign(
 			'position', position,
@@ -243,12 +233,12 @@ function run (element) {
 
 	if (isPseudoTextarea) {
 		if (getValueCallback) {
-			runCore(element, extension.urlInfo.frameSource, '');
+			runCore(element, '');
 			return;
 		}
 
 		getValueCallback = function (value) {
-			runCore(element, extension.urlInfo.frameSource, value);
+			runCore(element, value);
 		};
 
 		var className = getUniqueClass();
@@ -260,16 +250,31 @@ function run (element) {
 		fireCustomEvent('WasaviRequestGetContent', {className:className});
 	}
 	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		runCore(element, extension.urlInfo.frameSource, element.value);
+		runCore(element, element.value);
 	}
 	else if (element.isContentEditable) {
-		runCore(element, extension.urlInfo.frameSource, toPlainText(element));
+		runCore(element, toPlainText(element));
+	}
+	else if (element.nodeName == 'BODY') {
+		var content = [], el;
+		// title
+		el = document.querySelector('title, h1');
+		content.push(el.textContent || '');
+		// url
+		el = document.querySelector('link[rel="canonical"]');
+		content.push(el ? el.getAttribute('href') : window.location.href);
+		// selection
+		el = window.getSelection().toString()
+			.replace(/(?:\r\n|\r|\n)/g, '\n')
+			.replace(/\n{2,}/g, '\n') || '';
+		el != '' && content.push('', el);
+		runCore(element, content.join('\n'));
 	}
 
 	diagMessages._p('agent: leaving run()');
 }
 
-function runCore (element, frameSource, value) {
+function runCore (element, value) {
 	diagMessages._p('agent: entering runCore()');
 
 	/*
@@ -325,7 +330,7 @@ function runCore (element, frameSource, value) {
 	wasaviFrame.style.overflow = 'hidden';
 	wasaviFrame.style.visibility = 'hidden';
 	wasaviFrame.style.zIndex = 0x7fffffff;
-	wasaviFrame.src = extension.urlInfo.frameSource || frameSource;
+	wasaviFrame.src = extension.urlInfo.frameSource;
 
 	document.body.appendChild(wasaviFrame);
 
@@ -350,11 +355,11 @@ function runCore (element, frameSource, value) {
 		nodePath:getNodePath(element),
 		isContentEditable:element.isContentEditable,
 		elementType:element.type,
-		selectionStart:element.selectionStart,
-		selectionEnd:element.selectionEnd,
-		scrollTop:element.scrollTop,
-		scrollLeft:element.scrollLeft,
-		readOnly:element.readOnly || element.disabled,
+		selectionStart:element.selectionStart || 0,
+		selectionEnd:element.selectionEnd || 0,
+		scrollTop:element.scrollTop || 0,
+		scrollLeft:element.scrollLeft || 0,
+		readOnly:element.readOnly || element.disabled || !element.isContentEditable,
 		value:value,
 		rect:{width:rect.width, height:rect.height},
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
@@ -501,17 +506,17 @@ function setValue (element, value, isForce) {
 			return _('Exception while saving: {0}', e.message);
 		}
 	}
+	else if (element.nodeName == 'BODY') {
+		return _('Cannot rewrite the page itself.');
+	}
 	else {
-		if (Object.prototype.toString.call(value) != '[object Array]') {
-			return _('Invalid text format.');
-		}
-
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
 
 		var f = document.createDocumentFragment();
 		var length = 0;
+		value = value.split('\n');
 		for (var i = 0, goal = value.length - 1; i < goal; i++) {
 			f.appendChild(document.createTextNode(value[i]));
 			f.appendChild(document.createElement('br'));
@@ -780,6 +785,20 @@ function connect () {
 	extension.connect(eventName, gotInit);
 }
 
+function isAcceptable (key) {
+	return key in ACCEPTABLE_TYPES && allowedElements[ACCEPTABLE_TYPES[key]];
+}
+
+function getFullscreenRect () {
+	var cover = document.body.appendChild(document.createElement('div'));
+	cover.style.position = 'fixed';
+	cover.style.left = cover.style.top =
+	cover.style.right = cover.style.bottom = FULLSCREEN_MARGIN + 'px';
+	var result = cover.getBoundingClientRect();
+	cover.parentNode.removeChild(cover);
+	return result;
+}
+
 /**
  * page agent creator
  * ----------------
@@ -817,9 +836,8 @@ function handleKeydown (e) {
 	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
 
 	if (e.target.isContentEditable && allowedElements.enableContentEditable
-	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
-		&& e.target.type in ACCEPTABLE_TYPES
-		&& allowedElements[ACCEPTABLE_TYPES[e.target.type]]) {
+	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
+	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
 
 		/*
 		 * <textarea>
@@ -855,9 +873,8 @@ function handleTargetFocus (e) {
 	if (!canLaunch || !quickActivation || targetElement || !e || !e.target || !allowedElements) return;
 
 	if (e.target.isContentEditable && allowedElements.enableContentEditable
-	||  (e.target.nodeName == 'TEXTAREA' || e.target.nodeName == 'INPUT')
-		&& e.target.type in ACCEPTABLE_TYPES
-		&& allowedElements[ACCEPTABLE_TYPES[e.target.type]]) {
+	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
+	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
 
 		var current = e.target.getAttribute(EXTENSION_CURRENT);
 		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
@@ -1134,7 +1151,7 @@ function handleBackendMessage (req) {
 				bytes:result
 			};
 		}
-		else if (Object.prototype.toString.call(value) == '[object Array]') {
+		else if (Object.prototype.toString.call(result) == '[object Array]') {
 			payload.error = result;
 		}
 		else {

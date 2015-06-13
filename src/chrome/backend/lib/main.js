@@ -137,7 +137,8 @@
 				enableEmail:          false,
 				enablePassword:       false,
 				enableNumber:         false,
-				enableContentEditable:true
+				enableContentEditable:true,
+				enablePage:           true
 			}
 		},
 		exrc: {
