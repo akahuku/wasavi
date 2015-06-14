@@ -2351,6 +2351,7 @@ function getWriteHandler (id) {
 				_('Writing ({0}%)', req.progress.toFixed(2)));
 			break;
 		case 'complete':
+			config.setData('nomodified');
 			showMessage(
 				_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
 			notifyActivity('', '', 'write handler completed');

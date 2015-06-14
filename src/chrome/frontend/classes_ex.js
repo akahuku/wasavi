@@ -528,7 +528,6 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 		if (app.fileName == '') {
 			app.fileName = pathRegalized;
 		}
-		app.isTextDirty = false;
 		app.editLogger.notifySave();
 	}
 }

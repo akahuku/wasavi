@@ -233,12 +233,12 @@ function run (element) {
 
 	if (isPseudoTextarea) {
 		if (getValueCallback) {
-			runCore(element, '');
+			runCore(element);
 			return;
 		}
 
 		getValueCallback = function (value) {
-			runCore(element, value);
+			runCore(element, {value:value});
 		};
 
 		var className = getUniqueClass();
@@ -250,31 +250,45 @@ function run (element) {
 		fireCustomEvent('WasaviRequestGetContent', {className:className});
 	}
 	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		runCore(element, element.value);
+		runCore(element, {
+			value:element.value,
+			readOnly:element.readOnly || element.disabled
+		});
 	}
 	else if (element.isContentEditable) {
-		runCore(element, toPlainText(element));
+		runCore(element, {value:toPlainText(element)});
 	}
 	else if (element.nodeName == 'BODY') {
-		var content = [], el;
+		var content = [], el, s;
 		// title
-		el = document.querySelector('title, h1');
-		content.push(el.textContent || '');
+		if ((el = document.querySelector('title, h1')) && (s = el.textContent) != '') {
+			content.push(el.textContent);
+		}
 		// url
-		el = document.querySelector('link[rel="canonical"]');
-		content.push(el ? el.getAttribute('href') : window.location.href);
+		if ((el = document.querySelector('link[rel="canonical"]')) && (s = el.getAttribute('href')) != '') {
+			content.push(s);
+		}
+		else {
+			content.push(window.location.href);
+		}
+		// description
+		if ((el = document.querySelector('meta[name="description"]')) && (s = el.getAttribute('content')) != '') {
+			content.push('', s);
+		}
 		// selection
-		el = window.getSelection().toString()
+		if ((s = window.getSelection().toString()
 			.replace(/(?:\r\n|\r|\n)/g, '\n')
-			.replace(/\n{2,}/g, '\n') || '';
-		el != '' && content.push('', el);
-		runCore(element, content.join('\n'));
+			.replace(/\n{2,}/g, '\n')) != '') {
+			content.push('', s);
+		}
+		// run
+		runCore(element, {value:content.join('\n')});
 	}
 
 	diagMessages._p('agent: leaving run()');
 }
 
-function runCore (element, value) {
+function runCore (element, overrides) {
 	diagMessages._p('agent: entering runCore()');
 
 	/*
@@ -343,7 +357,7 @@ function runCore (element, value) {
 
 	//
 	var rect = locate(wasaviFrame, element);
-	extension.postMessage({
+	var payload = {
 		type:'push-payload',
 		parentTabId:extension.tabId,
 		parentInternalId:extension.internalId,
@@ -359,12 +373,18 @@ function runCore (element, value) {
 		selectionEnd:element.selectionEnd || 0,
 		scrollTop:element.scrollTop || 0,
 		scrollLeft:element.scrollLeft || 0,
-		readOnly:element.readOnly || element.disabled || !element.isContentEditable,
-		value:value,
+		readOnly:false,
+		value:'',
 		rect:{width:rect.width, height:rect.height},
 		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
 		marks:element.getAttribute(MARKS_ID)
-	});
+	}
+	if (overrides) {
+		for (var i in overrides) {
+			payload[i] = overrides[i];
+		}
+	}
+	extension.postMessage(payload);
 
 	diagMessages._p('agent: leaving runCore()');
 }
