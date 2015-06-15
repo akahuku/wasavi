@@ -318,8 +318,18 @@ loop:		do {
 		function findBracket () {
 			var i = 0;
 			while (!buffer.isEndOfText(n) && !buffer.isNewline(n)) {
-				var index = BRACKETS.indexOf(buffer.charAt(n));
-				if (index != -1 && ++i == count) {
+				var c = buffer.charAt(n);
+				var index = BRACKETS.indexOf(c);
+				if (index < 0) {
+					var list = app.ffttDictionary.get(c);
+					if (list) {
+						for (var j in list) {
+							index = BRACKETS.indexOf(j);
+							if (index >= 0) break;
+						}
+					}
+				}
+				if (index >= 0 && ++i == count) {
 					return index;
 				}
 				n = buffer.rightPos(n);
@@ -331,14 +341,13 @@ loop:		do {
 			var prevn = n;
 			n = buffer.rightPos(n);
 			while (!buffer.isEndOfText(n) && n.ne(prevn)) {
-				switch (buffer.charAt(n)) {
-				case current:
+				var c = buffer.charAt(n);
+				if (app.ffttDictionary.match(c, current)) {
 					depth++;
-					break;
-				case match:
+				}
+				else if (app.ffttDictionary.match(c, match)) {
 					if (depth == 0) return n;
 					depth--;
-					break;
 				}
 				prevn = n;
 				n = buffer.rightPos(n);
@@ -350,14 +359,13 @@ loop:		do {
 			var prevn = n;
 			n = buffer.leftPos(n);
 			while ((n.row > 0 || n.col >= 0) && n.ne(prevn)) {
-				switch (buffer.charAt(n)) {
-				case current:
+				var c = buffer.charAt(n);
+				if (app.ffttDictionary.match(c, current)) {
 					depth++;
-					break;
-				case match:
+				}
+				else if (app.ffttDictionary.match(c, match)) {
 					if (depth == 0) return n;
 					depth--;
-					break;
 				}
 				prevn = n;
 				n = buffer.leftPos(n);
@@ -457,7 +465,7 @@ loop:		do {
 		return true;
 	}
 	function block (count, what, over, includeAnchor) {
-		if (buffer.charAt(buffer.selectionStart) == what) {
+		if (app.ffttDictionary.match(buffer.charAt(buffer.selectionStart), what)) {
 			app.motion.right('', 1);
 			buffer.setSelectionRange(buffer.selectionEnd);
 		}

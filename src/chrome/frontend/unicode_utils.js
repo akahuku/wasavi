@@ -849,6 +849,7 @@ var unicodeUtils = (function () {
 			return cache[ch] = result;
 		}
 		function match (/*string*/ch, /*string*/target) {
+			if (ch == target) return true;
 			var o = this.get(ch);
 			return o && target in o;
 		}

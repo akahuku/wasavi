@@ -82,6 +82,7 @@ diag('defining classes');
 		get recordedStrokes () {return recordedStrokes},
 		get notifier () {return notifier},
 		get searchUtils () {return searchUtils},
+		get ffttDictionary () {return ffttDictionary},
 
 		get isTextDirty () {return config.vars.modified},
 		set isTextDirty (v) {config.setData(v ? 'modified' : 'nomodified')},
@@ -3053,8 +3054,7 @@ function motionFindForward (c, count, stopBefore, continuous) {
 		var index = start || 0;
 		var goal = line.length;
 		while (index < goal) {
-			var c = line.charAt(index);
-			if (c == target || ffttDictionary.match(c, target)) {
+			if (ffttDictionary.match(line.charAt(index), target)) {
 				return index;
 			}
 			index++;
@@ -3103,8 +3103,7 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 	function lastIndexOfEx (line, target, start) {
 		var index = start || 0;
 		while (index >= 0) {
-			var c = line.charAt(index);
-			if (c == target || ffttDictionary.match(c, target)) {
+			if (ffttDictionary.match(line.charAt(index), target)) {
 				return index;
 			}
 			index--;
