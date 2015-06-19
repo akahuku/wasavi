@@ -999,6 +999,7 @@
 			
 			// new composition session
 			else {
+				compositionResult = null;
 				e.data = '';
 				compositionstart(e);
 				compositionResult.before = cop2.before;
