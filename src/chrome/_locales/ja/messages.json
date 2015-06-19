@@ -604,6 +604,10 @@
     "message": "不正な字句: {0}",
     "description": "Invalid token: {0}"
   },
+  "invalid_write_response": {
+    "message": "write の応答が不正です。",
+    "description": "Invalid write response."
+  },
   "key_@0_cannot_be_remapped": {
     "message": "{0} キーは再マップできません。",
     "description": "Key {0} cannot be remapped."

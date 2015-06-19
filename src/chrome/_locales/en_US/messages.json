@@ -604,6 +604,10 @@
     "message": "Invalid token: {0}",
     "description": "Invalid token: {0}"
   },
+  "invalid_write_response": {
+    "message": "Invalid write response.",
+    "description": "Invalid write response."
+  },
   "key_@0_cannot_be_remapped": {
     "message": "Key {0} cannot be remapped.",
     "description": "Key {0} cannot be remapped."

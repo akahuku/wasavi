@@ -466,21 +466,21 @@ function parseWriteArg (app, t, a) {
 	return {
 		isCommand:isCommand,
 		isAppend:isAppend,
-		name:name
+		path:name
 	};
 }
 
-function writeCore (app, t, a, isCommand, isAppend, path) {
-	path || (path = app.fileName);
-	var pathRegalized = app.low.regalizeFilePath(path, true);
+function writeCore (app, t, a, pa) {
+	pa.path || (pa.path = app.fileName);
+	var pathRegalized = app.low.regalizeFilePath(pa.path, true);
 
-	if (isCommand) {
+	if (pa.isCommand) {
 		return _('Command redirection is not implemented.');
 	}
-	if (path == '' && app.extensionChannel.isTopFrame()) {
+	if (pa.path == '' && app.extensionChannel.isTopFrame()) {
 		return _('No file name.');
 	}
-	if (isAppend) {
+	if (pa.isAppend) {
 		return _('Appending is not implemented.');
 	}
 	if (a.flags.force) {
@@ -500,10 +500,7 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	if (a.range[1] == t.rowLength - 1) {
 		content = trimTerm(content);
 	}
-	if (app.targetElement.isContentEditable) {
-		content = content.split('\n');
-	}
-	else {
+	if (!app.targetElement.isContentEditable) {
 		content = content.replace(/\n/g, app.preferredNewline);
 	}
 
@@ -511,6 +508,7 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	var payload = {
 		path:pathRegalized,
 		isForce:a.flags.force,
+		isBuffered:pa.isBuffered,
 		value:content
 	};
 	if (payload.path == '') {
@@ -527,6 +525,9 @@ function writeCore (app, t, a, isCommand, isAppend, path) {
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
 		if (app.fileName == '') {
 			app.fileName = pathRegalized;
+		}
+		if (pa.isBuffered) {
+			app.isTextDirty = false;
 		}
 		app.editLogger.notifySave();
 	}
@@ -1035,8 +1036,7 @@ var cache = {};
 				return worker.error;
 			}
 			if (worker.req) {
-				var req = worker.req;
-				return chdirCore(app, t, a, req.data);
+				return chdirCore(app, t, a, worker.req.data);
 			}
 
 			return _('Invalid chdir response.');
@@ -1830,23 +1830,60 @@ var cache = {};
 		return find('global').handler.apply(this, arguments);
 	}),
 	new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var o = parseWriteArg(app, t, a);
-		return typeof o == 'string' ? o : writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
-	}),
-	new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var o = parseWriteArg(app, t, a);
-		if (typeof o == 'string') return o;
-		var result = writeCore(app, t, a, o.isCommand, o.isAppend, o.name);
-		return typeof result == 'string' ? result : find('quit').handler.apply(this, arguments);
-	}),
-	new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		if (app.isTextDirty) {
-			var result = writeCore(app, t, a, false, false, a.argv[0]);
-			return typeof result == 'string' ? result : find('quit').handler.apply(this, arguments);
+		var opcode = app.exvm.inst.currentOpcode;
+		var worker = opcode.worker;
+		if (worker) {
+			opcode.worker = null;
+
+			if (worker.error) {
+				return worker.error;
+			}
+			if (worker.req) {
+				app.isTextDirty = false;
+				if (this.name == 'wq' || this.name == 'xit') {
+					return find('quit').handler.apply(this, arguments);
+				}
+				var path = worker.req.meta.path;
+				var bytes = worker.req.meta.bytes;
+				var message = app.low.getFileIoResultInfo(path, bytes);
+				app.low.requestShowMessage(_('Written: {0}', message));
+				return;
+			}
+
+			return _('Invalid write response.');
+		}
+
+		var parsedArgs = parseWriteArg(app, t, a);
+		if (typeof parsedArgs == 'string') return parsedArgs;
+
+		var result;
+		if (this.name == 'write'
+		&& app.exvm.inst.index >= app.exvm.inst.opcodes.length - 2) {
+			// last opcode; do buffered write
+			parsedArgs.isBuffered = true;
+			result = writeCore(app, t, a, parsedArgs);
+			if (typeof result == 'string') return result;
+		}
+		else if (this.name != 'xit' || app.isTextDirty) {
+			// other; write immediately and wait its termination
+			parsedArgs.isBuffered = false;
+			result = writeCore(app, t, a, parsedArgs);
+			if (typeof result == 'string') return result;
+
+			result = app.exvm.EX_ASYNC;
 		}
 		else {
-			return find('quit').handler.apply(this, arguments);
+			// immediate quit op
+			result = find('quit').handler.apply(this, arguments);
 		}
+
+		return result;
+	}),
+	new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		return find('write').handler.apply(this, arguments);
+	}),
+	new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		return find('write').handler.apply(this, arguments);
 	}),
 	new ExCommand('yank', 'ya', 'bca', 2, function (app, t, a) {
 		var p = t.selectionStart;

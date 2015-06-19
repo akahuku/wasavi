@@ -1178,6 +1178,10 @@ function handleBackendMessage (req) {
 			payload.error = _('Internal state error.');
 		}
 
+		payload.exstate = {
+			isBuffered:req.isBuffered
+		};
+
 		notifyToChild(wasaviFrameInternalId, payload);
 		break;
 

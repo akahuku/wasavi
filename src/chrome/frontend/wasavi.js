@@ -2332,32 +2332,45 @@ function getEditHandler (id) {
 }
 function getWriteHandler (id) {
 	return function (req) {
+		var modeOverridden = null;
+		if ('meta' in req && req.meta && req.meta.path != '') {
+			modeOverridden = 'write handler';
+		}
 		if (req.error) {
 			removeMultiplexCallback(id);
-			showMessage(_.apply(null, req.error), true, false);
-			notifyActivity('', '', 'write handler error: ' + req.error);
-			notifyCommandComplete(
-				null,
-				!('meta' in req) || !req.meta || req.meta.path == '' ? null : 'write handler');
+			if (req.exstate.isBuffered) {
+				showMessage(_.apply(null, req.error), true, false);
+				notifyActivity('', '', 'write handler error: ' + req.error);
+				notifyCommandComplete(null, modeOverridden);
+			}
+			else {
+				exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
+				exvm.run();
+			}
 			return;
 		}
 
 		switch (req.state) {
 		case 'buffered':
-			showMessage(
-				_('Buffered: {0}', req.path));
+			showMessage(_('Buffered: {0}', req.path));
 			break;
 		case 'writing':
-			showMessage(
-				_('Writing ({0}%)', req.progress.toFixed(2)));
+			showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
 			break;
 		case 'complete':
-			config.setData('nomodified');
-			showMessage(
-				_('Written: {0}', getFileIoResultInfo(req.meta.path, req.meta.bytes)));
-			notifyActivity('', '', 'write handler completed');
-			notifyCommandComplete(null, req.meta.path == '' ? null : 'write handler');
 			removeMultiplexCallback(id);
+			if (req.exstate.isBuffered) {
+				var path = req.meta.path;
+				var bytes = req.meta.bytes;
+				var message = getFileIoResultInfo(path, bytes);
+				showMessage(_('Written: {0}', message));
+				notifyActivity('', '', 'write handler completed');
+				notifyCommandComplete(null, modeOverridden);
+			}
+			else {
+				exvm.inst.currentOpcode.worker = {req:req};
+				exvm.run();
+			}
 			break;
 		}
 	};

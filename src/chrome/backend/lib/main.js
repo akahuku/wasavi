@@ -83,7 +83,7 @@
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
 		cryptKeyPath: 'LICENSE',
-		writeDelaySecs: 1,
+		writeDelaySecs: 10,
 		fstab: {
 			dropbox: {
 				isDefault: true,
@@ -821,6 +821,9 @@
 					onresponse: function (d) {
 						if (!d) return;
 						d.internalId = command.internalId;
+						d.exstate = {
+							isBuffered:data.isBuffered
+						};
 						if (d.type == 'fileio-write-response') {
 							d.requestNumber = command.requestNumber;
 						}
