@@ -133,15 +133,6 @@ Wasavi.SubstituteWorker.prototype = {
 			this.substCount = 0;
 
 			if (this.isConfirm) {
-				this.k = {
-					bufferPos: 0,
-					pos: null,
-					posPrev: null,
-					indexPrev: -1,
-					delta: 0,
-					lastRow: -1
-				};
-
 				this.kontinue();
 				app.exvm.hideOverlay();
 				return app.exvm.EX_ASYNC;
@@ -175,30 +166,37 @@ Wasavi.SubstituteWorker.prototype = {
 	burst: function () {
 		var t = this.app.buffer;
 		var buffer = this.buffer;
-		var indexPrev = 0;
-		var delta = 0;
-		var lastRow = -1;
-		var pos;
-		var posPrev;
-		var replacer;
 
-		posPrev = new Wasavi.Position(this.range[0], 0);
+		var i = 0;
+		var pos = t.offsetBy(
+			new Wasavi.Position(this.range[0], 0),
+			buffer[i].index);
+		var replacer = this.executeReplacer(buffer[i]);
 
-		for (var i = 0, goal = buffer.length; i < goal; i++) {
-			pos = t.offsetBy(posPrev, buffer[i].index - indexPrev + delta);
+		var goal = buffer.length;
 
-			if (this.isGlobal || pos.row > lastRow) {
-				replacer = this.executeReplacer(buffer[i]);
-				delta = replacer.length - buffer[i][0].length;
-				lastRow = pos.row;
-				this.doSubstitute(pos, buffer[i][0].length, replacer);
+		while (i < goal) {
+			this.doSubstitute(pos, buffer[i][0].length, replacer);
+			while (true) {
+				var delta = replacer.length - buffer[i][0].length;
+				var rowPrev = pos.row;
+				var indexPrev = buffer[i].index;
+
+				if (++i >= goal) {
+					break;
+				}
+
+				pos = t.offsetBy(
+					pos,
+					buffer[i].index - indexPrev + delta);
+
+				if (this.isGlobal || pos.row > rowPrev) {
+					replacer = this.executeReplacer(buffer[i]);
+					break;
+				}
+
+				replacer = buffer[i][0];
 			}
-			else {
-				delta = 0;
-			}
-
-			indexPrev = buffer[i].index;
-			posPrev = pos;
 		}
 
 		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
@@ -208,14 +206,25 @@ Wasavi.SubstituteWorker.prototype = {
 	},
 	kontinue: function (action) {
 		var t = this.app.buffer;
+		var buffer = this.buffer;
+		var k = this.kontinueWorker;
+
+		/*
+		 * initializing
+		 */
 
 		if (action == undefined) {
-			this.k.posPrev = new Wasavi.Position(this.range[0], 0);
-			this.k.pos = t.offsetBy(this.k.posPrev, this.buffer[this.k.bufferPos].index);
+			k = this.kontinueWorker = {
+				index: 0,
+				pos: t.offsetBy(
+					new Wasavi.Position(this.range[0], 0),
+					buffer[0].index),
+				replacer: this.executeReplacer(buffer[0])
+			};
 
-			t.setSelectionRange(this.k.pos);
+			t.setSelectionRange(k.pos);
 			this.app.cursor.ensureVisible();
-			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
+			t.emphasis(k.pos, buffer[k.index][0].length);
 
 			this.app.low.requestInputMode('ex_s_prompt');
 			this.app.requestedState.modeline = null;
@@ -225,57 +234,72 @@ Wasavi.SubstituteWorker.prototype = {
 			return;
 		}
 
-		if (this.k.bufferPos < this.buffer.length) {
-			t.unEmphasis();
+		/*
+		 * main job
+		 */
 
-			switch (action.toLowerCase()) {
-			case 'y':
-				if (this.isGlobal || this.k.pos.row != this.k.lastRow) {
-					var replacer = this.executeReplacer(this.buffer[this.k.bufferPos]);
-					this.k.delta = replacer.length - this.buffer[this.k.bufferPos][0].length;
-					this.k.lastRow = this.k.pos.row;
-					this.doSubstitute(
-						this.k.pos,
-						this.buffer[this.k.bufferPos][0].length,
-						replacer);
-					this.app.editLogger.close().open('ex+s');
+		t.unEmphasis();
+
+		switch (action.toLowerCase()) {
+		case 'y':
+			this.doSubstitute(
+				k.pos,
+				buffer[k.index][0].length,
+				k.replacer);
+			this.app.editLogger.close().open('ex+s');
+			break;
+
+		case 'n':
+			k.replacer = buffer[k.index][0];
+			break;
+
+		case 'q':
+		case '\u001b':
+			k.index = buffer.length;
+			break;
+
+		default:
+			t.emphasis(k.pos, buffer[k.index][0].length);
+			this.app.low.requestRegisterNotice();
+			return true;
+		}
+
+		//
+
+		if (k.index < buffer.length) {
+			while (true) {
+				var delta = k.replacer.length - buffer[k.index][0].length;
+				var rowPrev = k.pos.row;
+				var indexPrev = buffer[k.index].index;
+
+				if (++k.index >= buffer.length) {
+					break;
 				}
-				else {
-					this.k.delta = 0;
+
+				k.pos = t.offsetBy(
+					k.pos,
+					buffer[k.index].index - indexPrev + delta);
+
+				if (this.isGlobal || k.pos.row > rowPrev) {
+					k.replacer = this.executeReplacer(buffer[k.index]);
+					break;
 				}
-				/*FALLTHRU*/
 
-			case 'n':
-				this.k.indexPrev = this.buffer[this.k.bufferPos].index;
-				this.k.bufferPos++;
-				break;
+				k.replacer = buffer[k.index][0];
+			}
 
-			case 'q':
-			case '\u001b':
-				this.k.bufferPos = this.buffer.length;
-				break;
+			if (k.index < buffer.length) {
+				t.setSelectionRange(k.pos);
+				this.app.cursor.ensureVisible();
+				t.emphasis(k.pos, buffer[k.index][0].length);
 
-			default:
-				t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
-				this.app.low.requestRegisterNotice();
 				return true;
 			}
 		}
 
-		if (this.k.bufferPos < this.buffer.length) {
-			this.k.posPrev = this.k.pos;
-			this.k.pos = t.offsetBy(
-				this.k.posPrev,
-				this.buffer[this.k.bufferPos].index - this.k.indexPrev + this.k.delta);
+		//
 
-			t.setSelectionRange(this.k.pos);
-			this.app.cursor.ensureVisible();
-			t.emphasis(this.k.pos, this.buffer[this.k.bufferPos][0].length);
-
-			return true;
-		}
-
-		if (this.buffer.length == this.substCount) {
+		if (buffer.length == this.substCount) {
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
 		}
 
@@ -284,7 +308,7 @@ Wasavi.SubstituteWorker.prototype = {
 		this.app.exvm.showOverlay();
 		this.app.exvm.inst.currentOpcode.worker = null;
 		this.showResult();
-		this.k = this.buffer = null;
+		this.kontinueWorker = this.buffer = null;
 	},
 	doSubstitute: function (pos, length, replacer) {
 		var t = this.app.buffer;
