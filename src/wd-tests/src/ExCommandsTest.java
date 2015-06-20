@@ -1574,6 +1574,55 @@ public class ExCommandsTest extends WasaviTest {
 		assertValue("#1-2", "1</li>\n!0!1!2!\n3*");
 	}
 
+	// https://github.com/akahuku/wasavi/issues/85
+	@Test
+	public void issue85_substAllRest () {
+		Wasavi.send(":sushi\n");
+		Wasavi.send("3ibee \u001byy2p1G");
+
+		Wasavi.send(":%s/b/BB/gc\nyyya");
+		assertValue("#1-1",
+				"BBee BBee BBee \n" +
+				"BBee BBee BBee \n" +
+				"BBee BBee BBee ");
+
+		Wasavi.send("u");
+		assertValue("#2-1",
+				"BBee BBee BBee \n" +
+				"bee bee bee \n" +
+				"bee bee bee ");
+
+		Wasavi.send("u");
+		assertValue("#2-2",
+				"BBee BBee bee \n" +
+				"bee bee bee \n" +
+				"bee bee bee ");
+
+		Wasavi.send("\u0012");
+		assertValue("#3-1",
+				"BBee BBee BBee \n" +
+				"bee bee bee \n" +
+				"bee bee bee ");
+
+		Wasavi.send("\u0012");
+		assertValue("#3-2",
+				"BBee BBee BBee \n" +
+				"BBee BBee BBee \n" +
+				"BBee BBee BBee ");
+	}
+
+	@Test
+	public void issue85_substLast () {
+		Wasavi.send(":sushi\n");
+		Wasavi.send("3ibee \u001byy2p1G");
+
+		Wasavi.send(":%s/b/BB/gc\nyl");
+		assertValue("#1-1",
+				"BBee BBee bee \n" +
+				"bee bee bee \n" +
+				"bee bee bee ");
+	}
+
 	// https://github.com/akahuku/wasavi/issues/86
 	@Test
 	public void issue86_substFirstMatch_burst () {
