@@ -832,9 +832,9 @@
     "message": "Shifted {0} {line:0}.",
     "description": "Shifted {0} {line:0}."
   },
-  "substitute_yes_no_quit": {
-    "message": "Substitute? ([y]es, [n]o, [q]uit)",
-    "description": "Substitute? ([y]es, [n]o, [q]uit)"
+  "substitute_yes_no_all_last_quit": {
+    "message": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit",
+    "description": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit"
   },
   "surround_with": {
     "message": "surround with:",

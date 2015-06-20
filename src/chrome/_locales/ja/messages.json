@@ -78,7 +78,7 @@
     "description": "Initialize all options"
   },
   "option_init_confirm": {
-    "message": "本当にいいですか？",
+    "message": "本当にいいですか?",
     "description": "Are you sure?"
   },
   "option_debug_head": {
@@ -832,9 +832,9 @@
     "message": "{0} 行が右シフトされました。",
     "description": "Shifted {0} {line:0}."
   },
-  "substitute_yes_no_quit": {
-    "message": "置き換えますか? ([y]はい、[n]いいえ、[q]終了)",
-    "description": "Substitute? ([y]es, [n]o, [q]uit)"
+  "substitute_yes_no_all_last_quit": {
+    "message": "置き換えますか? [y]はい, [n]いいえ, [a]以降全て, [l]これで終える, [q]終了",
+    "description": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit"
   },
   "surround_with": {
     "message": "囲む文字列:",

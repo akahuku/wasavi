@@ -127,6 +127,8 @@ Wasavi.SubstituteWorker.prototype = {
 		rg.setEndAfter(t.rowNodes(range[1]));
 		this.buffer = this.createBuffer(trimTerm(rg.toString()));
 
+		//
+		var result;
 		if (this.buffer.length) {
 			// found something
 			this.range = range;
@@ -135,16 +137,20 @@ Wasavi.SubstituteWorker.prototype = {
 			if (this.isConfirm) {
 				this.kontinue();
 				app.exvm.hideOverlay();
-				return app.exvm.EX_ASYNC;
+				result = app.exvm.EX_ASYNC;
 			}
 			else {
 				this.burst();
+				t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
+				this.showResult();
+				this.buffer = null;
 			}
 		}
 		else {
 			// not found
 			this.showNotFound();
 		}
+		return result;
 	},
 	createBuffer: function (text) {
 		var re;
@@ -163,15 +169,15 @@ Wasavi.SubstituteWorker.prototype = {
 
 		return buffer;
 	},
-	burst: function () {
+	burst: function (startIndex, startPos, startReplacer) {
 		var t = this.app.buffer;
 		var buffer = this.buffer;
 
-		var i = 0;
-		var pos = t.offsetBy(
+		var i = startIndex || 0;
+		var pos = startPos || t.offsetBy(
 			new Wasavi.Position(this.range[0], 0),
 			buffer[i].index);
-		var replacer = this.executeReplacer(buffer[i]);
+		var replacer = startReplacer || this.executeReplacer(buffer[i]);
 
 		var goal = buffer.length;
 
@@ -198,11 +204,6 @@ Wasavi.SubstituteWorker.prototype = {
 				replacer = buffer[i][0];
 			}
 		}
-
-		t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
-
-		this.showResult();
-		this.buffer = null;
 	},
 	kontinue: function (action) {
 		var t = this.app.buffer;
@@ -229,7 +230,7 @@ Wasavi.SubstituteWorker.prototype = {
 			this.app.low.requestInputMode('ex_s_prompt');
 			this.app.requestedState.modeline = null;
 			this.app.low.requestShowMessage(
-				_('Substitute? ([y]es, [n]o, [q]uit)'),
+				_('Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit'),
 				false, true, true);
 			return;
 		}
@@ -239,14 +240,19 @@ Wasavi.SubstituteWorker.prototype = {
 		 */
 
 		t.unEmphasis();
-
-		switch (action.toLowerCase()) {
+		action = action.toLowerCase();
+		switch (action) {
 		case 'y':
+		case 'l':
 			this.doSubstitute(
 				k.pos,
 				buffer[k.index][0].length,
 				k.replacer);
 			this.app.editLogger.close().open('ex+s');
+
+			if (action == 'l') {
+				k.index = buffer.length;
+			}
 			break;
 
 		case 'n':
@@ -255,6 +261,12 @@ Wasavi.SubstituteWorker.prototype = {
 
 		case 'q':
 		case '\u001b':
+			k.index = buffer.length;
+			break;
+
+		case 'a':
+			this.burst(k.index, k.pos, k.replacer);
+			this.app.editLogger.close().open('ex+s');
 			k.index = buffer.length;
 			break;
 
