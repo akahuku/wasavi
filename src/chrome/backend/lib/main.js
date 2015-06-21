@@ -138,7 +138,7 @@
 				enablePassword:       false,
 				enableNumber:         false,
 				enableContentEditable:true,
-				enablePage:           true
+				enablePage:           false
 			}
 		},
 		exrc: {
