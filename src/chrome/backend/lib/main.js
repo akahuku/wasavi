@@ -818,6 +818,7 @@
 			ext.fileSystem.write(
 				path, sender, data.value,
 				{
+					delaySecs: data.isBuffered ? undefined : 0,
 					onresponse: function (d) {
 						if (!d) return;
 						d.internalId = command.internalId;
