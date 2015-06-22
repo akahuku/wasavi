@@ -113,6 +113,7 @@ function notifyToChild (id, payload) {
 
 function locate (iframe, target, opts) {
 	function isFixedPosition (element) {
+		if (element == document.body) return true;
 		var isFixed = false;
 		for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
 			var s = document.defaultView.getComputedStyle(tmp, '');
