@@ -39,7 +39,7 @@ Wasavi.SubstituteWorker = function (app) {
 	this.isConfirm = false;
 	this.substCount = 0;
 	this.buffer = null;
-	this.k = null;
+	this.kontinueWorker = null;
 };
 Wasavi.SubstituteWorker.prototype = {
 	run: function (range, pattern, repl, options) {
