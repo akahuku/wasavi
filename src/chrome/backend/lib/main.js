@@ -27,6 +27,7 @@
 	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
 	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
 	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	var HOME_URL = 'http://dev.appsweets.net/wasavi/';
 	var TEST_VERSION = '0.0.1';
 
 	/* {{{1 variables */
@@ -944,10 +945,32 @@
 		registerAsyncInitializer(initWasaviStyle);
 		asyncInitCallbacks.push(function () {
 			if (ext.version != config.get('version')) {
-				ext.openTabWithUrl(
-					'http://appsweets.net/wasavi/' +
-					'?currentVersion=' + config.get('version') +
-					'&newVersion=' + ext.version);
+				var platform = ext.kind;
+				if (global.navigator) {
+					if (platform == 'Opera' && !/\bOPR\b/.test(global.navigator.userAgent)) {
+						platform = 'Presto Opera';
+					}
+					else if (platform == 'Chrome' && /\bOPR\b/.test(global.navigator.userAgent)) {
+						platform = 'Opera';
+					}
+				}
+				ext.request(
+					HOME_URL,
+					{
+						method:'POST',
+						content:{
+							currentVersion:config.get('version') || 'undefined',
+							newVersion:ext.version,
+							platform:platform
+						}
+					},
+					function () {
+						ext.openTabWithUrl(HOME_URL);
+					},
+					function () {
+						ext.openTabWithUrl(HOME_URL);
+					}
+				);
 				ext.storage.setItem('version', ext.version);
 			}
 			ext.isDev && ext.log(
