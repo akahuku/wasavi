@@ -71,15 +71,13 @@
 	var unicodeDictData;
 	var payload;
 	var config;
-	var runtimeOverwriteSettings;
-	var hotkey;
-	var contextMenu;
 	var storageUpdateTimer;
 	var storageUpdatePayload = {};
 	var sounds;
 	var soundVolume;
-	var asyncInitCount = 0;
-	var asyncInitCallbacks = [];
+
+	var isInitializing = true;
+	var blockedEvents = [];
 
 	var ext = require('./kosian/Kosian').Kosian(global, {
 		appName: 'wasavi',
@@ -126,6 +124,9 @@
 		 */
 		contentScripts: getContentScriptsSpec()
 	});
+	var runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
+	var hotkey = require('./kosian/Hotkey').Hotkey(true);
+	var contextMenu = require('./ContextMenu').ContextMenu();
 
 	var configInfo = {
 		targets: {
@@ -343,19 +344,6 @@
 		return src;
 	}
 
-	function asyncInitialized () {
-		asyncInitCount--;
-		if (asyncInitCount == 0) {
-			asyncInitCallbacks.forEach(function (cb) {cb()});
-			asyncInitCallbacks.length = 0;
-		}
-	}
-
-	function registerAsyncInitializer (fn) {
-		asyncInitCount++;
-		fn(asyncInitialized);
-	}
-
 	function playSound (key) {
 		if (key in sounds && sounds[key]) {
 			ext.sound.play(key, {volume: soundVolume});
@@ -446,111 +434,128 @@
 		];
 	}
 
+	/** {{{2 async initializer: init the config object */
+
+	function initConfig (configInfo) {
+		return new Promise(function (resolve, reject) {
+			config = new Config(configInfo);
+			resolve();
+		});
+	}
+
 	/** {{{2 async initializer: init the content of wasavi frame */
 
-	function initWasaviFrame (callback) {
-		ext.resource('mock.html', function (data) {
-			if (typeof data != 'string' || data == '') {
-				throw new Error('Invalid content of mock.html.');
-			}
+	function initWasaviFrame () {
+		return new Promise(function (resolve, reject) {
+			ext.resource('mock.html', function (data) {
+				if (typeof data != 'string' || data == '') {
+					reject(new Error('Invalid content of mock.html.'));
+				}
 
-			data = data
-				.replace(/\n+/g, '')
-				.replace(/<!--.*?-->/g, '')
-				.replace(/<script[^>]*>.*?<\/script>/g, '')
-				.replace(/>\s+</g, '><')
-				.replace(/^\s+|\s+$/g, '');
+				data = data
+					.replace(/\n+/g, '')
+					.replace(/<!--.*?-->/g, '')
+					.replace(/<script[^>]*>.*?<\/script>/g, '')
+					.replace(/>\s+</g, '><')
+					.replace(/^\s+|\s+$/g, '');
 
-			wasaviFrameHeader = /<head[^>]*>(.+?)<\/head>/.exec(data)[1];
-			wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
+				wasaviFrameHeader = /<head[^>]*>(.+?)<\/head>/.exec(data)[1];
+				wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
 
-			callback && callback();
-		}, {noCache:true});
+				resolve();
+			}, {noCache:true});
+		});
 	}
 
 	/** {{{2 async initializer: init the style sheet of wasavi frame */
 
-	function initWasaviStyle (callback) {
-		ext.resource('styles/wasavi.css', function (style) {
-			if (typeof style != 'string' || style == '') {
-				throw new Error('Invalid content of wasavi.css.');
-			}
-
-			style = style
-				.replace(/\n+/g, ' ')
-				.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, config.get('fontFamily'));
-
-			if (require('sdk/self')) {
-				style = style.replace(/box-sizing:/g, '-moz-$&');
-			}
-
-			wasaviFrameStyle = style;
-
-			var loaded = function (d) {
-				// apply new styles
-				var s = d.getElementById('wasavi_global_styles');
-				if (!s) {
-					throw new Error('Cannot find global style element in mock.');
+	function initWasaviStyle () {
+		return new Promise(function (resolve, reject) {
+			ext.resource('styles/wasavi.css', function (style) {
+				if (typeof style != 'string' || style == '') {
+					reject(new Error('Invalid content of wasavi.css.'));
+					return;
 				}
-				while (s.childNodes.length) {
-					s.removeChild(s.childNodes[0]);
+
+				style = style
+					.replace(/\n+/g, ' ')
+					.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, config.get('fontFamily'));
+
+				if (require('sdk/self')) {
+					style = style.replace(/box-sizing:/g, '-moz-$&');
 				}
-				s.appendChild(d.createTextNode(style));
 
-				// ensure container has a dimension
-				var container = d.getElementById('wasavi_container');
-				container.style.width = '640px';
-				container.style.height = '480px';
+				wasaviFrameStyle = style;
 
-				// calculate height of status line
-				statusLineHeight = Math.max.apply(Math, [
-					'wasavi_footer_status_container',
-					'wasavi_footer_input_container'
-				].map(function (id) {
-					var el = d.getElementById(id);
-					if (!el) {
-						throw new Error('Cannot find element #' + id);
+				var loaded = function (d) {
+					// apply new styles
+					var s = d.getElementById('wasavi_global_styles');
+					if (!s) {
+						reject(new Error('Cannot find global style element in mock.'));
+						return;
 					}
-					return el.offsetHeight;
-				}));
-
-				callback && callback();
-			};
-
-			var iframe;
-
-			// Chrome, Opera
-			if (global.document && document.getElementById) {
-				loaded(document);
-			}
-
-			// Firefox
-			else if ((iframe = require('sdk/frame/hidden-frame'))) {
-				var hiddenFrame = iframe.add(iframe.HiddenFrame({
-					onReady: function () {
-						this.element.contentWindow.location.href =
-							require('sdk/self').data.url('mock.html');
-						this.element.addEventListener('DOMContentLoaded', function (e) {
-							loaded(e.target);
-							iframe.remove(hiddenFrame);
-							iframe = hiddenFrame = null;
-						}, true);
+					while (s.childNodes.length) {
+						s.removeChild(s.childNodes[0]);
 					}
-				}));
-			}
+					s.appendChild(d.createTextNode(style));
 
-			//
-			else {
-				throw new Error('Cannot retrieve statusLineHeight calculator.');
-			}
-		}, {noCache:true});
+					// ensure container has a dimension
+					var container = d.getElementById('wasavi_container');
+					container.style.width = '640px';
+					container.style.height = '480px';
+
+					// calculate height of status line
+					statusLineHeight = Math.max.apply(Math, [
+						'wasavi_footer_status_container',
+						'wasavi_footer_input_container'
+					].map(function (id) {
+						var el = d.getElementById(id);
+						if (!el) {
+							reject(new Error('Cannot find element #' + id));
+							return;
+						}
+						return el.offsetHeight;
+					}));
+					if (isNaN(statusLineHeight)) {
+						reject(new Error('invalid statusLineHeight: ' + statusLineHeight));
+					}
+
+					resolve();
+				};
+
+				var iframe;
+
+				// Chrome, Opera
+				if (global.document && document.getElementById) {
+					loaded(document);
+				}
+
+				// Firefox
+				else if ((iframe = require('sdk/frame/hidden-frame'))) {
+					var hiddenFrame = iframe.add(iframe.HiddenFrame({
+						onReady: function () {
+							this.element.contentWindow.location.href =
+								require('sdk/self').data.url('mock.html');
+							this.element.addEventListener('DOMContentLoaded', function (e) {
+								loaded(e.target);
+								iframe.remove(hiddenFrame);
+								iframe = hiddenFrame = null;
+							}, true);
+						}
+					}));
+				}
+
+				//
+				else {
+					reject(new Error('Cannot retrieve statusLineHeight calculator.'));
+				}
+			}, {noCache:true});
+		});
 	}
 
 	/** {{{2 async initializer: init f/F/t/T dictionary */
 
-	function initUnicodeDictData (callback) {
-		unicodeDictData = {fftt:{}};
-
+	function initUnicodeDictData () {
 		function ensureBinaryString (data) {
 			var buffer = [];
 			for (var i = 0, goal = data.length; i < goal; i++) {
@@ -558,42 +563,50 @@
 			}
 			return String.fromCharCode.apply(null, buffer);
 		}
-		function handler (name1, name2) {
-			return function (data) {
-				data = ensureBinaryString(data);
-				if (name1 && name2) {
-					unicodeDictData[name1][name2] = data;
-				}
-				else if (name1) {
-					unicodeDictData[name1] = data;
-				}
-				if (--listLength == 0) {
-					callback && callback();
-				}
-			};
+		function get (arg) {
+			return new Promise(function (resolve, reject) {
+				ext.resource('unicode/' + arg[0],
+					function (data) {
+						if (!data) {
+							reject(new Error('invalid unicode dict data: ' + arg[0]));
+							return;
+						}
+						var name1 = arg[1];
+						var name2 = arg[2];
+						data = ensureBinaryString(data);
+						if (name1 && name2) {
+							unicodeDictData[name1][name2] = data;
+						}
+						else if (name1) {
+							unicodeDictData[name1] = data;
+						}
+						resolve();
+					},
+					function () {
+						reject(new Error('cannot load unicode dict data: ' + arg[0]));
+					},
+					{noCache:true, mimeType:'text/plain;charset=x-user-defined'}
+				);
+			});
 		}
+		return new Promise(function (resolve, reject) {
+			unicodeDictData = {fftt:{}};
 
-		var list = [
-			['fftt_general.dat', 'fftt', 'General'],
-			['fftt_han_ja.dat', 'fftt', 'HanJa'],
-			['linebreak.dat', 'LineBreak']
-		];
-		var listLength = list.length;
+			var list = [
+				['fftt_general.dat', 'fftt', 'General'],
+				['fftt_han_ja.dat', 'fftt', 'HanJa'],
+				['linebreak.dat', 'LineBreak']
+			];
 
-		list.forEach(function (arg) {
-			var file = arg.shift();
-			ext.resourceLoader.get(
-				'unicode/' + file,
-				handler.apply(null, arg),
-				{noCache:true, mimeType:'text/plain;charset=x-user-defined'});
+			return Promise.all(list.map(get)).then(resolve, reject);
 		});
 	}
 
 	/** {{{2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
-		if (asyncInitCount) {
-			asyncInitCallbacks.push(function () {
+		if (isInitializing) {
+			blockedEvents.push(function () {
 				handleInit(command, data, sender, respond);
 			});
 			return true;
@@ -933,21 +946,23 @@
 	}
 
 	function boot () {
-		// misc initializers
-		runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
-		hotkey = require('./kosian/Hotkey').Hotkey(true);
-		contextMenu = require('./ContextMenu').ContextMenu();
-		config = new Config(configInfo);
+		ext.receive(handleRequest);
 
-		// async initializers:
-		registerAsyncInitializer(initWasaviFrame);
-		registerAsyncInitializer(initUnicodeDictData);
-		registerAsyncInitializer(initWasaviStyle);
-		asyncInitCallbacks.push(function () {
+		initConfig(configInfo)
+
+		.then(function () {
+			return Promise.all([
+				initWasaviFrame(),
+				initUnicodeDictData(),
+				initWasaviStyle()
+			]);
+		})
+
+		.then(function () {
 			if (ext.version != config.get('version')) {
 				var platform = ext.kind;
 				if (global.navigator) {
-					if (platform == 'Opera' && !/\bOPR\b/.test(global.navigator.userAgent)) {
+					if (platform == 'Opera' && global.opera) {
 						platform = 'Presto Opera';
 					}
 					else if (platform == 'Chrome' && /\bOPR\b/.test(global.navigator.userAgent)) {
@@ -973,6 +988,7 @@
 				);
 				ext.storage.setItem('version', ext.version);
 			}
+
 			ext.isDev && ext.log(
 				'!INFO: running with following filesystems:',
 				ext.fileSystem.getInfo()
@@ -980,14 +996,18 @@
 					.map(function (f) {return f.name})
 					.join(', ')
 			);
-		});
 
-		ext.receive(handleRequest);
+			isInitializing = false;
+			blockedEvents.forEach(function (cb) {cb()});
+			blockedEvents = null;
+		},
+		function (err) {
+			ext.log('!ERROR: ' + err);
+		});
 	}
 
 	pre();
 	boot();
-
 })(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
