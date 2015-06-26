@@ -24,7 +24,7 @@
 
 	/* {{{1 consts */
 
-	var TEST_MODE_URL = 'http://wasavi.appsweets.net/test_frame.html';
+	var TEST_MODE_URL = 'http://127.0.0.1/test_frame.html';
 	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
 	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	var HOME_URL = 'http://dev.appsweets.net/wasavi/';
