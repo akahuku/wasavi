@@ -582,9 +582,6 @@
 						}
 						resolve();
 					},
-					function () {
-						reject(new Error('cannot load unicode dict data: ' + arg[0]));
-					},
 					{noCache:true, mimeType:'text/plain;charset=x-user-defined'}
 				);
 			});
