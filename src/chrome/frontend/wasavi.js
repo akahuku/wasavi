@@ -6275,6 +6275,25 @@ var commandMap = {
 		wait_a_letter:function (c, o) {
 			var result = false;
 			switch (c) {
+			case 'a':
+				var ss = buffer.selectionStart;
+				var ch1 = toNativeControl(buffer.charAt(ss)), ch2 = '';
+				var cp = ch1.charCodeAt(0);
+				if (unicodeUtils.isHighSurrogate(cp)) {
+					ch2 = buffer.charAt(buffer.rightPos(ss));
+					if (unicodeUtils.isLowSurrogate(ch2.charCodeAt(0))) {
+						cp = unicodeUtils.toUCS32(cp, ch2.charCodeAt(0));
+					}
+					else {
+						ch2 = '';
+					}
+				}
+				requestShowMessage(
+					'"' + toVisibleControl(ch1) + toVisibleControl(ch2) + '"' +
+					' U+' + (cp <= 0xffff ? ('0000' + cp.toString(16)).substr(-4) : cp.toString(16)).toUpperCase() +
+					' (' + cp + ')');
+				break;
+
 			case 'g':
 				var index = prefixInput.count;
 				var n = new Position(index - 1, 0);
