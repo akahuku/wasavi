@@ -158,17 +158,29 @@ Wasavi.L10n = function (app, catalog) {
 }
 
 Wasavi.Configurator = function (app, internals, abbrevs) {
-	function VariableItem (name, type, defaultValue, subSetter, isDynamic) {
+	function VariableItem (name, type, defaultValue, subSetter, opts) {
+		opts || (opts = {});
 		this.name = name;
 		this.type = type;
 		this.isLateBind = type == 'r';
-		this.isDynamic = !!isDynamic;
+		this.isDynamic = 'isDynamic' in opts ? !!opts.isDynamic : false;
+		this.isAsync = 'isAsync' in opts ? !!opts.isAsync : false;
 		this.defaultValue = defaultValue;
 		this.subSetter = subSetter;
 		this.nativeValue = defaultValue;
 		this.snapshots = undefined;
 	}
 	VariableItem.prototype = {
+		getInfo: function () {
+			return {
+				name:this.name,
+				type:this.type,
+				isLateBind:this.isLateBind,
+				isDynamic:this.isDynamic,
+				isAsync:this.isAsync,
+				defaultValue:this.defaultValue
+			};
+		},
 		get value () {
 			return this.nativeValue;
 		},
@@ -309,7 +321,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 	//
 	function getInfo (name) {
 		var item = getItem(name);
-		return item ? {name:item.name, type:item.type} : null;
+		return item ? item.getInfo() : null;
 	}
 	function getData (name, reformat) {
 		var item = getItem(name);

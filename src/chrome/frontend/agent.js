@@ -1055,6 +1055,10 @@ function handleBackendMessage (req) {
 			locate(wasaviFrame, targetElement, {
 				isFullscreen: isFullscreen
 			});
+			notifyToChild(wasaviFrameInternalId, {
+				type: 'relocate',
+				state: req.state
+			});
 			break;
 		}
 		break;
@@ -1129,6 +1133,10 @@ function handleBackendMessage (req) {
 			}
 		}
 		resizeListener.fire();
+		notifyToChild(wasaviFrameInternalId, {
+			type: 'relocate',
+			isSyncSize: req.isSyncSize
+		});
 		break;
 
 	case 'terminated':

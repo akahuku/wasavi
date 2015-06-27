@@ -4520,8 +4520,9 @@ function handleBackendMessage (req) {
 		break;
 
 	case 'relocate':
-		targetElement.rect = req.rect;
-		setGeometory();
+		if (exvm.running && exvm.suspended) {
+			exvm.run();
+		}
 		break;
 
 	case 'focus-me-response':
@@ -4843,7 +4844,7 @@ var config = new Wasavi.Configurator(appProxy,
 				state:v ? 'maximized' : 'normal'
 			});
 			return v;
-		}],
+		}, {isAsync:true}],
 		['jkdenotative', 'b', false],
 		['undoboundlen', 'i', 20],
 		['stripe', 'b', true, function (v) {
@@ -4854,8 +4855,8 @@ var config = new Wasavi.Configurator(appProxy,
 		['syncsize', 'b', true, function (v) {
 			notifyToParent('set-size', {isSyncSize: v});
 			return v;
-		}],
-		['override', 'b', true, null, true],
+		}, {isAsync:true}],
+		['override', 'b', true, null, {isDynamic:true}],
 		['datetime', 's', '%c'],
 		['cursorblink', 'b', true],
 
@@ -4877,7 +4878,7 @@ var config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['textwidth', 'i', 0],
-		['modified', 'b', false, null, true],
+		['modified', 'b', false, null, {isDynamic:true}],
 		['cursorline', 'b', false],
 		['cursorcolumn', 'b', false],
 
@@ -4895,7 +4896,7 @@ var config = new Wasavi.Configurator(appProxy,
 				});
 			}
 			return v;
-		}, true],
+		}, {isDynamic:true, isAsync:true}],
 		//['combined', 'b', false],
 		//['comment', 'b', false],
 		//['escapetime', 'i', 6],
@@ -4916,7 +4917,7 @@ var config = new Wasavi.Configurator(appProxy,
 				});
 			}
 			return v;
-		}, true],
+		}, {isDynamic:true, isAsync:true}],
 		//['lisp', 'b', false],
 		//['lock', 'b', true],
 		['matchtime', 'i', 5],

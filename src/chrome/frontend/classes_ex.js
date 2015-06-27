@@ -1662,8 +1662,19 @@ var cache = {};
 			}
 		}
 		else {
-			messages = [];
-			for (var i = 0; i < a.argv.length; i++) {
+			var messages, startIndex;
+
+			var opcode = app.exvm.inst.currentOpcode;
+			var worker = opcode.worker;
+			if (worker) {
+				messages = worker.messages;
+				startIndex = worker.startIndex;
+			}
+			else {
+				messages = [];
+				startIndex = 0;
+			}
+			for (var i = startIndex; i < a.argv.length; i++) {
 				var arg = a.argv[i];
 				var re = /^([^=?]+)([=?]|&(?:default|exrc)?)/.exec(arg) || ['', arg, ''];
 				var info = app.config.getInfo(re[1]);
@@ -1734,6 +1745,12 @@ var cache = {};
 							messages.push(result.replace(/\.$/, '') + ': ' + arg);
 							emphasis = true;
 							break;
+						}
+						if (info.isAsync) {
+							opcode.worker || (opcode.worker = {});
+							opcode.worker.messages = messages;
+							opcode.worker.startIndex = i + 1;
+							return app.exvm.EX_ASYNC;
 						}
 					}
 				}
