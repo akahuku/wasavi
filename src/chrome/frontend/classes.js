@@ -1748,6 +1748,9 @@ Wasavi.Editor.prototype = new function () {
 				return node;
 			}
 		}
+		if (!trim) {
+			return rowNode.appendChild(document.createTextNode('\n'));
+		}
 		return null;
 	}
 	return {
@@ -2127,6 +2130,8 @@ Wasavi.Editor.prototype = new function () {
 			this.elm.childNodes[this.selectionStartRow].className = 'current';
 		},
 		insertChars: function (arg, text) {
+			fixLineTail(this.elm.childNodes[arg.row]);
+
 			var iter = document.createNodeIterator(
 				this.elm.childNodes[arg.row],
 				window.NodeFilter.SHOW_TEXT, null, false);
@@ -2158,6 +2163,8 @@ Wasavi.Editor.prototype = new function () {
 			return arg;
 		},
 		overwriteChars: function (arg, text) {
+			fixLineTail(this.elm.childNodes[arg.row]);
+
 			var iter = document.createNodeIterator(
 				this.elm.childNodes[arg.row], window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
