@@ -6280,7 +6280,7 @@ var commandMap = {
 				var ch1 = toNativeControl(buffer.charAt(ss)), ch2 = '';
 				var cp = ch1.charCodeAt(0);
 				if (unicodeUtils.isHighSurrogate(cp)) {
-					ch2 = buffer.charAt(buffer.rightPos(ss));
+					ch2 = toNativeControl(buffer.charAt(buffer.rightPos(ss)));
 					if (unicodeUtils.isLowSurrogate(ch2.charCodeAt(0))) {
 						cp = unicodeUtils.toUCS32(cp, ch2.charCodeAt(0));
 					}

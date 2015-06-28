@@ -1388,8 +1388,13 @@ Wasavi.Registers = function (app, value) {
 	}
 	function dump () {
 		function dumpItem (item) {
+			var MAX_LENGTH = 32;
 			var orientString = item.isLineOrient ? 'L' : 'C';
-			return _('  {0}  {1}', orientString, toVisibleString(item.data));
+			var data = item.data;
+			if (data.length > MAX_LENGTH) {
+				data = data.substring(0, MAX_LENGTH) + '...';
+			}
+			return _('  {0}  {1}', orientString, toVisibleString(data));
 		}
 		var a = [];
 		a.push('""' + dumpItem(unnamed));
