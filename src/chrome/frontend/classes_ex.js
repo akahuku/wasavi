@@ -293,12 +293,18 @@ flag23_loop:
 				&& syntax.indexOf('1') >= 0) {
 					break;
 				}
-				if (/\d/.test(line.charAt(0))) {
-					break;
+				if (!app.registers.isReadable(line.charAt(0))) {
+					return _('Invalid register name: {0}', line.charAt(0));
+				};
+				if (line.charAt(0) == '=') {
+					result.register = line;
+					line = '';
 				}
-				result.register = line.charAt(0);
+				else {
+					result.register = line.charAt(0);
+					line = line.substring(1);
+				}
 				result.flags.register = true;
-				line = line.substring(1);
 				break;
 
 			case 'c':
@@ -1537,15 +1543,39 @@ var cache = {};
 	}),
 	new ExCommand('put', 'pu', 'b', 1 | EXFLAGS.printDefault | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
 		var register = a.flags.register ? a.register : '"';
-		if (!app.registers.exists(register)) {
-			return _('Register {0} is empty.', register);
+		var opts = {
+			isForward:true,
+			lineOrientOverride:true
+		};
+		if (register.charAt(0) == '=') {
+			var e;
+			if (register.length == 1) {
+				if (!app.registers.exists(register)) {
+					return _('Register {0} is empty.', register);
+				}
+				e = app.registers.get(register).data;
+			}
+			else {
+				e = register.substring(1);
+			}
+
+			var v = expr(e);
+			if (v.error) {
+				return v.error;
+			}
+
+			opts.content = v.result;
+			register = register.charAt(0);
+			app.registers.get('=').set(e);
+		}
+		else {
+			if (!app.registers.exists(register)) {
+				return _('Register {0} is empty.', register);
+			}
+			opts.register = register;
 		}
 		t.setSelectionRange(new Wasavi.Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
-		app.edit.paste(1, {
-			isForward:true,
-			lineOrientOverride:true,
-			register:register
-		});
+		app.edit.paste(1, opts);
 		t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
 	}),
 	new ExCommand('quit', 'q', '!', 0, function (app, t, a) {

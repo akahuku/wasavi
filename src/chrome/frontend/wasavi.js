@@ -4068,7 +4068,7 @@ function paste (count, opts) {
 	}
 	else if ('content' in opts) {
 		item = {};
-		data = opts.content;
+		data = '' + opts.content;
 	}
 	if (data.length == 0) {
 		requestShowMessage(_('Putting data is empty.'), true);
