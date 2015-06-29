@@ -1548,25 +1548,25 @@ var cache = {};
 			lineOrientOverride:true
 		};
 		if (register.charAt(0) == '=') {
-			var e;
+			var expressionString;
 			if (register.length == 1) {
 				if (!app.registers.exists(register)) {
 					return _('Register {0} is empty.', register);
 				}
-				e = app.registers.get(register).data;
+				expressionString = app.registers.get(register).data;
 			}
 			else {
-				e = register.substring(1);
+				expressionString = register.substring(1);
 			}
 
-			var v = expr(e);
+			var v = expr(expressionString);
 			if (v.error) {
 				return v.error;
 			}
 
 			opts.content = v.result;
 			register = register.charAt(0);
-			app.registers.get('=').set(e);
+			app.registers.get('=').set(expressionString);
 		}
 		else {
 			if (!app.registers.exists(register)) {
@@ -1951,19 +1951,46 @@ var cache = {};
 	new ExCommand('@', '@', 'b', 1, function (app, t, a) {
 		var command;
 		var register;
+		var expression;
 
 		if (a.flags.register) {
 			register = a.register;
 		}
-		else if (!app.registers.exists('@') || (register = app.registers.get('@').data) == '') {
+		else if (!app.registers.exists('@')
+		|| (register = app.registers.get('@').data) == '') {
 			return _('No previous execution.');
 		}
-		if (register == '@' || !app.registers.isReadable(register)) {
+
+		if (register == '@'
+		|| !app.registers.isReadable(register)) {
 			return _('Invalid register name: {0}', register);
 		}
-		if (!app.registers.exists(register) || (command = app.registers.get(register).data) == '') {
+
+		if (register.charAt(0) == '=') {
+			if (register.length == 1) {
+				if (!app.registers.exists(register)
+				|| (expression = app.registers.get(register).data) == '') {
+					return _('Register {0} is empty.', register);
+				}
+			}
+			else {
+				expression = register.substring(1);
+			}
+
+			var v = expr(expression);
+			if (v.error) {
+				return v.error;
+			}
+
+			command = v.result;
+			register = register.charAt(0);
+			app.registers.get('=').set(expression);
+		}
+		else if (!app.registers.exists(register)
+		|| (command = app.registers.get(register).data) == '') {
 			return _('Register {0} is empty.', register);
 		}
+
 		if (app.exvm.executedRegisterFlags[register]) {
 			return _('Register {0} was used recursively.', register);
 		}
@@ -1977,7 +2004,7 @@ var cache = {};
 
 		app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
 		app.exvm.executedRegisterFlags[register] = true;
-		app.registers.set('@', command, true);
+		app.registers.get('@').set(register);
 	}),
 	new ExCommand('*', '*', 'b', 1, function (app, t, a) {
 		return find('@').handler.apply(this, arguments);
