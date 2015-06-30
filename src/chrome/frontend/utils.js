@@ -103,13 +103,10 @@ function style (src, styles) {
 function multiply (letter, times) {
 	if (letter == '' || times <= 0) return '';
 	var result = letter;
-	while (result.length * 2 <= times) {
+	while (result.length < times) {
 		result += result;
 	}
-	while (result.length < times) {
-		result += letter;
-	}
-	return result;
+	return result.length == times ? result : result.substring(0, times);
 }
 function toVisibleString (s) {
 	return (s || '')
