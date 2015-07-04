@@ -6130,13 +6130,60 @@ var commandMap = {
 		}
 		prefixInput.motion = c;
 		isSmoothScrollRequested = true;
-		return motionFindByRegexFacade(
-			registers.get('/').data, prefixInput.count,
-			lastRegexFindCommand.direction * (o.key == 'n' ? 1 : -1),
-			lastRegexFindCommand.verticalOffset);
+		var regex = registers.get('/').data;
+		var isForward = o.key != 'N';
+		var dir = lastRegexFindCommand.direction * (isForward ? 1 : -1);
+		var result = motionFindByRegexFacade(regex, prefixInput.count, dir);
+		requestShowMessage((isForward ? '/' : '?') + regex);
+		return result;
 	},
 	// search previous match for current pattern
 	N:function () {return this.n.apply(this, arguments)},
+	// search current word
+	'*':function (c, o) {
+		var ss1 = buffer.selectionStart;
+		var se1 = buffer.selectionEnd;
+		var word;
+		if (!searchUtils.dispatchRangeSymbol(1, 'w', false)
+		|| (word = regexConverter.toLiteralString(buffer.getSelection())) == '') {
+			buffer.setSelectionRange(ss1, se1);
+			return inputEscape(o.e.key);
+		}
+
+		var ss2 = buffer.selectionStart;
+		var se2 = buffer.selectionEnd;
+		var direction, offset;
+		if (o.key == '*') {
+			buffer.setSelectionRange(ss1, buffer.leftPos(se2));
+			direction = 1;
+			offset = buffer.selectionEnd;
+		}
+		else {
+			buffer.setSelectionRange(ss2, se1);
+			direction = -1;
+			offset = buffer.selectionStart;
+		}
+
+		var iskeyword = config.vars.iskeyword;
+		if (iskeyword.test(word.charAt(0))) {
+			word = '\\<' + word;
+		}
+		if (iskeyword.test(word.substr(-1))) {
+			word += '\\>';
+		}
+
+		registers.get('/').set(word);
+		lastRegexFindCommand.push({
+			head:c,
+			direction:direction,
+			offset:offset,
+			scrollTop:buffer.scrollTop,
+			scrollLeft:buffer.scrollLeft,
+			updateBound:isBound(inputMode)
+		});
+		return this.n.apply(this, arguments);
+	},
+	'#':function () {return this['*'].apply(this, arguments)},
 
 	/*
 	 * scrollers (independent motions)
@@ -7051,6 +7098,7 @@ var boundMap = {
 	M:commandMap.M,					L:commandMap.L,					G:commandMap.G,	
 	f:commandMap.f,					F:commandMap.F,					t:commandMap.t,	
 	T:commandMap.T,					n:commandMap.n,					N:commandMap.N,	
+	'*':commandMap['*'],			'#':commandMap['#'],
 
 	/* scrollers */
 	'\u0015':commandMap['\u0015'],	'\u0004':commandMap['\u0004'],	'\u0019':commandMap['\u0019'],

@@ -485,41 +485,190 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 };
 
 Wasavi.RegexConverter = function (app) {
-	var flips = {
-		// vi metacharacter -> js metacharacter
-		'\\<': '\\b',
-		'\\>': '\\b',
-		'\\{': '{',
-		'\\}': '}',
-		'\\(': '(',
-		'\\)': ')',
-		'\\?': '?',
-		'\\+': '+',
-		'{':   '\\{',
-		'}':   '\\}',
-		'(':   '\\(',
-		')':   '\\)',
-		'(?':  '\\(\\?',
-		'?':   '\\?',
-		'+':   '\\+'
+	var SPECIAL_SPACE = '[\u0009\u000b\u000c\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]';
+	var SPECIAL_NONSPACE = '[\u0000-\u0008\u000a\u000d-\u001f\u0021-\u009f\u00a1-\u1fff\u200c-\u2027\u202a-\u2fff\u3001-\uffff]';
+	var META_MAP = {
+		backslashed:{
+			// index 0: vi regex -> js regex mapping (outside of character class)
+			// index 1: vi regex -> invalidated vi regex mapping
+			// index 2: vi regex -> vi regex mapping (inside of character class)
+			'\\\\': ['\\\\', '\\\\\\\\'],
+			'\\<': ['\\b', '\\\\<', ''],	// TODO: this map is INCORRECT.
+			'\\>': ['\\b', '\\\\>', ''],	// TODO: this map is INCORRECT.
+			'\\{': ['{', '\\\\{'],
+			'\\}': ['}', '\\\\}'],
+			'\\(': ['(', '\\\\('],
+			'\\)': [')', '\\\\)'],
+			'\\?': ['?', '\\\\?'],
+			'\\+': ['+', '\\\\+'],
+			'\\|': ['|', '\\\\|'],
+			'\\s': [SPECIAL_SPACE, '\\\\s', SPECIAL_SPACE.replace(/^\[|\]$/g, '')],
+			'\\S': [SPECIAL_NONSPACE, '\\\\S', SPECIAL_NONSPACE.replace(/^\[|\]$/g, '')]
+		},
+
+		nonbackslashed:{
+			'{': ['\\{', '{'],
+			'}': ['\\}', '}'],
+			'(': ['\\(', '('],
+			')': ['\\)', ')'],
+			'?': ['\\?', '?'],
+			'+': ['\\+', '+'],
+			'|': ['\\|', '|']
+		},
+
+		common:{
+			'.': ['.', '\\.'],
+			'*': ['*', '\\*'],
+			'[': ['[', '\\['],
+			']': [']', '\\]'],
+			'^': ['^', '\\^'],
+			'$': ['$', '\\$']
+		}
 	};
+	function parse (s, forceLiteral) {
+		var result = [];
+		var isInClass = false;
+		var index = forceLiteral ? 1 : 0;
+		for (var i = 0, goal = s.length; i < goal; i++) {
+			var ch = s.charAt(i);
+			if (ch == '\\') {
+				if (++i >= goal) {
+					throw new Error('a backslash cannot be end');
+				}
+			}
+			if (isInClass) {
+				if (ch == '\\') {
+					ch += s.charAt(i);
+					result.push(META_MAP.backslashed[ch][2] || ch);
+				}
+				else if (ch == ']') {
+					result.push(ch);
+					isInClass = false;
+				}
+				else {
+					result.push(ch);
+				}
+			}
+			else {
+				if (ch == '\\') {
+					ch += s.charAt(i);
+					if (ch in META_MAP.backslashed) {
+						if (ch == '\\?' && result.lastItem == '(') {
+							result.push(META_MAP.backslashed[ch][1]);
+						}
+						else {
+							result.push(META_MAP.backslashed[ch][index]);
+						}
+					}
+					else {
+						if (forceLiteral) {
+							result.push(ch.replace(/\\/g, '\\\\'));
+						}
+						else {
+							result.push(ch);
+						}
+					}
+				}
+				else if (ch in META_MAP.nonbackslashed) {
+					result.push(META_MAP.nonbackslashed[ch][index]);
+				}
+				else if (ch in META_MAP.common) {
+					result.push(META_MAP.common[ch][index]);
+					if (ch == '[' && !forceLiteral) {
+						isInClass = true;
+					}
+				}
+				else {
+					result.push(ch);
+				}
+			}
+		}
+		if (isInClass) {
+			throw new Error('unclosed character class');
+		}
+		return result.join('');
+	}
+	function doTestParse (title, tests, forceLiteral) {
+		var result = tests.reduce(function (log, item) {
+			var errored = false;
+			try {
+				var pattern = parse(item[0], forceLiteral);
+				if (pattern != item[1]) {
+					errored = 'parse result not match';
+					return;
+				}
+			}
+			catch (e) {
+				if (item[1] == Error) return;
+				log.push('"' + item[0] + '" exception: ' + e);
+			}
+			finally {
+				if (errored) {
+					log.push(
+						'"' + item[0] + '"' +
+						' failed: "' + pattern + '"' +
+						' expected: "' + item[1] + '"' +
+						' (' + errored + ')');
+				}
+				return log;
+			}
+		}, []).join('\n')
+		result != '' && console.log(title + '\n' + result);
+	}
+	function testParse () {
+		doTestParse('#1', [
+			['foo', 'foo'],
+			['^f*o.o$', '^f*o.o$'],
+			['foo\\{1,2\\}bar\\?', 'foo{1,2}bar?'],
+			['\\(foo\\|bar\\)\\+', '(foo|bar)+'],
+			['a\\sb', 'a' + SPECIAL_SPACE + 'b'],
+			['a\\Sb', 'a' + SPECIAL_NONSPACE + 'b'],
+			['[abc\\s]', '[abc' + SPECIAL_SPACE.replace(/^\[|\]$/g, '') + ']'],
+			['[abc\\S]', '[abc' + SPECIAL_NONSPACE.replace(/^\[|\]$/g, '') + ']'],
+			['foo{1}', 'foo\\{1\\}'],
+			['foo(bar)', 'foo\\(bar\\)'],
+			['foo?bar+', 'foo\\?bar\\+'],
+			['foo\\d\\+', 'foo\\d+'],
+			['foo|bar', 'foo\\|bar'],
+			['(?foobar)', '\\(\\?foobar\\)'],
+			['\\(?foobar\\)', '(\\?foobar)'],
+			['\\t\\v\\\\', '\\t\\v\\\\'],
+			['\\t\\v\\', Error]
+		]);
+		doTestParse('#2', [
+			['foo', 'foo'],
+			['^f*o.o$', '\\^f\\*o\\.o\\$'],
+			['foo\\{1,2\\}bar\\?', 'foo\\\\{1,2\\\\}bar\\\\?'],
+			['\\(foo\\|bar\\)\\+', '\\\\(foo\\\\|bar\\\\)\\\\+'],
+			['a\\sb', 'a\\\\sb'],
+			['a\\Sb', 'a\\\\Sb'],
+			['[abc\\s]', '\\[abc\\\\s\\]'],
+			['[abc\\S]', '\\[abc\\\\S\\]'],
+			['foo{1}', 'foo{1}'],
+			['foo(bar)', 'foo(bar)'],
+			['foo?bar+', 'foo?bar+'],
+			['foo\\d\\+', 'foo\\\\d\\\\+'],
+			['foo|bar', 'foo|bar'],
+			['(?foobar)', '(?foobar)'],
+			['\\(?foobar\\)', '\\\\(?foobar\\\\)'],
+			['\\t\\v\\\\', '\\\\t\\\\v\\\\\\\\'],
+			['\\t\\v\\', Error]
+		], true);
+	}
 	function fixup (s) {
-		return s
-			.replace(/\\s/g, '[\\t\\v\\f\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]');
+		return s.replace(/\\s/g, SPECIAL_SPACE);
 	}
 	function toJsRegexString (s) {
 		if (typeof s == 'string') {
-			return fixup(
-				s.replace(
-					/\[(?:[^\]]|\\\])*\]|\\[?+<>{}()]|\(\?|[?+{}()]/g,
-					function ($0) { return flips[$0] || $0 }
-				)
-			);
+			return parse(s);
 		}
 		else if (s instanceof RegExp) {
 			return s.source;
 		}
 		throw new Error('invalid regex source');
+	}
+	function toLiteralString (s) {
+		return parse(s, true);
 	}
 	function toJsRegex (s, opts) {
 		var result;
@@ -544,7 +693,13 @@ Wasavi.RegexConverter = function (app) {
 		};
 	}
 
-	publish(this, fixup, toJsRegexString, toJsRegex, getCS, getDefaultOption);
+	//testParse();
+	publish(
+		this,
+		fixup,
+		toJsRegexString, toJsRegex, toLiteralString,
+		getCS, getDefaultOption
+	);
 };
 
 Wasavi.PrefixInput = function () {
@@ -3913,8 +4068,6 @@ Wasavi.Surrounding = function (app) {
 				p.outerStart, p.innerStart, p.innerEnd, p.outerEnd
 			);
 		});
-
-		console.log('undo log:\n' + app.editLogger.dump());
 
 		return true;
 	}
