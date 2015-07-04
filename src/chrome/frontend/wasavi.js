@@ -6004,7 +6004,8 @@ var commandMap = {
 	' ':function (c, o) {return this[o.e.shift ? 'h' : 'l'].apply(this, arguments)},
 	'<right>':function () {return this.l.apply(this, arguments)},
 	w:function (c, o) {
-		if (prefixInput.operation == 'c') {
+		if (prefixInput.operation == 'c'
+		&& !/[\t ]/.test(buffer.charAt(buffer.selectionStart))) {
 			motionNextWord(c, prefixInput.count, o.key == 'W', true);
 			if (!buffer.isNewline(buffer.selectionEnd)) {
 				buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
