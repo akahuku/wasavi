@@ -1010,7 +1010,7 @@ function install (x, req) {
 	diag('entering install()');
 
 	// container
-	var cnt = $(CONTAINER_ID);
+	var cnt = $('wasavi_container');
 	if (!cnt) throw new Error('wasavi container not found');
 
 	//
@@ -1069,7 +1069,7 @@ function install (x, req) {
 	var focusHolder = $('wasavi_focus_holder');
 
 	// buffer
-	buffer = new Wasavi.Editor($(EDITOR_CORE_ID));
+	buffer = new Wasavi.Editor($('wasavi_editor'));
 
 	// text length scaler
 	var textspan = $('wasavi_singleline_scaler');
@@ -1233,7 +1233,7 @@ function runExrc () {
 	 * setup theme
 	 */
 
-	theme.container = $(CONTAINER_ID);;
+	theme.container = $('wasavi_container');;
 	theme.update();
 
 	/*
@@ -1367,8 +1367,8 @@ function setGeometory (target) {
 		return;
 	}
 
-	var container = $(CONTAINER_ID);
-	var editor = $(EDITOR_CORE_ID);
+	var container = $('wasavi_container');
+	var editor = $('wasavi_editor');
 	var footer = $('wasavi_footer');
 	var conCon = $('wasavi_console_container');
 	var con = $('wasavi_console');
@@ -1433,7 +1433,7 @@ function pushInputMode (context, newInputMode, newInputModeOpts) {
 
 	switch (inputMode) {
 	case 'line_input':
-		var input = $(LINE_INPUT_ID);
+		var input = $('wasavi_footer_input');
 		context.value = input.value;
 		context.prefix = $('wasavi_footer_input_indicator').textContent;
 		context.curpos = input.selectionStart;
@@ -1542,7 +1542,7 @@ function showLineInput (prefix, value, curpos) {
 	if (state != 'line_input') return;
 	var line = $('wasavi_footer_input_container');
 	var alter = $('wasavi_footer_status_container');
-	var input = $(LINE_INPUT_ID);
+	var input = $('wasavi_footer_input');
 	line.style.display = '';
 	alter.style.display = 'none';
 	prefix || (prefix = '>');
@@ -1880,7 +1880,7 @@ function execEditMap (r, e, key, subkey, code) {
 }
 function execLineInputEditMap (r, e, key, subkey, code) {
 	if (!lineInputEditMap[key]) return false;
-	if (execMap($(LINE_INPUT_ID), e, lineInputEditMap, key, subkey, code)) {
+	if (execMap($('wasavi_footer_input'), e, lineInputEditMap, key, subkey, code)) {
 		r.needEmitEvent = true;
 	}
 	return true;
@@ -1973,7 +1973,7 @@ function processInput (e, ignoreAbbrev) {
 }
 function processInputSupplement () {
 	if (inputMode != 'line_input') return;
-	var input = $(LINE_INPUT_ID);
+	var input = $('wasavi_footer_input');
 	var e = keyManager.nopObject;
 	var last = inputModeStack.lastItem;
 	var map = getMap(last.inputMode);
@@ -2169,7 +2169,7 @@ function notifyCommandComplete (eventName, modeOverridden) {
 		registers:  registers.dumpData(),
 		marks:      marks.dumpData(),
 		lines:      config.vars.lines,
-		lineInput:  state == 'line_input' ? $(LINE_INPUT_ID).value : ''
+		lineInput:  state == 'line_input' ? $('wasavi_footer_input').value : ''
 	};
 	if (extensionChannel.isTopFrame()) {
 		document.documentElement.removeAttribute('data-wasavi-command-state');
@@ -2383,7 +2383,7 @@ function getChdirHandler (id) {
 }
 function getContainerRect () {
 	if (!containerRect) {
-		containerRect = $(CONTAINER_ID).getBoundingClientRect();
+		containerRect = $('wasavi_container').getBoundingClientRect();
 	}
 	return containerRect;
 }
@@ -2752,7 +2752,7 @@ function adjustSurroundingInputForNotify (original) {
 	if (surrounding.isTagPrefix(original)) {
 		prefixInput.appendMotion(original);
 		showLineInput(indicator.textContent + '<', '', 0);
-		dataset($(LINE_INPUT_ID), 'internalPrefix', original);
+		dataset($('wasavi_footer_input'), 'internalPrefix', original);
 		original = '';
 	}
 
@@ -2763,7 +2763,7 @@ function adjustSurroundingInputForNotify (original) {
 	return adjusted;
 }
 function adjustSurroundingInput (original) {
-	var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+	var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
 	original = original.replace(/\n$/, '');
 	var adjusted = original;
 
@@ -4881,7 +4881,7 @@ var config = new Wasavi.Configurator(appProxy,
 		//['cedit', 's', ''],
 		['columns', 'i', 0, function (v) {
 			if (isNumber(charWidth)) {
-				var ed = $(EDITOR_CORE_ID);
+				var ed = $('wasavi_editor');
 				notifyToParent('set-size', {
 					width: v * charWidth + (ed.offsetWidth - ed.clientWidth),
 					isSyncSize: config.vars.syncsize
@@ -5219,7 +5219,7 @@ var modeHandlers = {
 		return this.edit.apply(this, arguments);
 	},
 	line_input: function (e, r) {
-		var input = $(LINE_INPUT_ID);
+		var input = $('wasavi_footer_input');
 		var canEscape = r.code == 0x1b
 			|| r.code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
 		var isComplete = prefixInput.operation != ''
@@ -5278,7 +5278,7 @@ var modeHandlers = {
 		}
 		else if (execLineInputEditMap(r, e, r.mapkey, r.subkey, r.code)) {
 			setTimeout(function () {
-				var input = $(LINE_INPUT_ID);
+				var input = $('wasavi_footer_input');
 
 				/*
 				 * Although following codes are very very strange,
@@ -5575,7 +5575,7 @@ var commandMap = {
 		},
 		$line_input_notify:function (c, o) {return this.s[o.subkey].apply(this, arguments)},
 		line_input:function (c, o) {
-			var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+			var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
 			var isMultiline =
 				/S$/.test(prefixInput.operation)
 				|| isVerticalMotion
@@ -7040,7 +7040,7 @@ var boundMap = {
 		$line_input_notify:commandMap.s.$line_input_notify,
 		line_input:function (c, o) {
 			return operateToBound(c, o, true, function (p1, p2, act) {
-				var prefix = dataset($(LINE_INPUT_ID), 'internalPrefix');
+				var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
 				var isMultiline =
 					inputMode == 'bound_line'
 					|| surrounding.isLinewiseTagPrefix(prefix);

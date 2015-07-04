@@ -34,10 +34,6 @@
 /*const*/var CSS_PREFIX = window.chrome ? '-webkit-' :
 	window.opera ? '-o-' : IS_GECKO ? '-moz-' : '';
 
-/*const*/var CONTAINER_ID = 'wasavi_container';
-/*const*/var EDITOR_CORE_ID = 'wasavi_editor';
-/*const*/var LINE_INPUT_ID = 'wasavi_footer_input';
-
 /*const*/var BRACKETS = '[{(<"\'``\'">)}]';
 /*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 

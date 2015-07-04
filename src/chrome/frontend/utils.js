@@ -269,7 +269,7 @@ function _ () {
 	});
 }
 function setTabStop (ts) {
-	var editor = $(EDITOR_CORE_ID);
+	var editor = $('wasavi_editor');
 	if (!editor) return;
 
 	ts || (ts = 8);
