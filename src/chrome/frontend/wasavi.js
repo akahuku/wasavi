@@ -1987,7 +1987,6 @@ function getFindRegex (src) {
 	var caseSensibility = false;
 	var global = 'g';
 	var multiline = 'm';
-	var magic = false;
 	if (src instanceof RegExp) {
 		return src;
 	}
@@ -2004,15 +2003,8 @@ function getFindRegex (src) {
 		if ('multilineOverride' in src) {
 			multiline = src.multilineOverride;
 		}
-		if ('magicOverride' in src) {
-			magic = src.magicOverride;
-		}
 		if ('pattern' in src) {
 			pattern = src.pattern;
-		}
-		else if ('regex' in src && src.regex instanceof RegExp) {
-			pattern = src.regex.source;
-			magic = true;
 		}
 	}
 	if (caseSensibility === false) {
@@ -2021,7 +2013,7 @@ function getFindRegex (src) {
 	}
 	try {
 		result = new RegExp(
-			regexConverter[magic ? 'fixup' : 'toJsRegexString'](pattern),
+			regexConverter.toJsRegexString(pattern),
 			caseSensibility + global + multiline);
 	}
 	catch (e) {
@@ -4786,7 +4778,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['exrc', 'b', false],         // not used
 		['ignorecase', 'b', true],
 		['list', 'b', false],         // not used
-		['magic', 'b', true],
+		['magic', 'b', true],         // not used
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
 			invalidateIdealWidthPixels();

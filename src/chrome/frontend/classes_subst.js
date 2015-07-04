@@ -55,7 +55,7 @@ Wasavi.SubstituteWorker.prototype = {
 			if ((pattern = app.lastSubstituteInfo.pattern || '') == '') {
 				return _('No previous substitution.');
 			}
-			repl = app.config.vars.magic ? '~' : '\\~';
+			repl = '~';
 		}
 		else if (pattern == '' && repl != '') {
 			if ((pattern = app.lastRegexFindCommand.pattern || '') == '') {
@@ -69,8 +69,7 @@ Wasavi.SubstituteWorker.prototype = {
 			repl = app.lastSubstituteInfo.replacement;
 		}
 		repl.replace(/\\.|./g, function (a) {
-			if (a == '\\~' && !app.config.vars.magic
-			||  a == '~' && app.config.vars.magic) {
+			if (a == '~') {
 				tildeUsed = true;
 			}
 		});
@@ -78,7 +77,7 @@ Wasavi.SubstituteWorker.prototype = {
 			if (app.lastSubstituteInfo.replacement == undefined) {
 				return _('No previous substitution.');
 			}
-			var tildeRegex = app.config.vars.magic ? /(?!\\)~/g : /\\~/g;
+			var tildeRegex = /(?!\\)~/g;
 			repl = repl.replace(tildeRegex, app.lastSubstituteInfo.replacement);
 		}
 
@@ -406,7 +405,6 @@ Wasavi.SubstituteWorker.prototype = {
 		var stack = [];
 		var specialEscapes = {'\\':'\\', 'n':'\n', 't':'\t'};
 		var specialLetters = {'\r':'\n'};
-		var magic = this.app.config.vars.magic;
 		function loop (callDepth, interruptMode, start) {
 			/*
 			 * opcodes:
@@ -429,7 +427,7 @@ Wasavi.SubstituteWorker.prototype = {
 				}
 				switch (ch) {
 				case '&': case '\\&':
-					if (ch == '&' && magic || ch == '\\&' && !magic) {
+					if (ch == '&') {
 						stack.push({x:1, v:0});
 						ate = newOperand = true;
 					}
