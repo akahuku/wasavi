@@ -4606,9 +4606,31 @@ var completer = new Wasavi.Completer(appProxy,
 			}
 		],
 
-		// option completion
+		// option value completion
 		[
-			/^(\s*)(set?\s+)(.*)$/, 3,
+			/^(\s*)(set?.*\s+)([^=]+=)((?:\\.|\S)*)(.*)$/, 4,
+			function (prefix, notifyCandidates, line) {
+				var value = [];
+				try {
+					var re = /([^= \t]+)=$/.exec(line);
+					if (!re) return;
+
+					var info = config.getInfo(re[1]);
+					if (!info || info.type == 'b') return;
+
+					value.push(
+						config.getData(re[1], true).replace(/^[^=]+=/, ''));
+				}
+				finally {
+					notifyCandidates(value);
+				}
+			},
+			{isVolatile:true}
+		],
+
+		// option name completion
+		[
+			/^(\s*)(set?.*\s+)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
 				var src = [];
 				Object.keys(config.vars).forEach(function (v) {
@@ -4618,47 +4640,6 @@ var completer = new Wasavi.Completer(appProxy,
 				notifyCandidates(src.sort());
 			},
 			{
-				onFoundContext:function (s, offset) {
-					var COMPLETION_INDEX = 0;
-
-					var regex = /([^=?\s]*)(\?|=(?:\\.|\S)*)?(\s*)/g, re;
-					var pieceOffset = 0;
-					var found = false;
-					var result = {
-						cursorOffset:0,
-						subPieceIndex:0,
-						subPieces:[]
-					};
-
-					while ((re = regex.exec(s)) !== null) {
-						var whole = re.shift(0);
-						var from = 0, to = 0;
-
-						for (var i = 0, goal = re.length; i < goal; i++) {
-							re[i] = re[i] || '';
-
-							if (i < COMPLETION_INDEX) {
-								from += re[i].length;
-							}
-							if (i <= COMPLETION_INDEX) {
-								to += re[i].length;
-							}
-						}
-
-						if (!found &&  pieceOffset + from <= offset && offset <= pieceOffset + to) {
-							found = true;
-							result.cursorOffset = offset - pieceOffset + from;
-							result.subPieceIndex = result.subPieces.length + COMPLETION_INDEX;
-						}
-
-						Array.prototype.push.apply(result.subPieces, re);
-						pieceOffset += whole.length;
-
-						if (whole == '') break;
-					}
-
-					return result;
-				},
 				onComplete:function (newValue, oldValue) {
 					var result = null;
 					var prefix = '';
@@ -4757,9 +4738,7 @@ var completer = new Wasavi.Completer(appProxy,
 					}
 				);
 			},
-			{
-				isVolatile:true
-			}
+			{isVolatile:true}
 		]
 	]
 );
