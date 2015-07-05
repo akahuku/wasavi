@@ -5666,13 +5666,24 @@ var commandMap = {
 	'<end>':function () {return this.$.apply(this, arguments)},
 	// jump to matching <, (, {, or [
 	'%':function (c, o) {
-		prefixInput.motion = c;
-		var result = searchUtils.findMatchedBracket(prefixInput.count);
-		if (!result) {
+		var pos;
+		if (prefixInput.isCountSpecified) {
+			var count = prefixInput.count;
+			if (0 <= count && count <= 100) {
+				count = Math.floor(buffer.rowLength * (count /100));
+				count = Math.max(0, Math.min(count, buffer.rowLength - 1));
+				pos = buffer.getLineTopOffset2(new Position(count, 0));
+			}
+		}
+		else {
+			pos = searchUtils.findMatchedBracket();
+		}
+		if (!pos) {
 			return inputEscape(o.e.key);
 		}
+		prefixInput.motion = c;
 		marks.setJumpBaseMark();
-		buffer.extendSelectionTo(result);
+		buffer.extendSelectionTo(pos);
 		invalidateIdealWidthPixels();
 		isSmoothScrollRequested = true;
 		return true;
