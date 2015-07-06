@@ -125,6 +125,7 @@ Tips and Tricks
 	+ `:abbreviate lhs` displays the abbreviation corresponding to lhs.
 	+ `:abbreviate lhs rhs` registers a abbreviation which
 	  expands lhs to rhs.
+	+ `:abbreviate [noremap] lhs rhs` also registers, but it is not effected remap mechanism.
 * map syntax is
 	+ `:map` displays all the mappings currently registered.
 	+ `:map [clear]` clears all the mappings.
