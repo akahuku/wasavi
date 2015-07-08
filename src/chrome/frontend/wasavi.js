@@ -1921,13 +1921,20 @@ function processInput (e, ignoreAbbrev) {
 			showPrefixInput(requestedState.modeline.message);
 			break;
 		case 'message':
-			messageUpdated = true;
-			showMessage(
-				requestedState.modeline.message,
-				requestedState.modeline.emphasis,
-				requestedState.modeline.pseudoCursor,
-				requestedState.modeline.volatile_
-			);
+			if (backlog.visible) {
+				showPrefixInput();
+				requestConsoleState();
+				backlog.push(requestedState.modeline.message);
+			}
+			else {
+				messageUpdated = true;
+				showMessage(
+					requestedState.modeline.message,
+					requestedState.modeline.emphasis,
+					requestedState.modeline.pseudoCursor,
+					requestedState.modeline.volatile_
+				);
+			}
 			break;
 		}
 		requestedState.modeline = null;
