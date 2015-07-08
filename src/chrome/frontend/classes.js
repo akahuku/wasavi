@@ -2581,7 +2581,6 @@ loop:			while (node) {
 				this.elm.childNodes[r.s.row].normalize();
 			}
 			else {
-
 				var r2 = document.createRange();
 				setRange.call(this, r2, r.s);
 				r2.setEndAfter(this.elm.childNodes[r.s.row].lastChild);

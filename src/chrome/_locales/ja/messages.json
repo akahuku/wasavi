@@ -832,6 +832,10 @@
     "message": "{0} 行が右シフトされました。",
     "description": "Shifted {0} {line:0}."
   },
+  "sorted_@0_line": {
+    "message": "{0} 行がソートされました。",
+    "description": "Sorted {0} {line:0}."
+  },
   "substitute_yes_no_all_last_quit": {
     "message": "置き換えますか? [y]はい, [n]いいえ, [a]以降全て, [l]これで終える, [q]終了",
     "description": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit"
@@ -927,6 +931,10 @@
   "unknown_option_@0": {
     "message": "未知のオプション: {0}",
     "description": "Unknown option: {0}"
+  },
+  "unknown_sort_argument_@0": {
+    "message": "未知のソート引数: {0}",
+    "description": "Unknown sort argument: {0}"
   },
   "unshifted_@0_line": {
     "message": "{0} 行が左シフトされました。",

@@ -693,7 +693,7 @@ function ExCommandExecutor (app) {
 			//   in paragraph 12.
 			else if (/^(?:global|open|s|v)$/.test(commandName)) {
 				skipblank();
-				if (/^(?:[^a-zA-Z"\n\\|])/.test(source)) {
+				if (/^(?:[^a-zA-Z0-9"\n\\|])/.test(source)) {
 					var delimiter = source.charAt(0);
 					argv = [];
 					skipby(1);
@@ -3673,6 +3673,7 @@ function adjustDeleteOperationPos (isLineOrient, actualCount) {
 
 function deleteSelection (isSubseq) {
 	if (!buffer.selected && !buffer.isLineOrientSelection) return 0;
+	if (buffer.isLineOrientSelection && buffer.rowLength == 1 && buffer.rows(0) == '') return 0;
 
 	var result = 0;
 	(isSubseq ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {

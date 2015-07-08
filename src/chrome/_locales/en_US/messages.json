@@ -832,6 +832,10 @@
     "message": "Shifted {0} {line:0}.",
     "description": "Shifted {0} {line:0}."
   },
+  "sorted_@0_line": {
+    "message": "Sorted {0} {line:0}.",
+    "description": "Sorted {0} {line:0}."
+  },
   "substitute_yes_no_all_last_quit": {
     "message": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit",
     "description": "Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit"
@@ -927,6 +931,10 @@
   "unknown_option_@0": {
     "message": "Unknown option: {0}",
     "description": "Unknown option: {0}"
+  },
+  "unknown_sort_argument_@0": {
+    "message": "Unknown sort argument.",
+    "description": "Unknown sort argument: {0}"
   },
   "unshifted_@0_line": {
     "message": "Unshifted {0} {line:0}.",

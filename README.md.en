@@ -229,7 +229,7 @@ Edit commands
 ex commands
 -----------
 
-`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
+`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `sort` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
 
 The addressing in ex command is fully supported:
 
@@ -330,3 +330,4 @@ Vim features in wasavi
 * writing to the register of A to Z
 * `gu` / `gU` + motion: lowerize or upperize a region
 * partial functionality of [Surround.vim](https://github.com/tpope/vim-surround)
+* partial functionality of `:sort` (regex pattern, `r` and `i` options)

@@ -225,9 +225,6 @@ syntax_expansion_loop:
 			}
 
 			line = line.replace(/^\s+/, '');
-			if (line == '') {
-				break;
-			}
 
 			switch (ch) {
 			case '1':
@@ -665,6 +662,282 @@ function chdirCore (app, t, a, data) {
 	}
 }
 
+function SortWorker (app, t, a) {
+	this.app = app;
+	this.t = t;
+	this.a = a;
+	this.content = this.opts = null;
+	this.terminalType = 0;
+}
+SortWorker.prototype = {
+	dosort: function (content, key, regex, opts) {
+		var callbacks = {
+			i: function (a, b) {
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+
+			p: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = a.substring(re.index + re[0].length);
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = b.substring(re.index + re[0].length);
+				}
+				return a.localeCompare(b);
+			},
+			pr: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = re[0];
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = re[0];
+				}
+				return a.localeCompare(b);
+			},
+			pi: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = a.substring(re.index + re[0].length);
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = b.substring(re.index + re[0].length);
+				}
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+			pri: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = re[0];
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = re[0];
+				}
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+
+			c: function (a, b) {
+				// TODO: expand tab?
+				a = a.substring(opts.columnNumber);
+				b = b.substring(opts.columnNumber);
+				return a.localeCompare(b);
+			},
+			ci: function (a, b) {
+				a = a.substring(opts.columnNumber);
+				b = b.substring(opts.columnNumber);
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			}
+		};
+		return content.sort(callbacks[key]);
+	},
+	preSort: function (type, content) {
+		switch (type) {
+		case 1:
+			content = content.replace(/\\\n/g, '\n');
+
+			var spaces = {'\t':0, ' ':0};
+			content.replace(/([\t ])\n/g, function ($0, s) {
+				spaces[s]++;
+			});
+
+			var maxValueKey = Object.keys(spaces).reduce(function (v, key) {
+				return spaces[key] > spaces[v] ? key : v
+			});
+
+			if (spaces[maxValueKey] > 0) {
+				content = content.replace(/[\t ]$/, '');
+				content += maxValueKey;
+			}
+			break;
+		case 2:
+			content = content.replace(/,\n/g, '\n');
+			break;
+		}
+		return content;
+	},
+	postSort: function (type, content) {
+		switch (type) {
+		case 1:
+			content = content
+				.replace(/\n/g, '\\\n')
+				.replace(/\s*$/, '');
+			break;
+		case 2:
+			content = content.replace(/\n/g, ',\n');
+			break;
+		}
+		return content;
+	},
+	test: function () {
+		var tests = [
+			['', 'xyz\nfoo\nbar', 'bar\nfoo\nxyz\n'],
+			['', 'xyz \\\nfoo \\\nbar', 'bar \\\nfoo \\\nxyz\n'],
+			['', 'xyz,\nfoo,\nbar', 'bar,\nfoo,\nxyz\n'],
+			['i', 'Foo\nbar\nBAZ', 'bar\nBAZ\nFoo\n'],
+			['/\\d\\+/', 'foo4baz\nbar3bar\nbaz1frr', 'bar3bar\nfoo4baz\nbaz1frr\n'],
+			['/\\d\\+/r', 'foo4baz\nbar3bar\nbaz1frr', 'baz1frr\nbar3bar\nfoo4baz\n'],
+			['/\\d\\+/i', 'foo4baZ\nbar3bar\nbaz1frr', 'bar3bar\nfoo4baZ\nbaz1frr\n'],
+			['/[a-zA-Z]\\+/ri', '345c847\n123a456\n537B183', '123a456\n537B183\n345c847\n'],
+			['c3', 'foo897\nbar532\nzoo321', 'zoo321\nbar532\nfoo897\n'],
+			['c3i', '321zoo\n532bar\n897Foo', '532bar\n897Foo\n321zoo\n']
+		];
+		var log = [];
+		tests.forEach(function (t) {
+			try {
+				var result = this.parseArgs(t[0]);
+				if (isString(result)) throw new Error(result);
+
+				this.buildContent(t[1]);
+
+				var result = this.sort();
+				if (isString(result)) throw new Error(result);
+
+				var result = this.getContent();
+				if (result != t[2]) throw new Error(
+					'sort result unmatch,' +
+					' result:"' + toVisibleString(result) + '"' +
+					' expected:"' + toVisibleString(t[2]) + '"');
+			}
+			catch (e) {
+				log.push(t[0] + ': ' + e.message);
+			}
+		}, this);
+		if (log.length) {
+			console.log(log.join('\n'));
+		}
+	},
+
+	parseArgs: function (arg) {
+		var re;
+		var s = arg != undefined ? arg : this.a.argv[0];
+		var opts = {
+			force:!!this.a.flags.force,
+			ignoreCase:false,
+			reuse:false,
+			column:false,
+			columnNumber:-1,
+			pattern:null
+		};
+		while ((s = s.replace(/^[\t ]+/, '')) != '') {
+			if ((re = /^i/.exec(s))) {
+				opts.ignoreCase = true;
+				s = s.substring(re[0].length);
+			}
+			else if ((re = /^r/.exec(s))) {
+				opts.reuse = true;
+				s = s.substring(re[0].length);
+			}
+			else if ((re = /^c([0-9]+)/.exec(s))) {
+				opts.column = true;
+				opts.columnNumber = parseInt(re[1], 10);
+				s = s.substring(re[0].length);
+			}
+			else if (/^[^a-zA-Z0-9"\n\\|]/.test(s)) {
+				var d = s.charAt(0);
+				s = s.substring(1);
+				re = (new RegExp('(?:\\\\.|[^' + d + '])*')).exec(s);
+				opts.pattern = re[0].replace(new RegExp('\\\\' + d, 'g'), d);
+				s = s.substring(re[0].length + 1);
+				if (opts.pattern == '') {
+					if ((opts.pattern = app.lastRegexFindCommand.pattern || '') == '') {
+						return _('No previous search pattern.');
+					}
+				}
+			}
+			else {
+				return _('Unknown sort argument: {0}', s);
+			}
+		}
+		this.opts = opts;
+		return true;
+	},
+	buildContent: function (content) {
+		if (!content) {
+			var rg = document.createRange();
+			rg.setStartBefore(this.t.rowNodes(this.a.range[0]));
+			rg.setEndAfter(this.t.rowNodes(this.a.range[1]));
+			content = toNativeControl(rg.toString());
+		}
+
+		content = trimTerm(content);
+		this.rows = content.match(/\n/g).length + 1;
+
+		var trailEscapes = (content.match(/\\\n/g) || []).length;
+		var trailCommas = (content.match(/,\n/g) || []).length;
+		if (trailEscapes == this.rows - 1) {
+			this.terminalType = 1;
+		}
+		else if (trailCommas == this.rows - 1) {
+			this.terminalType = 2;
+		}
+		else {
+			this.terminalType = 0;
+		}
+
+		this.content = this.preSort(this.terminalType, content).split('\n');
+	},
+	sort: function () {
+		var opts = this.opts;
+		var front = [];
+
+		if (opts.pattern || opts.reuse || opts.ignoreCase || opts.column) {
+			var regex, key = '', end = [];
+			if (opts.pattern) {
+				regex = this.app.low.getFindRegex({
+					pattern:opts.pattern,
+					csOverride:opts.ignoreCase ? 'i' : '',
+					globalOverride:'',
+					multilineOverride:''
+				});
+				if (!regex) {
+					return _('Invalid regex pattern.');
+				}
+				key += 'p';
+				if (opts.reuse) {
+					key += 'r';
+				}
+				while (this.content.length) {
+					var line = this.content.shift();
+					(regex.test(line) ? end : front).push(line);
+				}
+				this.content = end;
+			}
+			else if (opts.column) {
+				key += 'c';
+			}
+
+			if (opts.ignoreCase) {
+				key += 'i';
+			}
+
+			this.content = this.dosort(this.content, key, regex, opts);
+		}
+		else {
+			this.content = this.content.sort();
+		}
+
+		if (front.length) {
+			this.content = front.concat(this.content);
+		}
+		if (opts.force) {
+			this.content = this.content.reverse();
+		}
+
+		return true;
+	},
+	getContent: function () {
+		var result = this.content.join('\n');
+		this.content = null;
+		result = this.postSort(this.terminalType, result) + '\n';
+		return result;
+	}
+};
+
 var cache = {};
 /*public*/function find (name) {
 	if (name in cache) {
@@ -1084,6 +1357,7 @@ var cache = {};
 		var deleted = a.range[1] - a.range[0] + 1;
 		app.edit.yank(deleted, true, a.flags.register ? a.register : '');
 		app.edit.deleteSelection();
+		t.isLineOrientSelection = false;
 		if (deleted >= app.config.vars.report) {
 			app.low.requestShowMessage(_('Deleted {0} {line:0}.', deleted));
 		}
@@ -1799,6 +2073,47 @@ var cache = {};
 		else {
 			app.low.requestConsoleState(true);
 		}
+	}),
+	new ExCommand('sort', 'sor', '!s', 2 | EXFLAGS.addr2All, function (app, t, a) {
+		var worker = new SortWorker(app, t, a);
+
+		var result = worker.parseArgs();
+		if (isString(result)) return result;
+
+		worker.buildContent();
+
+		var result = worker.sort();
+		if (isString(result)) return result;
+
+		var marks = app.marks.dumpData();
+		app.editLogger.open('ex+sort', function () {
+			t.isLineOrientSelection = true;
+			t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
+			t.selectRows(worker.rows);
+			app.edit.deleteSelection();
+			t.isLineOrientSelection = false;
+
+			t.setSelectionRange(new Wasavi.Position(a.range[0] - 1, 0));
+			app.edit.paste(1, {
+				isForward:true,
+				lineOrientOverride:true,
+				content:worker.getContent()
+			});
+
+			for (var i in marks) {
+				var m = marks[i];
+				if (a.range[0] <= m.row && m.row <= a.range[1]) {
+					app.marks.set(i, new Wasavi.Position(m.row, m.col));
+				}
+			}
+
+			if (worker.rows >= app.config.vars.report) {
+				app.low.requestShowMessage(_('Sorted {0} {line:0}.', worker.rows));
+			}
+
+			t.setSelectionRange(t.getLineTopOffset2(a.range[0], 0));
+			app.isEditCompleted = true;
+		});
 	}),
 	new ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {
 		app.lastRegexFindCommand.push({});

@@ -229,7 +229,7 @@ Edit commands
 ex commands
 -----------
 
-`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
+`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `sort` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
 
 ex コマンドでのアドレス指定はフルサポートされています:
 
@@ -330,3 +330,4 @@ Vim 互換の機能
 * A から Z レジスタへの書き込み
 * `gu` / `gU` + モーションは領域を小文字化または大文字化します
 * [Surround.vim](https://github.com/tpope/vim-surround) の一部の機能
+* `:sort` の一部の機能（正規表現パターン、`r`、`i` オプション）
