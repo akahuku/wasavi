@@ -865,7 +865,9 @@ SortWorker.prototype = {
 		}
 
 		content = trimTerm(content);
-		this.rows = content.match(/\n/g).length + 1;
+		var re = content.match(/\n/g);
+		if (!re) return _('Single line can not be sorted.');
+		this.rows = re.length + 1;
 
 		var trailEscapes = (content.match(/\\\n/g) || []).length;
 		var trailCommas = (content.match(/,\n/g) || []).length;
@@ -880,6 +882,7 @@ SortWorker.prototype = {
 		}
 
 		this.content = this.preSort(this.terminalType, content).split('\n');
+		return true;
 	},
 	sort: function () {
 		var opts = this.opts;
@@ -2077,12 +2080,14 @@ var cache = {};
 	new ExCommand('sort', 'sor', '!s', 2 | EXFLAGS.addr2All, function (app, t, a) {
 		var worker = new SortWorker(app, t, a);
 
-		var result = worker.parseArgs();
+		var result;
+		result = worker.parseArgs();
 		if (isString(result)) return result;
 
-		worker.buildContent();
+		result = worker.buildContent();
+		if (isString(result)) return result;
 
-		var result = worker.sort();
+		result = worker.sort();
 		if (isString(result)) return result;
 
 		var marks = app.marks.dumpData();

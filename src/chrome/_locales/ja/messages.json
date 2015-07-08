@@ -832,6 +832,10 @@
     "message": "{0} 行が右シフトされました。",
     "description": "Shifted {0} {line:0}."
   },
+  "single_line_can_not_be_sorted": {
+    "message": "単一行はソートできません。",
+    "description": "Single line can not be sorted."
+  },
   "sorted_@0_line": {
     "message": "{0} 行がソートされました。",
     "description": "Sorted {0} {line:0}."

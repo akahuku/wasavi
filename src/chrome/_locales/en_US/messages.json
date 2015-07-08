@@ -832,6 +832,10 @@
     "message": "Shifted {0} {line:0}.",
     "description": "Shifted {0} {line:0}."
   },
+  "single_line_can_not_be_sorted": {
+    "message": "Single line can not be sorted.",
+    "description": "Single line can not be sorted."
+  },
   "sorted_@0_line": {
     "message": "Sorted {0} {line:0}.",
     "description": "Sorted {0} {line:0}."
@@ -933,7 +937,7 @@
     "description": "Unknown option: {0}"
   },
   "unknown_sort_argument_@0": {
-    "message": "Unknown sort argument.",
+    "message": "Unknown sort argument: {0}",
     "description": "Unknown sort argument: {0}"
   },
   "unshifted_@0_line": {
