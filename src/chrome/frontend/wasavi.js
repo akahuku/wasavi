@@ -5176,7 +5176,11 @@ var modeHandlers = {
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
 				processAbbrevs(false, r.ignoreAbbrev);
-				needBreakUndo(inputHandler.textFragment, letterActual) && inputHandler.newState();
+				if (needBreakUndo(inputHandler.textFragment, letterActual)) {
+					inputHandler.newState();
+					keyManager.lock();
+					setTimeout(function () {keyManager.unlock()}, 100);
+				}
 			}
 			else {
 				inputHandler.ungetText();
