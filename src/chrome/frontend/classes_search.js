@@ -32,7 +32,7 @@
 // almost methods in this class are ported from search.c of vim.
 Wasavi.SearchUtils = function (app) {
 	var buffer = app.buffer;
-	var spaces = /[ \t]/;
+	var spaces = spc('S');
 	var paragraphs;
 	var sections;
 
@@ -138,7 +138,7 @@ Wasavi.SearchUtils = function (app) {
 		return false;
 	}
 	function isWhiteCharOnly (pos) {
-		return /^[ \t]*$/.test(buffer.rows(pos));
+		return spc('^S*$').test(buffer.rows(pos));
 	}
 	function getSections () {
 		if (!sections) {

@@ -347,7 +347,7 @@ function ExCommandExecutor (app) {
 			return skip;
 		}
 		function skipblank (regex) {
-			regex || (regex = /^[ \t]+/);
+			regex || (regex = spc('^S+'));
 			var re = regex.exec(source);
 			if (re) {
 				skipby(re[0].length);
@@ -483,7 +483,7 @@ function ExCommandExecutor (app) {
 				skipto(/\n/g);
 				skipby(1);
 				if (argv && argv.length
-				&&  argv.lastItem.replace(/[ \t]+$/, '') == literalExitKey) {
+				&&  argv.lastItem.replace(spc('S+$'), '') == literalExitKey) {
 					argv.pop();
 					if (!pushCommand()) {
 						break;
@@ -503,7 +503,7 @@ function ExCommandExecutor (app) {
 
 			// 1. Leading <colon> characters shall be skipped.
 			// 2. Leading <blank> characters shall be skipped.
-			skipblank(/^[: \t]+/);
+			skipblank(spc('^[:S]+'));
 
 			// 3. If the leading character is a double-quote character, the characters up to and
 			// including the next non- <backslash>-escaped <newline> shall be discarded, and any
@@ -526,7 +526,7 @@ function ExCommandExecutor (app) {
 			skipby(source.length - range.rest.length);
 
 			// 5. Leading <blank> characters shall be skipped.
-			skipblank(/^[: \t]+/);
+			skipblank(spc('^[:S]+'));
 
 			// 6. If the next character is a <vertical-line> character or a <newline>:
 			//
@@ -663,7 +663,7 @@ function ExCommandExecutor (app) {
 				}
 				skipblank();
 				if (source.charAt(0) == '+') {
-					skipto(/[\n \t]/g);
+					skipto(spc('[\\nS]', 'g'));
 				}
 				paragraph12();
 			}
@@ -1670,7 +1670,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 			if (abbrev.length == 1) {
 				if (buffer.selectionStartCol - abbrev.length <= 1
 				||  target.length - abbrev.length <= 0
-				||  /[ \t]/.test(target.substr(-(abbrev.length + 1), 1))) {
+				||  spc('S').test(target.substr(-(abbrev.length + 1), 1))) {
 					canTransit = true;
 				}
 			}
@@ -1686,7 +1686,7 @@ function processAbbrevs (force, ignoreAbbreviation) {
 			if (buffer.selectionStartCol - abbrev.length <= 1
 			||  target.length - abbrev.length <= 0
 			||  regex.test(target.substr(-(abbrev.length + 1), 1))
-			||  /[ \t]/.test(target.substr(-(abbrev.length + 1), 1))) {
+			||  spc('S').test(target.substr(-(abbrev.length + 1), 1))) {
 				canTransit = true;
 			}
 		}
@@ -1779,7 +1779,7 @@ function processAutoDivide (e) {
 		var n = buffer.selectionStart;
 		while (n.col > 0) {
 			var left = buffer.leftPos(n);
-			if (!/[ \t]/.test(buffer.charAt(left))) {
+			if (!spc('S').test(buffer.charAt(left))) {
 				break;
 			}
 			n = left;
@@ -2840,7 +2840,7 @@ function motionLineEnd (c) {
 function motionLineStartDenotative (c, realTop) {
 	var n = buffer.getLineTopDenotativeOffset(buffer.selectionStart);
 	if (!realTop) {
-		while (!buffer.isEndOfText(n) && !buffer.isNewline(n) && /[ \t]/.test(buffer.charAt(n))) {
+		while (!buffer.isEndOfText(n) && !buffer.isNewline(n) && spc('S').test(buffer.charAt(n))) {
 			n.col++;
 		}
 	}
@@ -3877,7 +3877,7 @@ function reformat (width) {
 				var n = buffer.selectionStart;
 				while (n.col > 0) {
 					var left = buffer.leftPos(n);
-					if (!/[ \t]/.test(buffer.charAt(left))) {
+					if (!spc('S').test(buffer.charAt(left))) {
 						break;
 					}
 					n = left;
@@ -3892,7 +3892,7 @@ function reformat (width) {
 		}
 
 		while (!isEnd && curpos.row < buffer.rowLength) {
-			if (/^[ \t]*$/.test(buffer.rows(curpos))) {
+			if (spc('^S*$').test(buffer.rows(curpos))) {
 				curpos.row++;
 				continue;
 			}
@@ -3908,7 +3908,7 @@ function reformat (width) {
 				isEnd = true;
 				paraTail.row = marks.getPrivate(seMark).row;
 			}
-			while (/^[ \t]*$/.test(buffer.rows(paraTail.row))) {
+			while (spc('^S*$').test(buffer.rows(paraTail.row))) {
 				paraTail.row--;
 			}
 			if (paraTail.row < curpos.row) {
@@ -3998,7 +3998,7 @@ function joinLines (count, asis) {
 
 			var t1 = buffer.rows(buffer.selectionStartRow);
 			var t2 = buffer.rows(buffer.selectionStartRow + 1);
-			var re = asis ? asisIndex : /^[ \t]*/.exec(t2);
+			var re = asis ? asisIndex : spc('^S*').exec(t2);
 
 			buffer.selectionStart = new Position(buffer.selectionStartRow, t1.length);
 			buffer.selectionEnd = new Position(buffer.selectionStartRow + 1, re[0].length);
@@ -4007,7 +4007,7 @@ function joinLines (count, asis) {
 			var t1Last = t1.substr(-1);
 			var t2First = t2.charAt(re[0].length);
 			if (asis || t2.length == re[0].length
-			|| /[ \t]/.test(t1Last) || unicodeUtils.isIdeograph(t1Last)
+			|| spc('S').test(t1Last) || unicodeUtils.isIdeograph(t1Last)
 			|| unicodeUtils.isClosedPunct(t2First) || unicodeUtils.isIdeograph(t2First)
 			) {
 				// do nothing
@@ -4620,7 +4620,7 @@ var completer = new Wasavi.Completer(appProxy,
 			function (prefix, notifyCandidates, line) {
 				var value = [];
 				try {
-					var re = /([^= \t]+)=$/.exec(line);
+					var re = spc('([^=S]+)=$').exec(line);
 					if (!re) return;
 
 					var info = config.getInfo(re[1]);
@@ -6007,7 +6007,7 @@ var commandMap = {
 	'<right>':function () {return this.l.apply(this, arguments)},
 	w:function (c, o) {
 		if (prefixInput.operation == 'c'
-		&& !/[\t ]/.test(buffer.charAt(buffer.selectionStart))) {
+		&& !spc('S').test(buffer.charAt(buffer.selectionStart))) {
 			motionNextWord(c, prefixInput.count, o.key == 'W', true);
 			if (!buffer.isNewline(buffer.selectionEnd)) {
 				buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
@@ -7349,7 +7349,7 @@ var editMap = {
 		if (clipOverrun()) return;
 		var needShift = c == '\u0014';
 		var n = buffer.selectionStart;
-		var re = /^([ \t]*).*?([0^]?)$/.exec(buffer.rows(n).substring(0, n.col));
+		var re = spc('^(S*).*?([0^]?)$').exec(buffer.rows(n).substring(0, n.col));
 		var tmpMark = 'edit-shifter';
 		if (needShift || re) {
 			inputHandler.flush();

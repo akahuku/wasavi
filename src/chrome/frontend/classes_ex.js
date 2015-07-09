@@ -741,7 +741,7 @@ SortWorker.prototype = {
 			content = content.replace(/\\\n/g, '\n');
 
 			var spaces = {'\t':0, ' ':0};
-			content.replace(/([\t ])\n/g, function ($0, s) {
+			content.replace(spc('(S)\\n', 'g'), function ($0, s) {
 				spaces[s]++;
 			});
 
@@ -750,7 +750,7 @@ SortWorker.prototype = {
 			});
 
 			if (spaces[maxValueKey] > 0) {
-				content = content.replace(/[\t ]$/, '');
+				content = content.replace(spc('S$'), '');
 				content += maxValueKey;
 			}
 			break;
@@ -823,7 +823,7 @@ SortWorker.prototype = {
 			columnNumber:-1,
 			pattern:null
 		};
-		while ((s = s.replace(/^[\t ]+/, '')) != '') {
+		while ((s = s.replace(spc('^S+'), '')) != '') {
 			if ((re = /^i/.exec(s))) {
 				opts.ignoreCase = true;
 				s = s.substring(re[0].length);
@@ -966,13 +966,13 @@ var cache = {};
 	var error = false;
 	var re;
 
-	if ((re = /^[ \t]*%/.exec(s))) {
+	if ((re = spc('^S*%').exec(s))) {
 		rows.push(0, t.rowLength - 1);
 		s = s.substring(re[0].length);
 	}
 	else {
 		while (true) {
-			s = s.replace(/^[ \t]+/, '');
+			s = s.replace(spc('^S+'), '');
 
 			var found = false;
 			var regexSpecified = false;
@@ -1095,7 +1095,7 @@ var cache = {};
 					rows.lastItem = allowZeroAddress ? -1 : 0;
 				}
 
-				s = s.replace(/^[ \t]+/, '');
+				s = s.replace(spc('^S+'), '');
 			}
 
 			if (s.charAt(0) == ',') {

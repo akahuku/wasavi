@@ -867,6 +867,7 @@ var unicodeUtils = (function () {
 	 */
 
 	var scriptClassCache = {};
+	var generalSpaceRegexCache = {};
 
 	/*
 	 * functions
@@ -951,6 +952,23 @@ var unicodeUtils = (function () {
 			|| act == BREAK_ACTION.EXPLICIT;
 	}
 
+	function getUnicodeGeneralSpaceRegex (source, opts) {
+		var g = /g/.test(opts);
+		if (source in generalSpaceRegexCache && !g) {
+			return generalSpaceRegexCache[source];
+		}
+		var s = source;
+		s = s.replace(/S/, REGEX_ZS.source);
+		s = s.replace(/(\[[^\[]*)\[/g, '$1');
+		s = s.replace(/\]([^\]]*\])/g, '$1');
+		if (g) {
+			return new RegExp(s, opts);
+		}
+		else {
+			return generalSpaceRegexCache[source] = new RegExp(s, opts);
+		}
+	}
+
 	return Object.freeze({
 		BREAK_PROP:BREAK_PROP,
 		BREAK_ACTION:BREAK_ACTION,
@@ -968,8 +986,10 @@ var unicodeUtils = (function () {
 		isHighSurrogate:isHighSurrogate,
 		isLowSurrogate:isLowSurrogate,
 		toUCS32:toUCS32,
-		canBreak:canBreak
+		canBreak:canBreak,
+		getUnicodeGeneralSpaceRegex:getUnicodeGeneralSpaceRegex
 	});
 })();
+var spc = unicodeUtils.getUnicodeGeneralSpaceRegex;
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

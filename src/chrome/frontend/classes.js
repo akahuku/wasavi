@@ -2091,7 +2091,7 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getLineTopOffset2: function () {
 			var a = arg2pos(arguments);
-			var re = /^([\t ]*).*\n$/.exec(this.elm.childNodes[a.row].textContent);
+			var re = spc('^(S*).*\\n$').exec(this.elm.childNodes[a.row].textContent);
 			a.col = re ? re[1].length : 0;
 			return a;
 		},
@@ -2132,7 +2132,7 @@ Wasavi.Editor.prototype = new function () {
 			) {
 				a.row--;
 			}
-			return a.row >= 0 ? /^[\t ]*/.exec(this.rows(a))[0] : '';
+			return a.row >= 0 ? spc('^S*').exec(this.rows(a))[0] : '';
 		},
 		getBackIndent: function () {
 			var a = arg2pos(arguments);
@@ -2142,7 +2142,7 @@ Wasavi.Editor.prototype = new function () {
 					this.rows(a) == ''
 				)
 			) {}
-			return a.row >= 0 ? /^[\t ]*/.exec(this.rows(a))[0] : '';
+			return a.row >= 0 ? spc('^S*').exec(this.rows(a))[0] : '';
 		},
 		getSpans: function (className, start, end) {
 			var q = ['#wasavi_editor>div'];
@@ -2478,7 +2478,7 @@ loop:			while (node) {
 				else {
 					indent = indentInfo;
 				}
-				node.nodeValue = indent + node.nodeValue.replace(/^[\t ]+/, '');
+				node.nodeValue = indent + node.nodeValue.replace(spc('^S+'), '');
 				if (!marksInfo) return;
 				for (var i = 0, goal = marks.length; i < goal; i++) {
 					var markName = marks[i][2];
@@ -3802,7 +3802,7 @@ Wasavi.Surrounding = function (app) {
 
 			// adjust the outerStart
 			while (outerStart.col < innerStart.col) {
-				if (!/[ \t]/.test(buffer.charAt(outerStart))) {
+				if (!spc('S').test(buffer.charAt(outerStart))) {
 					break;
 				}
 				outerStart.col++;
@@ -3811,7 +3811,7 @@ Wasavi.Surrounding = function (app) {
 			// adjust the outerEnd
 			while (outerEnd.col - 1 > innerEnd.col) {
 				outerEnd.col--;
-				if (!/[ \t]/.test(buffer.charAt(outerEnd))) {
+				if (!spc('S').test(buffer.charAt(outerEnd))) {
 					outerEnd.col++;
 					break;
 				}
@@ -3879,14 +3879,14 @@ Wasavi.Surrounding = function (app) {
 
 		// insert right item
 		buffer.setSelectionRange(se);
-		app.edit.insert('\n' + indent + pair[1].replace(/^[ \t]+/, ''));
+		app.edit.insert('\n' + indent + pair[1].replace(spc('^S+'), ''));
 
 		// insert left item
 		var content = buffer.rows(ss);
 		buffer.setSelectionRange(
 			new Wasavi.Position(ss.row, 0),
 			new Wasavi.Position(ss.row, /^[ \t]*/.exec(content)[0].length));
-		app.edit.insert(indent + pair[0].replace(/[ \t]+$/, '') + '\n');
+		app.edit.insert(indent + pair[0].replace(spc('S+$'), '') + '\n');
 
 		// shift right the inner contents
 		var indentExpanded = indent;
@@ -3931,12 +3931,12 @@ Wasavi.Surrounding = function (app) {
 		buffer.isLineOrientSelection = false;
 
 		var line = buffer.rows(outerStart);
-		var indent = /^[ \t]*/.exec(line)[0];
+		var indent = spc('^S*').exec(line)[0];
 		var mid = outerStart.clone();
 
 		// left item
-		if (/^[ \t]*$/.test(line.substring(0, outerStart.col))
-		&&  /^[ \t]*$/.test(line.substring(innerStart.col))) {
+		if (spc('^S*$').test(line.substring(0, outerStart.col))
+		&&  spc('^S*$').test(line.substring(innerStart.col))) {
 			// orphan, delete a whole line
 			buffer.isLineOrientSelection = true;
 			buffer.setSelectionRange(
@@ -3953,7 +3953,7 @@ Wasavi.Surrounding = function (app) {
 			// ....{....zzz
 			//     ^^^^^
 
-			while (/^[ \t]$/.test(line.charAt(innerStart.col))) {
+			while (spc('^S$').test(line.charAt(innerStart.col))) {
 				innerStart.col++;
 			}
 			buffer.setSelectionRange(outerStart, innerStart);
@@ -3964,7 +3964,7 @@ Wasavi.Surrounding = function (app) {
 
 		// middle block
 		while (mid.row < outerEnd.row) {
-			var re = /^[ \t]*/.exec(buffer.rows(mid));
+			var re = spc('^S*').exec(buffer.rows(mid));
 
 			buffer.setSelectionRange(
 				new Wasavi.Position(mid.row, 0),
@@ -3976,8 +3976,8 @@ Wasavi.Surrounding = function (app) {
 
 		// right item
 		var line = buffer.rows(outerEnd);
-		if (/^[ \t]*$/.test(line.substring(0, innerEnd.col))
-		&&  /^[ \t]*$/.test(line.substring(outerEnd.col))) {
+		if (spc('^S*$').test(line.substring(0, innerEnd.col))
+		&&  spc('^S*$').test(line.substring(outerEnd.col))) {
 			// orphan, delete a whole line
 			buffer.isLineOrientSelection = true;
 			buffer.setSelectionRange(
@@ -3991,7 +3991,7 @@ Wasavi.Surrounding = function (app) {
 			// zzz....}....
 			//    ^^^^^
 
-			while (innerEnd.col > 0 && /^[ \t]$/.test(line.charAt(innerEnd.col - 1))) {
+			while (innerEnd.col > 0 && spc('^S$').test(line.charAt(innerEnd.col - 1))) {
 				innerEnd.col--;
 			}
 			buffer.setSelectionRange(innerEnd, outerEnd);
@@ -4017,8 +4017,8 @@ Wasavi.Surrounding = function (app) {
 		ss = outerStart;
 		se = innerStart;
 		buffer.setSelectionRange(ss, se);
-		if (/^[ \t]*$/.test(buffer.rows(se).substring(se.col))) {
-			pair[0] = pair[0].replace(/[ \t]*$/, '');
+		if (spc('^S*$').test(buffer.rows(se).substring(se.col))) {
+			pair[0] = pair[0].replace(spc('S*$'), '');
 		}
 		app.edit.insert(pair[0]);
 
@@ -4026,8 +4026,8 @@ Wasavi.Surrounding = function (app) {
 		ss = app.marks.getPrivate(mark + '-1');
 		se = app.marks.getPrivate(mark + '-2');
 		buffer.setSelectionRange(ss, se);
-		if (/^[ \t]*$/.test(buffer.rows(ss).substring(0, ss.col))) {
-			pair[1] = pair[1].replace(/^[ \t]*/, '');
+		if (spc('^S*$').test(buffer.rows(ss).substring(0, ss.col))) {
+			pair[1] = pair[1].replace(spc('^S*'), '');
 		}
 		app.edit.insert(pair[1]);
 
