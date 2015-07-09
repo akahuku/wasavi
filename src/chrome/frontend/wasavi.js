@@ -5178,8 +5178,10 @@ var modeHandlers = {
 				processAbbrevs(false, r.ignoreAbbrev);
 				if (needBreakUndo(inputHandler.textFragment, letterActual)) {
 					inputHandler.newState();
-					keyManager.lock();
-					setTimeout(function () {keyManager.unlock()}, 100);
+					if (!e.nativeEvent) {
+						keyManager.lock();
+						setTimeout(function () {keyManager.unlock()}, 1);
+					}
 				}
 			}
 			else {
