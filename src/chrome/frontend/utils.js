@@ -241,9 +241,7 @@ function emptyNodeContents (node) {
 function insertToLineInput (t, s) {
 	var ss = t.selectionStart;
 	var se = t.selectionEnd;
-	s = s.replace(/[\u0000-\u001f\u007f]/g, function ($0) {
-		return toVisibleControl($0.charCodeAt(0));
-	});
+	s = toVisibleControl(s);
 	t.value = t.value.substring(0, ss) + s + t.value.substring(se);
 	t.selectionStart = ss + s.length;
 	t.selectionEnd = t.selectionStart;
@@ -266,22 +264,6 @@ function _ () {
 			return $1.substr(0, $1.length - 1) + 'ies';
 		}
 		return $1 + 's';
-	});
-}
-function setTabStop (ts) {
-	var editor = $('wasavi_editor');
-	if (!editor) return;
-
-	ts || (ts = 8);
-	var editorStyle = document.defaultView.getComputedStyle(editor, '');
-	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
-		if (!(pn in editorStyle)) return false;
-		editor.style[pn] = ts;
-		['wasavi_singleline_scaler'].forEach(function (en) {
-			en = $(en);
-			if (en) en.style[pn] = ts;
-		});
-		return true;
 	});
 }
 function stacktrace () {

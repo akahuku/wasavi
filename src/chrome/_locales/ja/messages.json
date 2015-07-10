@@ -260,6 +260,10 @@
     "message": "  {0}  {1}",
     "description": "  {0}  {1}"
   },
+  "_@0_mode_maps_": {
+    "message": "*** {0} モードのマップ ***",
+    "description": "*** {0} mode maps ***"
+  },
   "_abbreviations_": {
     "message": "*** 略語展開 ***",
     "description": "*** abbreviations ***"

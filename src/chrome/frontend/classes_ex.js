@@ -1694,7 +1694,7 @@ var cache = {};
 						maxWidth = o[0].length;
 					}
 				});
-				var list = ['*** ' + mapName + ' mode map ***'];
+				var list = [_('*** {0} mode maps ***', mapName)];
 				map.map(function (o) {
 					list.push(
 						o[0] + multiply(' ', maxWidth - o[0].length) +

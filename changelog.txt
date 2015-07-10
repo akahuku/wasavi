@@ -1,3 +1,52 @@
+0.6.xxx
+
+	* make key stroke divided only non-interactive input
+	* break long sequential key strokes into async chunks
+	* fix backlog behavior
+	* add :sort command from vim
+	* add the functionality of '%' with a counter
+	* do 'cw' special behavior when cursor on a non-space character only
+	* remove 'magic' effect
+	* add '*' and '#' from vim
+	* allow 1 to 9 in :put command
+	* allow writing a expression directly in `:put =` command
+	* limit max length of ':registers' output
+	* port ga command from vim
+	* wait a completion of async set items
+	* ensure newline exists at end of line when insert/overwrite to buffer
+	* use local test frame instead of public server
+	* use Promise to init backend
+	* remove page hook code
+	* use POST method to notify an upgrade to appsweets.net server
+	* assign position:fixed to wasavi for document.body
+
+	* 対話的ではない入力の場合のみキーストロークの分割を行うようにした
+	* 一連の長いキーストロークを非同期的な断片に分割するようにした
+	* バックログが開いている際のメッセージ表示はバックログ側に表示するようにした
+	* :sort コマンドを追加した
+	* カウンタ付きの '%' の機能を追加した
+	* 'cw' における特別な振る舞いは非空白文字にカーソルがある場合のみにした
+	* 'magic' の効果を取り除いた
+	* vi コマンド '*' と '#' を追加した
+	* :put コマンドでレジスタ 1 から 9 も指定できるようにした
+	* `:put =` コマンドで式を直接書けるようにした
+	* ga コマンドを追加した
+	* set コマンドのオプションへの値の代入が非同期に行われる場合その完了を待つようにした
+	* バッファへの insert/overwrite 時に行末の改行が存在するのを確認するようにした
+	* テストページはローカルホスト内のものを参照するようにした
+	* バックエンドの初期化に Promise を使うようにした
+	* ページフック機構を除去した
+	* アップグレードを appsweets.net サーバに通知する際に POST を用いるようにした
+	* document.body に対して wasavi を起動する際は position:fixed とするようにした
+
+0.6.471
+
+	* disable a write delay if non-buffered
+	* set the default value of 'enablePage' option to false
+
+	* バッファリングしない書き込みでは書き込み遅延を行わないようにした
+	* 'enablePage' オプションの既定値を false にした
+
 0.6.468
 
 	* add a,l options for interactive :s

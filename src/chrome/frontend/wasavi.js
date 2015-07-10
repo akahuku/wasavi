@@ -2796,6 +2796,22 @@ function getNextProp (n) {
 	}
 	return p;
 }
+function setTabStop (ts) {
+	var editor = $('wasavi_editor');
+	if (!editor) return;
+
+	ts || (ts = 8);
+	var editorStyle = document.defaultView.getComputedStyle(editor, '');
+	['OTabSize', 'MozTabSize', 'WebkitTabSize', 'MsTabSize', 'tabSize'].some(function (pn) {
+		if (!(pn in editorStyle)) return false;
+		editor.style[pn] = ts;
+		['wasavi_singleline_scaler'].forEach(function (en) {
+			en = $(en);
+			if (en) en.style[pn] = ts;
+		});
+		return true;
+	});
+}
 
 /*
  * low-level functions for cursor motion {{{1
