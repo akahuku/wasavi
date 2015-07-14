@@ -286,8 +286,13 @@ flag23_loop:
 
 			case 'b':
 				// [register name]
-				if (/[+\-^#]+\s*$/.test(line)
-				&& syntax.indexOf('1') >= 0) {
+				if (line == '') {
+					break syntax_expansion_loop;
+				}
+				if (/[+\-^#]+\s*$/.test(line) && syntax.indexOf('1') >= 0) {
+					break;
+				}
+				if (/^\d/.test(line) && syntax.charAt(i + 1) == 'c' && !spc('S').test(line.charAt(1))) {
 					break;
 				}
 				if (!app.registers.isReadable(line.charAt(0))) {
@@ -311,6 +316,9 @@ flag23_loop:
 				// c+: accepts preceding sign (optional), and a count that >= 1
 				// ca: accepts a count that >= 1, and range will be adjusted
 				ch = syntax.charAt(++i);
+				if (line == '') {
+					break syntax_expansion_loop;
+				}
 
 				var re = /^\d+/.exec(line);
 				if (!re && ch == '+') {
@@ -343,6 +351,9 @@ flag23_loop:
 
 			case 'l':
 				// [destination address]
+				if (line == '') {
+					break syntax_expansion_loop;
+				}
 				var dest = parseRange(app, line, 1, true);
 				if (typeof dest == 'string') {
 					return dest;
@@ -383,7 +394,7 @@ flag23_loop:
 					var tmp = ch - 0;
 					ch = syntax.charAt(++i);
 					if ((ch != 'o' || result.argv.length != 0) && result.argv.length != tmp) {
-						return _('Arguments count mismatch.');
+						return _('Missing required argument.');
 					}
 				}
 				needCheckRest = false;
@@ -413,26 +424,29 @@ flag23_loop:
 			result.argv = argv;
 		}
 		result.args = args || '';
-
-		for (var i = 0, goal = result.range.length; i < goal; i++) {
+		return result;
+	},
+	fixupRange: function (app, range) {
+		for (var i = 0, goal = range.length; i < goal; i++) {
 			if (!this.flags.addrZero) {
-				result.range[i] = Math.max(0, result.range[i]);
+				range[i] = Math.max(0, range[i]);
 			}
 			if (this.flags.roundMax) {
-				result.range[i] = Math.min(app.buffer.rowLength - 1, result.range[i]);
+				range[i] = Math.min(app.buffer.rowLength - 1, range[i]);
 			}
 			else {
-				if (result.range[i] >= app.buffer.rowLength) {
+				if (range[i] >= app.buffer.rowLength) {
 					return _('{0}: Out of range.', this.name);
 				}
 			}
 		}
-		return result;
+		return range;
 	},
 	run: function (app, args) {
 		var result;
 		try {
-			result = this.handler(app, app.buffer, args);
+			var t = app.buffer;
+			result = this.handler(app, t, args);
 		}
 		catch (e) {
 			result = e.toString();
@@ -539,25 +553,26 @@ function writeCore (app, t, a, pa) {
 function globalLatterHead (app, t, a) {
 	var opcode = app.exvm.inst.currentOpcode;
 	var items = opcode.items;
-	var item = null;
 
 	if (app.exvm.lastError) {
 		app.editLogger.close();
 		return app.exvm.lastError;
 	}
 
+	var row = -1;
 	while (items.length) {
-		item = items.shift();
+		row = -1;
+		var item = items.shift();
 		if (item.parentNode) {
-			break;
-		}
-		else {
-			item = null;
+			row = t.indexOf(item);
+			if (0 <= row && row <= t.rowLength - 1) {
+				break;
+			}
 		}
 	}
 
-	if (item) {
-		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(t.indexOf(item), 0)));
+	if (row >= 0) {
+		t.setSelectionRange(t.getLineTopOffset2(new Wasavi.Position(row, 0)));
 	}
 	else {
 		app.exvm.inst.errorVectors.pop();

@@ -959,8 +959,8 @@ var unicodeUtils = (function () {
 		}
 		var s = source;
 		s = s.replace(/S/, REGEX_ZS.source);
-		s = s.replace(/(\[[^\[]*)\[/g, '$1');
-		s = s.replace(/\]([^\]]*\])/g, '$1');
+		s = s.replace(/(\[[^\[\]]*)\[/g, '$1');
+		s = s.replace(/\]([^\[\]]*\])/g, '$1');
 		if (g) {
 			return new RegExp(s, opts);
 		}

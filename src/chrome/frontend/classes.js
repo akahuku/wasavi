@@ -2872,6 +2872,44 @@ whole:
 				this.selectionEnd = s;
 			}
 		},
+		clipPosition: function () {
+			function doClip (s) {
+				var clipped = false;
+				var n;
+				if (s.row < 0) {
+					s.row = 0;
+					clipped = true;
+				}
+				else if (s.row > (n = this.rowLength - 1)) {
+					s.row = n;
+					clipped = true;
+				}
+				if (s.col < 0) {
+					s.col = 0;
+					clipped = true;
+				}
+				else if (s.col > (n = this.elm.childNodes[s.row].textContent.length)) {
+					s.col = n;
+					clipped = true;
+				}
+				return clipped ? s : null;
+			}
+			var s = this.selectionStart;
+			var e = this.selectionEnd;
+			if (s.eq(e)) {
+				s = doClip.call(this, s);
+				if (s) {
+					this.selectionStart = s;
+					this.selectionEnd = s;
+				}
+			}
+			else {
+				s = doClip(this, s);
+				e = doClip(this, e);
+				s && (this.selectionStart = s);
+				e && (this.selectionEnd = e);
+			}
+		},
 
 		// getter properties
 		get rowLength () {

@@ -252,6 +252,10 @@
     "message": "{0}: 未知のエラーです。",
     "description": "{0}: unknown error."
   },
+  "@0_unknown_range_error": {
+    "message": "{0}: 範囲について未知のエラーです。",
+    "description": "{0}: unknown range error."
+  },
   "@0_unknown_syntax_error": {
     "message": "{0}: 不明な文法エラーです。",
     "description": "{0}: unknown syntax error."
@@ -307,10 +311,6 @@
   "appending_is_not_implemented": {
     "message": "追記は実装されていません。",
     "description": "Appending is not implemented."
-  },
-  "arguments_count_mismatch": {
-    "message": "引数の個数が合っていません。",
-    "description": "Arguments count mismatch."
   },
   "authentication_declined_@0": {
     "message": "認証が拒否されました: {0}",
@@ -659,6 +659,10 @@
   "missing_a_number": {
     "message": "数値がありません。",
     "description": "Missing a number."
+  },
+  "missing_required_argument": {
+    "message": "引数が足りません。",
+    "description": "Missing required argument."
   },
   "modified": {
     "message": "変更済み",

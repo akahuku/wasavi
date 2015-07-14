@@ -443,6 +443,12 @@ function ExCommandExecutor (app) {
 				return false;
 			}
 
+			argObj.range = commandObj.fixupRange(app, argObj.range);
+			if (typeof argObj.range == 'string') {
+				resultMessage = argObj.range || _('{0}: unknown range error.', commandObj.name);
+				return false;
+			}
+
 			add(commandObj, argObj, range.source);
 			return true;
 		}
@@ -792,7 +798,7 @@ function ExCommandExecutor (app) {
 	function raiseError (command, errorMessage) {
 		lastError = errorMessage || _('{0}: unknown error.', command.name);
 		if (errorVectors.length) {
-			pc = errorVectors.lastItem;
+			pc = errorVectors.pop();
 		}
 		else {
 			pc = pc < opcodes.length - 1 ? opcodes.length - 1 : pc + 1;
@@ -827,9 +833,18 @@ function ExCommandExecutor (app) {
 					raiseError(command, newRange);
 					continue;
 				}
-				opcode.args.range = newRange.rows.last(
-					buffer, opcode.command.rangeCount,
-					opcode.command.flags.addr2All);
+
+				newRange = newRange.rows.last(
+					buffer, command.rangeCount,
+					command.flags.addr2All);
+
+				newRange = command.fixupRange(app, newRange);
+				if (isString(newRange)) {
+					raiseError(command, newRange);
+					continue;
+				}
+
+				opcode.args.range = newRange;
 			}
 
 			pcOverride = false;
@@ -874,7 +889,8 @@ function ExCommandExecutor (app) {
 		running = false;
 		clear();
 
-		lastError && requestShowMessage(lastError, true);
+		lastError && app.low.requestShowMessage(lastError, true);
+		(!app.requestedState.console || app.requestedState.modeline) && app.low.requestConsoleState(true);
 		async && processInput(app.keyManager.nopObject);
 
 		setTimeout(function (executes) {
@@ -1631,9 +1647,11 @@ function completeSelectionRange (ss, se) {
 		buffer.setSelectionRange(e);
 	}
 
-	if (buffer.selectionStart.ne(buffer.selectionEnd)) {
+	if (buffer.selected) {
 		buffer.setSelectionRange(buffer.selectionStart);
 	}
+
+	buffer.clipPosition();
 }
 function doEditComplete () {
 	config.setData('modified');
@@ -5133,10 +5151,13 @@ var modeHandlers = {
 			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
 
 			if (inputHandler.count > 1) {
-				var cmd = keyManager.createSequences(finalStrokeFollowed);
+				var strokes = keyManager.createSequences(finalStrokeFollowed);
+				var pe = {};
+				var goal = strokes.length;
 				for (var i = 1; i < inputHandler.count; i++) {
-					for (var j = 0, goal = cmd.length; j < goal; j++) {
-						processInput(cmd[j]);
+					for (var j = 0; j < goal; j++) {
+						strokes[j].nativeEvent = pe;
+						processInput(strokes[j]);
 					}
 				}
 			}
@@ -5706,7 +5727,7 @@ var commandMap = {
 			}
 		}
 		else {
-			pos = searchUtils.findMatchedBracket();
+			pos = searchUtils.findMatchedBracket(1);
 		}
 		if (!pos) {
 			return inputEscape(o.e.key);

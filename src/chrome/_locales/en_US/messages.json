@@ -252,6 +252,10 @@
     "message": "{0}: unknown error.",
     "description": "{0}: unknown error."
   },
+  "@0_unknown_range_error": {
+    "message": "{0}: unknown range error.",
+    "description": "{0}: unknown range error."
+  },
   "@0_unknown_syntax_error": {
     "message": "{0}: unknown syntax error.",
     "description": "{0}: unknown syntax error."
@@ -307,10 +311,6 @@
   "appending_is_not_implemented": {
     "message": "Appending is not implemented.",
     "description": "Appending is not implemented."
-  },
-  "arguments_count_mismatch": {
-    "message": "Arguments count mismatch.",
-    "description": "Arguments count mismatch."
   },
   "authentication_declined_@0": {
     "message": "Authentication declined: {0}",
@@ -659,6 +659,10 @@
   "missing_a_number": {
     "message": "Missing a number.",
     "description": "Missing a number."
+  },
+  "missing_required_argument": {
+    "message": "Missing required argument.",
+    "description": "Missing required argument."
   },
   "modified": {
     "message": "modified",
