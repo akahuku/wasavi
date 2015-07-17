@@ -256,7 +256,7 @@ public class RangeSymbolsTest extends WasaviTest {
 
 	@Test
 	public void block_all_outer () {
-		Wasavi.send("iabc ( def (ghi) jkl) mno\u001b");
+		Wasavi.send("iabc （ def (ghi) jkl） mno\u001b");
 		Wasavi.send("1|ya(");
 		assertEquals("#1", "", Wasavi.getRegister("\""));
 		assertTrue("#2", Wasavi.getLastMessage().length() > 0);
@@ -264,31 +264,31 @@ public class RangeSymbolsTest extends WasaviTest {
 
 	@Test
 	public void block_all_top () {
-		Wasavi.send("iabc ( def (ghi) jkl) mno\u001b");
+		Wasavi.send("iabc （ def (ghi) jkl） mno\u001b");
 		Wasavi.send("5|ya(");
 
-		assertEquals("#1", "( def (ghi) jkl)", Wasavi.getRegister("\""));
+		assertEquals("#1", "（ def (ghi) jkl）", Wasavi.getRegister("\""));
 	}
 
 	@Test
 	public void block_all_inner () {
-		Wasavi.send("iabc ( def (ghi) jkl) mno\u001b");
+		Wasavi.send("iabc （ def (ghi) jkl） mno\u001b");
 		Wasavi.send("8|ya(");
 
-		assertEquals("#1", "( def (ghi) jkl)", Wasavi.getRegister("\""));
+		assertEquals("#1", "（ def (ghi) jkl）", Wasavi.getRegister("\""));
 	}
 
 	@Test
 	public void block_all_bottom () {
-		Wasavi.send("iabc ( def (ghi) jkl) mno\u001b");
+		Wasavi.send("iabc （ def (ghi) jkl） mno\u001b");
 		Wasavi.send("20|ya(");
 
-		assertEquals("#1", "( def (ghi) jkl)", Wasavi.getRegister("\""));
+		assertEquals("#1", "（ def (ghi) jkl）", Wasavi.getRegister("\""));
 	}
 
 	@Test
 	public void block_all_error () {
-		Wasavi.send("iabc ( def (ghi) jkl mno\u001b");
+		Wasavi.send("iabc （ def (ghi) jkl mno\u001b");
 		Wasavi.send("8|ya(");
 
 		assertEquals("#1", "", Wasavi.getRegister("\""));

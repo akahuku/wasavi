@@ -820,7 +820,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("i1\n2\n3\u001b");
 
 		Wasavi.send(":2G\n:k\n");
-		assertEquals("#1-1", "k: Invalid argument.", Wasavi.getLastMessage());
+		assertEquals("#1-1", "k: Missing required argument.", Wasavi.getLastMessage());
 
 		Wasavi.send(":3G\n:ka\n");
 		Wasavi.send(":1\n:'a\n");
@@ -838,14 +838,14 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":map XQ G\n");
 		Wasavi.send(":map\n");
 		assertEquals("#2-1", join("\n",
-			"*** command mode map ***",
+			"*** command mode maps ***",
 			"Q \t1G",
 			"XQ\tG"
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":map X\n");
 		assertEquals("#3-1", join("\n",
-			"*** command mode map ***",
+			"*** command mode maps ***",
 			"XQ\tG"
 		), Wasavi.getLastMessage());
 
@@ -988,7 +988,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("i1\n2\n3\u001b");
 
 		Wasavi.send(":2G\n:mark\n");
-		assertEquals("#1-1", "mark: Invalid argument.", Wasavi.getLastMessage());
+		assertEquals("#1-1", "mark: Missing required argument.", Wasavi.getLastMessage());
 
 		Wasavi.send(":3G\n:mark a\n");
 		Wasavi.send(":1\n:'a\n");
@@ -1214,6 +1214,19 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("G", ":0pu *\n");
 		assertValue("#5-1", "clipboard text\nfoo\nfoo\nbar\nfoo\nbar");
 		assertPos("#5-2", 0, 0);
+
+		Wasavi.send("gg\"1y2y");
+		Wasavi.send(":0pu 1\n");
+		assertValue("#6-1",
+			"clipboard text\n" +
+			"foo\n" +
+			"clipboard text\n" +
+			"foo\n" +
+			"foo\n" +
+			"bar\n" +
+			"foo\n" +
+			"bar");
+		assertPos("#6-2", 0, 0);
 	}
 
 	@Test
@@ -1401,16 +1414,13 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send("ifirst\nsecond\nthird\u001b");
 
 		Wasavi.send("1G", ":%s/i/I/gc\n");
-		Wasavi.send("y", "y");
-		assertEquals("#1-1", "2 substitutions on 3 lines.", Wasavi.getLastMessage());
-		assertValue("#1-2", "fIrst\nsecond\nthIrd");
+		Wasavi.send("n", "y");
+		assertEquals("#1-1", "1 substitution on 3 lines.", Wasavi.getLastMessage());
+		assertValue("#1-2", "first\nsecond\nthIrd");
 		assertPos("#1-3", 2, 0);
 
 		Wasavi.send("u");
-		assertValue("#2-1", "fIrst\nsecond\nthird");
-
-		Wasavi.send("u");
-		assertValue("#3-1", "first\nsecond\nthird");
+		assertValue("#2-1", "first\nsecond\nthird");
 	}
 
 	@Test
@@ -1425,6 +1435,68 @@ public class ExCommandsTest extends WasaviTest {
 
 		Wasavi.send("u");
 		assertValue("#2-1", "first\nsecond\nthird");
+	}
+
+	@Test
+	public void testSubstQueriedAll () {
+		Wasavi.send(
+			"i" +
+			"first\n" +
+			"second\n" +
+			"third" +
+			"\u001b");
+
+		Wasavi.send("1G:%s/[a-f]/\\U&/gc\n");
+		Wasavi.send("nna");
+		assertEquals("#1-1", "3 substitutions on 3 lines.", Wasavi.getLastMessage());
+		assertValue("#1-2",
+			"first\n" +
+			"seConD\n" +
+			"thirD");
+		assertPos("#1-3", 2, 0);
+
+		Wasavi.send("u");
+		assertValue("#2-1",
+			"first\n" +
+			"second\n" +
+			"third");
+	}
+
+	@Test
+	public void testSubstQueriedLast () {
+		Wasavi.send(
+			"i" +
+			"first\n" +
+			"second\n" +
+			"third" +
+			"\u001b");
+
+		Wasavi.send("1G:%s/[a-f]/\\U&/gc\n");
+		Wasavi.send("yyl");
+		assertEquals("#1-1", "3 substitutions on 3 lines.", Wasavi.getLastMessage());
+		assertValue("#1-2",
+			"First\n" +
+			"sECond\n" +
+			"third");
+		assertPos("#1-3", 1, 0);
+
+		Wasavi.send("u");
+		assertValue("#2-1",
+			"First\n" +
+			"sEcond\n" +
+			"third");
+
+		Wasavi.send("u");
+		assertValue("#2-1",
+			"First\n" +
+			"second\n" +
+			"third");
+
+		Wasavi.send("u");
+		assertValue("#2-1",
+			"first\n" +
+			"second\n" +
+			"third");
 	}
 
 	@Test
@@ -1845,7 +1917,7 @@ public class ExCommandsTest extends WasaviTest {
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":unabbreviate\n");
-		assertEquals("#2-1", "unabbreviate: Invalid argument.", Wasavi.getLastMessage());
+		assertEquals("#2-1", "unabbreviate: Missing required argument.", Wasavi.getLastMessage());
 
 		Wasavi.send(":unabb xyz\n");
 		assertEquals("#3-1", "unabbreviate: xyz is not an abbreviation.", Wasavi.getLastMessage());
@@ -1861,12 +1933,12 @@ public class ExCommandsTest extends WasaviTest {
 	public void testUnmap () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":unmap\n");
-		assertEquals("#1-1", "unmap: Invalid argument.", Wasavi.getLastMessage());
+		assertEquals("#1-1", "unmap: Missing required argument.", Wasavi.getLastMessage());
 
 		Wasavi.send(":map H ^\n");
 		Wasavi.send(":map\n");
 		assertEquals("#1-1", join("\n",
-			"*** command mode map ***",
+			"*** command mode maps ***",
 			"H\t^"
 		), Wasavi.getLastMessage());
 
@@ -2168,6 +2240,46 @@ public class ExCommandsTest extends WasaviTest {
 	public void testFileWithFileName () {
 		Wasavi.send(":file foobar.txt\n");
 		assertEquals("#1-1", "file: Only stand alone form can rename.", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void pasteCalcRegisterDirect () {
+		Wasavi.send(":0put =99*99\n");
+		assertValue("#1-1", "9801");
+	}
+
+	@Test
+	public void pasteCalcRegisterIndirect () {
+		Wasavi.send(":put =\n");
+		assertValue("#1-1", "");
+		assertEquals("#1-2", "put: Register = is empty.", Wasavi.getLastMessage());
+
+		Wasavi.send("\"=99*99\nP");
+		assertValue("#2-1", "9801");
+
+		Wasavi.send(":put =\n");
+		assertValue("#3-1", "9801\n9801");
+	}
+
+	@Test
+	public void sort () {
+		String[][] tests = {
+			{"", "xyz\nfoo\nbar", "bar\nfoo\nxyz"},
+			{"", "xyz \\\nfoo \\\nbar", "bar \\\nfoo \\\nxyz"},
+			{"", "xyz,\nfoo,\nbar", "bar,\nfoo,\nxyz"},
+			{"i", "Foo\nbar\nBAZ", "bar\nBAZ\nFoo"},
+			{"/\\d\\+/", "foo4baz\nbar3bar\nbaz1frr", "bar3bar\nfoo4baz\nbaz1frr"},
+			{"/\\d\\+/r", "foo4baz\nbar3bar\nbaz1frr", "baz1frr\nbar3bar\nfoo4baz"},
+			{"/\\d\\+/i", "foo4baZ\nbar3bar\nbaz1frr", "bar3bar\nfoo4baZ\nbaz1frr"},
+			{"/[a-zA-Z]\\+/ri", "345c847\n123a456\n537B183", "123a456\n537B183\n345c847"},
+			{"c3", "foo897\nbar532\nzoo321", "zoo321\nbar532\nfoo897"},
+			{"c3i", "321zoo\n532bar\n897Foo", "532bar\n897Foo\n321zoo"}
+		};
+		for (String[] t: tests) {
+			Wasavi.send("ggcG" + t[1] + "\u001b");
+			Wasavi.send(":sort " + t[0] + "\n");
+			assertValue(t[2]);
+		}
 	}
 }
 

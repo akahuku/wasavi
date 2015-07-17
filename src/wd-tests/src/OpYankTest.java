@@ -1038,6 +1038,114 @@ public class OpYankTest extends WasaviTest {
 		assertEquals("#2-1", "def\nghi ", Wasavi.getRegister("\""));
 		assertPos("#2-2", 0, 4);
 	}
+
+	@Test
+	public void yankCurrentWordForward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"foo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|y*");
+		/*
+		 * This is different from vim.
+		 * The result in vim is: "o\nbar\nbaz" (last newline is trimmed).
+		 */
+		assertEquals("#1-1",
+			"o\n" +
+			"bar\n" +
+			"baz\n",
+			Wasavi.getRegister("\""));
+	}
+
+	@Test
+	public void yankCurrentWordForward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"\tfoo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|y*");
+		assertEquals("#1-1",
+			"o\n" +
+			"bar\n" +
+			"baz\n" +
+			"\t",
+			Wasavi.getRegister("\""));
+	}
+
+	@Test
+	public void yankCurrentWordBackward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|y#");
+		assertEquals("#1-1",
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"fo",
+			Wasavi.getRegister("\""));
+	}
+
+	@Test
+	public void yankCurrentWordBackward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"\tfoo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|y#");
+		assertEquals("#1-1",
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"fo",
+			Wasavi.getRegister("\""));
+	}
+
+	@Test
+	public void yankToPercentageRow () {
+		Wasavi.send("ifoo bar baz bax\u001byy4p");
+		Wasavi.send("gg2wy100%");
+		assertEquals("#1-1",
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n",
+			Wasavi.getRegister("\""));
+
+		Wasavi.send("yy");
+		assertEquals("foo bar baz bax\n", Wasavi.getRegister("\""));
+
+		Wasavi.send("G2wy1%");
+		assertEquals("#2-1",
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n",
+			Wasavi.getRegister("\""));
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

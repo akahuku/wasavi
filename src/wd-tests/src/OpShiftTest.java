@@ -1196,6 +1196,107 @@ public class OpShiftTest extends WasaviTest {
 		assertEquals("#2-1", "\tabc def\n\tghi foo\nbaz", Wasavi.getValue());
 		assertPos("#2-2", 0, 1);
 	}
+
+	@Test
+	public void shiftCurrentWordForward () {
+		Wasavi.send(":set sw=8 noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"foo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|>*");
+		assertValue("#1-1",
+			"\tfoo\n" +
+			"\tbar\n" +
+			"\tbaz\n" +
+			"foo\n" +
+			"bax");
+	}
+
+	@Test
+	public void shiftCurrentWordForward2 () {
+		Wasavi.send(":set sw=8 noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"\tfoo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|>*");
+		assertValue("#1-1",
+			"\tfoo\n" +
+			"\tbar\n" +
+			"\tbaz\n" +
+			"\t\tfoo\n" +
+			"bax");
+	}
+
+	@Test
+	public void shiftCurrentWordBackward () {
+		Wasavi.send(":set sw=8 noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|>#");
+		assertValue("#1-1",
+			"bax\n" +
+			"\tfoo\n" +
+			"\tbaz\n" +
+			"\tbar\n" +
+			"\tfoo");
+	}
+
+	@Test
+	public void shiftCurrentWordBackward2 () {
+		Wasavi.send(":set sw=8 noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"\tfoo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|>#");
+		assertValue("#1-1",
+			"bax\n" +
+			"\t\tfoo\n" +
+			"\tbaz\n" +
+			"\tbar\n" +
+			"\tfoo");
+	}
+
+	@Test
+	public void shiftToPercentageRow () {
+		Wasavi.send(":set sw=8\n");
+		Wasavi.send("ifoo bar baz bax\u001byy4p");
+		Wasavi.send("gg2w>100%");
+		assertValue("#1-1",
+			"\tfoo bar baz bax\n" +
+			"\tfoo bar baz bax\n" +
+			"\tfoo bar baz bax\n" +
+			"\tfoo bar baz bax\n" +
+			"\tfoo bar baz bax");
+
+		Wasavi.send("G2w<1%");
+		assertValue("#2-1",
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax\n" +
+			"foo bar baz bax");
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

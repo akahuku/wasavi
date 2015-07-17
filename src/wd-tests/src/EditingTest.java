@@ -1111,4 +1111,11 @@ public class EditingTest extends WasaviTest {
 		assertEquals("#1-1", "\tfoo bar\nBAZ BAX", Wasavi.getValue());
 		assertPos("#1-2", 0, 1);
 	}
+
+	@Test
+	public void getCodePointUnderCursor () {
+		Wasavi.send("ifoo bar\u001b");
+		Wasavi.send("0ga");
+		assertEquals("#1-1", "\"f\" U+0066 (102)", Wasavi.getLastMessage());
+	}
 }

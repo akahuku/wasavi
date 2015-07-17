@@ -691,6 +691,12 @@ public class OpChangeTest extends WasaviTest {
 		assertTrue("#4-2", "".equals(Wasavi.getLastMessage()));
 		assertPos("#4-3", 0, 2);
 		assertEquals("#4-4", "X Y Z\nbax", Wasavi.getRegister("\""));
+
+		Wasavi.send("cc    foo bar baz\u001b0cwbax\u001b");
+		assertValue("#5-1", "baxfoo bar baz");
+		assertEquals("#5-2", "", Wasavi.getLastMessage());
+		assertPos("#5-3", 0, 2);
+		assertEquals("#5-4", "    ", Wasavi.getRegister("\""));
 	}
 
 	@Test
@@ -1186,6 +1192,84 @@ public class OpChangeTest extends WasaviTest {
 		assertEquals("#2-1", "def\nghi ", Wasavi.getRegister("\""));
 		assertEquals("#2-2", "abc XYZfoo\nbaz", Wasavi.getValue());
 		assertPos("#2-3", 0, 6);
+	}
+
+	@Test
+	public void changeCurrentWordForward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"foo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|c*FOO\u001b");
+		assertValue("#1-1",
+			"foFOO\n" +
+			"foo\n" +
+			"bax");
+	}
+
+	@Test
+	public void changeCurrentWordForward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"\tfoo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|c*FOO\u001b");
+		assertValue("#1-1",
+			"foFOOfoo\n" +
+			"bax");
+	}
+
+	@Test
+	public void changeCurrentWordBackward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|c#FOO\u001b");
+		assertValue("#1-1",
+			"bax\n" +
+			"FOOo");
+	}
+
+	@Test
+	public void changeCurrentWordBackward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"\tfoo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|c#FOO\u001b");
+		assertValue("#1-1",
+			"bax\n" +
+			"\tFOOo");
+	}
+
+	@Test
+	public void changeToPercentageRow () {
+		Wasavi.send("ifoo bar baz bax\u001byy4pgg2wc100%percentage\u001b");
+		assertValue("#1-1", "percentage");
+
+		Wasavi.send("ccfoo bar baz bax\u001byy4pG2wc1%percentage\u001b");
+		assertValue("#1-2", "percentage");
 	}
 }
 

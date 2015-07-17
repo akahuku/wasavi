@@ -1013,6 +1013,84 @@ public class OpDeleteTest extends WasaviTest {
 		assertEquals("#2-1", "abc foo\nbaz", Wasavi.getValue());
 		assertPos("#2-2", 0, 4);
 	}
+
+	@Test
+	public void deleteCurrentWordForward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"foo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|d*");
+		assertValue("#1-1",
+			"fo\n" +
+			"foo\n" +
+			"bax");
+	}
+
+	@Test
+	public void deleteCurrentWordForward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"bar\n" +
+			"baz\n" +
+			"\tfoo\n" +
+			"bax" +
+			"\u001b");
+		Wasavi.send("1G3|d*");
+		assertValue("#1-1",
+			"fofoo\n" +
+			"bax");
+	}
+
+	@Test
+	public void deleteCurrentWordBackward () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"foo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|d#");
+		assertValue("#1-1",
+			"bax\n" +
+			"o");
+	}
+
+	@Test
+	public void deleteCurrentWordBackward2 () {
+		Wasavi.send(":set noai\n");
+		Wasavi.send(
+			"i" +
+			"bax\n" +
+			"\tfoo\n" +
+			"baz\n" +
+			"bar\n" +
+			"foo" +
+			"\u001b");
+		Wasavi.send("5G3|d#");
+		assertValue("#1-1",
+			"bax\n" +
+			"\to");
+	}
+
+	@Test
+	public void deleteToPercentageRow () {
+		Wasavi.send("ifoo bar baz bax\u001byy4pgg2wd100%");
+		assertValue("#1-1", "");
+
+		Wasavi.send("ccfoo bar baz bax\u001byy4pG2wd1%");
+		assertValue("#1-2", "");
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */

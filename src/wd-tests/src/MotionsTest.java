@@ -227,6 +227,19 @@ public class MotionsTest extends WasaviTest {
 	}
 
 	@Test
+	public void jumpToRowByPercentage () {
+		Wasavi.makeScrollableBuffer(2);
+		int lines = Wasavi.getRow() + 1;
+		int expectedRow = (int)(lines * 0.5);
+
+		Wasavi.send("50%");
+		assertEquals("#1-1", expectedRow, Wasavi.getRow());
+
+		Wasavi.send("1000%");
+		assertEquals("#2-1", "% canceled.", Wasavi.getLastMessage());
+	}
+
+	@Test
 	public void testSearchForward () {
 		Wasavi.send(":set noai\n");
 		Wasavi.send("ifirst line\n\tsecond line\n\tthird line\u001b", "gg");
@@ -780,7 +793,7 @@ public class MotionsTest extends WasaviTest {
 	@Test
 	public void testWordForward () {
 		Wasavi.send(":set noai\n");
-		String base = "first second\n\tthird word";
+		String base = "first sëcond\n\tthird word";
 		Wasavi.send("i" + base + "\u001bgg");
 
 		assertPos("#1", 0, 0);
@@ -810,7 +823,7 @@ public class MotionsTest extends WasaviTest {
 
 	@Test
 	public void testWordBackward () {
-		Wasavi.send("ifirst second\n\tthird word\u001b");
+		Wasavi.send("ifirst sëcond\n\tthird word\u001b");
 
 		assertPos("#1", 1, 10);
 
@@ -1073,6 +1086,93 @@ public class MotionsTest extends WasaviTest {
 		Wasavi.send("N");
 		assertPos("#6", 1, 0);
 	}
+
+	@Test
+	public void star () {
+		Wasavi.send(":set wrapscan noai\n");
+
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"\tbar\n" +
+			"fffooo\n" +
+			"bbbarr\n" +
+			"\tfoo\n" +
+			"bar" +
+			"\u001b");
+
+		// cursor is on the word
+		Wasavi.send("1G1|*");
+		assertPos("#1-1", 4, 1);
+		assertEquals("#1-2", "\\<foo\\>", Wasavi.getRegister("/"));
+
+		// direction test
+		Wasavi.send("n");
+		assertPos("#1-3", 0, 0);
+
+		// cursor is on the space which precedes a word
+		Wasavi.send("2G1|*");
+		assertPos("#2-1", 5, 0);
+		assertEquals("#2-2", "\\<bar\\>", Wasavi.getRegister("/"));
+
+		// direction test
+		Wasavi.send("n");
+		assertPos("#2-3", 1, 1);
+	}
+
+	@Test
+	public void starError () {
+		Wasavi.send("*");
+		assertEquals("#1-1", "No word under the cursor.", Wasavi.getLastMessage());
+
+		Wasavi.send("i\t\t\t\u001b");
+		Wasavi.send("0#");
+		assertEquals("#2-1", "No word under the cursor.", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void hash () {
+		Wasavi.send(":set wrapscan noai\n");
+
+		Wasavi.send(
+			"i" +
+			"foo\n" +
+			"\tbar\n" +
+			"fffooo\n" +
+			"bbbarr\n" +
+			"\tfoo\n" +
+			"bar" +
+			"\u001b");
+
+		// cursor is on the word
+		Wasavi.send("6G1|#");
+		assertPos("#1-1", 1, 1);
+		assertEquals("#1-2", "\\<bar\\>", Wasavi.getRegister("/"));
+
+		// direction test
+		Wasavi.send("n");
+		assertPos("#1-3", 5, 0);
+
+		// cursor is on the space which precedes a word
+		Wasavi.send("5G1|#");
+		assertPos("#2-1", 0, 0);
+		assertEquals("#2-2", "\\<foo\\>", Wasavi.getRegister("/"));
+
+		// direction test
+		Wasavi.send("n");
+		assertPos("#2-3", 4, 1);
+	}
+
+	@Test
+	public void hashError () {
+		Wasavi.send("#");
+		assertEquals("#1-1", "No word under the cursor.", Wasavi.getLastMessage());
+
+		Wasavi.send("i\t\t\t\u001b");
+		Wasavi.send("0#");
+		assertEquals("#2-1", "No word under the cursor.", Wasavi.getLastMessage());
+	}
+
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */
