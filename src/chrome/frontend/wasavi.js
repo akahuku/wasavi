@@ -948,10 +948,11 @@ function ExCommandExecutor (app) {
 diag('defining functions');
 
 /*
- * low-level functions for application management {{{1
+ * low-level functions {{{1
  * ----------------
  */
 
+// for application management
 function log () {
 	logMode && console.log('wasavi: ' + toArray(arguments).join(' '));
 }
@@ -961,20 +962,103 @@ function info () {
 function error () {
 	logMode && console.error('wasavi: ' + toArray(arguments).join(' '));
 }
-function getLocalStorage (keyName, callback) {
-	extensionChannel.postMessage(
-		{type:'get-storage', key:keyName},
-		function (res) {
-			callback && callback(res.value);
-		}
-	);
-}
-function setLocalStorage (keyName, value) {
+function notifyToParent (eventName, payload) {
+	if (!extensionChannel || extensionChannel.isTopFrame()) return;
+	payload || (payload = {});
+	payload.type = eventName;
 	extensionChannel.postMessage({
-		type:'set-storage',
-		key:keyName,
-		value:value
+		type: 'transfer',
+		to: targetElement.parentInternalId,
+		payload: payload
 	});
+}
+function notifyActivity (code, key, note) {
+	if (!testMode || !extensionChannel) return;
+	if (extensionChannel.isTopFrame()) {
+		if (!document.documentElement.getAttribute('data-wasavi-command-state')) {
+			document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
+		}
+	}
+	else {
+		notifyToParent('notify-keydown', {
+			keyCode:code,
+			key:key,
+			eventType:note
+		});
+	}
+}
+function notifyCommandComplete (eventName, modeOverridden) {
+	//if (exvm.inst.opcodes.length) return;
+	if (!testMode || !extensionChannel) return;
+	eventName || (eventName = 'command-completed');
+	var pt = new Position(getCurrentViewPositionIndices().top, 0);
+	var currentState = {
+		running:    !!targetElement,
+		state:      state,
+		inputMode:  modeOverridden || inputMode,
+		lastMessage:lastMessage,
+		lastSimpleCommand: lastSimpleCommand,
+		value:      buffer.value,
+		row:        buffer.selectionStartRow,
+		col:        buffer.selectionStartCol,
+		topRow:     pt.row,
+		topCol:     pt.col,
+		rowLength:  buffer.elm.childNodes.length,
+		registers:  registers.dumpData(),
+		marks:      marks.dumpData(),
+		lines:      config.vars.lines,
+		lineInput:  state == 'line_input' ? $('wasavi_footer_input').value : ''
+	};
+	if (extensionChannel.isTopFrame()) {
+		document.documentElement.removeAttribute('data-wasavi-command-state');
+		document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
+		document.documentElement.setAttribute('data-wasavi-state', JSON.stringify(currentState));
+	}
+	else {
+		notifyToParent(eventName, {state:currentState});
+	}
+}
+function registerMultiplexCallback (id, callback) {
+	if (multiplexCallbackId != undefined) {
+		throw new Error(_('Already in a pending state.'));
+	}
+	if (isString(callback)) {
+		switch (callback) {
+		case 'read':
+			callback = getReadHandler(id);
+			break;
+		case 'write':
+			callback = getWriteHandler(id);
+			break;
+		case 'edit':
+			callback = getEditHandler(id);
+			break;
+		case 'chdir':
+			callback = getChdirHandler(id);
+			break;
+		}
+	}
+	if (isFunction(callback)) {
+		extensionChannel.preservedCallbacks[id] = callback;
+	}
+	multiplexCallbackId = id;
+}
+function removeMultiplexCallback (id) {
+	if (multiplexCallbackId) {
+		if (id != multiplexCallbackId) {
+			throw new Error(_('Pending Request ID mismatch.'));
+		}
+		extensionChannel.removeCallback(multiplexCallbackId);
+	}
+	multiplexCallbackId = undefined;
+}
+function interruptMultiplexCallback () {
+	if (multiplexCallbackId) {
+		extensionChannel.interruptCallback(multiplexCallbackId, {
+			error:[_('The ex command was interrupted.')]
+		});
+	}
+	multiplexCallbackId = undefined;
 }
 function install (x, req) {
 	/*
@@ -1375,75 +1459,8 @@ function setupEventHandlers (install) {
 
 	cursor.setupEventHandlers(install);
 }
-function setGeometory (target) {
-	if (target == undefined) {
-		target = targetElement;
-	}
-	if (!target) {
-		return;
-	}
 
-	var container = $('wasavi_container');
-	var editor = $('wasavi_editor');
-	var footer = $('wasavi_footer');
-	var conCon = $('wasavi_console_container');
-	var con = $('wasavi_console');
-	var conScaler = $('wasavi_console_scaler');
-	var fNotifier = $('wasavi_footer_notifier');
-	var curLine = $('wasavi_cursor_line');
-	var curCol = $('wasavi_cursor_column');
-
-	if (!container || !editor || !footer || !conCon || !con || !conScaler
-	||  !fNotifier || !curLine || !curCol) {
-		throw new Error(
-			'setGeometory: invalid element: ' +
-			[
-				container, editor, footer, conCon, con, conScaler, fNotifier
-			].join(', ')
-		);
-	}
-
-	editor.style.bottom = statusLineHeight + 'px';
-	conCon.style.bottom = (statusLineHeight + 8) + 'px';
-	fNotifier.style.bottom = (statusLineHeight + 8) + 'px';
-	curLine.style.right = (editor.offsetWidth - editor.clientWidth) + 'px';
-	curCol.style.bottom = statusLineHeight + 'px';
-
-	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
-	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
-}
-function getPrimaryMode () {
-	if (inputMode in mode2stateTable) {
-		return inputMode;
-	}
-
-	for (var i = inputModeStack.length - 1; i >= 0; i--) {
-		if (inputModeStack[i].inputMode in mode2stateTable) {
-			return inputModeStack[i].inputMode;
-		}
-	}
-}
-function setInputMode (newInputMode, opts) {
-	var newState = mode2stateTable[newInputMode] || state;
-	opts || (opts = {});
-
-	inputMode = newInputMode;
-	cursor.update({type:newInputMode, visible:false});
-	if (newState != state) {
-		state = newState;
-	}
-
-	switch (inputMode) {
-	case 'line_input':
-		lineInputHistories.defaultName = opts.historyName || ':';
-		showLineInput.apply(null, ['prefix', 'value', 'curpos'].map(function (a) {
-			return a in opts ? opts[a] : undefined;
-		}));
-		break;
-	}
-
-	isEditCompleted = isSmoothScrollRequested = false;
-}
+// for mode management
 function pushInputMode (context, newInputMode, newInputModeOpts) {
 	context.inputMode = inputMode;
 
@@ -1474,26 +1491,8 @@ function popInputMode (context) {
 		setInputMode('command');
 	}
 }
-function getCursorPositionString () {
-	if (buffer.elm.scrollHeight <= buffer.elm.clientHeight) {
-		return _('All');
-	}
-	if (buffer.elm.scrollTop == 0) {
-		return _('Top');
-	}
-	var viewHeight = buffer.elm.scrollHeight - buffer.elm.clientHeight;
-	if (buffer.elm.scrollTop + buffer.elm.clientHeight >= buffer.elm.scrollHeight) {
-		return _('Bot');
-	}
-	return ('  ' + Math.floor(buffer.elm.scrollTop / viewHeight * 100.)).substr(-3) + '%';
-}
-function getDefaultPrefixInputString () {
-	// 000000,0000xxx000%
-	return (recordedStrokes.items('q') ? _('[RECORDING]') + ' ' : '') +
-		 ('     ' + (buffer.selectionStartRow + 1)).substr(-6) +
-		 ',' + ((getLogicalColumn() + 1) + '   ').substr(0, 4) +
-		 '   ' + getCursorPositionString();
-}
+
+// for display
 function showPrefixInput (message) {
 	if (state != 'normal') return;
 	var line = $('wasavi_footer_status_container');
@@ -1574,6 +1573,25 @@ function showLineInput (prefix, value, curpos) {
 	dataset(input, 'current', value);
 	dataset(input, 'internalPrefix', null);
 }
+function invalidateIdealWidthPixels () {
+	idealWidthPixels = -1;
+}
+function refreshIdealWidthPixels () {
+	if (idealWidthPixels >= 0) return;
+	var n = buffer.selectionStart;
+	var line = buffer.rows(n).substr(0, n.col);
+	var textspan = $('wasavi_singleline_scaler');
+	if (textspan.textContent != line) {
+		textspan.textContent = line;
+	}
+	idealWidthPixels = textspan.offsetWidth;
+
+	var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
+	var curRect = buffer.charRectAt(n);
+	idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
+}
+
+// for flag request
 function requestShowPrefixInput (message) {
 	if (!requestedState.modeline) {
 		requestedState.modeline = {type:'prefix', message:message};
@@ -1625,11 +1643,8 @@ function requestSimpleCommandUpdate (initial) {
 		requestedState.simpleCommand = {initial:initial || ''};
 	}
 }
-function executeViCommand (arg) {
-	var seq = keyManager.createSequences(arg);
-	keyManager.setDequeue('unshift', seq, mapManager.markExpandedNoremap);
-	keyManager.sweep();
-}
+
+// for editing
 function completeSelectionRange (ss, se) {
 	var s = buffer.selectionStart;
 	var e = buffer.selectionEnd;
@@ -1833,6 +1848,53 @@ function needBreakUndo (s, ch) {
 		|| unicodeUtils.isPTerm(ch)
 		|| unicodeUtils.isIdeograph(ch);
 }
+function execMap (target, e, map, key, subkey, code, pos) {
+	if (isArray(map)) {
+		map = map.filter(function (m) {return !!m[key]});
+		if (map.length == 0) return false;
+		map = map[0];
+	}
+	else {
+		if (!map[key]) return false;
+	}
+
+	subkey || (subkey = '');
+
+	var opts = {
+		target:target,
+		e:e,
+		key:key,
+		subkey:subkey,
+		selectionStart:pos && pos.s || buffer.selectionStart,
+		selectionEnd:pos && pos.e || buffer.selectionEnd
+	};
+	var letter = e.code2letter(code) || code;
+
+/*console.log([
+	'*** execMap ***',
+	'target: ' + getObjectType(target),
+	'   key: ' + (JSON.stringify(key)),
+	'subkey: ' + (JSON.stringify(subkey)),
+	'  code: ' + (JSON.stringify(code)),
+	'  mode: ' + inputMode,
+	'prefix: ' + prefixInput.toString(),
+	'typeof map item: ' + typeof map[key]
+].join('\n'));*/
+	switch (typeof map[key]) {
+	case 'function':
+		if (subkey == '' || subkey == inputMode) {
+			return map[key].call(map, letter, opts);
+		}
+		break;
+	case 'object':
+		if (subkey != '' && subkey in map[key]) {
+			return map[key][subkey].call(map, letter, opts);
+		}
+		break;
+	}
+
+	return true;
+}
 function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 	lastMessage = '';
 	var ss = buffer.selectionStart;
@@ -1902,6 +1964,11 @@ function execLineInputEditMap (r, e, key, subkey, code) {
 		r.needEmitEvent = true;
 	}
 	return true;
+}
+function executeViCommand (arg) {
+	var seq = keyManager.createSequences(arg);
+	keyManager.setDequeue('unshift', seq, mapManager.markExpandedNoremap);
+	keyManager.sweep();
 }
 function processInput (e, ignoreAbbrev) {
 	var result = {
@@ -2005,6 +2072,358 @@ function processInputSupplement () {
 	var line = toNativeControl(input.value);
 	execMap(input, e, map, last.mapkey, '$' + inputMode + '_reset', line);
 	execMap(input, e, map, last.mapkey, '$' + inputMode + '_notify', line);
+}
+function extendRightIfInclusiveMotion () {
+	if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
+	||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
+	||  'eEft%'.indexOf(prefixInput.motion) >= 0) {
+		if (!buffer.isNewline(buffer.selectionEnd)) {
+			buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
+		}
+	}
+}
+function clipOverrun () {
+	if (inputMode != 'overwrite') {
+		return false;
+	}
+	var p = inputHandler.getStartPosition();
+	var n = buffer.selectionStart;
+	if (n.lt(p)) {
+		buffer.setSelectionRange(p);
+		requestShowMessage(_('You are in the restricted region.'), true);
+		return true;
+	}
+	return false;
+}
+function adjustDeleteOperationPos (isLineOrient, actualCount) {
+	// special delete behavior followed vim.
+	if (!isLineOrient && buffer.selectionEndCol == 0 && actualCount > 1) {
+		var leading = buffer.rows(buffer.selectionStartRow)
+			.substring(0, buffer.selectionStartCol);
+		if (!/\S/.test(leading)) {
+			isLineOrient = true;
+		}
+
+		actualCount--;
+		buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
+	}
+	return {
+		isLineOrient:isLineOrient,
+		actualCount:actualCount
+	};
+}
+function isDenotativeState () {
+	var isAlterMotion = prefixInput.motion.charAt(0) == 'g';
+	return isAlterMotion  && !config.vars.jkdenotative
+		|| !isAlterMotion &&  config.vars.jkdenotative;
+}
+function callDenotativeFunction () {
+	return (isDenotativeState() ? motionUpDownDenotative : motionUpDown).apply(null, arguments);
+}
+function inputEscape () {
+	if (arguments.length) {
+		requestRegisterNotice(_('{0} canceled.', prefixInput.operation || arguments[0]));
+	}
+	else {
+		inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
+	}
+
+	prefixInput.reset();
+	requestShowPrefixInput();
+	return false;
+}
+function inputDigit (c) {
+	prefixInput.appendCount(c);
+	requestShowPrefixInput();
+	return false;
+}
+function operationDefault (c, o) {
+	if (prefixInput.isEmptyOperation) {
+		prefixInput.operation = c;
+		requestShowPrefixInput();
+	}
+	else if (prefixInput.operation == c) {
+		return true;
+	}
+	else {
+		return inputEscape(o.e.key);
+	}
+}
+function isEditing (mode) {
+	function o (mode) {
+		return mode == 'edit' || mode == 'overwrite';
+	}
+	if (mode) return o(mode);
+	if (o(inputMode)) return true;
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (o(inputModeStack[i].inputMode)) return true;
+	}
+	return false;
+}
+function isBound (mode) {
+	function o (mode) {
+		return mode == 'bound' || mode == 'bound_line';
+	}
+	if (mode) return o(mode);
+	if (o(inputMode)) return true;
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (o(inputModeStack[i].inputMode)) return true;
+	}
+	return false;
+}
+function isAlias (c, op) {
+	return prefixInput.motion == '' && c == (op || prefixInput.operation);
+}
+
+// for file system
+function extractDriveName (path, callback) {
+	return path.replace(/^([^\/:]+):/, function ($0, $1) {
+		callback($0, $1);
+		return '';
+	});
+}
+function splitPath (path, escapeChar) {
+	escapeChar || (escapeChar = '\u2416');
+	var componentRegex = new RegExp('(?:\\' + escapeChar + '.|[^\\/])*(?:\\/|$)', 'g');
+	var replaceRegex = new RegExp('\\' + escapeChar + '(.)', 'g');
+	var re, result = [], foundLast = false;
+	while (!foundLast && (re = componentRegex.exec(path))) {
+		foundLast = re[0].substr(-1) != '/';
+		var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
+		tmp = tmp.replace(replaceRegex, '$1');
+		//tmp != '' && result.push(tmp);
+		result.push(tmp);
+	}
+	return result;
+}
+function regalizeFilePath (path, completeDriveName) {
+	path || (path = '');
+	if (path == '') {
+		return path;
+	}
+
+	// strip drive name
+	var drive = '';
+	path = extractDriveName(path, function (d) {drive = d});
+	if (drive == '' && completeDriveName) {
+		drive = fstab[fileSystemIndex].name + ':';
+	}
+
+	// resolve relative path
+	if (!/^\//.test(path)) {
+		path = fstab[fileSystemIndex].cwd + '/' + path;
+	}
+
+	// resolve special directories (".", "..")
+	var fragmentsSrc = splitPath(path);
+	var fragmentsDst = [];
+	fragmentsSrc.forEach(function (f, i) {
+		switch (f) {
+		case '.':
+			break;
+		case '..':
+			fragmentsDst.pop();
+			break;
+		case '':
+			if (i > 0 && i < fragmentsSrc.length - 1) {
+				break;
+			}
+			/* FALLTHRU */
+		default:
+			fragmentsDst.push(f);
+			break;
+		}
+	});
+	path = fragmentsDst.join('/');
+
+	// restore drive name
+	path = drive + path;
+
+	return path;
+}
+
+// for bound mode
+function ensureBoundPosition (p1, p2, mode) {
+	if (p1.gt(p2)) {
+		var t = p1; p1 = p2; p2 = t;
+	}
+	switch (mode || inputMode) {
+	case 'bound':
+		p2 = p2.clone();
+		p2.col++;
+		break;
+	case 'bound_line':
+		p1 = p1.clone();
+		p2 = p2.clone();
+		p1.col = 0;
+		p2.col = buffer.rows(p2).length;
+		break;
+	}
+	return [p1, p2];
+}
+function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
+	var p = ensureBoundPosition(marks.getPrivate('<'), marks.getPrivate('>'));
+	var act = p[1].row - p[0].row + 1;
+	buffer.unEmphasis(BOUND_CLASS);
+
+	if (callback1) {
+		buffer.setSelectionRange(p[0], p[1]);
+		buffer.isLineOrientSelection = inputMode == 'bound_line';
+		callback1(p[0], p[1], act);
+		buffer.isLineOrientSelection = false;
+	}
+
+	if (updateSimpleCommand && !o.e.mapExpanded) {
+		lastSimpleCommand = recordedStrokes.items('bound').strokes;
+//console.log('operateToBound: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
+	}
+
+	var isEditCompletedSaved = isEditCompleted;
+	processInput(keyManager.objectFromCode(27));
+	isEditCompleted = isEditCompletedSaved;
+
+	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
+}
+function extendBound (p, mode) {
+	mode || (mode = inputMode);
+	var anchor = marks.getPrivate('<');
+	var focus = marks.getPrivate('>');
+	if (!anchor || !focus) {
+		return setBound(buffer.selectionStart, p, mode, true);
+	}
+	if (!buffer.elm.querySelector('.' + BOUND_CLASS)) {
+		return setBound(anchor, p, mode);
+	}
+	if (anchor.row == focus.row || anchor.row == p.row) {
+		return setBound(anchor, p, mode, true);
+	}
+	if (focus.gt(anchor)) {
+		if (p.lt(anchor)) { // full refresh
+			setBound(p, anchor, mode, true);
+		}
+		else if (p.lt(focus)) { // shrink
+			buffer.unEmphasis(BOUND_CLASS, p.row, focus.row);
+			setBound(new Wasavi.Position(p.row, 0), p, mode);
+		}
+		else if (p.gt(focus)) { // enlarge
+			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
+			setBound(new Wasavi.Position(focus.row, 0), p, mode);
+		}
+	}
+	else {
+		if (p.gt(anchor)) { // full refresh
+			setBound(p, anchor, mode, true);
+		}
+		else if (p.gt(focus)) { // shrink
+			buffer.unEmphasis(BOUND_CLASS, focus.row, p.row);
+			setBound(p, new Wasavi.Position(p.row, buffer.rows(p).length - 1), mode);
+		}
+		else if (p.lt(focus)) { // enlarge
+			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
+			setBound(p, new Wasavi.Position(focus.row, buffer.rows(focus).length - 1), mode);
+		}
+	}
+}
+
+// for surrounding
+function startSurrounding (c, o) {
+	var result;
+	switch (prefixInput.operation) {
+	case 'd': // operation surrounding-prefix surrunding-symbol
+	case 'c':
+		prefixInput.motion = c;
+		requestInputMode('wait_a_letter');
+		requestShowPrefixInput(
+			_('{0}: surrounding symbol', prefixInput.operation + o.e.key));
+		break;
+	case 'y': // operation surrounding-prefix (motion | range symbol) surrunding-string
+		prefixInput.appendOperation(c);
+		requestShowPrefixInput();
+		break;
+	case 'ys':
+		result = commandMap._(c);
+		isVerticalMotion = false;
+		buffer.setSelectionRange(
+			buffer.getLineTopOffset2(buffer.selectionStart),
+			buffer.getLineTailOffset(buffer.selectionEnd));
+		break;
+	case 'yS':
+		result = commandMap._(c);
+		break;
+	default:
+		result = inputEscape(o.e.key);
+		break;
+	}
+	return result;
+}
+function adjustSurroundingInputForNotify (original) {
+	var indicator = $('wasavi_footer_input_indicator');
+	var adjusted = original;
+
+	if (surrounding.isTagPrefix(original)) {
+		prefixInput.appendMotion(original);
+		showLineInput(indicator.textContent + '<', '', 0);
+		dataset($('wasavi_footer_input'), 'internalPrefix', original);
+		original = '';
+	}
+
+	if (surrounding.isTagPrefix(indicator.textContent.substr(-1))) {
+		adjusted = '<' + original;
+	}
+
+	return adjusted;
+}
+function adjustSurroundingInput (original) {
+	var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
+	original = original.replace(/\n$/, '');
+	var adjusted = original;
+
+	if (surrounding.isTagPrefix(prefix)) {
+		adjusted = '<' + original.substring(1);
+	}
+
+	return adjusted;
+}
+
+// getters
+function getLocalStorage (keyName, callback) {
+	extensionChannel.postMessage(
+		{type:'get-storage', key:keyName},
+		function (res) {
+			callback && callback(res.value);
+		}
+	);
+}
+function getPrimaryMode () {
+	if (inputMode in mode2stateTable) {
+		return inputMode;
+	}
+
+	for (var i = inputModeStack.length - 1; i >= 0; i--) {
+		if (inputModeStack[i].inputMode in mode2stateTable) {
+			return inputModeStack[i].inputMode;
+		}
+	}
+}
+function getCursorPositionString () {
+	if (buffer.elm.scrollHeight <= buffer.elm.clientHeight) {
+		return _('All');
+	}
+	if (buffer.elm.scrollTop == 0) {
+		return _('Top');
+	}
+	var viewHeight = buffer.elm.scrollHeight - buffer.elm.clientHeight;
+	if (buffer.elm.scrollTop + buffer.elm.clientHeight >= buffer.elm.scrollHeight) {
+		return _('Bot');
+	}
+	return ('  ' + Math.floor(buffer.elm.scrollTop / viewHeight * 100.)).substr(-3) + '%';
+}
+function getDefaultPrefixInputString () {
+	// 000000,0000xxx000%
+	return (recordedStrokes.items('q') ? _('[RECORDING]') + ' ' : '') +
+		 ('     ' + (buffer.selectionStartRow + 1)).substr(-6) +
+		 ',' + ((getLogicalColumn() + 1) + '   ').substr(0, 4) +
+		 '   ' + getCursorPositionString();
 }
 function getFindRegex (src) {
 	var result;
@@ -2149,68 +2568,6 @@ function getLogicalColumn () {
 	// TODO: use more trustworthy method
 	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
 }
-function notifyToParent (eventName, payload) {
-	if (!extensionChannel || extensionChannel.isTopFrame()) return;
-	payload || (payload = {});
-	payload.type = eventName;
-	extensionChannel.postMessage({
-		type: 'transfer',
-		to: targetElement.parentInternalId,
-		payload: payload
-	});
-}
-function notifyActivity (code, key, note) {
-	if (!testMode || !extensionChannel) return;
-	if (extensionChannel.isTopFrame()) {
-		if (!document.documentElement.getAttribute('data-wasavi-command-state')) {
-			document.documentElement.setAttribute('data-wasavi-command-state', 'busy');
-		}
-	}
-	else {
-		notifyToParent('notify-keydown', {
-			keyCode:code,
-			key:key,
-			eventType:note
-		});
-	}
-}
-function notifyCommandComplete (eventName, modeOverridden) {
-	//if (exvm.inst.opcodes.length) return;
-	if (!testMode || !extensionChannel) return;
-	eventName || (eventName = 'command-completed');
-	var pt = new Position(getCurrentViewPositionIndices().top, 0);
-	var currentState = {
-		running:    !!targetElement,
-		state:      state,
-		inputMode:  modeOverridden || inputMode,
-		lastMessage:lastMessage,
-		lastSimpleCommand: lastSimpleCommand,
-		value:      buffer.value,
-		row:        buffer.selectionStartRow,
-		col:        buffer.selectionStartCol,
-		topRow:     pt.row,
-		topCol:     pt.col,
-		rowLength:  buffer.elm.childNodes.length,
-		registers:  registers.dumpData(),
-		marks:      marks.dumpData(),
-		lines:      config.vars.lines,
-		lineInput:  state == 'line_input' ? $('wasavi_footer_input').value : ''
-	};
-	if (extensionChannel.isTopFrame()) {
-		document.documentElement.removeAttribute('data-wasavi-command-state');
-		document.documentElement.setAttribute('data-wasavi-input-mode', inputMode);
-		document.documentElement.setAttribute('data-wasavi-state', JSON.stringify(currentState));
-	}
-	else {
-		notifyToParent(eventName, {state:currentState});
-	}
-}
-function extractDriveName (path, callback) {
-	return path.replace(/^([^\/:]+):/, function ($0, $1) {
-		callback($0, $1);
-		return '';
-	});
-}
 function getFileSystemIndex (name) {
 	var result = -1;
 	name = name.replace(/:$/, '');
@@ -2220,107 +2577,6 @@ function getFileSystemIndex (name) {
 		}
 	});
 	return result;
-}
-function splitPath (path, escapeChar) {
-	escapeChar || (escapeChar = '\u2416');
-	var componentRegex = new RegExp('(?:\\' + escapeChar + '.|[^\\/])*(?:\\/|$)', 'g');
-	var replaceRegex = new RegExp('\\' + escapeChar + '(.)', 'g');
-	var re, result = [], foundLast = false;
-	while (!foundLast && (re = componentRegex.exec(path))) {
-		foundLast = re[0].substr(-1) != '/';
-		var tmp = foundLast ? re[0] : re[0].substr(0, re[0].length - 1);
-		tmp = tmp.replace(replaceRegex, '$1');
-		//tmp != '' && result.push(tmp);
-		result.push(tmp);
-	}
-	return result;
-}
-function regalizeFilePath (path, completeDriveName) {
-	path || (path = '');
-	if (path == '') {
-		return path;
-	}
-
-	// strip drive name
-	var drive = '';
-	path = extractDriveName(path, function (d) {drive = d});
-	if (drive == '' && completeDriveName) {
-		drive = fstab[fileSystemIndex].name + ':';
-	}
-
-	// resolve relative path
-	if (!/^\//.test(path)) {
-		path = fstab[fileSystemIndex].cwd + '/' + path;
-	}
-
-	// resolve special directories (".", "..")
-	var fragmentsSrc = splitPath(path);
-	var fragmentsDst = [];
-	fragmentsSrc.forEach(function (f, i) {
-		switch (f) {
-		case '.':
-			break;
-		case '..':
-			fragmentsDst.pop();
-			break;
-		case '':
-			if (i > 0 && i < fragmentsSrc.length - 1) {
-				break;
-			}
-			/* FALLTHRU */
-		default:
-			fragmentsDst.push(f);
-			break;
-		}
-	});
-	path = fragmentsDst.join('/');
-
-	// restore drive name
-	path = drive + path;
-
-	return path;
-}
-function registerMultiplexCallback (id, callback) {
-	if (multiplexCallbackId != undefined) {
-		throw new Error(_('Already in a pending state.'));
-	}
-	if (isString(callback)) {
-		switch (callback) {
-		case 'read':
-			callback = getReadHandler(id);
-			break;
-		case 'write':
-			callback = getWriteHandler(id);
-			break;
-		case 'edit':
-			callback = getEditHandler(id);
-			break;
-		case 'chdir':
-			callback = getChdirHandler(id);
-			break;
-		}
-	}
-	if (isFunction(callback)) {
-		extensionChannel.preservedCallbacks[id] = callback;
-	}
-	multiplexCallbackId = id;
-}
-function removeMultiplexCallback (id) {
-	if (multiplexCallbackId) {
-		if (id != multiplexCallbackId) {
-			throw new Error(_('Pending Request ID mismatch.'));
-		}
-		extensionChannel.removeCallback(multiplexCallbackId);
-	}
-	multiplexCallbackId = undefined;
-}
-function interruptMultiplexCallback () {
-	if (multiplexCallbackId) {
-		extensionChannel.interruptCallback(multiplexCallbackId, {
-			error:[_('The ex command was interrupted.')]
-		});
-	}
-	multiplexCallbackId = undefined;
 }
 function getReadHandler (id) {
 	return function (req) {
@@ -2412,12 +2668,6 @@ function getContainerRect () {
 	}
 	return containerRect;
 }
-
-/*
- * low-level functions for editor functionality {{{1
- * ----------------
- */
-
 function getMap (mode) {
 	switch (mode) {
 	case 'command':
@@ -2433,70 +2683,6 @@ function getMap (mode) {
 	default:
 		return null;
 	}
-}
-function execMap (target, e, map, key, subkey, code, pos) {
-	if (isArray(map)) {
-		map = map.filter(function (m) {return !!m[key]});
-		if (map.length == 0) return false;
-		map = map[0];
-	}
-	else {
-		if (!map[key]) return false;
-	}
-
-	subkey || (subkey = '');
-
-	var opts = {
-		target:target,
-		e:e,
-		key:key,
-		subkey:subkey,
-		selectionStart:pos && pos.s || buffer.selectionStart,
-		selectionEnd:pos && pos.e || buffer.selectionEnd
-	};
-	var letter = e.code2letter(code) || code;
-
-/*console.log([
-	'*** execMap ***',
-	'target: ' + getObjectType(target),
-	'   key: ' + (JSON.stringify(key)),
-	'subkey: ' + (JSON.stringify(subkey)),
-	'  code: ' + (JSON.stringify(code)),
-	'  mode: ' + inputMode,
-	'prefix: ' + prefixInput.toString(),
-	'typeof map item: ' + typeof map[key]
-].join('\n'));*/
-	switch (typeof map[key]) {
-	case 'function':
-		if (subkey == '' || subkey == inputMode) {
-			return map[key].call(map, letter, opts);
-		}
-		break;
-	case 'object':
-		if (subkey != '' && subkey in map[key]) {
-			return map[key][subkey].call(map, letter, opts);
-		}
-		break;
-	}
-
-	return true;
-}
-function invalidateIdealWidthPixels () {
-	idealWidthPixels = -1;
-}
-function refreshIdealWidthPixels () {
-	if (idealWidthPixels >= 0) return;
-	var n = buffer.selectionStart;
-	var line = buffer.rows(n).substr(0, n.col);
-	var textspan = $('wasavi_singleline_scaler');
-	if (textspan.textContent != line) {
-		textspan.textContent = line;
-	}
-	idealWidthPixels = textspan.offsetWidth;
-
-	var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
-	var curRect = buffer.charRectAt(n);
-	idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
 }
 function getCurrentViewPositionIndices () {
 	function findTopLineIndex (line) {
@@ -2574,230 +2760,6 @@ function getCurrentViewPositionIndices () {
 
 	return result;
 }
-function isDenotativeState () {
-	var isAlterMotion = prefixInput.motion.charAt(0) == 'g';
-	return isAlterMotion  && !config.vars.jkdenotative
-		|| !isAlterMotion &&  config.vars.jkdenotative;
-}
-function callDenotativeFunction () {
-	return (isDenotativeState() ? motionUpDownDenotative : motionUpDown).apply(null, arguments);
-}
-function inputEscape () {
-	if (arguments.length) {
-		requestRegisterNotice(_('{0} canceled.', prefixInput.operation || arguments[0]));
-	}
-	else {
-		inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
-	}
-
-	prefixInput.reset();
-	requestShowPrefixInput();
-	return false;
-}
-function inputDigit (c) {
-	prefixInput.appendCount(c);
-	requestShowPrefixInput();
-	return false;
-}
-function operationDefault (c, o) {
-	if (prefixInput.isEmptyOperation) {
-		prefixInput.operation = c;
-		requestShowPrefixInput();
-	}
-	else if (prefixInput.operation == c) {
-		return true;
-	}
-	else {
-		return inputEscape(o.e.key);
-	}
-}
-function isEditing (mode) {
-	function o (mode) {
-		return mode == 'edit' || mode == 'overwrite';
-	}
-	if (mode) return o(mode);
-	if (o(inputMode)) return true;
-	for (var i = inputModeStack.length - 1; i >= 0; i--) {
-		if (o(inputModeStack[i].inputMode)) return true;
-	}
-	return false;
-}
-function isBound (mode) {
-	function o (mode) {
-		return mode == 'bound' || mode == 'bound_line';
-	}
-	if (mode) return o(mode);
-	if (o(inputMode)) return true;
-	for (var i = inputModeStack.length - 1; i >= 0; i--) {
-		if (o(inputModeStack[i].inputMode)) return true;
-	}
-	return false;
-}
-function isAlias (c, op) {
-	return prefixInput.motion == '' && c == (op || prefixInput.operation);
-}
-function ensureBoundPosition (p1, p2, mode) {
-	if (p1.gt(p2)) {
-		var t = p1; p1 = p2; p2 = t;
-	}
-	switch (mode || inputMode) {
-	case 'bound':
-		p2 = p2.clone();
-		p2.col++;
-		break;
-	case 'bound_line':
-		p1 = p1.clone();
-		p2 = p2.clone();
-		p1.col = 0;
-		p2.col = buffer.rows(p2).length;
-		break;
-	}
-	return [p1, p2];
-}
-function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
-	var p = ensureBoundPosition(marks.getPrivate('<'), marks.getPrivate('>'));
-	var act = p[1].row - p[0].row + 1;
-	buffer.unEmphasis(BOUND_CLASS);
-
-	if (callback1) {
-		buffer.setSelectionRange(p[0], p[1]);
-		buffer.isLineOrientSelection = inputMode == 'bound_line';
-		callback1(p[0], p[1], act);
-		buffer.isLineOrientSelection = false;
-	}
-
-	if (updateSimpleCommand && !o.e.mapExpanded) {
-		lastSimpleCommand = recordedStrokes.items('bound').strokes;
-//console.log('operateToBound: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
-	}
-
-	var isEditCompletedSaved = isEditCompleted;
-	processInput(keyManager.objectFromCode(27));
-	isEditCompleted = isEditCompletedSaved;
-
-	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
-}
-function setBound (p1, p2, mode, fullRefresh) {
-	var p = ensureBoundPosition(p1, p2, mode);
-	fullRefresh && buffer.unEmphasis(BOUND_CLASS);
-	buffer.emphasis(p[0], p[1], BOUND_CLASS);
-}
-function extendBound (p, mode) {
-	mode || (mode = inputMode);
-	var anchor = marks.getPrivate('<');
-	var focus = marks.getPrivate('>');
-	if (!anchor || !focus) {
-		return setBound(buffer.selectionStart, p, mode, true);
-	}
-	if (!buffer.elm.querySelector('.' + BOUND_CLASS)) {
-		return setBound(anchor, p, mode);
-	}
-	if (anchor.row == focus.row || anchor.row == p.row) {
-		return setBound(anchor, p, mode, true);
-	}
-	if (focus.gt(anchor)) {
-		if (p.lt(anchor)) { // full refresh
-			setBound(p, anchor, mode, true);
-		}
-		else if (p.lt(focus)) { // shrink
-			buffer.unEmphasis(BOUND_CLASS, p.row, focus.row);
-			setBound(new Wasavi.Position(p.row, 0), p, mode);
-		}
-		else if (p.gt(focus)) { // enlarge
-			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
-			setBound(new Wasavi.Position(focus.row, 0), p, mode);
-		}
-	}
-	else {
-		if (p.gt(anchor)) { // full refresh
-			setBound(p, anchor, mode, true);
-		}
-		else if (p.gt(focus)) { // shrink
-			buffer.unEmphasis(BOUND_CLASS, focus.row, p.row);
-			setBound(p, new Wasavi.Position(p.row, buffer.rows(p).length - 1), mode);
-		}
-		else if (p.lt(focus)) { // enlarge
-			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
-			setBound(p, new Wasavi.Position(focus.row, buffer.rows(focus).length - 1), mode);
-		}
-	}
-}
-function insertNewlineWithIndent (origin, selfIndent) {
-	if (buffer.rowLength == 1 && buffer.rows(0) == '') {
-		var indent = config.vars.autoindent ? selfIndent : '';
-		insert(indent);
-	}
-	else if (origin.row >= buffer.rowLength) {
-		var n = buffer.selectionStart;
-		var indent = config.vars.autoindent ? buffer.getIndent(n) : '';
-		n = buffer.getLineTailOffset(n);
-		buffer.setSelectionRange(n);
-		insert('\n' + indent);
-	}
-	else {
-		var indent = config.vars.autoindent ? buffer.getBackIndent(buffer.selectionStart) : '';
-		insert(indent);
-		insert('\n', {keepPosition:true});
-	}
-}
-function startSurrounding (c, o) {
-	var result;
-	switch (prefixInput.operation) {
-	case 'd': // operation surrounding-prefix surrunding-symbol
-	case 'c':
-		prefixInput.motion = c;
-		requestInputMode('wait_a_letter');
-		requestShowPrefixInput(
-			_('{0}: surrounding symbol', prefixInput.operation + o.e.key));
-		break;
-	case 'y': // operation surrounding-prefix (motion | range symbol) surrunding-string
-		prefixInput.appendOperation(c);
-		requestShowPrefixInput();
-		break;
-	case 'ys':
-		result = commandMap._(c);
-		isVerticalMotion = false;
-		buffer.setSelectionRange(
-			buffer.getLineTopOffset2(buffer.selectionStart),
-			buffer.getLineTailOffset(buffer.selectionEnd));
-		break;
-	case 'yS':
-		result = commandMap._(c);
-		break;
-	default:
-		result = inputEscape(o.e.key);
-		break;
-	}
-	return result;
-}
-function adjustSurroundingInputForNotify (original) {
-	var indicator = $('wasavi_footer_input_indicator');
-	var adjusted = original;
-
-	if (surrounding.isTagPrefix(original)) {
-		prefixInput.appendMotion(original);
-		showLineInput(indicator.textContent + '<', '', 0);
-		dataset($('wasavi_footer_input'), 'internalPrefix', original);
-		original = '';
-	}
-
-	if (surrounding.isTagPrefix(indicator.textContent.substr(-1))) {
-		adjusted = '<' + original;
-	}
-
-	return adjusted;
-}
-function adjustSurroundingInput (original) {
-	var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
-	original = original.replace(/\n$/, '');
-	var adjusted = original;
-
-	if (surrounding.isTagPrefix(prefix)) {
-		adjusted = '<' + original.substring(1);
-	}
-
-	return adjusted;
-}
 function getNextProp (n) {
 	var ikw = config.vars.iskeyword;
 	var p = buffer.charClassAt(n, true, ikw);
@@ -2813,6 +2775,78 @@ function getNextProp (n) {
 		break;
 	}
 	return p;
+}
+
+// setters
+function setLocalStorage (keyName, value) {
+	extensionChannel.postMessage({
+		type:'set-storage',
+		key:keyName,
+		value:value
+	});
+}
+function setGeometory (target) {
+	if (target == undefined) {
+		target = targetElement;
+	}
+	if (!target) {
+		return;
+	}
+
+	var container = $('wasavi_container');
+	var editor = $('wasavi_editor');
+	var footer = $('wasavi_footer');
+	var conCon = $('wasavi_console_container');
+	var con = $('wasavi_console');
+	var conScaler = $('wasavi_console_scaler');
+	var fNotifier = $('wasavi_footer_notifier');
+	var curLine = $('wasavi_cursor_line');
+	var curCol = $('wasavi_cursor_column');
+
+	if (!container || !editor || !footer || !conCon || !con || !conScaler
+	||  !fNotifier || !curLine || !curCol) {
+		throw new Error(
+			'setGeometory: invalid element: ' +
+			[
+				container, editor, footer, conCon, con, conScaler, fNotifier
+			].join(', ')
+		);
+	}
+
+	editor.style.bottom = statusLineHeight + 'px';
+	conCon.style.bottom = (statusLineHeight + 8) + 'px';
+	fNotifier.style.bottom = (statusLineHeight + 8) + 'px';
+	curLine.style.right = (editor.offsetWidth - editor.clientWidth) + 'px';
+	curCol.style.bottom = statusLineHeight + 'px';
+
+	config.setData('lines', parseInt(editor.clientHeight / lineHeight), true);
+	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
+}
+function setInputMode (newInputMode, opts) {
+	var newState = mode2stateTable[newInputMode] || state;
+	opts || (opts = {});
+
+	inputMode = newInputMode;
+	cursor.update({type:newInputMode, visible:false});
+	if (newState != state) {
+		state = newState;
+	}
+
+	switch (inputMode) {
+	case 'line_input':
+		lineInputHistories.defaultName = opts.historyName || ':';
+		showLineInput.apply(null, ['prefix', 'value', 'curpos'].map(function (a) {
+			return a in opts ? opts[a] : undefined;
+		}));
+		break;
+	}
+
+	isEditCompleted = isSmoothScrollRequested = false;
+}
+function setBound (p1, p2, mode, fullRefresh) {
+	var p = ensureBoundPosition(p1, p2, mode);
+	fullRefresh && buffer.unEmphasis(BOUND_CLASS);
+	buffer.emphasis(p[0], p[1], BOUND_CLASS);
 }
 function setTabStop (ts) {
 	var editor = $('wasavi_editor');
@@ -3667,45 +3701,6 @@ function scrollView (c, count) {
 	prefixInput.motion = c;
 	return true;
 }
-function extendRightIfInclusiveMotion () {
-	if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
-	||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
-	||  'eEft%'.indexOf(prefixInput.motion) >= 0) {
-		if (!buffer.isNewline(buffer.selectionEnd)) {
-			buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
-		}
-	}
-}
-function clipOverrun () {
-	if (inputMode != 'overwrite') {
-		return false;
-	}
-	var p = inputHandler.getStartPosition();
-	var n = buffer.selectionStart;
-	if (n.lt(p)) {
-		buffer.setSelectionRange(p);
-		requestShowMessage(_('You are in the restricted region.'), true);
-		return true;
-	}
-	return false;
-}
-function adjustDeleteOperationPos (isLineOrient, actualCount) {
-	// special delete behavior followed vim.
-	if (!isLineOrient && buffer.selectionEndCol == 0 && actualCount > 1) {
-		var leading = buffer.rows(buffer.selectionStartRow)
-			.substring(0, buffer.selectionStartCol);
-		if (!/\S/.test(leading)) {
-			isLineOrient = true;
-		}
-
-		actualCount--;
-		buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
-	}
-	return {
-		isLineOrient:isLineOrient,
-		actualCount:actualCount
-	};
-}
 
 /*
  * low-level functions for text modification {{{1
@@ -4370,6 +4365,24 @@ function quickReplace (c, count, allowMultiLine) {
 	isEditCompleted = true;
 	invalidateIdealWidthPixels();
 	return true;
+}
+function insertNewlineWithIndent (origin, selfIndent) {
+	if (buffer.rowLength == 1 && buffer.rows(0) == '') {
+		var indent = config.vars.autoindent ? selfIndent : '';
+		insert(indent);
+	}
+	else if (origin.row >= buffer.rowLength) {
+		var n = buffer.selectionStart;
+		var indent = config.vars.autoindent ? buffer.getIndent(n) : '';
+		n = buffer.getLineTailOffset(n);
+		buffer.setSelectionRange(n);
+		insert('\n' + indent);
+	}
+	else {
+		var indent = config.vars.autoindent ? buffer.getBackIndent(buffer.selectionStart) : '';
+		insert(indent);
+		insert('\n', {keepPosition:true});
+	}
 }
 
 /*
