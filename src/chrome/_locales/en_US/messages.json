@@ -732,6 +732,10 @@
     "message": "No undo item.",
     "description": "No undo item."
   },
+  "no_word_under_the_cursor": {
+    "message": "No word under the cursor.",
+    "description": "No word under the cursor."
+  },
   "not_a_authentication_task_@0": {
     "message": "Not a authentication task: {0}",
     "description": "Not a authentication task: {0}"

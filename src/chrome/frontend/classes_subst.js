@@ -310,7 +310,7 @@ Wasavi.SubstituteWorker.prototype = {
 
 		//
 
-		if (buffer.length == this.substCount) {
+		if ('nq\u001b'.indexOf(action) < 0) {
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
 		}
 

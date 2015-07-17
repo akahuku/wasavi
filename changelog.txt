@@ -5,7 +5,7 @@
 	* fix backlog behavior
 	* add :sort command from vim
 	* add the functionality of '%' with a counter
-	* do 'cw' special behavior when cursor on a non-space character only
+	* do 'cw' special behavior when cursor is only on a non-space character
 	* remove 'magic' effect
 	* add '*' and '#' from vim
 	* allow 1 to 9 in :put command

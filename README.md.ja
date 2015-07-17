@@ -224,7 +224,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `ga` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
 
 ex commands
 -----------

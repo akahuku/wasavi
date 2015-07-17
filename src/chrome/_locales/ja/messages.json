@@ -732,6 +732,10 @@
     "message": "これ以上アンドゥできません。",
     "description": "No undo item."
   },
+  "no_word_under_the_cursor": {
+    "message": "カーソルの下に単語がありません。",
+    "description": "No word under the cursor."
+  },
   "not_a_authentication_task_@0": {
     "message": "認証タスクではありません: {0}",
     "description": "Not a authentication task: {0}"

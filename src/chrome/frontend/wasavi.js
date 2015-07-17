@@ -5721,9 +5721,10 @@ var commandMap = {
 		if (prefixInput.isCountSpecified) {
 			var count = prefixInput.count;
 			if (0 <= count && count <= 100) {
-				count = Math.floor(buffer.rowLength * (count /100));
+				count = Math.floor(buffer.rowLength * (count / 100));
 				count = Math.max(0, Math.min(count, buffer.rowLength - 1));
 				pos = buffer.getLineTopOffset2(new Position(count, 0));
+				isVerticalMotion = true;
 			}
 		}
 		else {
@@ -6177,15 +6178,37 @@ var commandMap = {
 	'*':function (c, o) {
 		var ss1 = buffer.selectionStart;
 		var se1 = buffer.selectionEnd;
-		var word;
-		if (!searchUtils.dispatchRangeSymbol(1, 'w', false)
-		|| (word = regexConverter.toLiteralString(buffer.getSelection())) == '') {
-			buffer.setSelectionRange(ss1, se1);
-			return inputEscape(o.e.key);
+		var ss2, se2, word;
+
+		var message = false;
+		try {
+			if (!searchUtils.dispatchRangeSymbol(1, 'w', false)) {
+				message = 'Unknown error: cannot retreive word boundary.';
+				return;
+			}
+
+			word = regexConverter.toLiteralString(buffer.getSelection());
+			if (word == '') {
+				message = _('No word under the cursor.');
+				return;
+			}
+
+			ss2 = buffer.selectionStart;
+			se2 = buffer.selectionEnd;
+			if (ss1.row != ss2.row) {
+				message = _('No word under the cursor.');
+				return;
+			}
+		}
+		finally {
+			if (isString(message)) {
+				buffer.setSelectionRange(ss1, se1);
+				requestedState.notice = null;
+				requestShowMessage(requestRegisterNotice(message), true);
+				return inputEscape(o.e.key);
+			}
 		}
 
-		var ss2 = buffer.selectionStart;
-		var se2 = buffer.selectionEnd;
 		var direction, offset;
 		if (o.key == '*') {
 			buffer.setSelectionRange(ss1, buffer.leftPos(se2));
@@ -6356,7 +6379,10 @@ var commandMap = {
 		wait_a_letter:function (c, o) {
 			var result = false;
 			switch (c) {
-			case 'a':
+			case 'a':// individual command
+				if (!prefixInput.isEmptyOperation) {
+					return inputEscape(o.e.key);
+				}
 				var ss = buffer.selectionStart;
 				var ch1 = toNativeControl(buffer.charAt(ss)), ch2 = '';
 				var cp = ch1.charCodeAt(0);
@@ -6375,7 +6401,7 @@ var commandMap = {
 					' (' + cp + ')');
 				break;
 
-			case 'g':
+			case 'g':// motion
 				var index = prefixInput.count;
 				var n = new Position(index - 1, 0);
 				marks.setJumpBaseMark();
@@ -6393,7 +6419,10 @@ var commandMap = {
 				prefixInput.motion = o.key + c;
 				result = true;
 				break;
-			case 'i':
+			case 'i':// individual command
+				if (!prefixInput.isEmptyOperation) {
+					return inputEscape(o.e.key);
+				}
 				var m = inputHandler.getStartPosition();
 				if (m) {
 					buffer.setSelectionRange(m);
@@ -6406,28 +6435,31 @@ var commandMap = {
 				}
 				prefixInput.motion = o.key + c;
 				break;
-			case 'j':
+			case 'j':// motion
 				prefixInput.motion = o.key + c;
 				result = this.j.apply(this, arguments);
 				break;
-			case 'k':
+			case 'k':// motion
 				prefixInput.motion = o.key + c;
 				result = this.k.apply(this, arguments);
 				break;
-			case '^':
+			case '^':// motion
 				prefixInput.motion = o.key + c;
 				result = this['^'].apply(this, arguments);
 				break;
-			case '$':
+			case '$':// motion
 				prefixInput.motion = o.key + c;
 				result = this['$'].apply(this, arguments);
 				break;
-			case 'q':
+			case 'q':// operator
 			case 'u':
 			case 'U':
 				result = operationDefault(o.key + c, o);
 				break;
-			case 'v':
+			case 'v':// individual command
+				if (!prefixInput.isEmptyOperation) {
+					return inputEscape(o.e.key);
+				}
 				var m1 = marks.get('<');
 				var m2 = marks.get('>');
 				if (m1 && m2) {

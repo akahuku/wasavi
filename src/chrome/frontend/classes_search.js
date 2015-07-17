@@ -457,10 +457,10 @@ loop:		do {
 				buffer.setSelectionRange(buffer.selectionEnd);
 			}
 			app.motion.nextWord('', count, bigword, true);
-			if (buffer.selectionStartRow != buffer.selectionEndRow
-			||  buffer.selectionEndCol - buffer.selectionStartCol != 1) {
+			//if (buffer.selectionStartRow != buffer.selectionEndRow
+			//||  buffer.selectionEndCol - buffer.selectionStartCol != 1) {
 				app.motion.right('', 1);
-			}
+			//}
 		}
 		return true;
 	}
