@@ -1,4 +1,4 @@
-0.6.xxx
+0.6.505
 
 	* make key stroke divided only non-interactive input
 	* break long sequential key strokes into async chunks

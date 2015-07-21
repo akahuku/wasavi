@@ -905,7 +905,7 @@ function ExCommandExecutor (app) {
 		}, 1, executes);
 	}
 	function isClipboardAccess (args) {
-		return args.flags.register && args.register == '*';
+		return args.flags.register && registers.isClipboard(args.register);
 	}
 	function suspend () {
 		if (running) {
@@ -5428,7 +5428,7 @@ var commandMap = {
 		wait_register:function (c, o) {
 			prefixInput.appendRegister(c);
 			requestShowPrefixInput();
-			if (c == '*') {
+			if (registers.isClipboard(c)) {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					registers.get('*').set(data);
@@ -7652,7 +7652,7 @@ var editMap = {
 			inputHandler.ungetStroke();
 
 			var s;
-			if (c == '*') {
+			if (registers.isClipboard(c)) {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					registers.get('*').set(data);
@@ -7954,7 +7954,7 @@ var lineInputEditMap = {
 		},
 		wait_register:function (c, o) {
 			var s;
-			if (c == '*') {
+			if (registers.isClipboard(c)) {
 				keyManager.lock();
 				extensionChannel.getClipboard(function (data) {
 					registers.get('*').set(data);

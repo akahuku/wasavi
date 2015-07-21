@@ -1349,6 +1349,7 @@ Wasavi.Registers = function (app, value) {
 	 *  .       last edited text (read only) [vim compatible]
 	 *  :       last executed ex command (read only) [vim compatible]
 	 *  *       system clipboard, if available [vim compatible]
+	 *  +       system clipboard, if available [vim compatible]
 	 *  /       last searched text (read only) [vim compatible]
 	 *  ^       last input position (read only) [vim compatible]
 	 *  =       last computed result of simple math-expression (readonly) [vim compatible]
@@ -1393,7 +1394,7 @@ Wasavi.Registers = function (app, value) {
 	var named;
 	var storageKey = 'wasavi_registers';
 	var writableRegex = /^[1-9a-zA-Z@]$/;
-	var readableRegex = /^["1-9a-zA-Z@.:*\/\^=;]$/;
+	var readableRegex = /^["1-9a-zA-Z@.:*+\/\^=;]$/;
 	var isLatest = false;
 
 	function serialize () {
@@ -1438,8 +1439,17 @@ Wasavi.Registers = function (app, value) {
 	function isReadable (name) {
 		return readableRegex.test(name.charAt(0));
 	}
+	function isClipboard (name) {
+		return '*+'.indexOf(name) >= 0;
+	}
+	function resolveAlias (name) {
+		if (name == '+') {
+			name = '*';
+		}
+		return name;
+	}
 	function exists (name) {
-		name = name.charAt(0);
+		name = resolveAlias(name.charAt(0));
 		if (!isReadable(name)) {
 			return false;
 		}
@@ -1449,7 +1459,7 @@ Wasavi.Registers = function (app, value) {
 		return !!named[name];
 	}
 	function findItem (name) {
-		name = name.charAt(0);
+		name = resolveAlias(name.charAt(0));
 		if (name == '"') {
 			return unnamed;
 		}
@@ -1460,6 +1470,8 @@ Wasavi.Registers = function (app, value) {
 	}
 	function set (name, data, isLineOrient, isInteractive) {
 		if (data == '') return;
+
+		name = resolveAlias(name);
 
 		// unnamed register
 		if (typeof name != 'string' || name == '') {
@@ -1487,7 +1499,7 @@ Wasavi.Registers = function (app, value) {
 				var item = findItem(name);
 				item.set(data, isLineOrient);
 				unnamed.set(data, isLineOrient);
-				name == '*' && app.extensionChannel && app.extensionChannel.setClipboard(item.data);
+				name == '*' && app.extensionChannel.setClipboard(item.data);
 			}
 			else if (/^[@.:\/\^]$/.test(name) && !isInteractive) {
 				var item = findItem(name);
@@ -1505,7 +1517,7 @@ Wasavi.Registers = function (app, value) {
 		if (typeof name != 'string' || name == '') {
 			return unnamed;
 		}
-		name = name.charAt(0);
+		name = resolveAlias(name.charAt(0));
 		if (isReadable(name)) {
 			var item;
 
@@ -1578,7 +1590,8 @@ Wasavi.Registers = function (app, value) {
 	}
 
 	publish(this,
-		set, get, isWritable, isReadable, exists, dump, dumpData, save, load,
+		set, get, isWritable, isReadable, isClipboard,
+		exists, dump, dumpData, save, load,
 		{
 			storageKey:function () {return storageKey},
 			writableList:function () {
