@@ -116,8 +116,9 @@ diag('defining classes');
 			popInputMode:popInputMode,
 			showPrefixInput:showPrefixInput,
 			showMessage:showMessage,
+			showMessageCore:showMessageCore,
 			requestShowMessage:requestShowMessage,
-			requestRegisterNotice:requestRegisterNotice,
+			requestNotice:requestNotice,
 			requestInputMode:requestInputMode,
 			requestConsoleState:requestConsoleState,
 			executeViCommand:executeViCommand,
@@ -889,9 +890,15 @@ function ExCommandExecutor (app) {
 		running = false;
 		clear();
 
-		lastError && app.low.requestShowMessage(lastError, true);
-		(!app.requestedState.console || app.requestedState.modeline) && app.low.requestConsoleState(true);
-		async && processInput(app.keyManager.nopObject);
+		if (lastError) {
+			app.low.requestShowMessage(lastError, true);
+		}
+		if (!app.requestedState.console || app.requestedState.showInput) {
+			app.low.requestConsoleState(true);
+		}
+		if (async) {
+			processInput(app.keyManager.nopObject);
+		}
 
 		setTimeout(function (executes) {
 			executes.forEach(function (a) {a(self)});
@@ -988,7 +995,6 @@ function notifyActivity (code, key, note) {
 	}
 }
 function notifyCommandComplete (eventName, modeOverridden) {
-	//if (exvm.inst.opcodes.length) return;
 	if (!testMode || !extensionChannel) return;
 	eventName || (eventName = 'command-completed');
 	var pt = new Position(getCurrentViewPositionIndices().top, 0);
@@ -1175,10 +1181,6 @@ function install (x, req) {
 	var textspan = $('wasavi_singleline_scaler');
 	textspan.textContent = '#';
 
-	// console scaler
-	var conscaler = $('wasavi_console_scaler');
-	conscaler.textContent = '#';
-
 	// footer (default indicator)
 	var footerStatusLine = $('wasavi_footer_status_container');
 	$('wasavi_footer_file_indicator').textContent = '#';
@@ -1199,7 +1201,6 @@ function install (x, req) {
 	// console window
 	var conwincnt = $('wasavi_console_container');
 	var conwin = $('wasavi_console');
-	conscaler.style.width = conwin.offsetWidth + 'px';
 
 	// command cursor
 	var cc = $('wasavi_command_cursor');
@@ -1289,7 +1290,7 @@ function install (x, req) {
 	scroller = new Wasavi.Scroller(appProxy, cursor, footerStatusLine);
 	editLogger = new Wasavi.EditLogger(appProxy, config.vars.undolevels);
 	exvm = new ExCommandExecutor(appProxy);
-	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin, conscaler);
+	backlog = new Wasavi.Backlog(appProxy, conwincnt, conwin);
 	searchUtils = new Wasavi.SearchUtils(appProxy);
 	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
 	surrounding = new Wasavi.Surrounding(appProxy);
@@ -1522,7 +1523,7 @@ function showPrefixInput (message) {
 	}
 	indp.textContent = message || prefixInput.toString() || getDefaultPrefixInputString();
 }
-function showMessage (message, emphasis, pseudoCursor, volatile_) {
+function showMessageCore (message, emphasis, pseudoCursor, preserveLastMessage) {
 	if (state != 'normal' && state != 'console_wait') return;
 	var line = $('wasavi_footer_status_container');
 	var alter = $('wasavi_footer_input_container');
@@ -1549,8 +1550,22 @@ function showMessage (message, emphasis, pseudoCursor, volatile_) {
 		blink.className = 'blink';
 		blink.textContent = '\u2588';
 	}
-	if (message != '' && !volatile_) {
+	if (!preserveLastMessage) {
 		lastMessage = toNativeControl(message);
+	}
+}
+function showMessage (text, em, pc, plm) {
+	if (backlog.visible) {
+		backlog.push({
+			text:text,
+			emphasis:!!em,
+			pseudoCursor:!!pc,
+			preserveLastMessage:!!plm
+		});
+		backlog.open(true);
+	}
+	else {
+		showMessageCore(text, em, pc, plm);
 	}
 }
 function showLineInput (prefix, value, curpos) {
@@ -1593,31 +1608,38 @@ function refreshIdealWidthPixels () {
 
 // for flag request
 function requestShowPrefixInput (message) {
-	if (!requestedState.modeline) {
-		requestedState.modeline = {type:'prefix', message:message};
+	if (!requestedState.showInput) {
+		requestedState.showInput = {message:message};
 	}
 	return message;
 }
-function requestShowMessage (message, emphasis, pseudoCursor, volatile_) {
-	if (!requestedState.modeline) {
-		requestedState.modeline = {
-			type:'message',
-			message:message,
+function requestShowMessage (message, emphasis, pseudoCursor, preserveLastMessage) {
+	if (!requestedState.message) {
+		backlog.push({
+			text:message,
 			emphasis:!!emphasis,
 			pseudoCursor:!!pseudoCursor,
-			volatile_:!!volatile_
-		};
+			preserveLastMessage:!!preserveLastMessage
+		});
+		requestedState.message = true;
+		requestedState.console = {open:true};
 	}
 	return message;
 }
-function requestRegisterNotice (message) {
+function requestNotice (args) {
 	if (!requestedState.notice) {
-		requestedState.notice = {play:true};
-		if (arguments.length) {
-			requestedState.notice.message = message;
+		if (isString(args)) {
+			requestedState.notice = {message:args};
+		}
+		else {
+			requestedState.notice = args || {bell:true};
+		}
+		if (!('message' in requestedState.notice)) {
+			if (!('bell' in requestedState.notice)) {
+				requestedState.notice.bell = true;
+			}
 		}
 	}
-	return message;
 }
 function requestInputMode (mode, opts) {
 	if (!requestedState.inputMode) {
@@ -1673,7 +1695,10 @@ function doEditComplete () {
 	lastRegexFindCommand.text = null;
 	if (config.vars.readonly && !isReadonlyWarned) {
 		isReadonlyWarned = true;
-		requestShowMessage(requestRegisterNotice(_('Warning: changing readonly element.')), true);
+		requestNotice({
+			message:_('Warning: changing readonly element.'),
+			emphasis:true
+		});
 	}
 }
 function processAbbrevs (force, ignoreAbbreviation) {
@@ -2000,58 +2025,49 @@ function processInput (e, ignoreAbbrev) {
 		requestedState.updateCursor = true;
 		requestedState.inputMode = null;
 	}
-	if (requestedState.modeline) {
-		switch (requestedState.modeline.type) {
-		case 'prefix':
-			showPrefixInput(requestedState.modeline.message);
-			break;
-		case 'message':
-			if (backlog.visible) {
-				showPrefixInput();
-				requestConsoleState();
-				backlog.push(requestedState.modeline.message);
-			}
-			else {
-				messageUpdated = true;
-				showMessage(
-					requestedState.modeline.message,
-					requestedState.modeline.emphasis,
-					requestedState.modeline.pseudoCursor,
-					requestedState.modeline.volatile_
-				);
-			}
-			break;
-		}
-		requestedState.modeline = null;
-		config.vars.errorbells && requestRegisterNotice();
+	if (requestedState.showInput) {
+		showPrefixInput(requestedState.showInput.message);
+		requestedState.showInput = null;
+		config.vars.errorbells && requestNotice();
 	}
 	if (requestedState.notice) {
-		if (requestedState.notice.play) {
+		var line = requestedState.notice;
+		if (line.bell) {
 			bell.play();
 		}
-		if (requestedState.notice.message) {
-			lastMessage = toNativeControl(requestedState.notice.message);
-			log(requestedState.notice.message);
+		if (line.message) {
+			showMessageCore(line.message, line.emphasis, false, true);
+		}
+		else if (line.silent) {
+			lastMessage = toNativeControl(line.silent);
 		}
 		requestedState.notice = null;
 	}
 	if (requestedState.console) {
-		if (requestedState.console.open && backlog.queued) {
+		if (requestedState.console.open) {
 			if (backlog.buffer.length > 1 || backlog.visible) {
-				backlog.write(false, messageUpdated);
+				backlog.open();
 				pushInputMode(result, 'backlog_prompt');
 			}
 			else {
-				backlog.buffer.length && showMessage(backlog.buffer[0]);
+				if (backlog.buffer.length == 1) {
+					var line = backlog.buffer[0];
+					showMessageCore(
+						line.text, line.emphasis,
+						line.pseudoCursor, line.preserveLastMessage);
+					if (line.emphasis) {
+						bell.play();
+					}
+				}
 				backlog.hide();
 				backlog.clear();
 			}
 		}
-		else if (!requestedState.console.open) {
+		else {
 			backlog.hide();
 			backlog.clear();
 		}
-		requestedState.console = null;
+		requestedState.console = requestedState.message = null;
 	}
 	if (!keyManager.isLocked && (result.needEmitEvent !== false || prefixInput == '')) {
 		requestedState.updateCursor = true;
@@ -2122,10 +2138,12 @@ function callDenotativeFunction () {
 }
 function inputEscape () {
 	if (arguments.length) {
-		requestRegisterNotice(_('{0} canceled.', prefixInput.operation || arguments[0]));
+		requestNotice({
+			silent:_('{0} canceled.', prefixInput.operation || arguments[0])
+		});
 	}
 	else {
-		inputMode == 'command' && requestRegisterNotice(_('In command mode.'));
+		inputMode == 'command' && requestNotice({silent:_('In command mode.')});
 	}
 
 	prefixInput.reset();
@@ -2173,6 +2191,10 @@ function isBound (mode) {
 }
 function isAlias (c, op) {
 	return prefixInput.motion == '' && c == (op || prefixInput.operation);
+}
+function isMotionErrored () {
+	return requestedState.message
+		|| requestedState.notice && requestedState.notice.bell;
 }
 
 // for file system
@@ -2798,17 +2820,17 @@ function setGeometory (target) {
 	var footer = $('wasavi_footer');
 	var conCon = $('wasavi_console_container');
 	var con = $('wasavi_console');
-	var conScaler = $('wasavi_console_scaler');
 	var fNotifier = $('wasavi_footer_notifier');
 	var curLine = $('wasavi_cursor_line');
 	var curCol = $('wasavi_cursor_column');
 
-	if (!container || !editor || !footer || !conCon || !con || !conScaler
+	if (!container || !editor || !footer || !conCon || !con
 	||  !fNotifier || !curLine || !curCol) {
 		throw new Error(
 			'setGeometory: invalid element: ' +
 			[
-				container, editor, footer, conCon, con, conScaler, fNotifier
+				container, editor, footer, conCon, con, fNotifier,
+				curLine, curCol
 			].join(', ')
 		);
 	}
@@ -2873,7 +2895,7 @@ function setTabStop (ts) {
 function motionLeft (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionStart;
-	c != '' && n.col <= 0 && requestRegisterNotice(_('Top of line.'));
+	c != '' && n.col <= 0 && requestNotice({silent:_('Top of line.')});
 	n.col = Math.max(n.col - count, 0);
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
@@ -2884,7 +2906,7 @@ function motionRight (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionEnd;
 	var length = buffer.rows(n).length;
-	c != '' && n.col >= length - 1 && requestRegisterNotice(_('Tail of line.'));
+	c != '' && n.col >= length - 1 && requestNotice({silent:_('Tail of line.')});
 	n.col = Math.min(n.col + count, length);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
@@ -2928,7 +2950,7 @@ function motionNextWord (c, count, bigWord, wordEnd) {
 	var n = buffer.selectionEnd;
 	var ikw = config.vars.iskeyword;
 	count || (count = 1);
-	n.col >= buffer.rows(n).length - 1 && n.row >= buffer.rowLength - 1 && requestRegisterNotice(_('Tail of text.'));
+	n.col >= buffer.rows(n).length - 1 && n.row >= buffer.rowLength - 1 && requestNotice({silent:_('Tail of text.')});
 
 	function doBigWord () {
 		for (var i = 0; i < count; i++) {
@@ -3061,7 +3083,7 @@ function motionPrevWord (c, count, bigWord, specialStops) {
 	var n = buffer.selectionStart;
 	var ikw = config.vars.iskeyword;
 	count || (count = 1);
-	n.col <= 0 && n.row <= 0 && requestRegisterNotice(_('Top of text.'));
+	n.col <= 0 && n.row <= 0 && requestNotice({silent:_('Top of text.')});
 
 	function isStopPosition (stop) {return stop.eq(n);}
 
@@ -3168,7 +3190,7 @@ function motionFindForward (c, count, stopBefore, continuous) {
 		buffer.selectionEnd = n;
 	}
 	else {
-		requestRegisterNotice(_('Next search target not found.'));
+		requestNotice({silent:_('Next search target not found.')});
 	}
 	lastHorzFindCommand.direction = 1;
 	lastHorzFindCommand.letter = c;
@@ -3217,7 +3239,7 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 		buffer.selectionStart = n;
 	}
 	else {
-		requestRegisterNotice(_('Previous search target not found.'));
+		requestNotice({silent:_('Previous search target not found.')});
 	}
 	lastHorzFindCommand.direction = -1;
 	lastHorzFindCommand.letter = c;
@@ -3307,7 +3329,7 @@ function motionFindByRegexForward (c, count, opts) {
 		}
 	}
 	invalidateIdealWidthPixels();
-	wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
+	wrapped && requestNotice(_('Search wrapped.'));
 	return {offset:n, matchLength:len};
 }
 function motionFindByRegexBackward (c, count, opts) {
@@ -3388,7 +3410,7 @@ function motionFindByRegexBackward (c, count, opts) {
 		}
 	}
 	invalidateIdealWidthPixels();
-	wrapped && requestShowMessage(_('Search wrapped.'), false, false, true);
+	wrapped && requestNotice(_('Search wrapped.'));
 	return {offset:n, matchLength:len};
 }
 function motionUpDown (c, count, isDown) {
@@ -3398,11 +3420,11 @@ function motionUpDown (c, count, isDown) {
 	var goalWidth = idealWidthPixels;
 
 	if (isDown) {
-		n.row >= buffer.rowLength - 1 && requestRegisterNotice(_('Tail of text.'));
+		n.row >= buffer.rowLength - 1 && requestNotice({silent:_('Tail of text.')});
 		n.row = Math.min(n.row + count, buffer.rowLength - 1);
 	}
 	else {
-		n.row <= 0 && requestRegisterNotice(_('Top of text.'));
+		n.row <= 0 && requestNotice({silent:_('Top of text.')});
 		n.row = Math.max(n.row - count, 0);
 	}
 
@@ -3634,8 +3656,9 @@ function motionUpDownDenotative (c, count, isDown) {
 
 	if (overed) {
 		if (i == 0) {
-			requestRegisterNotice(
-				isDown ? _('Tail of text.') : _('Top of text.'));
+			requestNotice({
+				silent:isDown ? _('Tail of text.') : _('Top of text.')
+			});
 		}
 	}
 	else {
@@ -4303,7 +4326,7 @@ function quickReplace (c, count, allowMultiLine) {
 	}
 	if (!allowMultiLine
 	&& count > buffer.rows(buffer.selectionStartRow).length - buffer.selectionStartCol) {
-		requestRegisterNotice(_('Replace count too large.'));
+		requestShowMessage(_('Replace count too large.'), true);
 		isEditCompleted = true;
 		invalidateIdealWidthPixels();
 		return true;
@@ -4382,6 +4405,16 @@ function insertNewlineWithIndent (origin, selfIndent) {
 		var indent = config.vars.autoindent ? buffer.getBackIndent(buffer.selectionStart) : '';
 		insert(indent);
 		insert('\n', {keepPosition:true});
+	}
+}
+function reportSave (f) {
+	var report = config.vars.report;
+	config.setData('report', 0x7fffffff);
+	try {
+		return f();
+	}
+	finally {
+		config.setData('report', report);
 	}
 }
 
@@ -5102,7 +5135,7 @@ var modeHandlers = {
 				keyManager.push(e);
 			}
 			else {
-				backlog.write(r.letter == '\u000d');
+				backlog.open(r.letter == '\u000d');
 			}
 		}
 		else {
@@ -5464,7 +5497,7 @@ var commandMap = {
 			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
-			if (requestedState.notice) {
+			if (isMotionErrored()) {
 				return;
 			}
 
@@ -5483,9 +5516,10 @@ var commandMap = {
 				var selfIndent = buffer.getIndent(origin);
 				buffer.selectionEnd = buffer.selectionStart;
 				buffer.isLineOrientSelection = true;
-				yank(actualCount);
-				requestedState.modeline = null;
-				var deleted = deleteSelection();
+				var deleted = reportSave(function () {
+					yank(actualCount);
+					return deleteSelection();
+				});
 				if (deleted >= config.vars.report) {
 					requestShowMessage(_('Changing {0} {line:0}.', deleted));
 				}
@@ -5509,7 +5543,7 @@ var commandMap = {
 			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
-			if (requestedState.notice) {
+			if (isMotionErrored()) {
 				return;
 			}
 
@@ -5529,9 +5563,10 @@ var commandMap = {
 				extendRightIfInclusiveMotion();
 			}
 
-			yank(actualCount);
-			requestedState.modeline = null;
-			var deleted = deleteSelection();
+			var deleted = reportSave(function () {
+				yank(actualCount);
+				return deleteSelection();
+			});
 
 			if (isLineOrient) {
 				origin.row = Math.min(origin.row, buffer.rowLength - 1);
@@ -5557,7 +5592,7 @@ var commandMap = {
 			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
-			if (requestedState.notice) {
+			if (isMotionErrored()) {
 				return;
 			}
 
@@ -5577,7 +5612,7 @@ var commandMap = {
 			if (isAlias(c)) {
 				this._.apply(this, arguments);
 			}
-			if (requestedState.notice) {
+			if (isMotionErrored()) {
 				return;
 			}
 
@@ -5607,6 +5642,9 @@ var commandMap = {
 	},
 	ys:{
 		$op:function (c, o) {
+			if (isMotionErrored()) {
+				return;
+			}
 			requestInputMode('line_input', {
 				modeOpts:{
 					prefix:_('surround with:'),
@@ -6182,7 +6220,7 @@ var commandMap = {
 		var isForward = o.key != 'N';
 		var dir = lastRegexFindCommand.direction * (isForward ? 1 : -1);
 		var result = motionFindByRegexFacade(regex, prefixInput.count, dir);
-		requestShowMessage((isForward ? '/' : '?') + regex);
+		requestNotice((isForward ? '/' : '?') + regex);
 		return result;
 	},
 	// search previous match for current pattern
@@ -6216,8 +6254,7 @@ var commandMap = {
 		finally {
 			if (isString(message)) {
 				buffer.setSelectionRange(ss1, se1);
-				requestedState.notice = null;
-				requestShowMessage(requestRegisterNotice(message), true);
+				requestShowMessage(message, true);
 				return inputEscape(o.e.key);
 			}
 		}
@@ -6374,7 +6411,7 @@ var commandMap = {
 				break;
 
 			default:
-				requestRegisterNotice(_('Unknown adjust command.'));
+				requestShowMessage(_('Unknown adjust command.'), true);
 				break;
 			}
 		}
@@ -6443,7 +6480,7 @@ var commandMap = {
 					result = startEdit(c);
 				}
 				else {
-					requestRegisterNotice(_('Last inputted position is undefined.'));
+					requestShowMessage(_('Last inputted position is undefined.'), true);
 					result = true;
 				}
 				prefixInput.motion = o.key + c;
@@ -6483,13 +6520,13 @@ var commandMap = {
 					recordedStrokes.add('bound').strokes = o.key + c;
 				}
 				else {
-					requestRegisterNotice(_('Last bound is undefined.'));
+					requestShowMessage(_('Last bound is undefined.'), true);
 				}
 				result = true;
 				prefixInput.motion = o.key + c;
 				break;
 			default:
-				requestRegisterNotice(_('Unknown g-prefixed command: {0}', c));
+				requestShowMessage(_('Unknown g-prefixed command: {0}', c), true);
 				result = true;
 				break;
 			}
@@ -6677,7 +6714,7 @@ var commandMap = {
 		}
 		var result = editLogger.undo();
 		if (result === false) {
-			requestShowMessage(requestRegisterNotice(_('No undo item.')));
+			requestShowMessage(_('No undo item.'), true);
 		}
 		else {
 			requestShowMessage(_('{0} {operation:0} have reverted.', result));
@@ -6692,7 +6729,7 @@ var commandMap = {
 		}
 		var result = editLogger.redo();
 		if (result === false) {
-			requestShowMessage(requestRegisterNotice(_('No redo item.')));
+			requestShowMessage(_('No redo item.'), true);
 		}
 		else {
 			requestShowMessage(_('{0} {operation:0} have executed again.', result));
@@ -6744,7 +6781,7 @@ var commandMap = {
 		wait_a_letter:function (c) {
 			prefixInput.trailer = c;
 			if (!marks.isValidName(c)) {
-				requestRegisterNotice(_('Invalid mark name.'));
+				requestShowMessage(_('Invalid mark name.'), true);
 			}
 			marks.set(c, buffer.selectionStart);
 			return true;
@@ -7099,7 +7136,7 @@ var boundMap = {
 				var selfIndent = buffer.getIndent(p1);
 				buffer.isLineOrientSelection = true;
 				yank();
-				requestedState.modeline = null;
+				requestedState.showInput = null;
 				deleteSelection();
 				act >= config.vars.report && requestShowMessage(_('Changing {0} {line:0}.', act));
 				buffer.isLineOrientSelection = false;
@@ -7197,7 +7234,7 @@ var boundMap = {
 					buffer.setSelectionRange(m);
 				}
 				else {
-					requestRegisterNotice(_('Last inputted position is undefined.'));
+					requestShowMessage(_('Last inputted position is undefined.'), true);
 				}
 				result = true;
 				break;
@@ -7219,7 +7256,7 @@ var boundMap = {
 					extendBound(m2);
 				}
 				else {
-					requestRegisterNotice(_('Last bound is undefined.'));
+					requestShowMessage(_('Last bound is undefined.'), true);
 				}
 				result = true;
 				break;
@@ -7872,7 +7909,7 @@ var lineInputEditMap = {
 	},
 	'\u000e'/*^N*/:function (c, o) {
 		if (lineInputHistories.isInitial) {
-			requestRegisterNotice(_('Tail of history.'));
+			notifier.show(_('Tail of history.'));
 		}
 		else {
 			var line = lineInputHistories.next();
@@ -7880,7 +7917,7 @@ var lineInputEditMap = {
 				line = dataset(o.target, 'wasaviLineInputCurrent');
 			}
 			if (line == undefined) {
-				requestRegisterNotice(_('Invalid history item.'));
+				notifier.show(_('Invalid history item.'));
 			}
 			else {
 				o.target.value = toVisibleControl(line);
@@ -7897,7 +7934,7 @@ var lineInputEditMap = {
 		}
 		var line = lineInputHistories.prev();
 		if (line == undefined) {
-			requestRegisterNotice(_('Top of history.'));
+			notifier.show(_('Top of history.'));
 		}
 		else {
 			o.target.value = toVisibleControl(line);
@@ -7992,7 +8029,7 @@ var lineInputEditMap = {
 			}
 			if (result.error) {
 				notifier.show(result.error);
-				requestRegisterNotice();
+				requestNotice();
 			}
 			else {
 				notifier.hide();
@@ -8004,7 +8041,7 @@ var lineInputEditMap = {
 						var e = keyManager.objectFromCode(code);
 
 						if (code == 10) {
-							requestRegisterNotice();
+							requestNotice();
 							break;
 						}
 						if (code >= 0 && code <= 31 || code == 0x7f) {

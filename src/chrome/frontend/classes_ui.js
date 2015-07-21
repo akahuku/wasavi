@@ -697,13 +697,64 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 	);
 };
 
-Wasavi.Backlog = function (app, container, con, scaler) {
+Wasavi.Backlog = function (app, container, con) {
 	var buffer = [];
+	var charWidth;
+	var charHeight;
+
+	function append (line) {
+		var el = con.appendChild(document.createElement('div'));
+		el.className = 'backlog-row';
+
+		if (line.emphasis) {
+			var span = el.appendChild(document.createElement('span'));
+			span.style.color = app.theme.colors.warnedStatusFg;
+			span.style.backgroundColor = app.theme.colors.warnedStatusBg;
+			span.textContent = line.text;
+		}
+		else {
+			el.appendChild(document.createTextNode(line.text));
+		}
+
+		return el;
+	}
+	function ensureSetCharSize () {
+		if (charWidth && charHeight) return;
+		var span = con.appendChild(document.createElement('span'));
+		try {
+			span.textContent = '0';
+			charWidth = span.offsetWidth;
+			charHeight = span.offsetHeight;
+		}
+		finally {
+			removeChild(span);
+		}
+	}
 
 	function push (arg) {
-		arg instanceof Array ?
-			buffer.push.apply(buffer, arg) :
+		if (isArray(arg)) {
+			arg.forEach(push);
+		}
+		else if (isObject(arg)) {
+			if (!('text' in arg)) arg.text = '';
 			buffer.push(arg);
+		}
+		else {
+			buffer.push({text:'' + arg});
+		}
+	}
+	function pushEmphasis (arg) {
+		if (isArray(arg)) {
+			arg.forEach(push);
+		}
+		else if (isObject(arg)) {
+			if (!('text' in arg)) arg.text = '';
+			arg.emphasis = true;
+			buffer.push(arg);
+		}
+		else {
+			buffer.push({text:'' + arg, emphasis:true});
+		}
 	}
 	function show () {
 		container.style.visibility = 'visible';
@@ -714,60 +765,43 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 	function clear () {
 		buffer.length = 0;
 	}
-	function write (byLine, preserveMessage) {
+	function open (byLine) {
+		var totalHeight = 0;
+		var goalHeight = getRows() * charHeight;
+
 		if (!getVisible()) {
 			show();
-			con.value = multiply('\n', getRows());
+			emptyNodeContents(con);
+			var el = con.appendChild(document.createElement('div'));
+			el.style.height = goalHeight + 'px';
 		}
 
-		var totalHeight = 0;
-		var goalHeight = parseInt(con.clientHeight / scaler.offsetHeight) * scaler.offsetHeight;
 		while (buffer.length) {
-			if (con.value.length && con.value.substr(-1) != '\n') {
-				con.value += '\n';
-			}
-			if (app.lastMessage.length && app.lastMessage.substr(-1) != '\n') {
-				app.lastMessage += '\n';
-			}
-			var line = '';
-			if (app.isInteractive) {
-				line = buffer.shift();
-			}
-			else {
-				line = buffer.join('\n');
-				buffer.length = 0;
-			}
-			scaler.textContent = line;
-			if (app.isInteractive && (totalHeight + scaler.offsetHeight > goalHeight || byLine)) {
-				if (totalHeight == 0) {
-					con.value += line;
-					con.setSelectionRange(con.value.length, con.value.length);
-					con.scrollTop = con.scrollHeight - con.clientHeight;
-					app.lastMessage += toNativeControl(line);
-				}
-				else {
-					buffer.unshift(line);
-				}
+			var line = buffer.shift();
+			var el = append(line);
+
+			if (totalHeight > 0
+			&& (totalHeight + el.offsetHeight > goalHeight || byLine)) {
+				buffer.unshift(line);
+				removeChild(el);
 				break;
 			}
 			else {
-				con.value += line;
-				con.setSelectionRange(con.value.length, con.value.length);
+				app.lastMessage +=
+					(app.lastMessage == '' || app.lastMessage.substr(-1) == '\n' ? '' : '\n') +
+					toNativeControl(line.text);
 				con.scrollTop = con.scrollHeight - con.clientHeight;
-				totalHeight += scaler.offsetHeight;
-				app.lastMessage += toNativeControl(line);
+				totalHeight += el.offsetHeight;
 			}
 		}
 
-		if (!preserveMessage) {
-			app.low.showMessage(
-				buffer.length ? _('More...') :
-								_('Press any key to continue, or enter more ex command:'),
-				false, true, true);
-		}
+		app.low.showMessageCore(
+			buffer.length ? _('More...') :
+							_('Press any key to continue, or enter more ex command:'),
+			false, true, true);
 	}
 	function dispose () {
-		app = container = con = scaler = null;
+		app = container = con = null;
 	}
 
 	function getBuffer () {
@@ -777,27 +811,33 @@ Wasavi.Backlog = function (app, container, con, scaler) {
 		return buffer.length > 0;
 	}
 	function getRows () {
-		scaler.textContent = '0';
-		return Math.floor(con.offsetHeight / scaler.offsetHeight);
+		ensureSetCharSize();
+		return Math.floor(con.offsetHeight / charHeight);
 	}
 	function getCols () {
-		emptyNodeContents(scaler);
-		var span = scaler.appendChild(document.createElement('span'));
-		span.textContent = '0';
-		return Math.floor(con.offsetWidth / span.offsetWidth);
+		ensureSetCharSize();
+		return Math.floor(con.offsetWidth / charWidth);
 	}
 	function getVisible () {
 		return document.defaultView.getComputedStyle(container, '').visibility != 'hidden';
 	}
+	function getText () {
+		return Array.prototype.map.call(
+			con.getElementsByClassName('backlog-row'),
+			function (o) {return o.textContent}
+		)
+		.join('\n');
+	}
 
 	publish(this,
-		push, show, hide, clear, write, dispose,
+		push, pushEmphasis, show, hide, clear, open, dispose,
 		{
 			buffer:getBuffer,
 			queued:getQueued,
 			rows:getRows,
 			cols:getCols,
-			visible:getVisible
+			visible:getVisible,
+			text:getText
 		}
 	);
 };

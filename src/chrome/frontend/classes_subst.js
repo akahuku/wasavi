@@ -271,7 +271,7 @@ Wasavi.SubstituteWorker.prototype = {
 
 		default:
 			t.emphasis(k.pos, buffer[k.index][0].length);
-			this.app.low.requestRegisterNotice();
+			this.app.low.requestNotice();
 			return true;
 		}
 
