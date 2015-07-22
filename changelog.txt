@@ -1,3 +1,8 @@
+0.6.508
+
+	* add `:wqs` and `:submit` command
+	* treat '+' register as an alias of '*'
+
 0.6.505
 
 	* make key stroke divided only non-interactive input

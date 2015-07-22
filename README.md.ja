@@ -232,7 +232,7 @@ Edit commands
 ex commands
 -----------
 
-`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `sort` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `xit` `yank` `>` `<` `@` `*`
+`abbreviate` `cd` `chdir` `copy` `delete` `edit` `file` `filesystem` `global` `join` `k` `map` `mark` `marks` `move` `options` `print` `put` `pwd` `quit` `read` `redo` `s` `&` `~` `set` `sort` `submit` `registers` `to` `unabbreviate` `undo` `unmap` `version` `v` `write` `wq` `wqs` `xit` `yank` `>` `<` `@` `*`
 
 ex コマンドでのアドレス指定はフルサポートされています:
 
