@@ -98,6 +98,18 @@
 				}
 
 				document
+				.getElementById('container')
+				.addEventListener('submit', function (e) {
+					alert('form: submit handler');
+				}, false);
+
+				document
+				.getElementById('submit-button')
+				.addEventListener('click', function (e) {
+					alert('submit button: click handler');
+				}, false);
+
+				document
 				.getElementById('reset-button')
 				.addEventListener('click', function (e) {
 					e.preventDefault();
@@ -156,7 +168,7 @@
 	<body>
 		<h1>wasavi test frame</h1>
 		<hr>
-		<form id="container">
+		<form id="container" action="#">
 			<div><input type="text" id="t1"></div>
 			<table id="textbox-container">
 				<tr>
@@ -165,6 +177,7 @@
 				</tr>
 			</table>
 			<div>
+				<input type="submit" id="submit-button">
 				<input type="reset" id="reset-button">
 				<button id="init-section-button">init section test</button>
 				<button id="init-wrap-button">init wrap test</button>

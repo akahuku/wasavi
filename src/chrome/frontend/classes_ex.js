@@ -1871,8 +1871,11 @@ var cache = {};
 		t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
 	}),
 	new ExCommand('quit', 'q', '!', 0, function (app, t, a) {
+		if (/^(?:wqs|submit)$/.test(this.name)) {
+			app.targetElement.isSubmitRequested = true;
+		}
 		if (a.flags.force) {
-			app.writeOnTermination = false;
+			app.isTextDirty = false;
 			app.terminated = true;
 		}
 		else {
@@ -2160,6 +2163,9 @@ var cache = {};
 			}
 		);
 	}),
+	new ExCommand('submit', 'sub', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		return find('write').handler.apply(this, arguments);
+	}),
 	new ExCommand('registers', 'reg', '', 0, function (app, t, a) {
 		app.backlog.push(app.registers.dump());
 		app.low.requestConsoleState();
@@ -2222,7 +2228,7 @@ var cache = {};
 			}
 			if (worker.req) {
 				app.isTextDirty = false;
-				if (this.name == 'wq' || this.name == 'xit') {
+				if (/^(?:submit|wqs?|xit)$/.test(this.name)) {
 					return find('quit').handler.apply(this, arguments);
 				}
 				var path = worker.req.meta.path;
@@ -2262,6 +2268,9 @@ var cache = {};
 		return result;
 	}),
 	new ExCommand('wq', 'wq', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
+		return find('write').handler.apply(this, arguments);
+	}),
+	new ExCommand('wqs', 'wqs', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
 		return find('write').handler.apply(this, arguments);
 	}),
 	new ExCommand('xit', 'x', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {

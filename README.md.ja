@@ -163,6 +163,9 @@ Tips and Tricks
 	+ `:set <オプション名>&exrc`
 * 全ての設定を exrc の評価直後の状態へ戻すには:
 	+ `:set all&exrc`
+* テキストを書き出し、wasavi を閉じた後自動的にフォームをサブミットするには:
+	+ `:wqs`
+	+ `:submit` ( `:sub` まで省略できます)
 
 
 

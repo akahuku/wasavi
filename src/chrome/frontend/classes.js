@@ -472,10 +472,13 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			item && item.loadSnapshot(snapshot);
 		}
 	}
+	function dispose () {
+		app = internals = abbrevs = vars = names = null;
+	}
 
 	publish(this,
 		getInfo, getData, setData, dump, dumpData, dumpScript,
-		reset, saveSnapshot, loadSnapshot,
+		reset, saveSnapshot, loadSnapshot, dispose,
 		{
 			vars:function () {return vars},
 			abbrevs:function () {return abbrevs}

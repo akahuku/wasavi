@@ -1151,6 +1151,21 @@ function handleBackendMessage (req) {
 		if (req.marks) {
 			targetElement.setAttribute(MARKS_ID, req.marks);
 		}
+		if (req.isSubmitRequested
+		&& targetElement
+		&& targetElement.form
+		&& targetElement.form.action != '') {
+			setTimeout(function (form) {
+				var submitter = form.querySelector(
+					'input[type="submit"],button[type="submit"]');
+				if (submitter) {
+					submitter.click();
+				}
+				else {
+					form.submit();
+				}
+			}, 1, targetElement.form);
+		}
 		cleanup(req.value, req.isImplicit);
 		info('wasavi terminated');
 		fireCustomEvent('WasaviTerminated', 0);

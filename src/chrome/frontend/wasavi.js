@@ -65,8 +65,6 @@ diag('defining classes');
 		set preferredNewline (v) {preferredNewline = v},
 		get terminated () {return terminated},
 		set terminated (v) {terminated = v},
-		get writeOnTermination () {return writeOnTermination},
-		set writeOnTermination (v) {writeOnTermination = v},
 		get state () {return state},
 		get marks () {return marks},
 		get cursor () {return cursor},
@@ -1252,7 +1250,6 @@ function install (x, req) {
 	});
 	preferredNewline = '\n';
 	terminated = false;
-	writeOnTermination = true;
 	state = 'normal';
 	inputModeStack = [];
 	inputMode = 'command';
@@ -1377,14 +1374,22 @@ function runExrc () {
 
 	diag('leaving runExrc()');
 }
-function uninstall (save, implicit) {
+function uninstall (implicit) {
+	// in quick activation mode,
 	// apply the edited content to target textarea
-	if (save && config.vars.modified) {
+	if (quickActivation && config.vars.modified) {
 		targetElement.value = buffer.value;
 	}
 
 	// remove all event handlers
 	setupEventHandlers(false);
+
+	// write back the data which agent uses
+	targetElement.tabId = extensionChannel.tabId;
+	targetElement.isTopFrame = !!extensionChannel.isTopFrame();
+	targetElement.isImplicit = !!implicit;
+	targetElement.ros = config.dumpScript(true).join('\n');
+	targetElement.marks = testMode ? null : marks.save();
 
 	// clear all objects
 	inputModeStack = undefined;
@@ -1399,7 +1404,6 @@ function uninstall (save, implicit) {
 	lastSubstituteInfo = undefined;
 	requestedState = undefined;
 	inputHandler = inputHandler.dispose();
-	targetElement.marks = testMode ? null : marks.save();
 	marks = marks.dispose();
 	cursor = cursor.dispose();
 	scroller = scroller.dispose();
@@ -1410,12 +1414,7 @@ function uninstall (save, implicit) {
 	completer = completer.dispose();
 	recordedStrokes = recordedStrokes.dispose();
 	surrounding = surrounding.dispose();
-
-	//
-	targetElement.tabId = extensionChannel.tabId;
-	targetElement.isTopFrame = !!extensionChannel.isTopFrame();
-	targetElement.isImplicit = !!implicit;
-	targetElement.ros = config.dumpScript(true).join('\n');
+	config = config.dispose();
 
 	extensionChannel.postMessage({
 		type:'terminated',
@@ -2008,7 +2007,7 @@ function processInput (e, ignoreAbbrev) {
 	modeHandlers[inputMode].call(modeHandlers, e, result);
 
 	if (terminated) {
-		uninstall(writeOnTermination);
+		uninstall();
 		return;
 	}
 
@@ -4429,7 +4428,7 @@ function handleWindowFocus (e) {
 }
 function handleWindowBlur (e) {
 	if (quickActivation) {
-		uninstall(true, true);
+		uninstall(true);
 	}
 	else {
 		cursor.update({focused:false});
@@ -5047,7 +5046,6 @@ var fileName;
 var fileSystemIndex;
 var preferredNewline;
 var terminated;
-var writeOnTermination;
 var state;
 var registers;
 var lineInputHistories;

@@ -163,6 +163,9 @@ Tips and Tricks
 	+ `:set <option-name>&exrc`
 * To return all settings to the state just after evaluation of exrc:
 	+ `:set all&exrc`
+* To submit a form automatically after writing text and closing wasavi:
+	+ `:wqs`
+	+ `:submit` (this can shoten to `:sub` )
 
 
 
