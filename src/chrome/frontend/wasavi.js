@@ -4337,6 +4337,7 @@ function quickReplace (c, count, allowMultiLine) {
 			insert('\n');
 		}
 		else {
+			c = toVisibleControl(c);
 			var n = buffer.selectionStart;
 			var scaler = $('wasavi_singleline_scaler');
 			var widthCache = [0];
@@ -5253,7 +5254,14 @@ var modeHandlers = {
 			if (execEditMap(r, e, r.mapkey, r.subkey, r.code)) {
 				requestShowPrefixInput(getDefaultPrefixInputString());
 			}
-			else if ((r.code == 0x08 || r.code == 0x0a || r.code >= 32) && !clipOverrun()) {
+			else if (!clipOverrun()) {
+				if (r.code < 32) {
+					inputHandler.ungetText();
+					inputHandler.ungetStroke();
+					e.code = toVisibleControl(e.code).charCodeAt(0);
+					letterActual = inputHandler.updateText(e);
+					inputHandler.updateStroke(e);
+				}
 				(inputMode == 'edit' ? insert : overwrite)(letterActual);
 				processAutoDivide(e);
 				processAbbrevs(false, r.ignoreAbbrev);
