@@ -417,8 +417,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		index.push('** version: ' + app.version + '**', '', '');
 		for (var i = 0, goal = internals.length; i < goal; i++) {
 			var v = internals[i];
-			index.push('* <a href="#' + v.name + '">' + v.name + '</a>');
-			content.push('<a href="#" id="' + v.name + '">#</a> ' + v.name);
+			index.push('* <a href="#wasavi-option-' + v.name + '">' + v.name + '</a>');
+			content.push('<a href="#" name="wasavi-option-' + v.name + '">#</a> ' + v.name);
 			content.push('--------');
 			content.push('');
 			switch (v.type) {

@@ -2138,30 +2138,38 @@ var cache = {};
 			app.isEditCompleted = true;
 		});
 	}),
-	new ExCommand('sushi', 'sushi', '', 0, function (app, t, a) {
-		app.lastRegexFindCommand.push({});
-		app.lastRegexFindCommand.setPattern('');
-		app.lastSubstituteInfo.clear();
+	new ExCommand('sushi', 'sushi', 's', 0, function (app, t, a) {
+		switch (a.argv[0]) {
+		case 'reset-search-info':
+			app.lastRegexFindCommand.push({});
+			app.lastRegexFindCommand.setPattern('');
+			app.lastSubstituteInfo.clear();
+			break;
+		case 'dump-undo-info':
+			console.log([
+				'*** undo info ***',
+				app.editLogger.dump(),
+				'item length: ' + app.editLogger.logLength,
+				'current pos: ' + app.editLogger.currentPosition
+			].join('\n'));
+			break;
+		case 'dump-internal-ids':
+			app.extensionChannel.postMessage(
+				{
+					type:'dump-internal-ids',
+					parentTabId: app.targetElement.parentTabId,
+					parentTabIdInternal: app.targetElement.internalId
+				},
+				function (req) {
+					req && req.log && console.log(req.log);
+				}
+			);
+			break;
+		case 'dump-options-doc':
+			console.log(app.config.dumpData());
+			break;
+		}
 		app.low.requestShowMessage('Whassup?');
-		app.low.log([
-			'*** undo info ***',
-			app.editLogger.dump(),
-			'item length: ' + app.editLogger.logLength,
-			'current pos: ' + app.editLogger.currentPosition
-		].join('\n'));
-	}),
-	new ExCommand('sashimi', 'sashimi', '', 0, function (app, t, a) {
-		app.low.requestShowMessage('Soy sauce!');
-		app.extensionChannel.postMessage(
-			{
-				type:'dump-internal-ids',
-				parentTabId: app.targetElement.parentTabId,
-				parentTabIdInternal: app.targetElement.internalId
-			},
-			function (req) {
-				req && req.log && console.log(req.log);
-			}
-		);
 	}),
 	new ExCommand('submit', 'sub', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
 		return find('write').handler.apply(this, arguments);
