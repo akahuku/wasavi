@@ -3,9 +3,9 @@ wasavi (VI editor for any web page)
 
 wasavi is an extension for Chrome, Opera and Firefox. wasavi transforms TEXTAREA element of any page into a VI editor, so you can edit the text in VI.  wasavi supports almost all VI commands and some ex commands.
 
-wasavi is underdevelopment. Any bug report or feature request is welcomed.
+wasavi is under development. Any bug report or feature request is welcome.
 
-And we also welcome the donation to continue development:
+And we also welcome a donation to continue development:
 
 [![Donate](http://pledgie.com/campaigns/26501.png)](https://pledgie.com/campaigns/26501)
 [![Flattr](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=akahuku&url=http://appsweets.net/wasavi/)
@@ -79,11 +79,11 @@ Focus TEXTAREA and press `Ctrl+Enter`.
 
 To quit wasavi press `ZZ` or `:q` or `:wq` or any other VI quit command.
 
-## What are options which wasavi accepts via `:set` command?
+## Which options are accepted by the `:set` command?
 
 See [this table](https://github.com/akahuku/wasavi/wiki/All-Options-which-wasavi-recognizes).
 
-Note: there are also options which accepts but doesn't have any effect yet.
+Note: there are also options which are accepted but don't have any effect yet.
 
 ## How to use wasavi with Vimperator on Firefox
 
@@ -99,7 +99,7 @@ This plugin will control suspend mode of Keysnail according to the state of wasa
 
 ## How to use wasavi as an independent text editor
 
-Install wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
+Install the wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
 
 ## About automatic setting override
 
@@ -107,7 +107,7 @@ The `:set` commands which you input while wasavi is running are stored to extens
 
 This setting override mechanism works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in your exrc. Then overriding will be skipped.
 
-## I Have noticed a bug
+## I have noticed a bug
 
 Please create an issue on [wasavi issue tracker](http://github.com/akahuku/wasavi/issues)
 
@@ -123,15 +123,13 @@ Tips and Tricks
 	+ `:abbreviate` displays all the abbreviations currently registered.
 	+ `:abbreviate [clear]` clears all the abbreviations.
 	+ `:abbreviate lhs` displays the abbreviation corresponding to lhs.
-	+ `:abbreviate lhs rhs` registers a abbreviation which
-	  expands lhs to rhs.
+	+ `:abbreviate lhs rhs` registers a abbreviation which expands lhs to rhs.
 	+ `:abbreviate [noremap] lhs rhs` also registers, but it is not effected remap mechanism.
 * map syntax is
 	+ `:map` displays all the mappings currently registered.
 	+ `:map [clear]` clears all the mappings.
 	+ `:map lhs rhs` registers a rule which translates lhs to rhs. Its translation is recursive.
-	+ `:map [noremap] lhs rhs` also registers, but it is
-	  non-recursive.
+	+ `:map [noremap] lhs rhs` also registers, but it is non-recursive.
 	+ `:map` targets the normal mode mappings. On the other hand,
 	  `:map!` targets the insert mode. This is equivalent to vim's `:imap`.
 * j k ^ $ moves cursor by physical row, on the other hand,
@@ -165,7 +163,7 @@ Tips and Tricks
 	+ `:set all&exrc`
 * To submit a form automatically after writing text and closing wasavi:
 	+ `:wqs`
-	+ `:submit` (this can shorten to `:sub` )
+	+ `:submit` (this can be shortened to `:sub` )
 
 
 
@@ -252,7 +250,7 @@ Input mode commands
 -------------------
 
 * `^@`: input the most recently input text, and exit input mode. this key stroke is actually `Ctrl+Space`.
-* `^D`: unshift. but if the last input character is `0` or `^`, delete all indent
+* `^D`: unshift. but if the last input character is `0` or `^`, delete all indentation
 * `^H`: delete a character
 * `^R`: paste register's content
 * `^T`: shift
