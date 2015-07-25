@@ -1887,6 +1887,26 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testSetInvert () {
+		Wasavi.send(":set list?\n");
+		assertEquals("#1-1", "  list", Wasavi.getLastMessage());
+
+		Wasavi.send(":set list!\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#2-1", "nolist", Wasavi.getLastMessage());
+		
+		Wasavi.send(":set invlist\n");
+		Wasavi.send(":set list?\n");
+		assertEquals("#3-1", "  list", Wasavi.getLastMessage());
+
+		Wasavi.send(":set datetime!\n");
+		assertEquals("#4-1", "datetime option is not a boolean: datetime!", Wasavi.getLastMessage());
+
+		Wasavi.send(":set invdirectory\n");
+		assertEquals("#5-1", "directory option is not a boolean: invdirectory", Wasavi.getLastMessage());
+	}
+
+	@Test
 	public void testRegisters () {
 		Wasavi.send(":registers\n");
 		assertEquals("#1-1", join("\n",
