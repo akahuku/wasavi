@@ -39,6 +39,7 @@
 
 /*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
 /*const*/var LINE_NUMBER_MAX_WIDTH = 6;
+/*const*/var LINE_NUMBER_RELATIVE_WIDTH = 2;
 
 /*const*/var COMPOSITION_CLASS = 'wasavi_composition';
 /*const*/var LEADING_CLASS = 'wasavi_leading';

@@ -4850,7 +4850,6 @@ var config = new Wasavi.Configurator(appProxy,
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
 			invalidateIdealWidthPixels();
-			v && config.setData('norelativenumber');
 			return v;
 		}],
 		['paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
@@ -4929,7 +4928,6 @@ var config = new Wasavi.Configurator(appProxy,
 		['quoteescape', 's', '\\'],
 		['relativenumber', 'b', false, function (v) {
 			invalidateIdealWidthPixels();
-			v && config.setData('nonumber');
 			return v;
 		}],
 		['textwidth', 'i', 0],

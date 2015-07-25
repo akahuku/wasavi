@@ -2287,14 +2287,23 @@ Wasavi.Editor.prototype = new function () {
 				this.elm.style.backgroundPosition = desc;
 			}
 		},
-		adjustLineNumberWidth: function (width, isRelative) {
-			var newClass = width ? (('n n' + width) + ' ' + (isRelative ? 'r' : 'a')) : '';
+		adjustLineNumberClass: function (isAbsolute, isRelative) {
+			var newClass = '';
+			if (isAbsolute) {
+				newClass = (isRelative ? 'nar' : 'na') +
+					' n' + Math.min(
+						LINE_NUMBER_MAX_WIDTH,
+						(this.elm.childNodes.length + '').length);
+			}
+			else if (isRelative) {
+				newClass = 'nr n' + LINE_NUMBER_RELATIVE_WIDTH;
+			}
 			if (this.elm.className != newClass) {
 				this.elm.className = newClass;
 			}
 		},
-		adjustLineNumber: function (isRelative) {
-			var desc = 'n ' + (isRelative ? (this.selectionStartRow + 1) : 0);
+		adjustLineNumber: function () {
+			var desc = 'na 0 nr ' + (this.selectionStartRow + 1);
 			if (this.elm.style.counterReset != desc) {
 				this.elm.style.counterReset = desc;
 			}
