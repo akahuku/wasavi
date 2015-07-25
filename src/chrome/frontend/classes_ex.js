@@ -2001,7 +2001,7 @@ var cache = {};
 			}
 			for (var i = startIndex; i < a.argv.length; i++) {
 				var arg = a.argv[i];
-				var re = /^([^=?]+)([=?]|&(?:default|exrc)?)/.exec(arg) || ['', arg, ''];
+				var re = /^([^=?!]+)([=?!]|&(?:default|exrc)?)/.exec(arg) || ['', arg, ''];
 				var info = app.config.getInfo(re[1]);
 				if (!info) {
 					messages.push(_('Unknown option: {0}', re[1]));
@@ -2038,6 +2038,7 @@ var cache = {};
 
 				// others
 				else {
+					// "set foo =bar" -> "set foo=bar"
 					if (re[2] == ''
 					&& i + 1 < a.argv.length
 					&& a.argv[i + 1].charAt(0) == '=') {
@@ -2045,9 +2046,11 @@ var cache = {};
 						arg += a.argv[++i];
 						re[2] = '=';
 					}
-					if (re[2] != '=' && info.type != 'b') {
+					// alternative query form if non-boolean
+					if (re[2] == '' && info.type != 'b') {
 						messages.push(app.config.getData(re[1], true));
 					}
+					// assignment
 					else {
 						var value = undefined;
 						if (re[2] == '=') {
@@ -2064,6 +2067,9 @@ var cache = {};
 								emphasis = true;
 								break;
 							}
+						}
+						else if (re[2] == '!') {
+							re[1] = 'inv' + re[1];
 						}
 						var result = app.config.setData(re[1], value);
 						if (typeof result == 'string') {

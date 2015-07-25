@@ -317,9 +317,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		});
 	}
 	function getItem (name) {
-		if (/^no/.test(name)) {
-			name = name.substring(2);
-		}
+		name = name.replace(/^(?:no|inv)/, '');
 		if (name in abbrevs) {
 			name = abbrevs[name];
 		}
@@ -337,9 +335,14 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 	}
 	function setData (name, value, skipSubSetter) {
 		var off = false;
+		var invert = false;
 		if (/^no/.test(name)) {
 			name = name.substring(2);
 			off = true;
+		}
+		else if (/^inv/.test(name)) {
+			name = name.substring(3);
+			invert = off = true;
 		}
 		var item = getItem(name);
 		if (!item) {
@@ -349,7 +352,12 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			if (value !== undefined) {
 				return _('An extra value assigned to {0} option.', item.name);
 			}
-			item.value = !off;
+			if (invert) {
+				item.value = !item.value;
+			}
+			else {
+				item.value = !off;
+			}
 		}
 		else if (off) {
 			return _('{0} option is not a boolean.', item.name);
