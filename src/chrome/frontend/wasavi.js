@@ -4724,7 +4724,7 @@ var completer = new Wasavi.Completer(appProxy,
 				var src = [];
 				Object.keys(config.vars).forEach(function (v) {
 					src.push(v);
-					config.getInfo(v).type == 'b' && src.push('no' + v);
+					config.getInfo(v).type == 'b' && src.push('no' + v, 'inv' + v);
 				});
 				notifyCandidates(src.sort());
 			},
@@ -4732,7 +4732,7 @@ var completer = new Wasavi.Completer(appProxy,
 				onComplete:function (newValue, oldValue) {
 					var result = null;
 					var prefix = '';
-					if (/^(no)(.+)/.test(oldValue)) {
+					if (/^(no|inv)(.+)/.test(oldValue)) {
 						prefix = RegExp.$1;
 						oldValue = RegExp.$2;
 					}

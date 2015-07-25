@@ -2046,6 +2046,10 @@ var cache = {};
 						arg += a.argv[++i];
 						re[2] = '=';
 					}
+					// mark whether inverted flag is specified
+					if ('inv' + info.name == re[1]) {
+						re[2] = '!';
+					}
 					// alternative query form if non-boolean
 					if (re[2] == '' && info.type != 'b') {
 						messages.push(app.config.getData(re[1], true));
@@ -2069,7 +2073,7 @@ var cache = {};
 							}
 						}
 						else if (re[2] == '!') {
-							re[1] = 'inv' + re[1];
+							re[1] = 'inv' + info.name;
 						}
 						var result = app.config.setData(re[1], value);
 						if (typeof result == 'string') {
