@@ -169,16 +169,18 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		this.subSetter = subSetter;
 		this.nativeValue = defaultValue;
 		this.snapshots = undefined;
+		this.assignState = 0;
 	}
 	VariableItem.prototype = {
 		getInfo: function () {
+			var that = this;
 			return {
-				name:this.name,
-				type:this.type,
-				isLateBind:this.isLateBind,
-				isDynamic:this.isDynamic,
-				isAsync:this.isAsync,
-				defaultValue:this.defaultValue
+				get name () {return that.name},
+				get type () {return that.type},
+				get isLateBind () {return that.isLateBind},
+				get isDynamic () {return that.isDynamic},
+				get isAsync () {return that.assignState ? false : that.isAsync},
+				get defaultValue () {return that.defaultValue}
 			};
 		},
 		get value () {
@@ -186,6 +188,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		},
 		set value (v) {
 			try {
+				this.assignState = 0;
 				switch (this.type) {
 				case 'b':
 					v = Boolean(v);
@@ -221,10 +224,15 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				}
 				if (this.subSetter) {
 					v = this.subSetter(v);
+					if (v == undefined) {
+						this.assignState = 1; // 1: warned
+						return;
+					}
 				}
 				this.nativeValue = v;
 			}
 			catch (e) {
+				this.assignState = 2; // 2: errored
 				throw e;
 			}
 		},
@@ -302,7 +310,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				});
 			}
 			else {
-				v.value = v.nativeValue;
+				try {v.value = v.nativeValue} catch (e) {}
 				vars[v.name] = v.value;
 			}
 			return v;
