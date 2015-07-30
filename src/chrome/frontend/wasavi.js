@@ -968,7 +968,7 @@ function error () {
 	logMode && console.error('wasavi: ' + toArray(arguments).join(' '));
 }
 function notifyToParent (eventName, payload) {
-	if (!extensionChannel || extensionChannel.isTopFrame()) return;
+	if (!extensionChannel || extensionChannel.isTopFrame()) return false;
 	payload || (payload = {});
 	payload.type = eventName;
 	extensionChannel.postMessage({
@@ -976,6 +976,7 @@ function notifyToParent (eventName, payload) {
 		to: targetElement.parentInternalId,
 		payload: payload
 	});
+	return true;
 }
 function notifyActivity (code, key, note) {
 	if (!testMode || !extensionChannel) return;
@@ -4723,7 +4724,7 @@ var completer = new Wasavi.Completer(appProxy,
 				var src = [];
 				Object.keys(config.vars).forEach(function (v) {
 					src.push(v);
-					config.getInfo(v).type == 'b' && src.push('no' + v);
+					config.getInfo(v).type == 'b' && src.push('no' + v, 'inv' + v);
 				});
 				notifyCandidates(src.sort());
 			},
@@ -4731,7 +4732,7 @@ var completer = new Wasavi.Completer(appProxy,
 				onComplete:function (newValue, oldValue) {
 					var result = null;
 					var prefix = '';
-					if (/^(no)(.+)/.test(oldValue)) {
+					if (/^(no|inv)(.+)/.test(oldValue)) {
 						prefix = RegExp.$1;
 						oldValue = RegExp.$2;
 					}
@@ -4849,7 +4850,6 @@ var config = new Wasavi.Configurator(appProxy,
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
 			invalidateIdealWidthPixels();
-			v && config.setData('norelativenumber');
 			return v;
 		}],
 		['paragraphs', 's', 'IPLPPPQPP LIpplpipbp', function (v) {
@@ -4895,14 +4895,10 @@ var config = new Wasavi.Configurator(appProxy,
 		['history', 'i', 20],
 		['monospace', 'i', 20],
 		['fullscreen', 'b', false, function (v) {
-			extensionChannel &&
-			!extensionChannel.isTopFrame() &&
-			targetElement &&
-			notifyToParent('window-state', {
+			return extensionChannel && notifyToParent('window-state', {
 				tabId:extensionChannel.tabId,
 				state:v ? 'maximized' : 'normal'
-			});
-			return v;
+			}) ? v : undefined;
 		}, {isAsync:true}],
 		['jkdenotative', 'b', false],
 		['undoboundlen', 'i', 20],
@@ -4912,8 +4908,7 @@ var config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['syncsize', 'b', true, function (v) {
-			notifyToParent('set-size', {isSyncSize: v});
-			return v;
+			return extensionChannel && notifyToParent('set-size', {isSyncSize: v}) ? v : undefined;
 		}, {isAsync:true}],
 		['override', 'b', true, null, {isDynamic:true}],
 		['datetime', 's', '%c'],
@@ -4933,7 +4928,6 @@ var config = new Wasavi.Configurator(appProxy,
 		['quoteescape', 's', '\\'],
 		['relativenumber', 'b', false, function (v) {
 			invalidateIdealWidthPixels();
-			v && config.setData('nonumber');
 			return v;
 		}],
 		['textwidth', 'i', 0],
@@ -4947,14 +4941,13 @@ var config = new Wasavi.Configurator(appProxy,
 		//['cdpath', 's', ':'],
 		//['cedit', 's', ''],
 		['columns', 'i', 0, function (v) {
-			if (isNumber(charWidth)) {
+			if (extensionChannel && isNumber(charWidth)) {
 				var ed = $('wasavi_editor');
-				notifyToParent('set-size', {
+				return notifyToParent('set-size', {
 					width: v * charWidth + (ed.offsetWidth - ed.clientWidth),
 					isSyncSize: config.vars.syncsize
-				});
+				}) ? v : undefined;
 			}
-			return v;
 		}, {isDynamic:true, isAsync:true}],
 		//['combined', 'b', false],
 		//['comment', 'b', false],
@@ -4969,13 +4962,12 @@ var config = new Wasavi.Configurator(appProxy,
 		//['keytime', 'i', 6],
 		//['leftright', 'b', false],
 		['lines', 'i', 0, function (v) {
-			if (isNumber(lineHeight)) {
-				notifyToParent('set-size', {
+			if (extensionChannel && isNumber(lineHeight)) {
+				return notifyToParent('set-size', {
 					height: v * lineHeight,
 					isSyncSize: config.vars.syncsize
-				});
+				}) ? v : undefined;
 			}
-			return v;
 		}, {isDynamic:true, isAsync:true}],
 		//['lisp', 'b', false],
 		//['lock', 'b', true],

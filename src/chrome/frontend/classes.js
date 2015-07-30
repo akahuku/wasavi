@@ -169,16 +169,18 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		this.subSetter = subSetter;
 		this.nativeValue = defaultValue;
 		this.snapshots = undefined;
+		this.assignState = 0;
 	}
 	VariableItem.prototype = {
 		getInfo: function () {
+			var that = this;
 			return {
-				name:this.name,
-				type:this.type,
-				isLateBind:this.isLateBind,
-				isDynamic:this.isDynamic,
-				isAsync:this.isAsync,
-				defaultValue:this.defaultValue
+				get name () {return that.name},
+				get type () {return that.type},
+				get isLateBind () {return that.isLateBind},
+				get isDynamic () {return that.isDynamic},
+				get isAsync () {return that.assignState ? false : that.isAsync},
+				get defaultValue () {return that.defaultValue}
 			};
 		},
 		get value () {
@@ -186,6 +188,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		},
 		set value (v) {
 			try {
+				this.assignState = 0;
 				switch (this.type) {
 				case 'b':
 					v = Boolean(v);
@@ -221,10 +224,15 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				}
 				if (this.subSetter) {
 					v = this.subSetter(v);
+					if (v == undefined) {
+						this.assignState = 1; // 1: warned
+						return;
+					}
 				}
 				this.nativeValue = v;
 			}
 			catch (e) {
+				this.assignState = 2; // 2: errored
 				throw e;
 			}
 		},
@@ -302,16 +310,14 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				});
 			}
 			else {
-				v.value = v.nativeValue;
+				try {v.value = v.nativeValue} catch (e) {}
 				vars[v.name] = v.value;
 			}
 			return v;
 		});
 	}
 	function getItem (name) {
-		if (/^no/.test(name)) {
-			name = name.substring(2);
-		}
+		name = name.replace(/^(?:no|inv)/, '');
 		if (name in abbrevs) {
 			name = abbrevs[name];
 		}
@@ -329,9 +335,14 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 	}
 	function setData (name, value, skipSubSetter) {
 		var off = false;
+		var invert = false;
 		if (/^no/.test(name)) {
 			name = name.substring(2);
 			off = true;
+		}
+		else if (/^inv/.test(name)) {
+			name = name.substring(3);
+			invert = off = true;
 		}
 		var item = getItem(name);
 		if (!item) {
@@ -341,7 +352,12 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			if (value !== undefined) {
 				return _('An extra value assigned to {0} option.', item.name);
 			}
-			item.value = !off;
+			if (invert) {
+				item.value = !item.value;
+			}
+			else {
+				item.value = !off;
+			}
 		}
 		else if (off) {
 			return _('{0} option is not a boolean.', item.name);
@@ -417,8 +433,8 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		index.push('** version: ' + app.version + '**', '', '');
 		for (var i = 0, goal = internals.length; i < goal; i++) {
 			var v = internals[i];
-			index.push('* <a href="#' + v.name + '">' + v.name + '</a>');
-			content.push('<a href="#" id="' + v.name + '">#</a> ' + v.name);
+			index.push('* <a href="#wasavi-option-' + v.name + '">' + v.name + '</a>');
+			content.push('<a href="#" name="wasavi-option-' + v.name + '">#</a> ' + v.name);
 			content.push('--------');
 			content.push('');
 			switch (v.type) {
@@ -2279,14 +2295,23 @@ Wasavi.Editor.prototype = new function () {
 				this.elm.style.backgroundPosition = desc;
 			}
 		},
-		adjustLineNumberWidth: function (width, isRelative) {
-			var newClass = width ? (('n n' + width) + ' ' + (isRelative ? 'r' : 'a')) : '';
+		adjustLineNumberClass: function (isAbsolute, isRelative) {
+			var newClass = '';
+			if (isAbsolute) {
+				newClass = (isRelative ? 'nar' : 'na') +
+					' n' + Math.min(
+						LINE_NUMBER_MAX_WIDTH,
+						(this.elm.childNodes.length + '').length);
+			}
+			else if (isRelative) {
+				newClass = 'nr n' + LINE_NUMBER_RELATIVE_WIDTH;
+			}
 			if (this.elm.className != newClass) {
 				this.elm.className = newClass;
 			}
 		},
-		adjustLineNumber: function (isRelative) {
-			var desc = 'n ' + (isRelative ? (this.selectionStartRow + 1) : 0);
+		adjustLineNumber: function () {
+			var desc = 'na 0 nr ' + (this.selectionStartRow + 1);
 			if (this.elm.style.counterReset != desc) {
 				this.elm.style.counterReset = desc;
 			}

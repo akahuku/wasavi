@@ -46,8 +46,8 @@ Wasavi.Theme = function (app) {
 		rowBgOdd:['#wasavi_editor>div:nth-child(odd)', ''],
 		editCursorFg:['#wasavi_edit_cursor', ''],
 		statusFg:['#wasavi_footer', ''],
-		lineNumberFg:['#wasavi_editor.n>div:before', ''],
-		lineNumberBg:['#wasavi_editor.n>div:before', ''],
+		lineNumberFg:['#wasavi_editor>div:before', ''],
+		lineNumberBg:['#wasavi_editor>div:before', ''],
 		rowFg:['#wasavi_editor>div', ''],
 		rowBg:['#wasavi_editor>div', ''],
 		highlightFg:['#wasavi_editor>div span.' + EMPHASIS_CLASS, ''],
@@ -427,7 +427,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 		};
 		this.show = function () {
 			buffer.adjustBackgroundImage(app.lineHeight);
-			buffer.adjustLineNumber(app.config.vars.relativenumber);
+			buffer.adjustLineNumber();
 			buffer.updateActiveRow();
 
 			var n = buffer.selectionStart;
@@ -476,14 +476,8 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			}
 		}
 
-		var lineNumberWidth = 0;
-		if (app.config.vars.number) {
-			lineNumberWidth = Math.min(6, (buffer.rowLength + '').length);
-		}
-		else if (app.config.vars.relativenumber) {
-			lineNumberWidth = 2;
-		}
-		buffer.adjustLineNumberWidth(lineNumberWidth, app.config.vars.relativenumber);
+		buffer.adjustLineNumberClass(
+			app.config.vars.number, app.config.vars.relativenumber);
 
 		var caret = getCommandCursorCoord();
 		var elm = buffer.elm;

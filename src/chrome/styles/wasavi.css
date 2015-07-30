@@ -77,7 +77,7 @@
 	/*<FONT_STYLE/>*/
 	overflow-x:hidden;
 	overflow-y:scroll;
-	counter-reset:n;
+	counter-reset:na 0 nr 0;
 }
 
 #wasavi_editor > div {
@@ -86,6 +86,11 @@
 	min-height:/*<LINE_HEIGHT>*/1px/*</LINE_HEIGHT>*/;
 	line-height:1.2;
 	white-space:pre-wrap;
+	counter-increment:na nr -1;
+}
+
+#wasavi_editor > div.current ~ div {
+	counter-increment:na nr 1;
 }
 
 #wasavi_editor > div:nth-child(odd) {
@@ -105,26 +110,29 @@
  * line number
  */
 
-#wasavi_editor.n > div:before {
+#wasavi_editor.na > div:before,
+#wasavi_editor.nr > div:before,
+#wasavi_editor.nar > div:before {
 	display:block;
 	float:left;
 	margin:0;
 	padding:0 /*<CHAR_WIDTH>*/1px/*</CHAR_WIDTH>*/ 0 0;
 	text-align:right;
 	/*<FONT_STYLE/>*/
-	content:counter(n);
 }
 
-#wasavi_editor.a > div:before {
-	counter-increment:n 1;
+#wasavi_editor.na > div:before {
+	content:counter(na);
 }
 
-#wasavi_editor.r > div:before {
-	counter-increment:n -1;
+#wasavi_editor.nar > div.current:before {
+	content:counter(na);
+	text-align:left;
 }
 
-#wasavi_editor.r > div.current ~ div:before {
-	counter-increment:n 1;
+#wasavi_editor.nr > div:before,
+#wasavi_editor.nar > div:before {
+	content:counter(nr);
 }
 
 /*<LINE_NUMBERS/>*/
