@@ -30,7 +30,7 @@
 (function (global) {
 	'use strict';
 
-	// {{{1 consts
+	// <<<1 consts
 	var WEBKIT_FUNCTION_KEYCODES = {
 		8: 'backspace',
 		9: 'tab',
@@ -46,9 +46,7 @@
 		112: 'f1', 113:  'f2', 114:  'f3', 115:  'f4',
 		116: 'f5', 117:  'f6', 118:  'f7', 119:  'f8',
 		120: 'f9', 121: 'f10', 122: 'f11', 123: 'f12',
-		145: 'scrolllock',
-
-		8192: 'presto_contenteditable_changed'
+		145: 'scrolllock'
 	};
 	var PRESTO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
 	var GECKO_FUNCTION_KEYCODES = WEBKIT_FUNCTION_KEYCODES;
@@ -94,9 +92,9 @@
 		'bslash':   '\\'.charCodeAt(0)
 	};
 	var PRIOR_KEYS_MANIFEST = 'data-prior-keys';
-	// }}}
+	// >>>
 
-	// {{{1 classes
+	// <<<1 classes
 	function VirtualInputEvent (nativeEvent, code, char, key, shift, ctrl, alt, isSpecial) {
 		this.nativeEvent = nativeEvent;
 		this.code = code;
@@ -123,19 +121,14 @@
 			return String.fromCharCode(c);
 		}
 		if (useSpecial && -c in functionKeyCodes) {
-			return '<' + functionKeyCodes[-c] + '>';
+			return this.key;
 		}
 		return '';
 	};
 	VirtualInputEvent.prototype.toInternalString = function () {
-		var c = this.code;
-		if (typeof c != 'number') {
-			return '';
-		}
-		if (this.isSpecial && c < 0) {
-			return '\ue000' + '<' + this.key + '>';
-		}
-		return String.fromCharCode(c);
+		return /^<.+>$/.test(this.key) ?
+			'\ue000' + this.key :
+			this.char;
 	};
 
 	function CompositionResult (e) {
@@ -153,9 +146,9 @@
 		editable.setSelectionRange(t, this.position);
 		pushCompositionedString(e, this.prefix + this.composition);
 	};
-	// }}}
+	// >>>
 
-	// {{{1 variables
+	// <<<1 variables
 	var listeners = {
 		input: [],
 		compositionstart: [],
@@ -170,6 +163,7 @@
 		false
 	);
 	var functionKeyCodes = null;
+	var functionKeyNames = null;
 	var ctrlMap = null;
 	var codeToCharMap = null;
 	var consumed;
@@ -198,9 +192,9 @@
 		before: '',
 		preEvents: []
 	};
-	// }}}
+	// >>>
 
-	// {{{1 utils for content editable elements
+	// <<<1 utils for content editable elements
 	var editable = Object.freeze({
 		isSimpleEdit: function (el) {
 			return 'selectionStart' in el
@@ -376,9 +370,9 @@
 			}
 		}
 	});
-	// }}}
+	// >>>
 
-	// {{{1 privates
+	// <<<1 privates
 	function logit () {
 		fire('log',
 			{message: Array.prototype.slice.call(arguments).join('')}
@@ -396,7 +390,6 @@
 	}
 
 	function getKeyupListener () {
-		if (global.opera) return keyupPresto;
 	}
 
 	function getInputListener () {
@@ -415,6 +408,14 @@
 		if (global.chrome) return WEBKIT_CODE_TO_CHAR_MAP;
 		if (global.opera) return PRESTO_CODE_TO_CHAR_MAP;
 		if (global.gecko) return GECKO_CODE_TO_CHAR_MAP;
+	}
+
+	function getFunctionKeyNames (o) {
+		var result = {};
+		for (var i in o) {
+			result[o[i]] = i;
+		}
+		return result;
 	}
 
 	function getListenersSet () {
@@ -618,9 +619,9 @@
 
 		sweep();
 	}
-	// }}}
+	// >>>
 
-	// {{{1 internal listeners
+	// <<<1 internal listeners
 	function compositionstart (e) {
 		enableLog && logs.composition && logit(
 			'[compositionstart] "', e.data, '"'
@@ -680,34 +681,6 @@
 			lastValue = editable.value(e.target);
 		}
 
-		if (window.opera && e.keyCode == 229) {
-			var value;
-			if (!isInComposition) {
-				var ss = editable.selectionStart(e.target);
-				if (!e.repeat && ss > 0) {
-					value = editable.value(e.target);
-					value = value.substring(0, ss - 1) +
-							value.substring(ss);
-				}
-				else {
-					value = '';
-				}
-				cop2.before = value;
-			}
-
-			cop2.preEvents.push({
-				repeat: e.repeat,
-				inputEventCount: 0
-			});
-
-			enableLog && logs.composition && logit(
-				' *** preEvents pushed at keydown event ***',
-				value == undefined ? '' : (', original string initialized: "' + value + '"')
-			);
-
-			return;
-		}
-
 		enableLog && logs.basic && logit(
 			etype,
 			' keyCode:', e.keyCode,
@@ -722,12 +695,19 @@
 		var keyCode = -e.keyCode;
 
 		if (!(e.keyCode in functionKeyCodes)) {
-			if (e.ctrlKey && !e.altKey && ctrlMap && e.keyCode in ctrlMap) {
-				charCode = ctrlMap[e.keyCode];
-				keyCode = 0;
-				enableLog && logs.basic && logit(
-					etype, ' found ctrl-shortcut'
-				);
+			if (ctrlMap && e.keyCode in ctrlMap) {
+				if (e.ctrlKey && !e.altKey) {
+					charCode = ctrlMap[e.keyCode];
+					keyCode = 0;
+					enableLog && logs.basic && logit(etype, ' found ctrl-shortcut');
+				}
+				else if (e.altKey) {
+					charCode = keyCode = -keyCode;
+					enableLog && logs.basic && logit(etype, ' found alt + alphabet key');
+				}
+				else {
+					return;
+				}
 			}
 			else {
 				return;
@@ -796,8 +776,13 @@
 		if (e.keyCode < 0) {
 			code = codeToCharMap[-e.keyCode] || e.keyCode;
 			getModifiers(c, e);
-			char = code < 0 ? '' : String.fromCharCode(code);
-			stroke = functionKeyCodes[-e.keyCode];
+			if (code < 0 || c.length) {
+				char = '';
+				stroke = functionKeyCodes[-e.keyCode];
+			}
+			else {
+				char = stroke = String.fromCharCode(code);
+			}
 			isSpecial = true;
 		}
 
@@ -805,8 +790,13 @@
 		else if (e.charCode == 0) {
 			code = codeToCharMap[e.keyCode] || -e.keyCode;
 			getModifiers(c, e);
-			char = code < 0 ? '' : String.fromCharCode(code);
-			stroke = functionKeyCodes[e.keyCode];
+			if (code < 0 || c.length) {
+				char = '';
+				stroke = functionKeyCodes[e.keyCode];
+			}
+			else {
+				char = stroke = String.fromCharCode(code);
+			}
 			isSpecial = true;
 		}
 
@@ -814,8 +804,13 @@
 		else if (e.charCode == 32) {
 			code = ctrlKey && !altKey ? 0 : 32;
 			getModifiers(c, e);
-			char = String.fromCharCode(code);
-			stroke = functionKeyCodes[e.charCode];
+			if (c.length) {
+				char = '';
+				stroke = functionKeyCodes[e.charCode];
+			}
+			else {
+				char = stroke = String.fromCharCode(code);
+			}
 			isSpecial = true;
 		}
 
@@ -832,39 +827,40 @@
 				code = 61;
 			}
 
-			// ctrl code directly
-			if (code >= 0 && code <= 31) {
-				char = String.fromCharCode(code);
-				stroke = String.fromCharCode(code + 64).toLowerCase();
+			// with alt
+			if (altKey) {
+				stroke = String.fromCharCode(code).toLowerCase();
 				getModifiers(c, e);
 			}
-			// ^@ - ^_
-			else if (ctrlKey && !altKey) {
-				if (code >= 64 && code <= 95 || code >= 97 && code <= 127) {
-					code = code & 0x1f;
-					char = String.fromCharCode(code);
-					stroke = String.fromCharCode(code + 64).toLowerCase();
-					getModifiers(c, e);
-				}
-				else {
-					return;
-				}
+			// ctrl code shortcut: ^@ - ^_
+			else if (ctrlKey && !altKey
+			&& (code >= 64 && code <= 95 || code >= 97 && code <= 127)) {
+				code = code & 0x1f;
+				char = stroke = String.fromCharCode(code);
 			}
 			// printable chars
-			else if (code >= 32) {
-				char = String.fromCharCode(code);
-				stroke = String.fromCharCode(code);
+			else {
+				char = stroke = String.fromCharCode(code);
 			}
 		}
 
 		if (stroke == undefined) return;
 		if (isPasteKeyStroke(code, e)) return;
 
-		c.push(stroke);
+		c.push(stroke
+			.replace('<', 'LT')
+			.replace('>', 'GT'));
 
+		if (altKey) {
+			code = -1;
+			char = '';
+		}
+		if (c.length > 1 || -code in functionKeyCodes) {
+			stroke = '<' + c.join('-') + '>';
+		}
 		var ev = new VirtualInputEvent(
 			e,
-			code, char, c.join('-'),
+			code, char, stroke,
 			shiftKey, ctrlKey, altKey, isSpecial);
 
 		if (lockCount > 0 && code == 3) {
@@ -892,147 +888,6 @@
 			', ctrl:', e.ctrlKey,
 			', alt:', e.altKey
 		);
-	}
-
-	function keyupPresto (e) {
-		// {{{2
-		if (e.shiftKey && e.keyCode == 16
-		||  e.ctrlKey && e.keyCode == 17
-		||  e.altKey && e.keyCode == 18) {
-			return;
-		}
-
-		var etype = '[   keyup]';
-
-		if (cop2.preEvents.length && editable.isSimpleEdit(e.target)) {
-			var current = editable.value(e.target);
-			var item = cop2.preEvents.shift();
-			var incPos = getIncreasePosition(cop2.before, current);
-			var composition = current.substr(
-				incPos, current.length - cop2.before.length);
-
-			while (cop2.preEvents.length && cop2.preEvents[0].repeat) {
-				cop2.preEvents.shift();
-			}
-
-			enableLog && logs.composition && logit([
-				etype,
-				'          keyCode: ' + e.keyCode,
-				'           before: "' + cop2.before + '"',
-				'          current: "' + current + '"',
-				'      composition: "' + composition + '"',
-				'  inputEventCount: ' + item.inputEventCount,
-				'           incPos: ' + incPos
-			].join('\n'));
-
-			if (isInComposition) {
-				/*
-				 * 1. implicit fix:
-				 * [keydown]	keyCode: 229, which: 229
-				 * [input]		value:"...X" (X is the character which raised fixation)
-				 * [input]		value:"...X" (X is the character which raised fixation)
-				 * [input]		value:"...X" (X is the character which raised fixation)
-				 * [keyup]		keyCode: Y, which: Y
-				 *
-				 * 2. explicit fix:
-				 * [keydown]	keyCode: 229, which: 229
-				 * [input]		value:"..."
-				 * [input]		value:"..."
-				 * [keyup]		keyCode: 13, which: 13
-				 *
-				 * 3. selecting a candidate
-				 * [keydown]	keyCode: 229, which: 229
-				 * [input]		value:"..."
-				 * [keyup]		keyCode: Y, which: Y
-				 *
-				 * 4. escaping a composition
-				 * [keydown]	keyCode: 229, which: 229
-				 * [keyup]		keyCode: 27, which: 27
-				 *
-				 */
-
-				// implicit fix
-				if (item.inputEventCount == 3) {
-					// close current composition session
-					e.data = composition.substr(0, composition.length - 1);
-					compositionend(e);
-
-					// open new composition session
-					cop2.before = cop2.before.substring(0, incPos) +
-								  composition.substr(0, composition.length - 1) +
-								  cop2.before.substring(incPos + composition.length);
-
-					e.data = '';
-					compositionstart(e);
-					compositionResult.prefix = '';
-
-					e.data = composition.substr(-1);
-					compositionupdate(e);
-				}
-
-				// explicit fix
-				// canceling
-				// composition extinction
-				else if (item.inputEventCount == 2
-				|| e.keyCode == 13
-				|| e.keyCode == 27
-				|| cop2.before == current) {
-					e.data = composition;
-					compositionend(e);
-
-					var incPos2 = getIncreasePosition(
-						compositionResult.before, current);
-					if (incPos2 >= 0) {
-						compositionResult.composition = current.substr(
-							incPos2,
-							current.length - compositionResult.before.length);
-						registerCompositionFinish(e);
-					}
-				}
-
-				// composition update
-				else {
-					e.data = composition;
-					compositionupdate(e);
-				}
-			}
-			
-			// new composition session
-			else {
-				compositionResult = null;
-				e.data = '';
-				compositionstart(e);
-				compositionResult.before = cop2.before;
-				compositionResult.position--;
-
-				e.data = composition;
-				compositionupdate(e);
-			}
-		}
-
-		else if (cop2.preEvents.length && editable.isComplexEdit(e.target)) {
-			if (e.keyCode == 13) {
-				cop2.preEvents.length = 0;
-				dequeue.push(new VirtualInputEvent(
-					null,
-					-8192, PRESTO_FUNCTION_KEYCODES['8192'], PRESTO_FUNCTION_KEYCODES['8192'],
-					false, false, false,
-					true
-				));
-				sweep();
-			}
-		}
-
-		enableLog && logs.basic && logit(
-			etype,
-			' keyCode:', e.keyCode,
-			', which:', e.which,
-			', charCode:', e.charCode,
-			', shift:', e.shiftKey,
-			', ctrl:', e.ctrlKey,
-			', alt:', e.altKey
-		);
-		// }}}
 	}
 
 	function inputWebkit (e) {
@@ -1108,9 +963,9 @@
 
 		pushCompositionedString(e, e.clipboardData.getData('text/plain'));
 	}
-	// }}}
+	// >>>
 
-	// {{{1 publics
+	// <<<1 publics
 	function install (opts) {
 		opts || (opts = {});
 		[
@@ -1126,6 +981,7 @@
 		if (functionKeyCodes) {
 			ctrlMap = getCtrlMap();
 			codeToCharMap = getCodeToCharMap();
+			functionKeyNames = getFunctionKeyNames(functionKeyCodes);
 
 			var listenersSet = getListenersSet();
 			for (var i in listenersSet) {
@@ -1140,6 +996,8 @@
 	function uninstall () {
 		functionKeyCodes = null;
 		ctrlMap = null;
+		codeToCharMap = null;
+		functionKeyNames = null;
 
 		var listenersSet = getListenersSet();
 		for (var i in listenersSet) {
@@ -1191,29 +1049,6 @@
 	}
 
 	// code utils
-	function code2letter (c, useSpecial) {
-		if (typeof c != 'number') {
-			return '';
-		}
-		if (c >= 0) {
-			return String.fromCharCode(c);
-		}
-		if (useSpecial && -c in functionKeyCodes) {
-			return '<' + functionKeyCodes[-c] + '>';
-		}
-		return '';
-	}
-
-	function toInternalString (e) {
-		if (typeof e.code != 'number') {
-			return '';
-		}
-		if (e.isSpecial && e.code < 0) {
-			return '\ue000' + '<' + e.key + '>';
-		}
-		return String.fromCharCode(e.code);
-	}
-
 	function objectFromCode (c) {
 		if (typeof c != 'number') {
 			return null;
@@ -1246,52 +1081,73 @@
 	function parseKeyDesc (desc, escaped) {
 		function doParse (desc) {
 			var parts = desc.toLowerCase().split('-');
-			var shift = false, ctrl = false, alt = false, name = '';
+			var shift = false, ctrl = false, alt = false;
 
-			while (parts.length > 1 && /^[sca]$/.test(parts[0])) {
+			while (parts.length > 1 && /^[sca]$/i.test(parts[0])) {
 				shift = parts[0] == 's' || shift;
 				ctrl = parts[0] == 'c' || ctrl;
 				alt = parts[0] == 'a' || alt;
 				parts.shift();
 			}
 
-			name = parts[0];
+			var name = parts[0]
+				.replace('lt', '<')
+				.replace('gt', '>');
+			var result = {
+				code:0,
+				name:name,
+				shift:shift,
+				ctrl:ctrl,
+				alt:alt,
+				special:true
+			};
 
 			if (name in FUNCTION_KEY_ALIASES) {
 				if (typeof FUNCTION_KEY_ALIASES[name] == 'number') {
-					return {
-						code:FUNCTION_KEY_ALIASES[name],
-						name:name,
-						shift:shift,
-						ctrl:ctrl,
-						alt:alt
-					};
+					name = String.fromCharCode(FUNCTION_KEY_ALIASES[name]);
 				}
 				else {
 					name = FUNCTION_KEY_ALIASES[name];
 				}
 			}
 
-			for (var i in functionKeyCodes) {
-				if (functionKeyCodes[i] == name) {
-					return {
-						code:codeToCharMap[i] || -i,
-						name:name,
-						shift:shift,
-						ctrl:ctrl,
-						alt:alt
-					};
+			if (name in functionKeyNames) {
+				if (alt) {
+					result.code = -1;
 				}
+				else {
+					result.code = codeToCharMap[functionKeyNames[name]]
+						|| -functionKeyNames[name];
+				}
+				if (0 <= result.code && result.code <= 31 && !ctrl && !shift && !alt) {
+					result.key = String.fromCharCode(result.code);
+				}
+				return result;
+			}
+
+			if (alt) {
+				result.code = -1;
+				result.name = result.name
+					.replace('<', 'LT')
+					.replace('>', 'GT');
+				result.special = false;
+				return result;
 			}
 
 			if (/^[@a-z\[\\\]_]$/.test(name) && ctrl && !shift && !alt) {
-				return {
-					code:name.charCodeAt(0) & 0x1f,
-					name:name,
-					shift:shift,
-					ctrl:ctrl,
-					alt:alt
-				};
+				result.code = name.charCodeAt(0) & 0x1f;
+				result.key = String.fromCharCode(result.code);
+				result.special = false;
+				return result;
+			}
+
+			if (name.length == 1) {
+				result.code = name.charCodeAt(0);
+				result.name = result.name
+					.replace('<', 'LT')
+					.replace('>', 'GT');
+				result.special = false;
+				return result;
 			}
 
 			return null;
@@ -1316,18 +1172,26 @@
 			if (consumed) {
 				var obj = doParse(desc);
 				if (!obj) return {consumed:consumed};
-				var c = [];
-				obj.shift && c.push('s');
-				obj.ctrl  && c.push('c');
-				obj.alt  && c.push('a');
-				c.push(obj.name);
+				var char = obj.code < 0 ? '' : String.fromCharCode(obj.code);
+				var key;
+				if ('key' in obj) {
+					key = obj.key;
+				}
+				else {
+					key = [];
+					obj.shift && key.push('S');
+					obj.ctrl  && key.push('C');
+					obj.alt   && key.push('A');
+					key.push(obj.name);
+					key = '<' + key.join('-') + '>';
+				}
 				return {
 					consumed:consumed,
 					prop: new VirtualInputEvent(
 						null,
-						obj.code, obj.name, c.join('-'),
+						obj.code, char, key,
 						obj.shift, obj.ctrl, obj.alt,
-						true
+						obj.special
 					)
 				};
 			}
@@ -1516,7 +1380,7 @@
 		}
 		uninstall();
 	}
-	// }}}
+	// >>>
 
 	// boot
 	(function () {
@@ -1527,6 +1391,7 @@
 			break;
 		}
 	})();
+
 	global.qeema = Object.create(Object.prototype, {
 		install: {value:install},
 		uninstall: {value:uninstall},
@@ -1538,6 +1403,7 @@
 		insertFnKeyHeader: {value:insertFnKeyHeader},
 		parseKeyDesc: {value:parseKeyDesc},
 		isInputEvent: {value:isInputEvent},
+		VirtualInputEvent: {value:VirtualInputEvent},
 
 		editable: {value:editable},
 
@@ -1586,6 +1452,7 @@
 			set: function (v) {handlePasteEvent = !!v}
 		}
 	});
+
 })(this);
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

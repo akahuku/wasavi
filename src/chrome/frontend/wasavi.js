@@ -36,7 +36,7 @@ diag('starting wasavi.js');
 diag('defining classes');
 
 /*
- * classes {{{1
+ * classes <<<1
  * ----------------
  */
 
@@ -315,7 +315,7 @@ function ExCommandExecutor (app) {
 	}
 
 	function compile (source, parents) {
-		// compile body {{{
+		// compile body <<<
 		/*
 		 * compile ex command source to intermediate expression
 		 *
@@ -782,7 +782,7 @@ function ExCommandExecutor (app) {
 		if (literalKey !== false) {
 			pushCommand();
 		}
-		// }}}
+		// >>>
 	}
 
 	/* private methods */
@@ -869,9 +869,9 @@ function ExCommandExecutor (app) {
 			if (result.flags.hash
 			|| result.flags.list
 			|| result.flags.print) {
-				var n = Math.max(0, Math.min(
+				var n = minmax(0,
 					buffer.selectionStartRow + result.flagoff,
-					buffer.rowLength - 1));
+					buffer.rowLength - 1);
 				buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
 				Wasavi.ExCommand.printRow(app, buffer, n.row, n.row, result.flags);
 			}
@@ -939,7 +939,7 @@ function ExCommandExecutor (app) {
 				set index (v) {
 					if (!running) return;
 					if (typeof v != 'number') return;
-					pc = Math.max(0, Math.min(v - 0, opcodes.length));
+					pc = minmax(0, v - 0, opcodes.length);
 					pcOverride = true;
 				},
 				get opcodes () {return opcodes},
@@ -953,7 +953,7 @@ function ExCommandExecutor (app) {
 diag('defining functions');
 
 /*
- * low-level functions {{{1
+ * low-level functions <<<1
  * ----------------
  */
 
@@ -1964,14 +1964,16 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 		marks.setPrivate('>', p);
 	}
 
-	if (requestedState.inputMode) {
-		cursor.ensureVisible(false);
-	}
-	else {
-		cursor.ensureVisible(isSmoothScrollRequested);
-	}
-	if (!keyManager.isLocked) {
-		requestedState.updateCursor = true;
+	if (!scroller.running) {
+		if (requestedState.inputMode) {
+			cursor.ensureVisible(false);
+		}
+		else {
+			cursor.ensureVisible(isSmoothScrollRequested);
+		}
+		if (!keyManager.isLocked) {
+			requestedState.updateCursor = true;
+		}
 	}
 }
 function execEditMap (r, e, key, subkey, code) {
@@ -1996,12 +1998,13 @@ function executeViCommand (arg) {
 	keyManager.sweep();
 }
 function processInput (e, ignoreAbbrev) {
+
 	var result = {
 		needEmitEvent:false,
 		ignoreAbbrev:ignoreAbbrev,
 		code: e.code,
-		letter: e.code2letter(e.code),
-		mapkey: e.code2letter(e.code, true),
+		letter: e.char,
+		mapkey: e.key,
 		subkey: inputMode
 	};
 
@@ -2079,10 +2082,9 @@ function processInput (e, ignoreAbbrev) {
 		requestedState.updateCursor = null;
 	}
 }
-function processInputSupplement () {
+function processInputSupplement (e) {
 	if (inputMode != 'line_input') return;
 	var input = $('wasavi_footer_input');
-	var e = keyManager.nopObject;
 	var last = inputModeStack.lastItem;
 	var map = getMap(last.inputMode);
 	var line = toNativeControl(input.value);
@@ -2383,7 +2385,8 @@ function adjustSurroundingInputForNotify (original) {
 	var adjusted = original;
 
 	if (surrounding.isTagPrefix(original)) {
-		prefixInput.appendMotion(original);
+		prefixInput.appendMotion(
+			(/^<.+>$/.test(original) ? '\ue000' : '') + original);
 		showLineInput(indicator.textContent + '<', '', 0);
 		dataset($('wasavi_footer_input'), 'internalPrefix', original);
 		original = '';
@@ -2401,7 +2404,7 @@ function adjustSurroundingInput (original) {
 	var adjusted = original;
 
 	if (surrounding.isTagPrefix(prefix)) {
-		adjusted = '<' + original.substring(1);
+		adjusted = '<' + original.substring(prefix.length);
 	}
 
 	return adjusted;
@@ -2888,7 +2891,7 @@ function setTabStop (ts) {
 }
 
 /*
- * low-level functions for cursor motion {{{1
+ * low-level functions for cursor motion <<<1
  * ----------------
  */
 
@@ -3267,12 +3270,12 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 			switch (direction) {
 			case -1:
 				var n = buffer.selectionStart;
-				n.row = Math.max(0, Math.min(n.row + verticalOffset, buffer.rowLength - 1));
+				n.row = minmax(0, n.row + verticalOffset, buffer.rowLength - 1);
 				buffer.selectionStart = buffer.getLineTopOffset2(n);
 				break;
 			case 1:
 				var n = buffer.selectionEnd;
-				n.row = Math.max(0, Math.min(n.row + verticalOffset, buffer.rowLength - 1));
+				n.row = minmax(0, n.row + verticalOffset, buffer.rowLength - 1);
 				buffer.selectionEnd = buffer.getLineTopOffset2(n);
 				break;
 			}
@@ -3467,7 +3470,7 @@ function motionUpDown (c, count, isDown) {
 		if (!adjusting) delta <<= 1;
 	}
 
-	n.col = Math.max(0, Math.min(index, goal));
+	n.col = minmax(0, index, goal);
 	if (isDown) {
 		buffer.selectionEnd = n;
 	}
@@ -3726,7 +3729,7 @@ function scrollView (c, count) {
 }
 
 /*
- * low-level functions for text modification {{{1
+ * low-level functions for text modification <<<1
  * ----------------
  */
 
@@ -4420,7 +4423,7 @@ function reportSave (f) {
 }
 
 /*
- * event handlers {{{1
+ * event handlers <<<1
  * ----------------
  */
 
@@ -4451,7 +4454,7 @@ function handleWindowResize (e) {
 	containerRect = null;
 	if (extensionChannel.isTopFrame()) {
 		if (!resizeHandlerInvokeTimer) {
-			resizeHandlerInvokeTimer = setTimeout(relocate, 100);
+			resizeHandlerInvokeTimer = setTimeout(function () {relocate()}, 100);
 		}
 	}
 	else {
@@ -4664,7 +4667,7 @@ function handleBackendMessage (req) {
 diag('defining variables');
 
 /*
- * variables {{{1
+ * variables <<<1
  * ----------------
  */
 
@@ -4677,7 +4680,7 @@ var mapManager = new Wasavi.MapManager(appProxy);
 var theme = new Wasavi.Theme(appProxy);
 var bell = new Wasavi.Bell(appProxy);
 var completer = new Wasavi.Completer(appProxy,
-// completer {{{2
+// completer <<<2
 	[
 		// ex command completion
 		[
@@ -4831,9 +4834,9 @@ var completer = new Wasavi.Completer(appProxy,
 		]
 	]
 );
-// }}}
+// >>>
 var config = new Wasavi.Configurator(appProxy,
-// configuration object {{{2
+// configuration object <<<2
 	[
 		/* defined by POSIX */
 		['autoindent', 'b', true],
@@ -5019,7 +5022,7 @@ var config = new Wasavi.Configurator(appProxy,
 		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink'
 	}
 );
-// }}}
+// >>>
 
 var extensionChannel;
 var version;
@@ -5095,7 +5098,7 @@ var mode2stateTable = {
 };
 
 /*
- * input handlers for each mode {{{1
+ * input handlers for each mode <<<1
  * ----------------
  */
 
@@ -5373,14 +5376,16 @@ var modeHandlers = {
 				dataset(input, 'pos', null);
 
 				if (input.value != dataset(input, 'current')) {
-					processInputSupplement();
+					processInputSupplement(e);
 				}
 			}, 1);
 		}
-		else if (r.code >= 1) {
-			lineInputHistories.isInitial = true;
-			insertToLineInput(input, r.letter);
-			processInputSupplement();
+		else {
+			if (r.code >= 1) {
+				lineInputHistories.isInitial = true;
+				insertToLineInput(input, r.letter);
+			}
+			processInputSupplement(e);
 			//keyManager.init(input);
 		}
 
@@ -5394,13 +5399,13 @@ var modeHandlers = {
 };
 
 /*
- * command mode mapping {{{1
+ * command mode mapping <<<1
  * ----------------
  */
 
 var commandMap = {
 	// internal special
-	'\u0000':function () {return true},
+	'*nop*':function () {return true},
 
 	// escape
 	'\u001b':inputEscape,
@@ -5771,7 +5776,7 @@ var commandMap = {
 			var count = prefixInput.count;
 			if (0 <= count && count <= 100) {
 				count = Math.floor(buffer.rowLength * (count / 100));
-				count = Math.max(0, Math.min(count, buffer.rowLength - 1));
+				count = minmax(0, count, buffer.rowLength - 1);
 				pos = buffer.getLineTopOffset2(new Position(count, 0));
 				isVerticalMotion = true;
 			}
@@ -6079,6 +6084,7 @@ var commandMap = {
 	},
 	'\u000e'/*^N*/:function () {return this.j.apply(this, arguments)},
 	'<down>':function () {return this.j.apply(this, arguments)},
+	'<A-n>':function () {return this.j.apply(this, arguments)},
 	k:function (c) {
 		return callDenotativeFunction(c, prefixInput.count);
 	},
@@ -6152,7 +6158,7 @@ var commandMap = {
 	},
 	G:function (c) {
 		var index = prefixInput.isCountSpecified ?
-			Math.max(Math.min(prefixInput.count, buffer.rowLength), 1) : buffer.rowLength;
+			minmax(1, prefixInput.count, buffer.rowLength) : buffer.rowLength;
 		var n = new Position(index - 1, 0);
 		marks.setJumpBaseMark();
 		if (prefixInput.isEmptyOperation) {
@@ -6365,7 +6371,7 @@ var commandMap = {
 		$op:function (c) {
 			var motion = prefixInput.motion;
 			var line = prefixInput.isCountSpecified ?
-				Math.max(Math.min(prefixInput.count, buffer.rowLength), 1) - 1 :
+				minmax(1, prefixInput.count, buffer.rowLength) - 1 :
 				buffer.selectionStartRow;
 			var current = buffer.rowNodes(line).offsetTop;
 			var n = new Position(line, 0);
@@ -6961,7 +6967,7 @@ var commandMap = {
 			return result;
 		},
 		$line_input_notify:function (c, o) {
-			var adjusted = adjustSurroundingInputForNotify(c);
+			var adjusted = adjustSurroundingInputForNotify(c || o.e.key);
 			if (/^<.*>$/.test(adjusted) || /^ ?[^ <]$/.test(adjusted)) {
 				keyManager.push('\n');
 			}
@@ -7070,12 +7076,12 @@ var commandMap = {
 };
 
 /*
- * bound mode mapping {{{1
+ * bound mode mapping <<<1
  * ----------------
  */
 
 var boundMap = {
-	'\u0000':commandMap['\u0000'], '\u0009':commandMap['\u0009'], '\u001b':inputEscape,
+	'*nop*':commandMap['*nop*'], '\u0009':commandMap['\u0009'], '\u001b':inputEscape,
 	'1':inputDigit, '2':inputDigit, '3':inputDigit, '4':inputDigit, '5':inputDigit,
 	'6':inputDigit, '7':inputDigit, '8':inputDigit, '9':inputDigit,
 	'"':commandMap['"'],
@@ -7445,12 +7451,12 @@ var boundMap = {
 };
 
 /*
- * insert/overwrite mode mapping {{{1
+ * insert/overwrite mode mapping <<<1
  * ----------------
  */
 
 var editMap = {
-	'\u0000'/*^@*/:function (c) {
+	'<C-space>'/*^@*/:function () {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
 		if (inputHandler.stroke.length) return;
@@ -7463,10 +7469,10 @@ var editMap = {
 			processInput(cmd[i], true);
 		}
 	},
-	'\u0004'/*^D*/:function (c) {
+	'\u0004'/*^D*/:function (c, o) {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
-		var needShift = c == '\u0014';
+		var needShift = o.key == '\u0014' || o.key == '<A-t>';
 		var n = buffer.selectionStart;
 		var re = spc('^(S*).*?([0^]?)$').exec(buffer.rows(n).substring(0, n.col));
 		var tmpMark = 'edit-shifter';
@@ -7495,7 +7501,7 @@ var editMap = {
 			inputHandler.invalidateHeadPosition();
 		}
 	},
-	'\u0008'/*^H, backspace*/:function (c) {
+	'\u0008'/*^H, backspace*/:function (c, o) {
 		inputHandler.ungetText();
 
 		if (buffer.selectionStartRow == 0 && buffer.selectionStartCol == 0) {
@@ -7554,7 +7560,7 @@ var editMap = {
 		inputHandler.flush();
 		if (inputMode == 'overwrite' &&
 		buffer.selectionStart.le(inputHandler.getStartPosition())) {
-			switch (c) {
+			switch (o.key) {
 			case '\u0008':
 				motionLeft(c, 1);
 				break;
@@ -7562,12 +7568,14 @@ var editMap = {
 				backToStartPosition();
 				break;
 			case '\u0017':
+			case '<A-w>':
+			case '<C-backspace>':
 				backToPrevWord();
 				break;
 			}
 		}
 		else {
-			switch (c) {
+			switch (o.key) {
 			case '\u0008':
 				deleteCharsBackward(getBackspaceWidth(), {canJoin:true});
 				break;
@@ -7576,6 +7584,8 @@ var editMap = {
 				deleteSelection();
 				break;
 			case '\u0017':
+			case '<A-w>':
+			case '<C-backspace>':
 				backToPrevWord();
 				deleteSelection();
 				break;
@@ -7583,7 +7593,7 @@ var editMap = {
 			inputHandler.invalidateHeadPosition();
 		}
 	},
-	'\u0009'/*^I, tab*/:function (c) {
+	'\u0009'/*^I, tab*/:function () {
 		if (clipOverrun()) return;
 		if (config.vars.expandtab) {
 			var ts = config.vars.tabstop;
@@ -7627,7 +7637,7 @@ var editMap = {
 		}
 	},
 	'\u000a'/*^J*/:function () {this['\u000d'].apply(this, arguments)},
-	'\u000d'/*^M, enter*/:function (c) {
+	'\u000d'/*^M, enter*/:function () {
 		if (clipOverrun()) return;
 		var indent = config.vars.autoindent ? buffer.getIndent(buffer.selectionStart) : '';
 		if (indent != '') {
@@ -7707,6 +7717,7 @@ var editMap = {
 		}
 	},
 	'\u0014'/*^T*/:function () {this['\u0004'].apply(this, arguments)},
+	'<A-t>':function () {this['\u0004'].apply(this, arguments)},
 	'\u0015'/*^U*/:function () {this['\u0008'].apply(this, arguments)},
 	'\u0016'/*^V*/:{
 		edit:function (c, o) {
@@ -7770,7 +7781,9 @@ var editMap = {
 		}
 	},
 	'\u0017'/*^W*/:function () {this['\u0008'].apply(this, arguments)},
-	'\u007f':function (c) {
+	'<A-w>':function () {this['\u0008'].apply(this, arguments)},
+	'<C-backspace>':function () {this['\u0008'].apply(this, arguments)},
+	'\u007f':function () {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
 		if (buffer.selectionStartRow >= buffer.rowLength - 1 &&
@@ -7818,33 +7831,16 @@ var editMap = {
 		scrollView(c, function (v) {
 			return Math.max(parseInt(v.lines - 2), 1);
 		});
-	},
-
-	// experimental: this special key is sent when a composition via IME
-	// is completed on presto opera.
-	'<presto_contenteditable_changed>':function (c, o) {
-		var n = buffer.selectionStart;
-		var from = n.col;
-		var to = keyManager.editable.selectionStart(buffer.rowNodes(n));
-		if (to > from) {
-			var s = buffer.rows(n).substring(from, to);
-			inputHandler.ungetText();
-			inputHandler.ungetStroke();
-			inputHandler.updateText(s);
-			inputHandler.updateStroke(s);
-			n.col = to;
-			buffer.setSelectionRange(n);
-		}
 	}
 };
 
 /*
- * line input mode mapping {{{1
+ * line input mode mapping <<<1
  * ----------------
  */
 
 var lineInputEditMap = {
-	'\u0000':function () {
+	'*nop*':function () {
 		return true;
 	},
 	'\u0001'/*^A*/:function (c, o) {
@@ -7926,6 +7922,7 @@ var lineInputEditMap = {
 		}
 		return true;
 	},
+	'<A-n>':function () {return this['\u000e'].apply(this, arguments)},
 	'\u0010'/*^P*/:function (c, o) {
 		if (lineInputHistories.isInitial) {
 			dataset(o.target, 'wasaviLineInputCurrent', o.target.value);
@@ -7942,6 +7939,7 @@ var lineInputEditMap = {
 		}
 		return true;
 	},
+	'<A-p>':function () {return this['\u0010'].apply(this, arguments)},
 	'\u0012'/*^R*/:{
 		line_input:function (c, o) {
 			requestInputMode('wait_register');
@@ -8077,6 +8075,8 @@ var lineInputEditMap = {
 		//keyManager.init(o.target);
 		return true;
 	},
+	'<A-w>':function () {return this['\u0017'].apply(this, arguments)},
+	'<C-backspace>':function () {return this['\u0017'].apply(this, arguments)},
 	'\u007f':function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
 			var n = o.target.selectionStart;
@@ -8103,7 +8103,7 @@ var lineInputEditMap = {
 diag('entering start up section');
 
 /*
- * startup {{{1
+ * startup <<<1
  * ----------------
  */
 
@@ -8180,4 +8180,4 @@ if (global.WasaviExtensionWrapper
 
 })(this);
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

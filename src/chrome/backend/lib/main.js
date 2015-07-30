@@ -22,7 +22,7 @@
 (function (global) {
 	'use strict';
 
-	/* {{{1 consts */
+	/* <<<1 consts */
 
 	var TEST_MODE_URL = 'http://127.0.0.1/test_frame.html';
 	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
@@ -30,7 +30,7 @@
 	var HOME_URL = 'http://appsweets.net/wasavi/';
 	var TEST_VERSION = '0.0.1';
 
-	/* {{{1 variables */
+	/* <<<1 variables */
 
 	/*
 	 * wasaviFrameSource is a special url of iframe source,
@@ -217,7 +217,7 @@
 		}
 	};
 
-	/* {{{1 classes */
+	/* <<<1 classes */
 
 	function Config (info) {
 		Object.defineProperty(this, 'info', {value:info});
@@ -305,9 +305,9 @@
 		}
 	};
 
-	/* {{{1 functions */
+	/* <<<1 functions */
 
-	/** {{{2 utilities */
+	/** <<<2 utilities */
 
 	function broadcastStorageUpdate (keys) {
 		if (storageUpdateTimer) {
@@ -356,7 +356,7 @@
 		return false;
 	}
 
-	/** {{{2 returns frontend script list for firefox */
+	/** <<<2 returns frontend script list for firefox */
 
 	function getContentScriptOptions () {
 		var self = require('sdk/self');
@@ -434,7 +434,7 @@
 		];
 	}
 
-	/** {{{2 async initializer: init the config object */
+	/** <<<2 async initializer: init the config object */
 
 	function initConfig (configInfo) {
 		return new Promise(function (resolve, reject) {
@@ -443,7 +443,7 @@
 		});
 	}
 
-	/** {{{2 async initializer: init the content of wasavi frame */
+	/** <<<2 async initializer: init the content of wasavi frame */
 
 	function initWasaviFrame () {
 		return new Promise(function (resolve, reject) {
@@ -467,7 +467,7 @@
 		});
 	}
 
-	/** {{{2 async initializer: init the style sheet of wasavi frame */
+	/** <<<2 async initializer: init the style sheet of wasavi frame */
 
 	function initWasaviStyle () {
 		return new Promise(function (resolve, reject) {
@@ -553,7 +553,7 @@
 		});
 	}
 
-	/** {{{2 async initializer: init f/F/t/T dictionary */
+	/** <<<2 async initializer: init f/F/t/T dictionary */
 
 	function initUnicodeDictData () {
 		function ensureBinaryString (data) {
@@ -599,7 +599,7 @@
 		});
 	}
 
-	/** {{{2 request handlers */
+	/** <<<2 request handlers */
 
 	function handleInit (command, data, sender, respond) {
 		if (isInitializing) {
@@ -878,7 +878,7 @@
 		respond({log: log.join('\n')});
 	}
 
-	/** {{{2 request handler entry */
+	/** <<<2 request handler entry */
 
 	var commandMap = {
 		'init-agent':			handleInit,
@@ -927,7 +927,7 @@
 		}
 	}
 
-	/** {{{2 bootstrap */
+	/** <<<2 bootstrap */
 
 	function pre () {
 		// platform depends tweaks
@@ -1007,4 +1007,4 @@
 	boot();
 })(this);
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

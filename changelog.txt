@@ -1,3 +1,15 @@
+0.6.523
+
+	* allow input a control char directly in input mode
+	* allow turning on both of number and relativenumber options
+	* add the syntax whitch inverts a value of option
+	* include inv-prefixed option name in completion list
+
+	* input モード時、制御文字を直接入力できるようにした
+	* number と relativenumber オプションを同時に有効にできるようにした
+	* オプションの値を反転させる書式を追加した
+	* オプション名の補完で inv を接頭辞にしたリストも含めるようにした
+
 0.6.508
 
 	* add `:wqs` and `:submit` command

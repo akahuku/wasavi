@@ -98,7 +98,7 @@ Wasavi.SubstituteWorker.prototype = {
 		if (re) {
 			count = parseInt(re[1], 10);
 			range[0] = range[1];
-			range[1] = Math.max(0, Math.min(range[0] + count - 1, t.rowLength - 1));
+			range[1] = minmax(0, range[0] + count - 1, t.rowLength - 1);
 			options = options.substring(re[0].length);
 		}
 

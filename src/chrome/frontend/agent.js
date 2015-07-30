@@ -353,8 +353,19 @@ function runCore (element, overrides) {
 	widthOwn = heightOwn = null;
 	isFullscreen = false;
 	isSyncSize = true;
-	removeListener = createElementRemoveListener(wasaviFrame, handleWasaviFrameRemove);
-	wasaviFrameTimeoutTimer = setTimeout(handleWasaviFrameInitTimeout, BOOT_WAIT_TIMEOUT_MSECS);
+	removeListener = createElementRemoveListener(wasaviFrame, function () {
+		wasaviFrame = null;
+		cleanup();
+		error('wasavi terminated abnormally.');
+		if (diagMessages) {
+			error(diagMessages.join('\n'));
+			diagMessages = undefined;
+		}
+	});
+	wasaviFrameTimeoutTimer = setTimeout(function () {
+		wasaviFrame.parentNode.removeChild(wasaviFrame);
+		wasaviFrameTimeoutTimer = null;
+	}, BOOT_WAIT_TIMEOUT_MSECS);
 
 	//
 	var rect = locate(wasaviFrame, element);
@@ -794,16 +805,15 @@ function connect () {
 		connected = true;
 		handleConnect(req);
 	};
-	var timeout = function () {
+	var checkIfConnectedOrRetry = function () {
 		if (connected || retryRest <= 0) return;
 		retryRest--;
 		wait += 1000;
-		setTimeout(timeout, wait);
+		setTimeout(function () {checkIfConnectedOrRetry()}, wait);
 		extension.connect(eventName, gotInit);
 	}
 
-	setTimeout(timeout, wait);
-	extension.connect(eventName, gotInit);
+	checkIfConnectedOrRetry();
 }
 
 function isAcceptable (key) {
@@ -919,25 +929,6 @@ function handleTargetResize (e) {
 		width: widthOwn,
 		height: heightOwn
 	});
-}
-
-/**
- * element removal event handler
- * ----------------
- */
-
-function handleWasaviFrameRemove () {
-	wasaviFrame = null;
-	cleanup();
-	error('wasavi terminated abnormally.');
-	if (diagMessages) {
-		error(diagMessages.join('\n'));
-		diagMessages = undefined;
-	}
-}
-function handleWasaviFrameInitTimeout () {
-	wasaviFrame.parentNode.removeChild(wasaviFrame);
-	wasaviFrameTimeoutTimer = null;
 }
 
 /**
