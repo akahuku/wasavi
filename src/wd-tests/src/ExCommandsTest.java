@@ -923,8 +923,8 @@ public class ExCommandsTest extends WasaviTest {
 	public void testMapControlShortcut () {
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map! <C-c> <esc>\n");
-		Wasavi.send(":map! <C-t> <tab>\n");
-		Wasavi.send("ifoo", Keys.chord(Keys.CONTROL, "t"), "bar", Keys.chord(Keys.CONTROL, "c"));
+		Wasavi.send(":map! <C-b> <tab>\n");
+		Wasavi.send("ifoo", Keys.chord(Keys.CONTROL, "b"), "bar", Keys.chord(Keys.CONTROL, "c"));
 
 		assertValue("#1-1", "foo\tbar");
 	}
@@ -1140,6 +1140,12 @@ public class ExCommandsTest extends WasaviTest {
 	@Test
 	public void testPrint () {
 		Wasavi.send("i1\t$\u0016\u0010\\\n2\n3\n4\n5\u001b");
+		assertValue("#0-1",
+			"1\t$\u0010\\\n" +
+			"2\n" +
+			"3\n" +
+			"4\n" +
+			"5");
 
 		Wasavi.send(":print\n");
 		assertEquals("#1-1", "5", Wasavi.getLastMessage());

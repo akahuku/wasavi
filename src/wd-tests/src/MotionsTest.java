@@ -696,7 +696,7 @@ public class MotionsTest extends WasaviTest {
 
 	@Test
 	public void testDownCtrlN () {
-		_testDown("\u000e");
+		_testDown(ctrln);
 	}
 
 	@Test

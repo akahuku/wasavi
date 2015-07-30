@@ -462,7 +462,7 @@ public class OpDeleteTest extends WasaviTest {
 
 	@Test
 	public void testDeleteDownCtrlN () {
-		_testDeleteDown("\u000e");
+		_testDeleteDown(ctrln);
 	}
 
 	@Test

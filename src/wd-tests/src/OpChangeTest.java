@@ -550,7 +550,7 @@ public class OpChangeTest extends WasaviTest {
 
 	@Test
 	public void testChangeDownCtrlN () {
-		_testChangeDown("\u000e");
+		_testChangeDown(ctrln);
 	}
 
 	@Test

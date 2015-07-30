@@ -570,7 +570,7 @@ public class OpShiftTest extends WasaviTest {
 
 	@Test
 	public void testShiftDownCtrlN () {
-		_testShiftDown("\u000e");
+		_testShiftDown(ctrln);
 	}
 
 	@Test

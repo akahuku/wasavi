@@ -574,10 +574,14 @@ public class SurroundingTest extends WasaviTest {
 
 	@Test
 	public void insertMultilineTag () {
-		for (String s: "\u0014,".split("")) {
+		String[][] keys = {
+			{ctrlt, "\ue000<A-t>"},
+			{",", ","}
+		};
+		for (String[] s: keys) {
 			Wasavi.send("ggcG0\u0004line1\nline2\u001b");
 
-			Wasavi.send(String.format("1Gysiw%shead foo='bar'>", s));
+			Wasavi.send(String.format("1Gysiw%shead foo='bar'>", s[0]));
 			assertValue("#1-1", "<head foo='bar'>\n    line1\n</head>\nline2");
 
 			Wasavi.send("u");
@@ -588,7 +592,7 @@ public class SurroundingTest extends WasaviTest {
 
 			assertEquals(
 				"#4-1",
-				String.format("ysiw%shead foo='bar'>\n", s),
+				String.format("ysiw%shead foo='bar'>\n", s[1]),
 				Wasavi.getLastSimpleCommand());
 
 			Wasavi.send("G.");
@@ -600,10 +604,17 @@ public class SurroundingTest extends WasaviTest {
 
 	@Test
 	public void insertMultilineTagViaOperator () {
-		for (String s: "\u0014,<Tt".split("")) {
+		String[][] keys = {
+			{ctrlt, "\ue000<A-t>"},
+			{",", ","},
+			{"<", "<"},
+			{"T", "T"},
+			{"t", "t"}
+		};
+		for (String[] s: keys) {
 			Wasavi.send("ggcG0\u0004line1\nline2\u001b");
 
-			Wasavi.send(String.format("1GySiw%shead foo='bar'>", s));
+			Wasavi.send(String.format("1GySiw%shead foo='bar'>", s[0]));
 			assertValue("#1-1", "<head foo='bar'>\n    line1\n</head>\nline2");
 
 			Wasavi.send("u");
@@ -614,7 +625,7 @@ public class SurroundingTest extends WasaviTest {
 
 			assertEquals(
 				"#4-1",
-				String.format("ySiw%shead foo='bar'>\n", s),
+				String.format("ySiw%shead foo='bar'>\n", s[1]),
 				Wasavi.getLastSimpleCommand());
 
 			Wasavi.send("G.");
@@ -626,10 +637,17 @@ public class SurroundingTest extends WasaviTest {
 
 	@Test
 	public void insertTagLinewise () {
-		for (String s: "\u0014,<Tt".split("")) {
+		String[][] keys = {
+			{ctrlt, "\ue000<A-t>"},
+			{",", ","},
+			{"<", "<"},
+			{"T", "T"},
+			{"t", "t"}
+		};
+		for (String[] s: keys) {
 			Wasavi.send("ggcG0\u0004line1\nline2\u001b");
 
-			Wasavi.send(String.format("1Gys_%shead foo='bar'>", s));
+			Wasavi.send(String.format("1Gys_%shead foo='bar'>", s[0]));
 			assertValue("#1-1", "<head foo='bar'>\n    line1\n</head>\nline2");
 
 			Wasavi.send("u");
@@ -640,7 +658,7 @@ public class SurroundingTest extends WasaviTest {
 
 			assertEquals(
 				"#4-1",
-				String.format("ys_%shead foo='bar'>\n", s),
+				String.format("ys_%shead foo='bar'>\n", s[1]),
 				Wasavi.getLastSimpleCommand());
 
 			Wasavi.send("G.");

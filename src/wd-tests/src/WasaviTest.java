@@ -33,9 +33,6 @@ import org.openqa.selenium.chrome.ChromeDriverService;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.chrome.ChromeDriver;
 
-import com.opera.core.systems.OperaDriver;
-import com.opera.core.systems.OperaProfile;
-
 
 
 class WasaviSendCallback {
@@ -474,6 +471,10 @@ class WasaviWrapper {
 
 
 class WasaviUtils {
+	public static String ctrln = Keys.chord(Keys.ALT, "n");
+	public static String ctrlt = Keys.chord(Keys.ALT, "t");
+	public static String ctrlw = Keys.chord(Keys.ALT, "w");
+
 	public static String join (String... parts) {
 		String delimiter = parts[0];
 		StringBuilder sb = new StringBuilder();
@@ -673,18 +674,7 @@ public class WasaviTest {
 	private static WebDriver createDriver (String name) {
 		WebDriver driver = null;
 
-		if (name.equals("opera")) {
-			DesiredCapabilities cap = DesiredCapabilities.operaPresto();
-			cap.setCapability("opera.profile",
-					new OperaProfile(System.getProperty("wasavi.tests.opera.profile_path")));
-			cap.setCapability("opera.logging.level",
-					java.util.logging.Level.FINE);
-			cap.setCapability("opera.binary",
-					System.getProperty("wasavi.tests.opera.executable"));
-			driver = new OperaDriver(cap);
-		}
-
-		else if (name.equals("chrome")) {
+		if (name.equals("chrome")) {
 			ChromeDriverService service = ChromeDriverService.createDefaultService();
 			ChromeOptions options = new ChromeOptions();
 			options.addArguments(

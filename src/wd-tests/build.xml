@@ -10,8 +10,8 @@
 	-->
 
 	<path id="classpath.test">
-		<!-- junit -->
-		<pathelement location="${JUNIT_JAR}" />
+		<!-- json -->
+		<pathelement location="${JSON_JAR}" />
 
 		<!-- selenium core -->
 		<pathelement location="${SELENIUM_JAR}" />

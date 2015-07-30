@@ -454,7 +454,7 @@ public class OpYankTest extends WasaviTest {
 
 	@Test
 	public void testYankDownCtrlN () {
-		_testYankDown("\u000e");
+		_testYankDown(ctrln);
 	}
 
 	@Test

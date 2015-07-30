@@ -102,7 +102,7 @@ public class LineInputEditingTest extends WasaviTest {
 
 	@Test
 	public void commandlineDeleteWord () {
-		Wasavi.send(":word\u0017version\n");
+		Wasavi.send(":word", ctrlw, "version\n");
 		assertTrue("#1-1", Wasavi.getLastMessage().matches(".*wasavi/.*"));
 	}
 
