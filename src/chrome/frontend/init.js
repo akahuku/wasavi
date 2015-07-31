@@ -37,7 +37,6 @@
 /*const*/var BRACKETS = '[{(<"\'``\'">)}]';
 /*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 
-/*const*/var LINE_NUMBER_MARGIN_LEFT = 2;
 /*const*/var LINE_NUMBER_MAX_WIDTH = 6;
 /*const*/var LINE_NUMBER_RELATIVE_WIDTH = 2;
 

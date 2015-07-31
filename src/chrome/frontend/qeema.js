@@ -841,6 +841,9 @@
 			if (altKey) {
 				stroke = String.fromCharCode(code).toUpperCase();
 				code = stroke.charCodeAt(0);
+				if (!(code >= 65 && code <= 90)) {
+					code = -1;
+				}
 				getModifiers(c, e);
 			}
 			// ctrl code shortcut: ^@ - ^_

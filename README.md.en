@@ -64,7 +64,7 @@ Presto based Opera does not support DOM3 Composition Event therefore input via I
 
 ### A note for Chrome users
 
-Chrome has reserved some fundamental shortcuts, such as Ctrl+T, Ctrl+W. These keys cannot be used in wasavi.
+Chrome has reserved some fundamental shortcuts, such as Ctrl+T, Ctrl+W and Ctrl+N. Although these keys cannot be used in wasavi, you can use Alt+T, Alt+W and Alt+N.
 
 
 

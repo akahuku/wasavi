@@ -1147,15 +1147,15 @@ function install (x, req) {
 			for (var i = 1; i <= LINE_NUMBER_MAX_WIDTH; i++) {
 				result.push(
 					'#wasavi_editor.n' + i + ' > div:before {' +
-					'min-width:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * i) + 'px;' +
-					'max-width:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * i) + 'px;' +
-					'margin-left:-' + (LINE_NUMBER_MARGIN_LEFT + charWidth * (i + 1)) + 'px;' +
+					'min-width:' + (charWidth * i) + 'px;' +
+					'max-width:' + (charWidth * i) + 'px;' +
+					'margin-left:-' + (charWidth * (i + 1)) + 'px;' +
 					'overflow:hidden;' +
 					'}'
 				);
 				result.push(
 					'#wasavi_editor.n' + i + ' > div {' +
-					'margin-left:' + (LINE_NUMBER_MARGIN_LEFT + charWidth * (i + 1)) + 'px;' +
+					'margin-left:' + (charWidth * (i + 1)) + 'px;' +
 					'}'
 				);
 			}
