@@ -92,6 +92,10 @@
 		'bslash':   '\\'.charCodeAt(0)
 	};
 	var PRIOR_KEYS_MANIFEST = 'data-prior-keys';
+	var BIT_SHIFT = 0x8000;
+	var BIT_CTRL  = 0x4000;
+	var BIT_ALT   = 0x2000;
+	var BIT_BASE  = 0x00ff;
 	// >>>
 
 	// <<<1 classes
@@ -166,6 +170,7 @@
 	var functionKeyNames = null;
 	var ctrlMap = null;
 	var codeToCharMap = null;
+	var charToCodeMap = null;
 	var consumed;
 	var lastReceivedEvent = '';
 	var dequeue = [];
@@ -410,14 +415,6 @@
 		if (global.gecko) return GECKO_CODE_TO_CHAR_MAP;
 	}
 
-	function getFunctionKeyNames (o) {
-		var result = {};
-		for (var i in o) {
-			result[o[i]] = i;
-		}
-		return result;
-	}
-
 	function getListenersSet () {
 		return {
 			keydown: getKeydownListener(),
@@ -619,6 +616,22 @@
 
 		sweep();
 	}
+
+	function flip (o) {
+		var result = {};
+		for (var i in o) {
+			result[o[i]] = i;
+		}
+		return result;
+	}
+
+	function toOuterBase (s) {
+		return s.replace('<', 'LT').replace('>', 'GT');
+	}
+
+	function toInnerBase (s) {
+		return s.replace(/^lt$/i, '<').replace(/^gt$/i, '>');
+	}
 	// >>>
 
 	// <<<1 internal listeners
@@ -777,7 +790,6 @@
 			code = codeToCharMap[-e.keyCode] || e.keyCode;
 			getModifiers(c, e);
 			if (code < 0 || c.length) {
-				char = '';
 				stroke = functionKeyCodes[-e.keyCode];
 			}
 			else {
@@ -791,7 +803,6 @@
 			code = codeToCharMap[e.keyCode] || -e.keyCode;
 			getModifiers(c, e);
 			if (code < 0 || c.length) {
-				char = '';
 				stroke = functionKeyCodes[e.keyCode];
 			}
 			else {
@@ -805,7 +816,6 @@
 			code = ctrlKey && !altKey ? 0 : 32;
 			getModifiers(c, e);
 			if (c.length) {
-				char = '';
 				stroke = functionKeyCodes[e.charCode];
 			}
 			else {
@@ -829,7 +839,8 @@
 
 			// with alt
 			if (altKey) {
-				stroke = String.fromCharCode(code).toLowerCase();
+				stroke = String.fromCharCode(code).toUpperCase();
+				code = stroke.charCodeAt(0);
 				getModifiers(c, e);
 			}
 			// ctrl code shortcut: ^@ - ^_
@@ -847,15 +858,13 @@
 		if (stroke == undefined) return;
 		if (isPasteKeyStroke(code, e)) return;
 
-		c.push(stroke
-			.replace('<', 'LT')
-			.replace('>', 'GT'));
-
-		if (altKey) {
-			code = -1;
-			char = '';
-		}
+		c.push(toOuterBase(stroke));
 		if (c.length > 1 || -code in functionKeyCodes) {
+			code = -(Math.abs(code) +
+				   (shiftKey ? BIT_SHIFT : 0) +
+				   (ctrlKey ?  BIT_CTRL : 0) +
+				   (altKey ?   BIT_ALT : 0));
+			char = '';
 			stroke = '<' + c.join('-') + '>';
 		}
 		var ev = new VirtualInputEvent(
@@ -981,7 +990,8 @@
 		if (functionKeyCodes) {
 			ctrlMap = getCtrlMap();
 			codeToCharMap = getCodeToCharMap();
-			functionKeyNames = getFunctionKeyNames(functionKeyCodes);
+			functionKeyNames = flip(functionKeyCodes);
+			charToCodeMap = flip(codeToCharMap);
 
 			var listenersSet = getListenersSet();
 			for (var i in listenersSet) {
@@ -998,6 +1008,7 @@
 		ctrlMap = null;
 		codeToCharMap = null;
 		functionKeyNames = null;
+		charToCodeMap = null;
 
 		var listenersSet = getListenersSet();
 		for (var i in listenersSet) {
@@ -1049,27 +1060,47 @@
 	}
 
 	// code utils
-	function objectFromCode (c) {
-		if (typeof c != 'number') {
+	function objectFromCode (code) {
+		var result = null;
+
+		if (typeof code != 'number') {
+			return result;
+		}
+
+		if (code < 0) {
+			code = Math.abs(code);
+			var m = {
+				S: !!(code & BIT_SHIFT),
+				C: !!(code & BIT_CTRL),
+				A: !!(code & BIT_ALT)
+			};
+
+			code &= BIT_BASE;
+			var base = code in functionKeyCodes ?
+				functionKeyCodes[code] :
+				String.fromCharCode(code);
+
+			if (0 <= code && code < 32 && Object.keys(m).length == 0) {
+				m.C = true;
+				m.S = m.A = false;
+			}
+
+			var parts = Object.keys(m).filter(function (n) {return m[n]});
+			parts.push(toOuterBase(base));
+			result = parseKeyDesc('\ue000<' + parts.join('-') + '>');
+		}
+		else if (code < 32 && !(code in charToCodeMap)) {
+			result = parseKeyDesc('\ue000<C-' + String.fromCharCode(64 + code) + '>');
+		}
+		else {
+			result = parseKeyDesc(String.fromCharCode(code));
+		}
+
+		if (!result || !result.prop) {
 			return null;
 		}
 
-		var identifier = '';
-		var isSpecial = false;
-		if (c >= 0) {
-			identifier = String.fromCharCode(c);
-		}
-		else if (-c in functionKeyCodes) {
-			identifier = functionKeyCodes[-c];
-			isSpecial = true;
-		}
-
-		return new VirtualInputEvent(
-			null,
-			c, identifier, identifier,
-			false, false, false,
-			isSpecial
-		);
+		return result.prop;
 	}
 
 	function insertFnKeyHeader (s) {
@@ -1078,101 +1109,88 @@
 		});
 	}
 
-	function parseKeyDesc (desc, escaped) {
-		function doParse (desc) {
-			var parts = desc.toLowerCase().split('-');
-			var shift = false, ctrl = false, alt = false;
+	function doParse (desc) {
+		var parts = desc.toLowerCase().split('-');
+		var shift = false, ctrl = false, alt = false;
 
-			while (parts.length > 1 && /^[sca]$/i.test(parts[0])) {
-				shift = parts[0] == 's' || shift;
-				ctrl = parts[0] == 'c' || ctrl;
-				alt = parts[0] == 'a' || alt;
-				parts.shift();
-			}
-
-			var name = parts[0]
-				.replace('lt', '<')
-				.replace('gt', '>');
-			var result = {
-				code:0,
-				name:name,
-				shift:shift,
-				ctrl:ctrl,
-				alt:alt,
-				special:true
-			};
-
-			if (name in FUNCTION_KEY_ALIASES) {
-				if (typeof FUNCTION_KEY_ALIASES[name] == 'number') {
-					name = String.fromCharCode(FUNCTION_KEY_ALIASES[name]);
-				}
-				else {
-					name = FUNCTION_KEY_ALIASES[name];
-				}
-			}
-
-			if (name in functionKeyNames) {
-				if (alt) {
-					result.code = -1;
-				}
-				else {
-					result.code = codeToCharMap[functionKeyNames[name]]
-						|| -functionKeyNames[name];
-				}
-				if (0 <= result.code && result.code <= 31 && !ctrl && !shift && !alt) {
-					result.key = String.fromCharCode(result.code);
-				}
-				return result;
-			}
-
-			if (alt) {
-				result.code = -1;
-				result.name = result.name
-					.replace('<', 'LT')
-					.replace('>', 'GT');
-				result.special = false;
-				return result;
-			}
-
-			if (/^[@a-z\[\\\]_]$/.test(name) && ctrl && !shift && !alt) {
-				result.code = name.charCodeAt(0) & 0x1f;
-				result.key = String.fromCharCode(result.code);
-				result.special = false;
-				return result;
-			}
-
-			if (name.length == 1) {
-				result.code = name.charCodeAt(0);
-				result.name = result.name
-					.replace('<', 'LT')
-					.replace('>', 'GT');
-				result.special = false;
-				return result;
-			}
-
-			return null;
+		while (parts.length > 1 && /^[sca]$/i.test(parts[0])) {
+			shift = parts[0] == 's' || shift;
+			ctrl = parts[0] == 'c' || ctrl;
+			alt = parts[0] == 'a' || alt;
+			parts.shift();
 		}
-		if (typeof desc == 'number') {
-			desc = String.fromCharCode(desc);
+
+		var name = toInnerBase(parts[0]);
+		var result = {
+			code:0,
+			name:name,
+			shift:shift,
+			ctrl:ctrl,
+			alt:alt,
+			special:true
+		};
+
+		if (name in FUNCTION_KEY_ALIASES) {
+			if (typeof FUNCTION_KEY_ALIASES[name] == 'number') {
+				name = String.fromCharCode(FUNCTION_KEY_ALIASES[name]);
+			}
+			else {
+				name = FUNCTION_KEY_ALIASES[name];
+			}
+		}
+
+		if (name in functionKeyNames) {
+			result.code = codeToCharMap[functionKeyNames[name]]
+				|| -functionKeyNames[name];
+			if (!ctrl && !shift && !alt && result.code in charToCodeMap) {
+				result.key = String.fromCharCode(result.code);
+			}
+			return result;
+		}
+
+		if (alt) {
+			result.code = -name.toUpperCase().charCodeAt(0);
+			result.name = toOuterBase(result.name);
+			result.special = false;
+			return result;
+		}
+
+		if (/^[@a-z\[\\\]_]$/.test(name) && ctrl && !shift && !alt) {
+			result.code = name.charCodeAt(0) & 0x1f;
+			result.key = String.fromCharCode(result.code);
+			result.special = false;
+			return result;
+		}
+
+		if (name.length == 1) {
+			result.code = name.charCodeAt(0);
+			result.name = toOuterBase(result.name);
+			result.special = false;
+			return result;
+		}
+
+		return null;
+	}
+
+	function parseKeyDesc (desc, escaped) {
+		if (typeof desc != 'string') {
+			desc = '' + desc;
 		}
 		if (!escaped) {
-			var consumed = 0;
-			var re = /^\ue000<([^>]+)>/.exec(desc);
-			if (re) {
+			var consumed = 0, re;
+			if ((re = /^\ue000<([^>]+)>/.exec(desc))) {
 				desc = re[1];
 				consumed = re[0].length;
 			}
-			else {
-				re = /^\ue000#(\d{1,2})/.exec(desc);
-				if (re) {
-					desc = 'f' + re[1];
-					consumed = re[0].length;
-				}
+			else if ((re = /^\ue000#(\d{1,2})/.exec(desc))) {
+				desc = 'f' + re[1];
+				consumed = re[0].length;
 			}
 			if (consumed) {
 				var obj = doParse(desc);
 				if (!obj) return {consumed:consumed};
-				var char = obj.code < 0 ? '' : String.fromCharCode(obj.code);
+				var code = obj.code;
+				var char = code < 0 ? '' : String.fromCharCode(code);
 				var key;
 				if ('key' in obj) {
 					key = obj.key;
@@ -1182,6 +1200,12 @@
 					obj.shift && key.push('S');
 					obj.ctrl  && key.push('C');
 					obj.alt   && key.push('A');
+					if (code < 0 || key.length) {
+						code = -(Math.abs(code) +
+							   (obj.shift ? BIT_SHIFT : 0) +
+							   (obj.ctrl ?  BIT_CTRL : 0) +
+							   (obj.alt ?   BIT_ALT : 0));
+					}
 					key.push(obj.name);
 					key = '<' + key.join('-') + '>';
 				}
@@ -1189,7 +1213,7 @@
 					consumed:consumed,
 					prop: new VirtualInputEvent(
 						null,
-						obj.code, char, key,
+						code, char, key,
 						obj.shift, obj.ctrl, obj.alt,
 						obj.special
 					)
@@ -1202,7 +1226,7 @@
 				null,
 				desc.charCodeAt(0), desc.charAt(0), desc.charAt(0),
 				false, false, false,
-				false
+				desc.charCodeAt(0) in charToCodeMap
 			)
 		};
 	}
