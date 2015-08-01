@@ -3755,7 +3755,7 @@ Wasavi.StrokeRecorder = function () {
 
 Wasavi.Surrounding = function (app) {
 	var charwiseTagPrefix = /^[<Tt]$/;
-	var linewiseTagPrefix = /^(?:[\u0014,]|<A-t>)$/;
+	var linewiseTagPrefix = /^(?:[\u0014,]|<A-T>)$/;
 	var singleCharsTable = '!#$%&*+,\\-.:;=?@^_|~"\'`';
 
 	var basicTable = {

@@ -2909,7 +2909,8 @@ function motionRight (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionEnd;
 	var length = buffer.rows(n).length;
-	c != '' && n.col >= length - 1 && requestNotice({silent:_('Tail of line.')});
+	var offset = isEditing() ? 0 : 1;
+	c != '' && n.col >= length - offset && requestNotice({silent:_('Tail of line.')});
 	n.col = Math.min(n.col + count, length);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
@@ -5236,7 +5237,7 @@ var modeHandlers = {
 //console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
 //console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
 		}
-		else if (r.code >= 0) {
+		else {
 			var letterActual = inputHandler.updateText(e);
 			var prevPos = buffer.selectionStart;
 			inputHandler.updateStroke(e);
@@ -5249,7 +5250,7 @@ var modeHandlers = {
 			if (execEditMap(r, e, r.mapkey, r.subkey, r.code)) {
 				requestShowPrefixInput(getDefaultPrefixInputString());
 			}
-			else if (!clipOverrun()) {
+			else if (r.code >= 0 && !clipOverrun()) {
 				if (r.code < 32) {
 					inputHandler.ungetText();
 					inputHandler.ungetStroke();
@@ -6084,7 +6085,7 @@ var commandMap = {
 	},
 	'\u000e'/*^N*/:function () {return this.j.apply(this, arguments)},
 	'<down>':function () {return this.j.apply(this, arguments)},
-	'<A-n>':function () {return this.j.apply(this, arguments)},
+	'<A-N>':function () {return this.j.apply(this, arguments)},
 	k:function (c) {
 		return callDenotativeFunction(c, prefixInput.count);
 	},
@@ -7472,7 +7473,7 @@ var editMap = {
 	'\u0004'/*^D*/:function (c, o) {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
-		var needShift = o.key == '\u0014' || o.key == '<A-t>';
+		var needShift = o.key == '\u0014' || o.key == '<A-T>';
 		var n = buffer.selectionStart;
 		var re = spc('^(S*).*?([0^]?)$').exec(buffer.rows(n).substring(0, n.col));
 		var tmpMark = 'edit-shifter';
@@ -7568,7 +7569,7 @@ var editMap = {
 				backToStartPosition();
 				break;
 			case '\u0017':
-			case '<A-w>':
+			case '<A-W>':
 			case '<C-backspace>':
 				backToPrevWord();
 				break;
@@ -7584,7 +7585,7 @@ var editMap = {
 				deleteSelection();
 				break;
 			case '\u0017':
-			case '<A-w>':
+			case '<A-W>':
 			case '<C-backspace>':
 				backToPrevWord();
 				deleteSelection();
@@ -7717,7 +7718,7 @@ var editMap = {
 		}
 	},
 	'\u0014'/*^T*/:function () {this['\u0004'].apply(this, arguments)},
-	'<A-t>':function () {this['\u0004'].apply(this, arguments)},
+	'<A-T>':function () {this['\u0004'].apply(this, arguments)},
 	'\u0015'/*^U*/:function () {this['\u0008'].apply(this, arguments)},
 	'\u0016'/*^V*/:{
 		edit:function (c, o) {
@@ -7781,7 +7782,7 @@ var editMap = {
 		}
 	},
 	'\u0017'/*^W*/:function () {this['\u0008'].apply(this, arguments)},
-	'<A-w>':function () {this['\u0008'].apply(this, arguments)},
+	'<A-W>':function () {this['\u0008'].apply(this, arguments)},
 	'<C-backspace>':function () {this['\u0008'].apply(this, arguments)},
 	'\u007f':function () {
 		inputHandler.ungetText();
@@ -7922,7 +7923,7 @@ var lineInputEditMap = {
 		}
 		return true;
 	},
-	'<A-n>':function () {return this['\u000e'].apply(this, arguments)},
+	'<A-N>':function () {return this['\u000e'].apply(this, arguments)},
 	'\u0010'/*^P*/:function (c, o) {
 		if (lineInputHistories.isInitial) {
 			dataset(o.target, 'wasaviLineInputCurrent', o.target.value);
@@ -7939,7 +7940,7 @@ var lineInputEditMap = {
 		}
 		return true;
 	},
-	'<A-p>':function () {return this['\u0010'].apply(this, arguments)},
+	'<A-P>':function () {return this['\u0010'].apply(this, arguments)},
 	'\u0012'/*^R*/:{
 		line_input:function (c, o) {
 			requestInputMode('wait_register');
@@ -8075,7 +8076,7 @@ var lineInputEditMap = {
 		//keyManager.init(o.target);
 		return true;
 	},
-	'<A-w>':function () {return this['\u0017'].apply(this, arguments)},
+	'<A-W>':function () {return this['\u0017'].apply(this, arguments)},
 	'<C-backspace>':function () {return this['\u0017'].apply(this, arguments)},
 	'\u007f':function (c, o) {
 		if (o.target.selectionStart == o.target.selectionEnd) {
