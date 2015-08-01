@@ -5236,7 +5236,7 @@ var modeHandlers = {
 //console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
 //console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
 		}
-		else {
+		else if (r.code >= 0) {
 			var letterActual = inputHandler.updateText(e);
 			var prevPos = buffer.selectionStart;
 			inputHandler.updateStroke(e);
