@@ -984,6 +984,14 @@ public class ExCommandsTest extends WasaviTest {
 	}
 
 	@Test
+	public void testMapAlt () {
+		Wasavi.send(":map [clear]\n");
+		Wasavi.send(":map <A-s> G\n");
+		Wasavi.send("i1\n2\n3\n4\n5\u001bgg", Keys.chord(Keys.ALT, "s"));
+		assertPos("#1-1", 4, 0);
+	}
+
+	@Test
 	public void testMark2 () {
 		Wasavi.send("i1\n2\n3\u001b");
 

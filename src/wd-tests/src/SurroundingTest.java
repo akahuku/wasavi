@@ -575,7 +575,7 @@ public class SurroundingTest extends WasaviTest {
 	@Test
 	public void insertMultilineTag () {
 		String[][] keys = {
-			{ctrlt, "\ue000<A-t>"},
+			{ctrlt, "\ue000<A-T>"},
 			{",", ","}
 		};
 		for (String[] s: keys) {
@@ -605,7 +605,7 @@ public class SurroundingTest extends WasaviTest {
 	@Test
 	public void insertMultilineTagViaOperator () {
 		String[][] keys = {
-			{ctrlt, "\ue000<A-t>"},
+			{ctrlt, "\ue000<A-T>"},
 			{",", ","},
 			{"<", "<"},
 			{"T", "T"},
@@ -638,7 +638,7 @@ public class SurroundingTest extends WasaviTest {
 	@Test
 	public void insertTagLinewise () {
 		String[][] keys = {
-			{ctrlt, "\ue000<A-t>"},
+			{ctrlt, "\ue000<A-T>"},
 			{",", ","},
 			{"<", "<"},
 			{"T", "T"},
