@@ -769,8 +769,8 @@ public class InsertionTest extends WasaviTest {
 	public void testDeleteWord () {
 		Wasavi.send("ifoo bar", ctrlw, "o\u001b");
 		assertValue("#1-1", "foo o");
-		assertEquals("#1-2", "foo bar\ue000<A-w>o", Wasavi.getRegister("."));
-		assertEquals("#1-3", "ifoo bar\ue000<A-w>o\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "foo bar\ue000<A-W>o", Wasavi.getRegister("."));
+		assertEquals("#1-3", "ifoo bar\ue000<A-W>o\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
@@ -781,8 +781,8 @@ public class InsertionTest extends WasaviTest {
 	public void testDeleteWordOverwrite () {
 		Wasavi.send("Rfoo bar", ctrlw, "o\u001b");
 		assertValue("#1-1", "foo o");
-		assertEquals("#1-2", "foo bar\ue000<A-w>o", Wasavi.getRegister("."));
-		assertEquals("#1-3", "Rfoo bar\ue000<A-w>o\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "foo bar\ue000<A-W>o", Wasavi.getRegister("."));
+		assertEquals("#1-3", "Rfoo bar\ue000<A-W>o\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
@@ -809,8 +809,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("ifoo bar\n\u001b");
 		Wasavi.send("a\tbaz", ctrlw, ctrlw, ctrlw, "\u001b");
 		assertValue("#1-1", "foo bar");
-		assertEquals("#1-2", "\tbaz\ue000<A-w>\ue000<A-w>\ue000<A-w>", Wasavi.getRegister("."));
-		assertEquals("#1-3", "a\tbaz\ue000<A-w>\ue000<A-w>\ue000<A-w>\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\tbaz\ue000<A-W>\ue000<A-W>\ue000<A-W>", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\tbaz\ue000<A-W>\ue000<A-W>\ue000<A-W>\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "foo bar\n");
 		Wasavi.send("\u0012");
@@ -822,8 +822,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("ifoo\n\u001b");
 		Wasavi.send("R", ctrlw, ctrlw, "\u001b");
 		assertValue("#1-1", "foo\n");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>", Wasavi.getRegister("."));
-		assertEquals("#1-3", "R\ue000<A-w>\ue000<A-w>\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\ue000<A-W>\ue000<A-W>\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
@@ -859,8 +859,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("ifoo bar baz\u001b");
 		Wasavi.send("a", ctrlw, ctrlw, "\u001b");
 		assertValue("#1-1", "foo ");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>", Wasavi.getRegister("."));
-		assertEquals("#1-3", "a\ue000<A-w>\ue000<A-w>\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\ue000<A-W>\ue000<A-W>\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "foo bar baz");
 		Wasavi.send("\u0012");
@@ -872,8 +872,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("ifoo bar baz\u001b");
 		Wasavi.send("R", ctrlw, ctrlw, "\u001b");
 		assertValue("#1-1", "foo bar baz");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>", Wasavi.getRegister("."));
-		assertEquals("#1-3", "R\ue000<A-w>\ue000<A-w>\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\ue000<A-W>\ue000<A-W>\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
@@ -951,8 +951,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
 		Wasavi.send("a", ctrlw, ctrlw, ctrlw, "\u0015\u001b");
 		assertValue("#1-1", "\tfirst\n");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015", Wasavi.getRegister("."));
-		assertEquals("#1-3", "a\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "\tfirst\n\tsecond\n\tthird");
 		Wasavi.send("\u0012");
@@ -965,8 +965,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("i\tfirst\nsecond\nthird\u001b");
 		Wasavi.send("a", ctrlw, ctrlw, ctrlw, "\u0015\u001b");
 		assertValue("#1-1", "\tfirst\n\t");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015", Wasavi.getRegister("."));
-		assertEquals("#1-3", "a\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "a\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "\tfirst\n\tsecond\n\tthird");
 		Wasavi.send("\u0012");
@@ -979,8 +979,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
 		Wasavi.send("R", ctrlw, ctrlw, ctrlw, "\u0015\u001b");
 		assertValue("#1-1", "\tfirst\n\tsecond\n\tthird");
-		assertEquals("#1-2", "\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015", Wasavi.getRegister("."));
-		assertEquals("#1-3", "R\ue000<A-w>\ue000<A-w>\ue000<A-w>\u0015\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015", Wasavi.getRegister("."));
+		assertEquals("#1-3", "R\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
@@ -1014,8 +1014,8 @@ public class InsertionTest extends WasaviTest {
 		Wasavi.send(":set sw=4 ts=8 ai\n");
 		Wasavi.send("iFOO\nfoobar", ctrlt, "baz\u001b");
 		assertValue("#1-1", "FOO\n    foobarbaz");
-		assertEquals("#1-2", "FOO\nfoobar\ue000<A-t>baz", Wasavi.getRegister("."));
-		assertEquals("#1-3", "iFOO\nfoobar\ue000<A-t>baz\u001b", Wasavi.getLastSimpleCommand());
+		assertEquals("#1-2", "FOO\nfoobar\ue000<A-T>baz", Wasavi.getRegister("."));
+		assertEquals("#1-3", "iFOO\nfoobar\ue000<A-T>baz\u001b", Wasavi.getLastSimpleCommand());
 		Wasavi.send("u");
 		assertValue("#1-4", "");
 		Wasavi.send("\u0012");
