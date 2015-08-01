@@ -589,5 +589,8 @@ var strftime = (function (global) {
 	}
 	return strftime;
 })(this);
+function minmax (min, value, max) {
+	return Math.max(min, Math.min(value, max));
+}
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

@@ -41,8 +41,8 @@ Wasavi.Position.prototype = {
 		return new Wasavi.Position(this.row, this.col);
 	},
 	round: function (t) {
-		this.row = Math.max(0, Math.min(this.row, t.rowLength - 1));
-		this.col = Math.max(0, Math.min(this.col, t.rows(this.row).length - (this.row == t.rowLength - 1 ? 0 : 1)));
+		this.row = minmax(0, this.row, t.rowLength - 1);
+		this.col = minmax(0, this.col, t.rows(this.row).length - (this.row == t.rowLength - 1 ? 0 : 1));
 		return this;
 	},
 	isp: function (o) {
@@ -1015,7 +1015,7 @@ Wasavi.LineInputHistories = function (app, maxSize, names, value) {
 
 				tmp[na] = {};
 				tmp[na].lines = src[na].lines.filter(isString).slice(-maxSize);
-				tmp[na].current = Math.min(Math.max(-1, Math.floor(src[na].current)), tmp[na].lines.length - 1);
+				tmp[na].current = minmax(-1, Math.floor(src[na].current), tmp[na].lines.length - 1);
 			}
 		}
 		s = extend(s, tmp);
@@ -3257,7 +3257,15 @@ Wasavi.InputHandler.prototype = {
 			result = e;
 		}
 		else if (this.app.keyManager.isInputEvent(e)) {
-			result = e.code == 0x000d ? '\u000a' : e.toInternalString();
+			if (e.code == 0x0d) {
+				result = '\u000a';
+			}
+			else if (/^<.+>$/.test(e.key)) {
+				result = '\ue000' + e.key;
+			}
+			else {
+				result = e.key;
+			}
 		}
 		else {
 			return;
@@ -3746,8 +3754,8 @@ Wasavi.StrokeRecorder = function () {
 };
 
 Wasavi.Surrounding = function (app) {
-	var charwiseTagPrefix = '<Tt';
-	var linewiseTagPrefix = '\u0014,';
+	var charwiseTagPrefix = /^[<Tt]$/;
+	var linewiseTagPrefix = /^(?:[\u0014,]|<A-t>)$/;
 	var singleCharsTable = '!#$%&*+,\\-.:;=?@^_|~"\'`';
 
 	var basicTable = {
@@ -4171,19 +4179,15 @@ Wasavi.Surrounding = function (app) {
 	}
 
 	function isCharwiseTagPrefix (line) {
-		return isString(line) && line.length == 1
-			&& charwiseTagPrefix.indexOf(line.charAt(0)) >= 0;
+		return charwiseTagPrefix.test(line);
 	}
 
 	function isLinewiseTagPrefix (line) {
-		return isString(line) && line.length == 1
-			&& linewiseTagPrefix.indexOf(line.charAt(0)) >= 0;
+		return linewiseTagPrefix.test(line);
 	}
 
 	function isTagPrefix (line) {
-		return isString(line) && line.length == 1
-			&& (   charwiseTagPrefix.indexOf(line.charAt(0)) >= 0
-				|| linewiseTagPrefix.indexOf(line.charAt(0)) >= 0);
+		return isCharwiseTagPrefix(line) || isLinewiseTagPrefix(line);
 	}
 
 	function dispose () {

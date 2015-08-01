@@ -64,7 +64,7 @@ function ExCommand (name, shortName, syntax, flags, handler) {
 }
 
 ExCommand.prototype = {
-	// {{{1 ExCommand class prorotype
+	// <<<1 ExCommand class prorotype
 	clone: function () {
 		return new ExCommand(
 			this.name,
@@ -337,7 +337,7 @@ flag23_loop:
 				}
 				if (ch == 'a') {
 					result.range[0] = result.range[1];
-					result.range[1] = Math.max(0, Math.min(result.range[0] + re - 1, t.rowLength - 1));
+					result.range[1] = minmax(0, result.range[0] + re - 1, t.rowLength - 1);
 				}
 				result.count = re;
 				result.flags.count = true;
@@ -460,7 +460,7 @@ flag23_loop:
 	toString: function () {
 		return '[ExCommand ' + this.name + ']';
 	}
-	// }}}
+	// >>>
 };
 
 function parseWriteArg (app, t, a) {
@@ -595,7 +595,7 @@ function readCore (app, t, a, content, meta, status) {
 		return _('"{0}" has no content.', meta.path);
 	}
 	content = content.replace(/\r\n|\r/g, '\n');
-	var startLine = Math.min(Math.max(-1, a.range[0]), t.rowLength - 1);
+	var startLine = minmax(-1, a.range[0], t.rowLength - 1);
 	t.setSelectionRange(new Wasavi.Position(startLine, 0));
 	app.edit.paste(1, {
 		isForward:true,
@@ -1866,7 +1866,7 @@ var cache = {};
 			}
 			opts.register = register;
 		}
-		t.setSelectionRange(new Wasavi.Position(Math.min(Math.max(-1, a.range[0]), t.rowLength - 1), 0));
+		t.setSelectionRange(new Wasavi.Position(minmax(-1, a.range[0], t.rowLength - 1), 0));
 		app.edit.paste(1, opts);
 		t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
 	}),
@@ -2384,4 +2384,4 @@ return Object.freeze({
 
 })();
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

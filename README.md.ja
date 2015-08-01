@@ -64,7 +64,7 @@ Presto ベースの Opera は DOM3 Composition Event をサポートしていな
 
 ### Chrome ユーザへの注意
 
-Chrome は Ctrl+T や Ctrl+W などの基本的なショートカットを予約しています。これらのキーは wasavi から使用することができません。
+Chrome は Ctrl+T、Ctrl+W および Ctrl+N の基本的なショートカットを予約しています。これらのキーは wasavi から使用することができませんが、その代わりに Alt+T、Alt+W および Alt+N を使うことができます。
 
 
 

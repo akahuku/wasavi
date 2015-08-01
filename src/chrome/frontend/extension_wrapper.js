@@ -29,7 +29,7 @@
 'use strict';
 
 !this.WasaviExtensionWrapper && (function (global) {
-	/* {{{1 consts */
+	/* <<<1 consts */
 	var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
@@ -37,16 +37,16 @@
 		typeof global.self == 'object' && typeof global.self.on == 'function'
 		&& /^\s*function\s+on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.self.on.toString().replace(/[\s\r\n\t]+/g, ' '));
-	/* }}} */
+	/* >>> */
 
-	/* {{{1 vars */
+	/* <<<1 vars */
 	var extensionName = 'wasavi';
 	var externalFrameURL = 'http://wasavi.appsweets.net/';
 	var externalSecureFrameURL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
-	/* }}} */
+	/* >>> */
 
 	/**
-	 * {{{1 url information class
+	 * <<<1 url information class
 	 * ----------------
 	 */
 
@@ -82,10 +82,10 @@
 			}
 		}
 	};
-	/* }}} */
+	/* >>> */
 
 	/**
-	 * {{{1 extension wrapper base class
+	 * <<<1 extension wrapper base class
 	 * ----------------
 	 */
 
@@ -227,10 +227,10 @@
 		|| IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_JETPACK;
 	ExtensionWrapper.urlInfo = new UrlInfo;
-	/* }}} */
+	/* >>> */
 
 	/**
-	 * {{{1 extension wrapper class for chrome
+	 * <<<1 extension wrapper class for chrome
 	 * ----------------
 	 */
 
@@ -301,10 +301,10 @@
 		};
 	}
 	ChromeExtensionWrapper.prototype = ExtensionWrapper.prototype;
-	/* }}} */
+	/* >>> */
 
 	/**
-	 * {{{1 extension wrapper class for opera
+	 * <<<1 extension wrapper class for opera
 	 * ----------------
 	 */
 
@@ -388,10 +388,10 @@
 		};
 	}
 	OperaExtensionWrapper.prototype = ExtensionWrapper.prototype;
-	/* }}} */
+	/* >>> */
 
 	/**
-	 * {{{1 extension wrapper class for firefox (Add-on SDK)
+	 * <<<1 extension wrapper class for firefox (Add-on SDK)
 	 * ----------------
 	 */
 
@@ -471,7 +471,7 @@
 					onMessageHandler && onMessageHandler(payload);
 				}
 			});
-			sweepTimer = setInterval(handleMessage, CALLBACK_SWEEP_MSECS);
+			sweepTimer = setInterval(function () {handleMessage()}, CALLBACK_SWEEP_MSECS);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
@@ -496,14 +496,14 @@
 		};
 	}
 	FirefoxJetpackExtensionWrapper.prototype = ExtensionWrapper.prototype;
-	/* }}} */
+	/* >>> */
 
-	/* {{{1 bootstrap */
+	/* <<<1 bootstrap */
 	ExtensionWrapper.urlInfo.isExternal &&
 		document.documentElement.setAttribute('data-wasavi-present', 1);
 	global.WasaviExtensionWrapper = ExtensionWrapper;
-	/* }}} */
+	/* >>> */
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

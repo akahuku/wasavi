@@ -116,7 +116,7 @@
 	display:block;
 	float:left;
 	margin:0;
-	padding:0 /*<CHAR_WIDTH>*/1px/*</CHAR_WIDTH>*/ 0 0;
+	padding:1px /*<CHAR_WIDTH>*/1px/*</CHAR_WIDTH>*/ 0 0;
 	text-align:right;
 	/*<FONT_STYLE/>*/
 }
@@ -289,7 +289,7 @@
 }
 
 #wasavi_cover.dim {
-	transition:background-color .5s linear 0s;
+	transition:background-color .5s linear 1s;
 	background-color:rgba(0,0,0,0.25);
 }
 

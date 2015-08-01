@@ -290,33 +290,32 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			var spans = buffer.getSpans(CURSOR_SPAN_CLASS);
 			return spans.length ? spans[0] : null;
 		}
-		function handleBlink () {
-			if (!comCursor) {
-				stopBlink();
-				return;
-			}
-
-			var span = getCursorSpan();
-			if (span) {
-				if (span.getAttribute('data-blink-active') == '1') {
-					span.style.color = span.style.backgroundColor = '';
-					span.setAttribute('data-blink-active', '0');
-				}
-				else {
-					span.style.color = app.theme.colors.invertFg;
-					span.style.backgroundColor = app.theme.colors.invertBg;
-					span.setAttribute('data-blink-active', '1');
-				}
-			}
-			else {
-				var s = document.defaultView.getComputedStyle(comCursor, '');
-				comCursor.style.visibility = s.visibility == 'visible' ? 'hidden' : 'visible';
-			}
-		}
 		function startBlink () {
 			stopBlink();
 			if (app.config.vars.cursorblink) {
-				cursorBlinkTimer = setInterval(handleBlink, 500);
+				cursorBlinkTimer = setInterval(function () {
+					if (!comCursor) {
+						stopBlink();
+						return;
+					}
+
+					var span = getCursorSpan();
+					if (span) {
+						if (span.getAttribute('data-blink-active') == '1') {
+							span.style.color = span.style.backgroundColor = '';
+							span.setAttribute('data-blink-active', '0');
+						}
+						else {
+							span.style.color = app.theme.colors.invertFg;
+							span.style.backgroundColor = app.theme.colors.invertBg;
+							span.setAttribute('data-blink-active', '1');
+						}
+					}
+					else {
+						var s = document.defaultView.getComputedStyle(comCursor, '');
+						comCursor.style.visibility = s.visibility == 'visible' ? 'hidden' : 'visible';
+					}
+				}, 500);
 			}
 		}
 		function stopBlink () {
@@ -620,6 +619,7 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 	var distance;
 	var scrollTopStart;
 	var scrollTopDest;
+	var scrollTimer;
 
 	function run (dest, callback) {
 		if (running || !app.targetElement || !cursor || !modeLine) {
@@ -640,11 +640,13 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 		app.keyManager.lock();
 		running = true;
 		lastRan = +Date.now();
-		(function doScroll () {
+		scrollTimer = setInterval(function () {
 			var now = +Date.now();
 			var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
 
 			if (!app.targetElement || !cursor || !modeLine) {
+				clearInterval(scrollTimer);
+				scrollTimer = null;
 				app.low.notifyActivity('', '', 'scroller exit (illegal state)');
 				app.low.notifyCommandComplete();
 				running = false;
@@ -654,6 +656,8 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 
 			if (distance > 0 && y >= scrollTopDest
 			||  distance < 0 && y <= scrollTopDest) {
+				clearInterval(scrollTimer);
+				scrollTimer = null;
 				buffer.scrollTop = scrollTopDest;
 				callback && callback();
 				cursor.ensureVisible();
@@ -663,12 +667,11 @@ Wasavi.Scroller = function (app, cursor, modeLine) {
 				app.low.notifyCommandComplete();
 				running = false;
 				app.keyManager.unlock();
+				return;
 			}
-			else {
-				buffer.scrollTop = parseInt(y);
-				setTimeout(doScroll, timerPrecision);
-			}
-		})();
+
+			buffer.scrollTop = parseInt(y);
+		}, timerPrecision);
 	}
 
 	function dispose () {

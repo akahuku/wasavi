@@ -917,40 +917,22 @@ sequential at:
 			throw new Error(_('Invalid paragraph format: {0}', m));
 		}
 		paragraphs = [];
-		m.replace(/../g, function (a) {paragraphs.push(a);});
+		m.replace(/../g, function (a) {paragraphs.push(a)});
 	}
 	function setSectionMacros (m) {
 		if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {
 			throw new Error(_('Invalid section format: {0}', m));
 		}
 		sections = [];
-		m.replace(/../g, function (a) {sections.push(a);});
+		m.replace(/../g, function (a) {sections.push(a)});
 	}
 	/*constructor*/function PairBracketsIndicator (targetChar, buffer, initialPos) {
-		var timer;
-		var count;
-		var visible;
+		var BLINK_FREQ_SECS = 0.1;
+		var BLINK_COUNT_MAX = 10;
 
-		function init () {
-			buffer.emphasis(initialPos, 1);
-			count = Math.max(1, Math.min(app.config.vars.matchtime, 10));
-			visible = true;
-			setColor();
-			timer = setTimeout(handleTimeout, 1000 * 0.1);
-		}
-		function handleTimeout () {
-			count--;
-			if (count <= 0) {
-				timer = null;
-				buffer.unEmphasis();
-			}
-			else {
-				visible = !visible;
-				setColor();
-				timer = setTimeout(handleTimeout, 1000 * 0.1);
-			}
-		}
-		function setColor () {
+		var timer1, timer2;
+
+		function setColor (visible) {
 			var nodes = buffer.getSpans(EMPHASIS_CLASS);
 			var fg, bg;
 			if (visible) {
@@ -967,13 +949,34 @@ sequential at:
 			}
 		}
 		function clear () {
-			timer && clearTimeout(timer);
-			count = 0;
-			handleTimeout();
+			timer1 && clearTimeout(timer1);
+			timer2 && clearInterval(timer2);
+			timer1 = timer2 = null;
+			buffer.unEmphasis();
 		}
+
 		this.clear = clear;
 		this.dispose = clear;
-		timer = setTimeout(init, 1);
+
+		timer1 = setTimeout(function () {
+			timer1 = null;
+			buffer.emphasis(initialPos, 1);
+			var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
+			var visible = true;
+			setColor(visible);
+			timer2 = setInterval(function () {
+				count--;
+				if (count <= 0) {
+					buffer.unEmphasis();
+					clearInterval(timer2);
+					timer2 = null;
+				}
+				else {
+					visible = !visible;
+					setColor(visible);
+				}
+			}, 1000 * BLINK_FREQ_SECS);
+		}, 1);
 	}
 	function getPairBracketsIndicator (targetChar, buffer, initialPos) {
 		if (targetChar != '' && CLOSE_BRACKETS.indexOf(targetChar) >= 0) {
