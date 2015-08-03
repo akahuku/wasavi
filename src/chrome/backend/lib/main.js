@@ -127,6 +127,7 @@
 	var runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 	var hotkey = require('./kosian/Hotkey').Hotkey(true);
 	var contextMenu = require('./ContextMenu').ContextMenu();
+	var memorandum = require('./Memorandum').Memorandum();
 
 	var configInfo = {
 		targets: {
@@ -655,9 +656,14 @@
 
 		// for wasavi
 		if (isInit) {
-			if (payload && (!isTestUrl(payload.url) || /[?&]ros\b/.test(payload.url))) {
-				o.ros = runtimeOverwriteSettings.get(
-					payload.url, payload.nodePath);
+			if (payload) {
+				if (!isTestUrl(payload.url) || /[?&]ros\b/.test(payload.url)) {
+					o.ros = runtimeOverwriteSettings.get(
+						payload.url, payload.nodePath);
+				}
+				if (payload.nodeName == 'BODY' && memorandum.exists(payload.url)) {
+					payload.value = memorandum.get(payload.url);
+				}
 			}
 			o.headHTML = wasaviFrameHeader;
 			o.bodyHTML = wasaviFrameContent;
@@ -740,6 +746,38 @@
 
 	function handleGetClipboard (command, data, sender, respond) {
 		respond({data: ext.clipboard.get()});
+	}
+
+	function handleSetMemorandum (command, data, sender, respond) {
+		memorandum.set(data.url, data.value);
+		ext.postMessage(sender, {
+			type:'fileio-write-response',
+			internalId:command.internalId,
+			requestNumber:command.requestNumber,
+			state: 'complete',
+			meta: {
+				path: '',
+				bytes: data.value.length
+			},
+			exstate: {
+				isBuffered: data.isBuffered
+			}
+		});
+	}
+
+	function handleGetMemorandum (command, data, sender, respond) {
+		var content = memorandum.get(data.url);
+		ext.postMessage(sender, {
+			type:'fileio-read-response',
+			internalId:command.internalId,
+			requestNumber:command.requestNumber,
+			state: 'complete',
+			meta: {
+				path: '',
+				bytes: content.length
+			},
+			content: content
+		});
 	}
 
 	function handlePushPayload (command, data, sender, respond) {
@@ -891,6 +929,8 @@
 		'play-sound':			handlePlaySound,
 		'set-clipboard':		handleSetClipboard,
 		'get-clipboard':		handleGetClipboard,
+		'set-memorandum':		handleSetMemorandum,
+		'get-memorandum':		handleGetMemorandum,
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
 		'fsctl':				handleFsCtl,

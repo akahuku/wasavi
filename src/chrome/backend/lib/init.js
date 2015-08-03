@@ -23,6 +23,7 @@ loadScripts(
 	'SimilarityComputer.js',
 	'RuntimeOverwriteSettings.js',
 	'ContextMenu.js',
+	'Memorandum.js',
 	typeof window.Promise == 'undefined' ? 'es6-promise.min.js' : null,
 	'main.js'
 );

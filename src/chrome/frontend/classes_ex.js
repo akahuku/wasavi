@@ -528,9 +528,14 @@ function writeCore (app, t, a, pa) {
 		isBuffered:pa.isBuffered,
 		value:content
 	};
-	if (payload.path == '') {
+	if (payload.path == '' && app.targetElement.nodeName != 'BODY') {
 		app.low.notifyToParent('write', payload);
 		requestId = app.extensionChannel.getNewRequestNumber();
+	}
+	else if (payload.path == '' && app.targetElement.nodeName == 'BODY') {
+		payload.type = 'set-memorandum';
+		payload.url = app.targetElement.url;
+		requestId = app.extensionChannel.postMessage(payload);
 	}
 	else {
 		payload.type = 'fsctl';
@@ -1430,9 +1435,14 @@ var cache = {};
 		var payload = {
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		};
-		if (payload.path == '') {
+		if (payload.path == '' && app.targetElement.nodeName != 'BODY') {
 			app.low.notifyToParent('read', payload);
 			requestId = app.extensionChannel.getNewRequestNumber();
+		}
+		else if (payload.path == '' && app.targetElement.nodeName == 'BODY') {
+			payload.type = 'get-memorandum';
+			payload.url = app.targetElement.url;
+			requestId = app.extensionChannel.postMessage(payload);
 		}
 		else {
 			payload.type = 'fsctl';
