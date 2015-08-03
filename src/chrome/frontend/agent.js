@@ -1164,14 +1164,16 @@ function handleBackendMessage (req) {
 
 	case 'read':
 		if (!wasaviFrame) break;
+		var value = targetElement.isContentEditable ?
+			toPlainText(targetElement) : targetElement.value;
 		notifyToChild(wasaviFrameInternalId, {
 			type:'read-response',
 			state:'complete',
 			meta:{
 				path:'',
-				bytes:targetElement.value.length
+				bytes:value.length
 			},
-			content:targetElement.value
+			content:value
 		});
 		break;
 
