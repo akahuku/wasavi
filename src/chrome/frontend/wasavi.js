@@ -2549,11 +2549,7 @@ function getFileIoResultInfo (aFileName, charLength, isNew) {
 	var attribs = [];
 
 	// file name
-	aFileName || (aFileName = getFileNameString());
-	if (!/^\*.*\*$/.test(aFileName)) {
-		aFileName = '"' + aFileName + '"';
-	}
-	result.push(aFileName);
+	result.push(aFileName || getFileNameString());
 
 	// partial attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
@@ -2580,7 +2576,7 @@ function getFileInfo (fullPath) {
 	var attribs = [];
 
 	// file name
-	result.push('"' + getFileNameString(fullPath) + '"');
+	result.push(getFileNameString(fullPath));
 
 	// attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
