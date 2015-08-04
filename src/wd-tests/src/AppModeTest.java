@@ -16,20 +16,20 @@ public class AppModeTest extends WasaviTest {
 	@Test
 	public void appModeFile () {
 		Wasavi.send("i!\u001b:file\n");
-		assertEquals("#1-1", "\"*Untitled*\" [unix, modified] line 1 of 1 (0%)", Wasavi.getAppModeStatusLine());
+		assertEquals("#1-1", "*Untitled* [unix, modified] line 1 of 1 (0%)", Wasavi.getAppModeStatusLine());
 	}
 
 	@Test
 	public void appModeFileForRename () {
 		Wasavi.send(":cd foo/bar|file ../baz/test.txt\n");
-		assertEquals("#1-1", "\"dropbox:/foo/baz/test.txt\" [unix] --No lines in buffer--", Wasavi.getAppModeStatusLine());
+		assertEquals("#1-1", "dropbox:/foo/baz/test.txt [unix] --No lines in buffer--", Wasavi.getAppModeStatusLine());
 		Wasavi.send("\u001b");
 		assertEquals("#1-2", "/foo/baz/test.txt", Wasavi.getAppModeStatusLine());
 		Wasavi.send(":cd /\n");
 		assertEquals("#1-3", "foo/baz/test.txt", Wasavi.getAppModeStatusLine());
 
 		Wasavi.send(":cd foo|file\n");
-		assertEquals("#2-1", "\"dropbox:/foo/baz/test.txt\" [unix] --No lines in buffer--", Wasavi.getAppModeStatusLine());
+		assertEquals("#2-1", "dropbox:/foo/baz/test.txt [unix] --No lines in buffer--", Wasavi.getAppModeStatusLine());
 		Wasavi.send("\u001b");
 		assertEquals("#2-2", "baz/test.txt", Wasavi.getAppModeStatusLine());
 	}
