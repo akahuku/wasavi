@@ -24,6 +24,7 @@ loadScripts(
 	'RuntimeOverwriteSettings.js',
 	'ContextMenu.js',
 	'Memorandum.js',
+	'SyncStorage.js',
 	typeof window.Promise == 'undefined' ? 'es6-promise.min.js' : null,
 	'main.js'
 );

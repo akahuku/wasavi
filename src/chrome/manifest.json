@@ -11,7 +11,7 @@
     "128": "images/icon128.png"
   },
   "permissions": [
-    "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
+    "tabs", "clipboardRead", "clipboardWrite", "contextMenus", "storage",
     "https://*.dropbox.com/*",
     "https://*.google.com/*",
     "https://*.googleapis.com/*",

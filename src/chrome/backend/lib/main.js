@@ -29,6 +29,7 @@
 	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	var HOME_URL = 'http://appsweets.net/wasavi/';
 	var TEST_VERSION = '0.0.1';
+	var STORAGE_UPDATE_BROADCAST_DELAY_SECS = 1000 * 3;
 
 	/* <<<1 variables */
 
@@ -71,8 +72,6 @@
 	var unicodeDictData;
 	var payload;
 	var config;
-	var storageUpdateTimer;
-	var storageUpdatePayload = {};
 	var sounds;
 	var soundVolume;
 
@@ -220,10 +219,11 @@
 
 	/* <<<1 classes */
 
-	function Config (info) {
+	function Config (info, opts) {
 		Object.defineProperty(this, 'info', {value:info});
-		this.usedKeys_ = {};
+		this.opts_ = {};
 		this.init();
+		this.opts_ = opts || this.opts_;
 	}
 
 	Config.prototype = {
@@ -294,43 +294,16 @@
 			if (name in this.info && this.info[name].set) {
 				value = this.info[name].set.call(this, value);
 			}
-
-			this.usedKeys_[name] = 1;
 			ext.storage.setItem(name, value);
-		},
-		clearUsedKeys: function () {
-			this.usedKeys_ = {};
-		},
-		get usedKeys () {
-			return Object.keys(this.usedKeys_);
+			if (this.opts_.onupdate) {
+				this.opts_.onupdate.call(this, name, value);
+			}
 		}
 	};
 
 	/* <<<1 functions */
 
 	/** <<<2 utilities */
-
-	function broadcastStorageUpdate (keys) {
-		if (storageUpdateTimer) {
-			ext.utils.clearTimeout(storageUpdateTimer);
-		}
-
-		keys.forEach(function (key) {
-			storageUpdatePayload[key] = {
-				key: key,
-				value: config.get(key)
-			};
-		});
-
-		storageUpdateTimer = ext.utils.setTimeout(function () {
-			ext.broadcast({
-				type: 'update-storage',
-				items: storageUpdatePayload
-			});
-			storageUpdatePayload = {};
-			storageUpdateTimer = null;
-		}, 1000 * 3);
-	}
 
 	function getShrinkedCode (src) {
 		// strip head comment
@@ -439,8 +412,45 @@
 
 	function initConfig (configInfo) {
 		return new Promise(function (resolve, reject) {
-			config = new Config(configInfo);
-			resolve();
+			var syncStorage = require('./SyncStorage').SyncStorage();
+			syncStorage.get(Object.keys(configInfo), function (items) {
+				if (items) {
+					for (var i in items) {
+						ext.storage.setItem(i, items[i]);
+					}
+				}
+				config = new Config(configInfo, {
+					onupdate: function (key, value) {
+						var that = this;
+						this._updates[key] = value;
+						this._timer && ext.utils.clearTimeout(this._timer);
+						this._timer = ext.utils.setTimeout(function () {
+							that._timer = null;
+
+							ext.broadcast({
+								type: 'update-storage',
+								items: that._updates
+							});
+
+							var syncUpdates = {};
+							for (var i in that.info) {
+								if (i in that._updates) {
+									syncUpdates[i] = that._updates[i];
+								}
+							}
+							that._syncStorage.set(syncUpdates);
+
+							that._updates = {};
+							that = null;
+						}, STORAGE_UPDATE_BROADCAST_DELAY_SECS);
+					}
+				});
+				config._updates = {};
+				config._timer = null;
+				config._syncStorage = syncStorage;
+				syncStorage = null;
+				resolve();
+			});
 		});
 	}
 
@@ -687,11 +697,10 @@
 
 	function handleResetOptions (command, data, sender, respond) {
 		ext.storage.clear();
+		syncStorage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
 		config.init();
-		broadcastStorageUpdate(
-			'targets exrc shortcut shortcutCode quickActivate'.split(' '));
 	}
 
 	function handleGetStorage (command, data, sender, respond) {
@@ -720,13 +729,11 @@
 		}
 
 		if (items) {
-			config.clearUsedKeys();
 			items.forEach(function (item) {
 				if (!('key' in item)) return;
 				if (!('value' in item)) return;
 				config.set(item.key, item.value);
 			});
-			broadcastStorageUpdate(config.usedKeys);
 		}
 	}
 
