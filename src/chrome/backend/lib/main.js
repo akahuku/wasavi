@@ -129,91 +129,98 @@
 	var memorandum = require('./Memorandum').Memorandum();
 
 	var configInfo = {
-		targets: {
-			def: {
-				enableTextArea:       true,
-				enableText:           false,
-				enableSearch:         false,
-				enableTel:            false,
-				enableUrl:            false,
-				enableEmail:          false,
-				enablePassword:       false,
-				enableNumber:         false,
-				enableContentEditable:true,
-				enablePage:           false
-			}
-		},
-		exrc: {
-			def: '" exrc for wasavi'
-		},
-		shortcut: {
-			def: function () {
-				return hotkey.defaultHotkeysDesc;
-			},
-			set: function (value) {
-				this.set(
-					'shortcutCode',
-					hotkey.getObjectsForDOM(value));
-				return value;
-			}
-		},
-		shortcutCode: {
-			def: function () {
-				return hotkey.getObjectsForDOM(this.get('shortcut'));
-			}
-		},
-		fontFamily: {
-			def: defaultFont,
-			set: function (value) {
-				if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(value)) {
-					value = defaultFont;
+		sync: {
+			targets: {
+				def: {
+					enableTextArea:       true,
+					enableText:           false,
+					enableSearch:         false,
+					enableTel:            false,
+					enableUrl:            false,
+					enableEmail:          false,
+					enablePassword:       false,
+					enableNumber:         false,
+					enableContentEditable:true,
+					enablePage:           false
 				}
-				return value;
+			},
+			exrc: {
+				def: '" exrc for wasavi'
+			},
+			shortcut: {
+				def: function () {
+					return hotkey.defaultHotkeysDesc;
+				},
+				set: function (value) {
+					this.set(
+						'shortcutCode',
+						hotkey.getObjectsForDOM(value));
+					return value;
+				}
+			},
+			shortcutCode: {
+				def: function () {
+					return hotkey.getObjectsForDOM(this.get('shortcut'));
+				}
+			},
+			fontFamily: {
+				def: defaultFont,
+				set: function (value) {
+					if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(value)) {
+						value = defaultFont;
+					}
+					return value;
+				}
+			},
+			fstab: {
+				def: {
+					dropbox:  {enabled:true, isDefault:true},
+					gdrive:   {enabled:true},
+					onedrive: {enabled:true}
+				},
+				set: function (value) {
+					ext.fileSystem.setInfo(value);
+					return value;
+				},
+				setOnInit: true
+			},
+			quickActivation: {
+				def: false
+			},
+			qaBlacklist: {
+				def: ''
+			},
+			logMode: {
+				def: false,
+				set: function (value) {
+					ext.setLogMode(value);
+					return value;
+				},
+				setOnInit: true
+			},
+			sounds: {
+				def: {
+					launch: true,
+					beep: true
+				},
+				set: function (value) {
+					sounds = value;
+					return value;
+				},
+				setOnInit: true
+			},
+			soundVolume: {
+				def: 25,
+				set: function (value) {
+					return soundVolume = Math.max(0, Math.min(value, 100));
+				},
+				setOnInit: true
 			}
 		},
-		fstab: {
-			def: {
-				dropbox:  {enabled:true, isDefault:true},
-				gdrive:   {enabled:true},
-				onedrive: {enabled:true}
-			},
-			set: function (value) {
-				ext.fileSystem.setInfo(value);
-				return value;
-			},
-			setOnInit: true
-		},
-		quickActivation: {
-			def: false
-		},
-		qaBlacklist: {
-			def: ''
-		},
-		logMode: {
-			def: false,
-			set: function (value) {
-				ext.setLogMode(value);
-				return value;
-			},
-			setOnInit: true
-		},
-		sounds: {
-			def: {
-				launch: true,
-				beep: true
-			},
-			set: function (value) {
-				sounds = value;
-				return value;
-			},
-			setOnInit: true
-		},
-		soundVolume: {
-			def: 25,
-			set: function (value) {
-				return soundVolume = Math.max(0, Math.min(value, 100));
-			},
-			setOnInit: true
+		local: {
+			version: {def: ''},
+			wasavi_lineinput_histories: {def: {}},
+			wasavi_registers: {def: {}}
 		}
 	};
 
@@ -221,83 +228,101 @@
 
 	function Config (info, opts) {
 		Object.defineProperty(this, 'info', {value:info});
-		this.opts_ = {};
+		this.opts_ = opts || {};
 		this.init();
-		this.opts_ = opts || this.opts_;
 	}
 
 	Config.prototype = {
-		init: function () {
-			for (var key in this.info) {
-				var item = this.info[key];
-				var defaultValue = this.getDefaultValue(key);
-				var currentValue = this.get(key);
+		init: function (emitUpdateEvent) {
+			var updateHandler = this.opts_.onupdate;
+			if (!emitUpdateEvent) {
+				this.opts_.onupdate = null;
+			}
+			['sync', 'local'].forEach(function (storage) {
+				for (var key in this.info[storage]) {
+					var item = this.info[storage][key];
+					var defaultValue = this.getDefaultValue(key);
+					var currentValue = this.get(key);
 
-				if (currentValue === undefined) {
-					this.set(key, defaultValue);
-					continue;
-				}
-
-				var defaultType = ext.utils.objectType(defaultValue);
-				var currentType = ext.utils.objectType(currentValue);
-
-				if (defaultType != currentType) {
-					this.set(key, defaultValue);
-					continue;
-				}
-
-				if (defaultType != 'Object') {
-					if (item.setOnInit && item.set) {
-						item.set.call(this, currentValue);
+					if (currentValue === undefined) {
+						this.set(key, defaultValue);
+						continue;
 					}
-					continue;
-				}
 
-				if (currentType == 'Object') {
-					Object.keys(currentValue).forEach(function (key) {
-						if (!(key in defaultValue)) {
-							delete currentValue[key];
+					var defaultType = ext.utils.objectType(defaultValue);
+					var currentType = ext.utils.objectType(currentValue);
+
+					if (defaultType != currentType) {
+						this.set(key, defaultValue);
+						continue;
+					}
+
+					if (defaultType != 'Object') {
+						if (item.setOnInit && item.set) {
+							item.set.call(this, currentValue);
+						}
+						continue;
+					}
+
+					if (currentType == 'Object') {
+						Object.keys(currentValue).forEach(function (key) {
+							if (!(key in defaultValue)) {
+								delete currentValue[key];
+							}
+						});
+					}
+					else {
+						currentType = {};
+					}
+
+					Object.keys(defaultValue).forEach(function (key) {
+						if (!(key in currentValue)) {
+							currentValue[key] = defaultValue[key];
 						}
 					});
-				}
-				else {
-					currentType = {};
-				}
 
-				Object.keys(defaultValue).forEach(function (key) {
-					if (!(key in currentValue)) {
-						currentValue[key] = defaultValue[key];
-					}
-				});
-
-				this.set(key, currentValue);
-			}
+					this.set(key, currentValue);
+				}
+			}, this);
+			this.opts_.onupdate = updateHandler;
+		},
+		getInfo: function (name) {
+			return this.info.sync[name] || this.info.local[name];
 		},
 		getDefaultValue: function (name) {
-			var item = this.info[name];
-			if (!item) return undefined;
-			if (typeof item.def == 'function') {
-				return item.def.call(this);
+			var info = this.getInfo(name);
+			if (!info) return undefined;
+			if (typeof info.def == 'function') {
+				return info.def.call(this);
 			}
-			return item.def;
+			return info.def;
 		},
 		get: function (name) {
+			var info = this.getInfo(name);
+			if (!info) return undefined;
 			var result = ext.storage.getItem(name);
-
-			if (name in this.info && this.info[name].get) {
-				result = this.info[name].get.call(this, result);
+			if (info.get) {
+				result = info.get.call(this, result);
 			}
-		
 			return result;
 		},
 		set: function (name, value) {
-			if (name in this.info && this.info[name].set) {
-				value = this.info[name].set.call(this, value);
+			var info = this.getInfo(name);
+			if (!info) return;
+			if (info.set) {
+				value = info.set.call(this, value);
 			}
 			ext.storage.setItem(name, value);
 			if (this.opts_.onupdate) {
 				this.opts_.onupdate.call(this, name, value);
 			}
+		},
+		clear: function () {
+			['sync', 'local'].forEach(function (storage) {
+				for (var key in this.info[storage]) {
+					ext.storage.setItem(key, undefined);
+				}
+			}, this);
 		}
 	};
 
@@ -412,42 +437,58 @@
 
 	function initConfig (configInfo) {
 		return new Promise(function (resolve, reject) {
-			var syncStorage = require('./SyncStorage').SyncStorage();
-			syncStorage.get(Object.keys(configInfo), function (items) {
-				if (items) {
+			function handleStorageUpdate (key, value) {
+				var that = this;
+				this._updates[key] = value;
+				this._timer && ext.utils.clearTimeout(this._timer);
+				this._timer = ext.utils.setTimeout(function () {
+					ext.broadcast({
+						type: 'update-storage',
+						items: that._updates
+					});
+
+					var syncUpdates = {};
+					for (var i in that.info.sync) {
+						if (i in that._updates) {
+							syncUpdates[i] = that._updates[i];
+						}
+					}
+					that._syncStorage.set(syncUpdates);
+
+					that._timer = null;
+					that._updates = {};
+					that = null;
+				}, STORAGE_UPDATE_BROADCAST_DELAY_SECS);
+			}
+			function handleGetSyncStorage (items) {
+				if (config) {
+					config.clear();
 					for (var i in items) {
 						ext.storage.setItem(i, items[i]);
 					}
+					config.init(true);
 				}
-				config = new Config(configInfo, {
-					onupdate: function (key, value) {
-						var that = this;
-						this._updates[key] = value;
-						this._timer && ext.utils.clearTimeout(this._timer);
-						this._timer = ext.utils.setTimeout(function () {
-							that._timer = null;
-
-							ext.broadcast({
-								type: 'update-storage',
-								items: that._updates
-							});
-
-							var syncUpdates = {};
-							for (var i in that.info) {
-								if (i in that._updates) {
-									syncUpdates[i] = that._updates[i];
-								}
-							}
-							that._syncStorage.set(syncUpdates);
-
-							that._updates = {};
-							that = null;
-						}, STORAGE_UPDATE_BROADCAST_DELAY_SECS);
+				else {
+					for (var i in items) {
+						ext.storage.setItem(i, items[i]);
 					}
-				});
-				config._updates = {};
-				config._timer = null;
-				config._syncStorage = syncStorage;
+					config = new Config(configInfo, {onupdate: handleStorageUpdate});
+					config._updates = {};
+					config._timer = null;
+					config._syncStorage = syncStorage;
+				}
+			}
+
+			var syncStorage = require('./SyncStorage').SyncStorage({
+				onSignInChanged: function () {
+					if (!config || !config._syncStorage) return;
+					config._syncStorage.get(
+						Object.keys(config.info.sync), handleGetSyncStorage);
+				}
+			});
+
+			syncStorage.get(Object.keys(configInfo.sync), function (items) {
+				handleGetSyncStorage(items);
 				syncStorage = null;
 				resolve();
 			});
@@ -696,11 +737,11 @@
 	}
 
 	function handleResetOptions (command, data, sender, respond) {
-		ext.storage.clear();
-		syncStorage.clear();
+		config.clear();
+		config._syncStorage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
-		config.init();
+		config.init(true);
 	}
 
 	function handleGetStorage (command, data, sender, respond) {
@@ -1030,7 +1071,7 @@
 						ext.openTabWithUrl(HOME_URL);
 					}
 				);
-				ext.storage.setItem('version', ext.version);
+				config.set('version', ext.version);
 			}
 
 			ext.isDev && ext.log(

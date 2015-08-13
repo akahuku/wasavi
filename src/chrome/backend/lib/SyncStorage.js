@@ -37,6 +37,9 @@
 
 	function ChromeSyncStorage (options) {
 		SyncStorage.apply(this, arguments);
+		chrome.identity.onSignInChanged.addListener(function (info, signedIn) {
+			this.ext.emit(this.options.onSignInChanged);
+		}.bind(this))
 	}
 	ChromeSyncStorage.prototype = Object.create(SyncStorage.prototype, {
 		clear: {value: function (callback) {
