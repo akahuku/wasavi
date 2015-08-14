@@ -743,16 +743,32 @@ function matchWithShortcut (e) {
 	});
 }
 
-function getMutationObserver () {
+function getMutationObserver (type, mediator) {
 	return window.MutationObserver
 	|| window.WebKitMutationObserver
 	|| window.OMutationObserver
-	|| window.MozMutationObserver;
+	|| window.MozMutationObserver
+	|| function (handler) {
+		return {
+			element: null,
+			observe: function (element) {
+				this.element = element;
+				this.element && this.element.addEventListener(
+					'DOM' + type, mediator, false);
+			},
+			disconnect: function () {
+				this.element && this.element.removeEventListener(
+					'DOM' + type, mediator, false);
+				this.element = null;
+			},
+			toString: function () {
+				return '[object WasaviPseudoMutationObserver]';
+			}
+		};
+	};
 }
 
 function createElementRemoveListener (element, callback) {
-	var mo = getMutationObserver();
-
 	function fireRemoved () {
 		callback({target: element});
 	}
@@ -760,32 +776,30 @@ function createElementRemoveListener (element, callback) {
 	function handleRemove (records) {
 		element
 		&& records.some(function (r) {
-			return r.removedNodes && Array.prototype.indexOf.call(r.removedNodes, element) >= 0;
+			return r.removedNodes
+				&& Array.prototype.indexOf.call(r.removedNodes, element) >= 0;
 		})
 		&& fireRemoved();
 	}
 
 	function connect () {
-		mo ? mo.observe(element.parentNode, {childList: true}) :
-			element.addEventListener('DOMNodeRemoved', fireRemoved, false);
+		var target = /\bWasaviPseudoMutationObserver\b/.test(mo.toString()) ?
+				element : element.parentNode;
+		mo.observe(target, {childList: true});
 	}
 
 	function disconnect () {
-		mo ? mo.disconnect() :
-			element.removeEventListener('DOMNodeRemoved', fireRemoved, false);
+		mo.disconnect();
 	}
 
-	mo = mo ? new mo(handleRemove) : null;
+	var mo = getMutationObserver('NodeRemoved', fireRemoved);
+
+	mo = new mo(handleRemove);
 	connect();
 	return {connect: connect, disconnect: disconnect};
 }
 
 function createElementResizeListener (element, callback) {
-	var mo = getMutationObserver();
-	var width = element.offsetWidth;
-	var height = element.offsetHeight;
-	var timer;
-
 	function fireIfResized () {
 		if (timer) return;
 		timer = setTimeout(function () {
@@ -808,20 +822,23 @@ function createElementResizeListener (element, callback) {
 	}
 
 	function connect () {
-		mo ? mo.observe(element, {attributes: true, attributeFilter: ['style']}) :
-			element.addEventListener('DOMAttrModified', handleDOMAttrModified, false);
+		mo.observe(element, {attributes: true, attributeFilter: ['style']});
 		window.addEventListener('resize', fireIfResized, false);
 		element.addEventListener('mouseup', fireIfResized, false);
 	}
 
 	function disconnect () {
-		mo ? mo.disconnect() :
-			element.removeEventListener('DOMAttrModified', handleDOMAttrModified, false);
+		mo.disconnect();
 		window.removeEventListener('resize', fireIfResized, false);
 		element.removeEventListener('mouseup', fireIfResized, false);
 	}
 
-	mo = mo ? new mo(fireIfResized) : null;
+	var mo = getMutationObserver('AttrModified', handleDOMAttrModified);
+	var width = element.offsetWidth;
+	var height = element.offsetHeight;
+	var timer;
+
+	mo = new mo(fireIfResized);
 	connect();
 	return {connect: connect, disconnect: disconnect, fire: fireIfResized};
 }
