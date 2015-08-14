@@ -188,17 +188,24 @@
 		ensureRun: function () {
 			var args = Array.prototype.slice.call(arguments);
 			var callback = args.shift();
-
-			if (document.readyState == 'interactive'
-			||  document.readyState == 'complete') {
+			var doc;
+			try {
+				doc = document;
+				doc.body;
+			}
+			catch (e) {
+				return;
+			}
+			if (doc.readyState == 'interactive'
+			||  doc.readyState == 'complete') {
 				callback.apply(null, args);
 				callback = args = null;
 			}
 			else {
-				document.addEventListener(
+				doc.addEventListener(
 					'DOMContentLoaded',
 					function handleDCL (e) {
-						document.removeEventListener(e.type, handleDCL, false);
+						doc.removeEventListener(e.type, handleDCL, false);
 						callback.apply(null, args);
 						e = callback = args = null;
 					},
