@@ -1,3 +1,23 @@
+0.6.545
+
+	* use storage.sync API on chrome (#97)
+	* don't append double quotes when display a file name
+	* extend blacklist syntax to specify an element (#96)
+	* fix the issue that :edit fails for a contenteditable element
+	* make buffer be persistent when wasavi starts for BODY element
+	* prevent alt-key stroke from input to buffer
+	* tune line number position
+	* allow alt-NTW instead of ctrl-NTW for chrome
+
+	* chrome 上では storage.sync API を使うようにした
+	* ファイル名を表示する際にダブルクオートを付加しないようにした
+	* ブラックリストの文法を要素を指定できるように拡張した
+	* contenteditable な要素に対する :edit が失敗するのを修正した
+	* BODY 要素に対して wasavi を起動した際バッファの内容を永続的になるようにした
+	* バッファへの入力の際 alt キー併用のストロークを除くようにした
+	* 行番号の位置を調整した
+	* chrome で ctrl-N/T/W の代わりに alt-N/T/W を使えるようにした
+
 0.6.523
 
 	* allow input a control char directly in input mode
