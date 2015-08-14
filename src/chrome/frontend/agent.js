@@ -893,6 +893,7 @@ function createPageAgent (listenKeydown, hookKeyEvents) {
 		window.addEventListener('keydown', handleKeydown, true);
 	}
 
+	/*
 	if (hookKeyEvents) {
 		var s = document.createElement('script');
 		s.onload = function () {
@@ -903,6 +904,7 @@ function createPageAgent (listenKeydown, hookKeyEvents) {
 		s.src = extension.getKeyHookScriptSrc();
 		parent.appendChild(s);
 	}
+	 */
 }
 
 /**
