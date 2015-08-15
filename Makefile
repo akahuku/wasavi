@@ -1,6 +1,8 @@
 # application macros
 # ========================================
 
+VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
+
 SHELL := /bin/sh
 
 CHROME := chromium-browser
@@ -12,12 +14,6 @@ ZIP := zip -qr9
 UNZIP := unzip
 
 RSYNC := rsync
-RSYNC_OPT = -rptLv --delete \
-	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
-	--exclude '.*' \
-	--exclude '$(CRYPT_SRC_FILE)*'
-
--include app.mk
 
 # basic macros
 # ========================================
@@ -26,6 +22,11 @@ PRODUCT = wasavi
 DIST_DIR = dist
 SRC_DIR = src
 EMBRYO_DIR = .embryo
+
+RSYNC_OPT = -rptLv --delete \
+	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
+	--exclude '.*' \
+	--exclude '$(CRYPT_SRC_FILE)*'
 
 CRYPT_KEY_FILE = LICENSE
 CRYPT_SRC_FILE = consumer_keys.json
@@ -58,14 +59,13 @@ FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/upda
 # derived macros
 # ========================================
 
-VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
 BINKEYS_PATH = $(CHROME_SRC_PATH)/$(CRYPT_DST_FILE)
 
 CHROME_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(CHROME_SUFFIX)
 CHROME_MTIME_PATH = $(EMBRYO_DIR)/.$(CHROME_SUFFIX)
 CHROME_SRC_PATH = $(SRC_DIR)/$(CHROME_SRC_DIR)
 CHROME_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(CHROME_SRC_DIR)
-CHROME_TEST_PROFILE_PATH := $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/chrome)
+CHROME_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/chrome)
 
 OPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(OPERA_SUFFIX)
 OPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(OPERA_SUFFIX)
@@ -82,7 +82,14 @@ FIREFOX_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX)
 FIREFOX_MTIME_PATH = $(EMBRYO_DIR)/.$(FIREFOX_SUFFIX)
 FIREFOX_SRC_PATH = $(SRC_DIR)/$(FIREFOX_SRC_DIR)
 FIREFOX_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(FIREFOX_SRC_DIR)
-FIREFOX_TEST_PROFILE_PATH := $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/firefox)
+FIREFOX_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/firefox)
+
+# local override of macros
+# ========================================
+
+-include app.mk
+
+
 
 # basic rules
 # ========================================
@@ -107,6 +114,8 @@ FORCE:
 	run-chrome run-opera run-firefox \
 	dbgfx \
 	FORCE
+
+
 
 #
 # rules to make wasavi.crx
