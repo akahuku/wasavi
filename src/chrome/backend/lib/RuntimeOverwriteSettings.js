@@ -22,7 +22,7 @@
 (function (global) {
 	'use strict';
 
-	function RuntimeOverwriteSettings () {
+	function RuntimeOverwriteSettings (options) {
 		var ROS_URL_MAX = 30;
 		var ROS_MATCH_RATIO = 0.8;
 
@@ -30,6 +30,10 @@
 		var SHA1 = require('./kosian/SHA1').SHA1;
 		var similarityComputer = require('./SimilarityComputer').SimilarityComputer();
 		var cache;
+		options || (options = {
+			urlMax: ROS_URL_MAX,
+			matchRatio: ROS_MATCH_RATIO
+		});
 
 		function getKeyParts (url, path) {
 			var re = /^([^?#]*)([?#].*)?$/.exec(url);
@@ -78,8 +82,8 @@
 				var pscore = similarityComputer.getLevenshteinRatio(
 					keyParts.nodePath, cache[i].nodePath);
 
-				if (qscore >= ROS_MATCH_RATIO && qscore > qscoreMax
-				&&  pscore >= ROS_MATCH_RATIO && pscore > pscoreMax) {
+				if (qscore >= options.matchRatio && qscore > qscoreMax
+				&&  pscore >= options.matchRatio && pscore > pscoreMax) {
 					index = i;
 					qscoreMax = qscore;
 					pscoreMax = pscore;
@@ -109,7 +113,7 @@
 			item.script = script;
 			cache.unshift(item);
 
-			while (cache.length > ROS_URL_MAX) {
+			while (cache.length > options.urlMax) {
 				cache.pop();
 			}
 
@@ -120,8 +124,8 @@
 		this.set = set;
 	}
 
-	function create () {
-		return new RuntimeOverwriteSettings();
+	function create (options) {
+		return new RuntimeOverwriteSettings(options);
 	}
 
 	exports.RuntimeOverwriteSettings = create;

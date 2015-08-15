@@ -29,6 +29,7 @@
 	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	var HOME_URL = 'http://appsweets.net/wasavi/';
 	var TEST_VERSION = '0.0.1';
+	var STORAGE_UPDATE_BROADCAST_DELAY_SECS = 1000 * 3;
 
 	/* <<<1 variables */
 
@@ -71,8 +72,6 @@
 	var unicodeDictData;
 	var payload;
 	var config;
-	var storageUpdateTimer;
-	var storageUpdatePayload = {};
 	var sounds;
 	var soundVolume;
 
@@ -127,209 +126,209 @@
 	var runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 	var hotkey = require('./kosian/Hotkey').Hotkey(true);
 	var contextMenu = require('./ContextMenu').ContextMenu();
+	var memorandum = require('./Memorandum').Memorandum();
 
 	var configInfo = {
-		targets: {
-			def: {
-				enableTextArea:       true,
-				enableText:           false,
-				enableSearch:         false,
-				enableTel:            false,
-				enableUrl:            false,
-				enableEmail:          false,
-				enablePassword:       false,
-				enableNumber:         false,
-				enableContentEditable:true,
-				enablePage:           false
-			}
-		},
-		exrc: {
-			def: '" exrc for wasavi'
-		},
-		shortcut: {
-			def: function () {
-				return hotkey.defaultHotkeysDesc;
-			},
-			set: function (value) {
-				this.set(
-					'shortcutCode',
-					hotkey.getObjectsForDOM(value));
-				return value;
-			}
-		},
-		shortcutCode: {
-			def: function () {
-				return hotkey.getObjectsForDOM(this.get('shortcut'));
-			}
-		},
-		fontFamily: {
-			def: defaultFont,
-			set: function (value) {
-				if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(value)) {
-					value = defaultFont;
+		sync: {
+			targets: {
+				def: {
+					enableTextArea:       true,
+					enableText:           false,
+					enableSearch:         false,
+					enableTel:            false,
+					enableUrl:            false,
+					enableEmail:          false,
+					enablePassword:       false,
+					enableNumber:         false,
+					enableContentEditable:true,
+					enablePage:           false
 				}
-				return value;
+			},
+			exrc: {
+				def: '" exrc for wasavi'
+			},
+			shortcut: {
+				def: function () {
+					return hotkey.defaultHotkeysDesc;
+				},
+				set: function (value) {
+					this.set(
+						'shortcutCode',
+						hotkey.getObjectsForDOM(value));
+					return value;
+				}
+			},
+			shortcutCode: {
+				def: function () {
+					return hotkey.getObjectsForDOM(this.get('shortcut'));
+				}
+			},
+			fontFamily: {
+				def: defaultFont,
+				set: function (value) {
+					if (!/^\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+)(?:\s*,\s*(?:"[^",;]+"|'[^',;]+'|[a-zA-Z-]+))*\s*$/.test(value)) {
+						value = defaultFont;
+					}
+					return value;
+				}
+			},
+			fstab: {
+				def: {
+					dropbox:  {enabled:true, isDefault:true},
+					gdrive:   {enabled:true},
+					onedrive: {enabled:true}
+				},
+				set: function (value) {
+					ext.fileSystem.setInfo(value);
+					return value;
+				},
+				setOnInit: true
+			},
+			quickActivation: {
+				def: false
+			},
+			qaBlacklist: {
+				def: ''
+			},
+			logMode: {
+				def: false,
+				set: function (value) {
+					ext.setLogMode(value);
+					return value;
+				},
+				setOnInit: true
+			},
+			sounds: {
+				def: {
+					launch: true,
+					beep: true
+				},
+				set: function (value) {
+					sounds = value;
+					return value;
+				},
+				setOnInit: true
+			},
+			soundVolume: {
+				def: 25,
+				set: function (value) {
+					return soundVolume = Math.max(0, Math.min(value, 100));
+				},
+				setOnInit: true
 			}
 		},
-		fstab: {
-			def: {
-				dropbox:  {enabled:true, isDefault:true},
-				gdrive:   {enabled:true},
-				onedrive: {enabled:true}
-			},
-			set: function (value) {
-				ext.fileSystem.setInfo(value);
-				return value;
-			},
-			setOnInit: true
-		},
-		quickActivation: {
-			def: false
-		},
-		qaBlacklist: {
-			def: ''
-		},
-		logMode: {
-			def: false,
-			set: function (value) {
-				ext.setLogMode(value);
-				return value;
-			},
-			setOnInit: true
-		},
-		sounds: {
-			def: {
-				launch: true,
-				beep: true
-			},
-			set: function (value) {
-				sounds = value;
-				return value;
-			},
-			setOnInit: true
-		},
-		soundVolume: {
-			def: 25,
-			set: function (value) {
-				return soundVolume = Math.max(0, Math.min(value, 100));
-			},
-			setOnInit: true
+		local: {
+			version: {def: ''},
+			wasavi_lineinput_histories: {def: {}},
+			wasavi_registers: {def: {}}
 		}
 	};
 
 	/* <<<1 classes */
 
-	function Config (info) {
+	function Config (info, opts) {
 		Object.defineProperty(this, 'info', {value:info});
-		this.usedKeys_ = {};
+		this.opts_ = opts || {};
 		this.init();
 	}
 
 	Config.prototype = {
-		init: function () {
-			for (var key in this.info) {
-				var item = this.info[key];
-				var defaultValue = this.getDefaultValue(key);
-				var currentValue = this.get(key);
+		init: function (emitUpdateEvent) {
+			var updateHandler = this.opts_.onupdate;
+			if (!emitUpdateEvent) {
+				this.opts_.onupdate = null;
+			}
+			['sync', 'local'].forEach(function (storage) {
+				for (var key in this.info[storage]) {
+					var item = this.info[storage][key];
+					var defaultValue = this.getDefaultValue(key);
+					var currentValue = this.get(key);
 
-				if (currentValue === undefined) {
-					this.set(key, defaultValue);
-					continue;
-				}
-
-				var defaultType = ext.utils.objectType(defaultValue);
-				var currentType = ext.utils.objectType(currentValue);
-
-				if (defaultType != currentType) {
-					this.set(key, defaultValue);
-					continue;
-				}
-
-				if (defaultType != 'Object') {
-					if (item.setOnInit && item.set) {
-						item.set.call(this, currentValue);
+					if (currentValue === undefined) {
+						this.set(key, defaultValue);
+						continue;
 					}
-					continue;
-				}
 
-				if (currentType == 'Object') {
-					Object.keys(currentValue).forEach(function (key) {
-						if (!(key in defaultValue)) {
-							delete currentValue[key];
+					var defaultType = ext.utils.objectType(defaultValue);
+					var currentType = ext.utils.objectType(currentValue);
+
+					if (defaultType != currentType) {
+						this.set(key, defaultValue);
+						continue;
+					}
+
+					if (defaultType != 'Object') {
+						if (item.setOnInit && item.set) {
+							item.set.call(this, currentValue);
+						}
+						continue;
+					}
+
+					if (currentType == 'Object') {
+						Object.keys(currentValue).forEach(function (key) {
+							if (!(key in defaultValue)) {
+								delete currentValue[key];
+							}
+						});
+					}
+					else {
+						currentType = {};
+					}
+
+					Object.keys(defaultValue).forEach(function (key) {
+						if (!(key in currentValue)) {
+							currentValue[key] = defaultValue[key];
 						}
 					});
-				}
-				else {
-					currentType = {};
-				}
 
-				Object.keys(defaultValue).forEach(function (key) {
-					if (!(key in currentValue)) {
-						currentValue[key] = defaultValue[key];
-					}
-				});
-
-				this.set(key, currentValue);
-			}
+					this.set(key, currentValue);
+				}
+			}, this);
+			this.opts_.onupdate = updateHandler;
+		},
+		getInfo: function (name) {
+			return this.info.sync[name] || this.info.local[name];
 		},
 		getDefaultValue: function (name) {
-			var item = this.info[name];
-			if (!item) return undefined;
-			if (typeof item.def == 'function') {
-				return item.def.call(this);
+			var info = this.getInfo(name);
+			if (!info) return undefined;
+			if (typeof info.def == 'function') {
+				return info.def.call(this);
 			}
-			return item.def;
+			return info.def;
 		},
 		get: function (name) {
+			var info = this.getInfo(name);
+			if (!info) return undefined;
 			var result = ext.storage.getItem(name);
-
-			if (name in this.info && this.info[name].get) {
-				result = this.info[name].get.call(this, result);
+			if (info.get) {
+				result = info.get.call(this, result);
 			}
-		
 			return result;
 		},
 		set: function (name, value) {
-			if (name in this.info && this.info[name].set) {
-				value = this.info[name].set.call(this, value);
+			var info = this.getInfo(name);
+			if (!info) return;
+			if (info.set) {
+				value = info.set.call(this, value);
 			}
-
-			this.usedKeys_[name] = 1;
 			ext.storage.setItem(name, value);
+			if (this.opts_.onupdate) {
+				this.opts_.onupdate.call(this, name, value);
+			}
 		},
-		clearUsedKeys: function () {
-			this.usedKeys_ = {};
-		},
-		get usedKeys () {
-			return Object.keys(this.usedKeys_);
+		clear: function () {
+			['sync', 'local'].forEach(function (storage) {
+				for (var key in this.info[storage]) {
+					ext.storage.setItem(key, undefined);
+				}
+			}, this);
 		}
 	};
 
 	/* <<<1 functions */
 
 	/** <<<2 utilities */
-
-	function broadcastStorageUpdate (keys) {
-		if (storageUpdateTimer) {
-			ext.utils.clearTimeout(storageUpdateTimer);
-		}
-
-		keys.forEach(function (key) {
-			storageUpdatePayload[key] = {
-				key: key,
-				value: config.get(key)
-			};
-		});
-
-		storageUpdateTimer = ext.utils.setTimeout(function () {
-			ext.broadcast({
-				type: 'update-storage',
-				items: storageUpdatePayload
-			});
-			storageUpdatePayload = {};
-			storageUpdateTimer = null;
-		}, 1000 * 3);
-	}
 
 	function getShrinkedCode (src) {
 		// strip head comment
@@ -438,8 +437,61 @@
 
 	function initConfig (configInfo) {
 		return new Promise(function (resolve, reject) {
-			config = new Config(configInfo);
-			resolve();
+			function handleStorageUpdate (key, value) {
+				var that = this;
+				this._updates[key] = value;
+				this._timer && ext.utils.clearTimeout(this._timer);
+				this._timer = ext.utils.setTimeout(function () {
+					ext.broadcast({
+						type: 'update-storage',
+						items: that._updates
+					});
+
+					var syncUpdates = {};
+					for (var i in that.info.sync) {
+						if (i in that._updates) {
+							syncUpdates[i] = that._updates[i];
+						}
+					}
+					that._syncStorage.set(syncUpdates);
+
+					that._timer = null;
+					that._updates = {};
+					that = null;
+				}, STORAGE_UPDATE_BROADCAST_DELAY_SECS);
+			}
+			function handleGetSyncStorage (items) {
+				if (config) {
+					config.clear();
+					for (var i in items) {
+						ext.storage.setItem(i, items[i]);
+					}
+					config.init(true);
+				}
+				else {
+					for (var i in items) {
+						ext.storage.setItem(i, items[i]);
+					}
+					config = new Config(configInfo, {onupdate: handleStorageUpdate});
+					config._updates = {};
+					config._timer = null;
+					config._syncStorage = syncStorage;
+				}
+			}
+
+			var syncStorage = require('./SyncStorage').SyncStorage({
+				onSignInChanged: function () {
+					if (!config || !config._syncStorage) return;
+					config._syncStorage.get(
+						Object.keys(config.info.sync), handleGetSyncStorage);
+				}
+			});
+
+			syncStorage.get(Object.keys(configInfo.sync), function (items) {
+				handleGetSyncStorage(items);
+				syncStorage = null;
+				resolve();
+			});
 		});
 	}
 
@@ -655,9 +707,14 @@
 
 		// for wasavi
 		if (isInit) {
-			if (payload && (!isTestUrl(payload.url) || /[?&]ros\b/.test(payload.url))) {
-				o.ros = runtimeOverwriteSettings.get(
-					payload.url, payload.nodePath);
+			if (payload) {
+				if (!isTestUrl(payload.url) || /[?&]ros\b/.test(payload.url)) {
+					o.ros = runtimeOverwriteSettings.get(
+						payload.url, payload.nodePath);
+				}
+				if (payload.nodeName == 'BODY' && memorandum.exists(payload.url)) {
+					payload.value = memorandum.get(payload.url);
+				}
 			}
 			o.headHTML = wasaviFrameHeader;
 			o.bodyHTML = wasaviFrameContent;
@@ -680,12 +737,11 @@
 	}
 
 	function handleResetOptions (command, data, sender, respond) {
-		ext.storage.clear();
+		config.clear();
+		config._syncStorage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
-		config.init();
-		broadcastStorageUpdate(
-			'targets exrc shortcut shortcutCode quickActivate'.split(' '));
+		config.init(true);
 	}
 
 	function handleGetStorage (command, data, sender, respond) {
@@ -714,13 +770,11 @@
 		}
 
 		if (items) {
-			config.clearUsedKeys();
 			items.forEach(function (item) {
 				if (!('key' in item)) return;
 				if (!('value' in item)) return;
 				config.set(item.key, item.value);
 			});
-			broadcastStorageUpdate(config.usedKeys);
 		}
 	}
 
@@ -740,6 +794,38 @@
 
 	function handleGetClipboard (command, data, sender, respond) {
 		respond({data: ext.clipboard.get()});
+	}
+
+	function handleSetMemorandum (command, data, sender, respond) {
+		memorandum.set(data.url, data.value);
+		ext.postMessage(sender, {
+			type:'fileio-write-response',
+			internalId:command.internalId,
+			requestNumber:command.requestNumber,
+			state: 'complete',
+			meta: {
+				path: '',
+				bytes: data.value.length
+			},
+			exstate: {
+				isBuffered: data.isBuffered
+			}
+		});
+	}
+
+	function handleGetMemorandum (command, data, sender, respond) {
+		var content = memorandum.get(data.url);
+		ext.postMessage(sender, {
+			type:'fileio-read-response',
+			internalId:command.internalId,
+			requestNumber:command.requestNumber,
+			state: 'complete',
+			meta: {
+				path: '',
+				bytes: content.length
+			},
+			content: content
+		});
 	}
 
 	function handlePushPayload (command, data, sender, respond) {
@@ -891,6 +977,8 @@
 		'play-sound':			handlePlaySound,
 		'set-clipboard':		handleSetClipboard,
 		'get-clipboard':		handleGetClipboard,
+		'set-memorandum':		handleSetMemorandum,
+		'get-memorandum':		handleGetMemorandum,
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
 		'fsctl':				handleFsCtl,
@@ -983,7 +1071,7 @@
 						ext.openTabWithUrl(HOME_URL);
 					}
 				);
-				ext.storage.setItem('version', ext.version);
+				config.set('version', ext.version);
 			}
 
 			ext.isDev && ext.log(

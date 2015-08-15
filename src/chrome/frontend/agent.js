@@ -63,7 +63,7 @@ var fontFamily;
 var quickActivation;
 var devMode;
 var logMode;
-var canLaunch;
+var blacklist;
 var statusLineHeight;
 
 var targetElement;
@@ -684,18 +684,49 @@ function toPlainText (input) {
 	}
 }
 
-function isInBlacklist (blacklist) {
-	var result = (blacklist || '').split('\n').some(function (url) {
-		url = url.replace(/^\s+|\s+$/g, '');
-		if (url == '' || /^[#;]/.test(url)) return;
+function parseBlacklist (blacklist) {
+	var result = {
+		fullBlocked: false,
+		selectors: [],
+		includes: function (element) {
+			return this.fullBlocked || this.selectors.some(function (s) {
+				try {
+					return Array.prototype.indexOf.call(
+						document.querySelectorAll(s), element) >= 0;
+				}
+				catch (e) {}
+			});
+		}
+	};
+	(blacklist || '').split('\n').some(function (line) {
+		line = line.replace(/^\s+|\s+$/g, '');
+		if (line == '' || /^[#;]/.test(url)) return;
 
+		var delimiter = /\s+/.exec(line);
+		if (delimiter) {
+			line = [
+				line.substring(0, delimiter.index),
+				line.substring(delimiter.index + delimiter[0].length)
+			];
+		}
+		else {
+			line = [line, ''];
+		}
 		try {
-			url = new RegExp('^' + url
+			var url = new RegExp('^' + line[0]
 				.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
 				.replace(/\?/g, '.')
 				.replace(/\*/g, '.+?'), 'i');
 
-			if (url.test(window.location.href)) return true;
+			if (url.test(window.location.href)) {
+				if (line[1] == '') {
+					result.fullBlocked = true;
+					return true;
+				}
+				else {
+					result.selectors.push(line[1]);
+				}
+			}
 		}
 		catch (e) {}
 	});
@@ -863,13 +894,13 @@ function createPageAgent (listenKeydown, hookKeyEvents) {
  */
 
 function handleKeydown (e) {
-	if (!canLaunch || targetElement || !e || !e.target || !allowedElements) return;
+	if (targetElement || !e || !e.target || !allowedElements) return;
 	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
+	if (blacklist.includes(e.target)) return;
 
 	if (e.target.isContentEditable && allowedElements.enableContentEditable
 	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
 	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
-
 		/*
 		 * <textarea>
 		 * <textarea data-texteditor-extension="auto">
@@ -901,12 +932,11 @@ function handleKeydown (e) {
  */
 
 function handleTargetFocus (e) {
-	if (!canLaunch || !quickActivation || targetElement || !e || !e.target || !allowedElements) return;
-
+	if (!quickActivation || targetElement || !e || !e.target || !allowedElements) return;
+	if (blacklist.includes(e.target)) return;
 	if (e.target.isContentEditable && allowedElements.enableContentEditable
 	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
 	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
-
 		var current = e.target.getAttribute(EXTENSION_CURRENT);
 		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
 		if (current !== null) return;
@@ -965,10 +995,11 @@ function handleAgentInitialized (req) {
  */
 
 function handleRequestLaunch () {
-	if (!canLaunch || wasaviFrame || targetElement || !allowedElements) return;
+	if (wasaviFrame || targetElement || !allowedElements) return;
 	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
 	var target = document.activeElement;
+	if (blacklist.includes(target)) return;
 	if (target.isContentEditable && allowedElements.enableContentEditable
 	||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
 		&& target.type in ACCEPTABLE_TYPES
@@ -1164,14 +1195,16 @@ function handleBackendMessage (req) {
 
 	case 'read':
 		if (!wasaviFrame) break;
+		var value = targetElement.isContentEditable ?
+			toPlainText(targetElement) : targetElement.value;
 		notifyToChild(wasaviFrameInternalId, {
 			type:'read-response',
 			state:'complete',
 			meta:{
 				path:'',
-				bytes:targetElement.value.length
+				bytes:value.length
 			},
-			content:targetElement.value
+			content:value
 		});
 		break;
 
@@ -1235,9 +1268,7 @@ function handleBackendMessage (req) {
 				break;
 			}
 		}
-		if (qaBlacklist) {
-			canLaunch = !isInBlacklist(qaBlacklist);
-		}
+		blacklist = parseBlacklist(qaBlacklist);
 		logbuf.length && log(
 			'update-storage: consumed ', logbuf.join(', '));
 		break;
@@ -1372,7 +1403,7 @@ function handleConnect (req) {
 	quickActivation = req.quickActivation;
 	devMode = req.devMode;
 	logMode = req.logMode;
-	canLaunch = !isInBlacklist(req.qaBlacklist);
+	blacklist = parseBlacklist(req.qaBlacklist);
 	statusLineHeight = req.statusLineHeight;
 
 	extension.ensureRun(handleAgentInitialized, req);

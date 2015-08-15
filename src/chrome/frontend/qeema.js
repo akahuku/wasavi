@@ -1153,7 +1153,7 @@
 
 		if (alt) {
 			result.code = -name.toUpperCase().charCodeAt(0);
-			result.name = toOuterBase(result.name);
+			result.name = toOuterBase(result.name.toUpperCase());
 			result.special = false;
 			return result;
 		}

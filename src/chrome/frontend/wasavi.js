@@ -2516,11 +2516,16 @@ function getFileNameString (full) {
 		}
 	}
 	else if (targetElement) {
-		if (targetElement.id != '') {
-			result = targetElement.nodeName + '#' + targetElement.id;
+		if (targetElement.nodeName == 'BODY') {
+			result = '*Memorandum*';
 		}
 		else {
-			result = targetElement.nodeName;
+			if (targetElement.id != '') {
+				result = targetElement.nodeName + '#' + targetElement.id;
+			}
+			else {
+				result = targetElement.nodeName;
+			}
 		}
 	}
 	return result;
@@ -2544,7 +2549,7 @@ function getFileIoResultInfo (aFileName, charLength, isNew) {
 	var attribs = [];
 
 	// file name
-	result.push('"' + (aFileName || getFileNameString()) + '"');
+	result.push(aFileName || getFileNameString());
 
 	// partial attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type
@@ -2571,7 +2576,7 @@ function getFileInfo (fullPath) {
 	var attribs = [];
 
 	// file name
-	result.push('"' + getFileNameString(fullPath) + '"');
+	result.push(getFileNameString(fullPath));
 
 	// attributes
 	attribs.push(getNewlineType(preferredNewline)); // newline type

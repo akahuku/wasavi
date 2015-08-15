@@ -34,8 +34,8 @@
     "description": "Exceptional URLs"
   },
   "option_qa_blacklist_tips": {
-    "message": "* wasavi の起動をさせない URL を記述してください。\n* 1 行につき 1 URL です。\n* [c];[/c] または [c]#[/c] で始まる行はコメントと見なされます。\n* URL の中ではワイルドカード [c]*[/c] および [c]?[/c] を使用できます。",
-    "description": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL."
+    "message": "* wasavi の起動をさせない URL を記述してください。\n* 1 行につき 1 URL です。\n* [c];[/c] または [c]#[/c] で始まる行はコメントと見なされます。\n* URL の中ではワイルドカード [c]*[/c] および [c]?[/c] を使用できます。\n* URL に続けて、空白と CSS セレクタを [c]http://example.net/ [name=\"foo\"][/c] のように記述することもできます。このセレクタは、ブロッキングの対象をページから要素に狭めます。",
+    "description": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* You can also put blank and CSS selector expression after URL, like [c]http://example.net/ [name=\"foo\"][/c]. The selector will changes a blacklisting target to an element from a page."
   },
   "option_target_elements_desc": {
     "message": "* ショートカットの書式は <(修飾子-)*キー>,... です。\n例えば、<c-enter>,<insert> は「ctrl+enter か insert が押されたら、wasavi を起動する」ことを意味します。\n* 以下のキーをショートカットに使用できます:\n[c]backspace[/c] [c]bs[/c] [c]tab[/c] [c]enter[/c] [c]return[/c] [c]ret[/c] [c]pageup[/c] [c]pagedown[/c] [c]end[/c] [c]home[/c] [c]left[/c] [c]up[/c] [c]right[/c] [c]down[/c] [c]insert[/c] [c]ins[/c] [c]delete[/c] [c]del[/c] [c],[/c] [c]comma[/c] [c].[/c] [c]dot[/c] [c]period[/c] [c]/[/c] [c]slash[/c] [c]\\[[/c] [c]\\\\[/c] [c]backslash[/c] [c]\\][/c]\n[c]f1[/c] から [c]f12[/c], [c]a[/c] から [c]z[/c], [c]0[/c] から [c]9[/c]\n* 以下のキーを修飾子として使用できます: [c]s[/c] (シフトキー)、[c]c[/c] (コントロールキー)。\n* テキストフィールドを空にすると、既定のショートカット <c-enter>, <insert> が使用されます。",

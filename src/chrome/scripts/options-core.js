@@ -76,6 +76,11 @@ function setMarkup (node, text) {
 							document.createElement(nodeName))
 					});
 				}
+				else {
+					stack[0].node.appendChild(document.createTextNode(
+						s.replace(/\\(.)/g, '$1')
+					));
+				}
 			}
 		}
 		else {
