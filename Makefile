@@ -270,6 +270,9 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 		$(FIREFOX_SRC_PATH)/data/options.html \
 		> $(FIREFOX_EMBRYO_SRC_PATH)/data/options.html
 
+#	replace the variables which be assigned to innerHTML with a string literal
+	localtool/inscontent
+
 #	update package
 	tool/update-firefox-package.rb \
 		--indir $(FIREFOX_SRC_PATH) \

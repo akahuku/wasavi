@@ -8123,16 +8123,6 @@ if (global.WasaviExtensionWrapper
 		function run (callback) {
 			function doRun () {
 				diag('entering doRun()');
-
-				/*
-				 * an issue of security risk about innerHTML
-				 * =========================================
-				 * Assigning a string to innerHTML may cause security risk.
-				 * But in this code, Both 'bodyHTML' and 'headHTML' content is
-				 * the resource within extension package at all the time,
-				 * and not be manipulated from the outside.
-				 * Thus we leave innerHTML.
-				 */
 				if (!/^chrome-extension:/.test(window.location.protocol)) {
 					// force doctype to standard mode
 					var doctype = document.implementation.createDocumentType('html', '', '');
