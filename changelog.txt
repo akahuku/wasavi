@@ -142,6 +142,14 @@
 
 0.6.406
 
+	* add 'set <option>&' syntax and override option (#71)
+	* add mediator plugin for keysnail
+	* do reformat always with charwise selection (#69)
+	* tune line height style
+	* add cursorline/cursorcolumn options
+	* use flexbox for layout
+	* focus cursor when a window get a focus
+
 	* :set コマンドでオプション名の後に & を付けることによりデフォルト値に
 	復帰する機能を追加
 	* override オプションを追加
@@ -154,6 +162,12 @@
 
 0.6.387
 
+	* use contenteditable attribute for input mode
+	* missing the break statement (#69)
+	* change wasavi's source location on firefox (#39)
+	* optimize j/k
+	* fix the bug gj/gk may cause infinity loop
+
 	* input モード時に contenteditable 属性を利用するようにした
 	* 選択範囲を gq するとカーソルの動きがおかしくなるのを修正
 	* Firefox 版において wasavi の iframe のドメインを変更
@@ -162,10 +176,17 @@
 
 0.6.375
 
+	* add a undo test to the test reads a register in input mode
+	* fix the bug that reading the register in input mode breaks undo list
+
 	* input 時にレジスタの内容を読み込むテストで undo もテストするようにした
 	* input 時にレジスタの内容を読むと undo リストが壊れるのを修正
 
 0.6.372
+
+	* remove experimental page-hook feature
+	* compute middle position with top and bottom index, instead of number of screen lines (#68)
+	* optimize up/down by wrapped row (#58)
 
 	* Blink Opera 向けの試験的機能を除去した
 	* M でカーソルの位置を決める方法を変更した
@@ -173,9 +194,17 @@
 
 0.6.368
 
+	* call setSelectionRange() after yank a bound (#67)
+
 	* 選択範囲をヤンクした後に明示的にカーソル位置を収束させるようにした
 
 0.6.363
+
+	* expand the blacklist effect into a activation via shortcut key (#63)
+	* fix #48: compute text width of replacee more correctly
+    * reuse cursor objects
+	* fix focus issues on firefox
+	* do not update dot command source by dot command itself
 
 	* URL ブラックリストがショートカットキーによる起動の際も影響するようにした
 	* R での 1 文字置換の際文字幅をより正確に考慮するよう修正
@@ -185,6 +214,11 @@
 
 0.6.359
 
+	* fix initial focus problem on firefox
+	* optimize edit cursor positioning
+	* include qeema instead of keyManager
+	* replace build tools with brisket
+
 	* Firefox での初期フォーカス状態を修正
 	* input カーソルの位置決めを最適化
 	* キーボード関連で qeema ライブラリを使うようにした
@@ -192,9 +226,14 @@
 
 0.6.350
 
+	* full rewrite ex command executor
+
 	* Ex コマンド実行処理を完全に書きなおした
 
 0.6.345
+
+	* optimize paste (shift+insert) speed (#56)
+	* optimize map expansion speed (#56)
 
 	* 貼り付け処理を最適化した
 	* マップの展開速度を最適化した
@@ -205,10 +244,17 @@
 
 0.6.329
 
+	* add calculate register
+	* add backspace functionality to literal input
+
 	* ^V のリテラル入力時にバックスペースが使えるようにした
 	* vim の = レジスタを移植した
 
 0.6.317
+
+	* add the url-blacklist for decide that wasavi launch on focus
+	* do not expand a map when in a submode (#44)
+	* add syncsize option and allow the columns/lines options to override (#36)
 
 	* フォーカスで起動する設定時に有効な、url のブラックリストを実装した
 	* サブモードに入っている状態では map の展開を行わないようにした
@@ -216,6 +262,12 @@
 	* lines と columns オプションを書き込み可能にした
 
 0.6.307
+
+	* implement the gu and gU operators (#41)
+	* don't use selenium standalone server
+	* add :set nostripe to turn off striped background (#42)
+	* show ellipsis mark when file/node name is too long
+	* overhaul substitute worker
 
 	* vim の gu/gU オペレータを移植した
 	* 機能テスト時、selenium の stand alone server を起動しないようにした
@@ -225,6 +277,12 @@
 
 0.6.292
 
+	* define min height to 240px
+	* add special capital registers
+	* fix the issue that cannot launch on firefox 32 (#39)
+	* fix the issue #40
+	* add test for ambiguous mapping
+
 	* 最小高を 240px とした
 	* A から Z までのレジスタからの読み出しを特別扱いするようにした
 	* firefox 32 で起動しないのを修正した
@@ -233,12 +291,23 @@
 
 0.6.282
 
+	* add page hook function to blink-opera
+	* update keyboard handling routines
+	* add the boundary check of rows
+	* allow describing a double quote as is in map argument
+
 	* Blink based Opera 向けにページフックスクリプト機能を追加した
 	* キーボードからのイベントをデキューで取り扱うようにした
 	* 行操作時の境界チェックを追加した
 	* :map の引数にダブルクオートをそのまま書けるようにした
 
 0.6.274
+
+	* modify the scope of ExCommand object (#32)
+	* make marks persist
+	* don't update registers in test mode
+	* delete unused files in Firefox
+	* fix font family assignment
 
 	* ExCommand オブジェクトのスコープを変更した
 	* マークが wasavi を終了しても引き継がれるようにした
@@ -248,11 +317,24 @@
 
 0.6.265
 
+	* add sound effect feature
+	* tiny key input patch for Opera 12 on Linux platform
+	* fix z-index of console and completion popup
+
 	* エラーベル以外の効果音も鳴らすようにした
 	* Opera 12 on Linux で動かした時 + キーのキーコードが変なのに対応
 	* 擬似コンソールと補完ポップアップの z-index を修正
 
 0.6.258
+
+	* improve initialization part of targetElement
+	* change the position initializing some vars
+	* sort message keys
+	* reduce the number of roundtrip of communication on booting
+	* extension wrapper is always available
+	* change the location of sound source
+	* #25: add shortcut capturing function
+	* improve initial positioning
 
 	* targetElement の部分的な初期化処理を修正
 	* いくつかの変数の初期化位置を変更
@@ -265,21 +347,38 @@
 
 0.6.248
 
+	* #31: fix dom to plain text converter
+
 	* contenteditable な要素の内容をプレインテキストに変換する際の処理を修正
 
 0.6.246
+
+	* fix file name of update.rdf
 
 	* github 上の update.rdf の名称を変更
 
 0.6.244
 
+	* change a logic of configuration
+
 	* オプションページの内部構成を変更した
 
 0.6.242
 
+	* make the message between agent and wasavi indirectly
+
 	* エージェントと wasavi の間のメッセージを間接的に行うようにした
 
 0.6.239
+
+	* add sync feature of ex command histries and registers
+	* allow include white spaces in abbreviation value
+	* use beforeunload event
+	* separate option-page logic from agent
+	* update year description in a license block of each file
+	* add the feature that interrupts a pending ex command
+	* add some aliases for bracket notation
+	* add noremapped abbreviation
 
 	* 他のページの wasavi 間で ex コマンドの履歴とレジスタの内容が同期する
 	ようにした
@@ -294,6 +393,10 @@
 
 0.6.216
 
+	* use css3 animation for prompt
+	* a ton of modifications for kosian
+	* add Makefile
+
 	* コンソールにおける擬似カーソルにおいて CSS3 Animation を使用するように
 	した
 	* バックエンドライブラリに kosian を用いるようにするための様々な修正。この
@@ -305,6 +408,18 @@
 	* ソースを完全に git に移行した
 
 0.5.394
+
+	* tune blight theme
+	* fix fullscreen
+	* update messages
+	* fix an error that reading from clipboard on Opera
+	* make :chdir check a file system.
+	* fix the behavior of handling read only element
+	* fix contenteditable bug
+	* fix backslash handling in a path
+	* use beforeunload event in app mode
+	* change locale retrieving method on Opera
+	* fix the duplicate problem when overwrite a file
 
 	* bright テーマを調整
 	* フルスクリーン状態に正しく遷移しないことがあるのを修正
@@ -321,6 +436,11 @@
 
 0.5.356
 
+	* add ^R in insert/overwrite/line-input mode
+	* let pasted string be a composition unit
+	* fix the timing of focusing to iframe
+	* use W3C Clipboard API (paste event)
+
 	* insert/overwrite/line-input モードの ^R を実装
 	* 貼り付けられた文字列をひとまとめにして扱うようにした
 	* wasavi の iframe にフォーカスするタイミングを修正
@@ -328,14 +448,26 @@
 
 0.5.343
 
+	* #15: fix the issue wasavi does not start on Firefox
+
 	* #15: Firefox で起動しなくなるバグを修正
 
 0.5.342
+
+	* file system: google drive
+	* add :cd :pwd :filesystem
 
 	* Google Drive に対するファイルの読み書きに対応した
 	* ex コマンド filesystem、cd、pwd を実装した
 
 0.5.317
+
+	* add completion
+	* change a way to publish class methods
+	* adapt to content-editable element
+	* add hotkey feature
+	* change wasavi frame location
+	* - split background.js into core and other classes
 
 	* 行入力モード時、ex コマンド名、set コマンドのオプション名、
 	ファイル操作コマンドの引数について補完が行われるようにした
