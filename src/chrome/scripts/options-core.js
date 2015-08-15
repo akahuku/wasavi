@@ -52,15 +52,18 @@ function setMarkup (node, text) {
 			}
 			else {
 				// open tag
-				var nodeName = null;
+				var newNode = null;
 				switch (re[3]) {
 				case 'c':
-					nodeName = 'code';
+					newNode = document.createElement('code');
 					break;
 
 				case 'i':
+					newNode = document.createElement('i');
+					break;
+
 				case 'b':
-					nodeName = re[3];
+					newNode = document.createElement('b');
 					break;
 
 				case 'br':
@@ -69,11 +72,10 @@ function setMarkup (node, text) {
 					break;
 				}
 
-				if (nodeName) {
+				if (newNode) {
 					stack.unshift({
 						name: re[3],
-						node: stack[0].node.appendChild(
-							document.createElement(nodeName))
+						node: stack[0].node.appendChild(newNode)
 					});
 				}
 				else {

@@ -817,7 +817,7 @@ function createElementResizeListener (element, callback) {
 		}, 100);
 	}
 
-	function handleDOMAttrModified (e) {
+	function attrModified (e) {
 		e.attrName == 'style' && fireIfResized();
 	}
 
@@ -833,7 +833,7 @@ function createElementResizeListener (element, callback) {
 		element.removeEventListener('mouseup', fireIfResized, false);
 	}
 
-	var mo = getMutationObserver('AttrModified', handleDOMAttrModified);
+	var mo = getMutationObserver('AttrModified', attrModified);
 	var width = element.offsetWidth;
 	var height = element.offsetHeight;
 	var timer;
