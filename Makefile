@@ -288,8 +288,8 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 #	prepare to amo versions
 	mv $(PRODUCT).$(FIREFOX_SUFFIX) $@
 	mv $(PRODUCT).update.rdf $(DIST_DIR)/update.rdf
-	cp $@ $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX)
-	cp $@ $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX)
+#	cp $@ $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX)
+#	cp $@ $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX)
 
 #	github version
 	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
@@ -303,28 +303,28 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX) install.rdf
 
 #	amo version
-	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
-	tool/update-firefox-manifest.rb \
-		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--localedir $(SRC_DIR)/chrome/_locales \
-		--ver $(VERSION) \
-		--strip-update-url
-	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo.rdf
-	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
-	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
+#	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
+#	tool/update-firefox-manifest.rb \
+#		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
+#		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+#		--localedir $(SRC_DIR)/chrome/_locales \
+#		--ver $(VERSION) \
+#		--strip-update-url
+#	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo.rdf
+#	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
+#	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo.$(FIREFOX_SUFFIX) install.rdf
 
 #	amo(beta) version
-	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
-	tool/update-firefox-manifest.rb \
-		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--localedir $(SRC_DIR)/chrome/_locales \
-		--ver $(VERSION)beta \
-		--strip-update-url
-	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo_beta.rdf
-	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
-	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
+#	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
+#	tool/update-firefox-manifest.rb \
+#		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
+#		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
+#		--localedir $(SRC_DIR)/chrome/_locales \
+#		--ver $(VERSION)beta \
+#		--strip-update-url
+#	cp $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf $(FIREFOX_EMBRYO_SRC_PATH)/install_amo_beta.rdf
+#	$(ZIP) -d $(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
+#	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT)_amo_beta.$(FIREFOX_SUFFIX) install.rdf
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
