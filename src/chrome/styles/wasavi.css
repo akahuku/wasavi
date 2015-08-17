@@ -86,6 +86,7 @@
 	min-height:/*<LINE_HEIGHT>*/1px/*</LINE_HEIGHT>*/;
 	line-height:1.2;
 	white-space:pre-wrap;
+	word-wrap:break-word;
 	counter-increment:na nr -1;
 }
 
