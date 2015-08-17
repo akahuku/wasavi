@@ -69,6 +69,7 @@ function setMarkup (node, text) {
 				case 'br':
 					stack[0].node.appendChild(
 						document.createElement('br'));
+					s = '';
 					break;
 				}
 
@@ -78,7 +79,7 @@ function setMarkup (node, text) {
 						node: stack[0].node.appendChild(newNode)
 					});
 				}
-				else {
+				else if (s != '') {
 					stack[0].node.appendChild(document.createTextNode(
 						s.replace(/\\(.)/g, '$1')
 					));
