@@ -128,7 +128,7 @@ Tips and Tricks
 * map syntax is
 	+ `:map` displays all the mappings currently registered.
 	+ `:map [clear]` clears all the mappings.
-	+ `:map lhs rhs` registers a rule which translates lhs to rhs. Its translation is recursive.
+	+ `:map lhs rhs` registers a rule which translates lhs to rhs. Its translation is recursive. About syntax of key stroke descriptor like `<esc>` in the lhs and rhs, see [this page](https://github.com/akahuku/wasavi/wiki/Syntax-of-key-stroke-descriptor).
 	+ `:map [noremap] lhs rhs` also registers, but it is non-recursive.
 	+ `:map` targets the normal mode mappings. On the other hand,
 	  `:map!` targets the insert mode. This is equivalent to vim's `:imap`.

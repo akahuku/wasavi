@@ -129,7 +129,7 @@ Tips and Tricks
 * :map の文法は:
 	+ `:map` は、登録されている全てのマップを表示します
 	+ `:map [clear]` は、全てのマップを削除します
-	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。この変換は再帰します
+	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。この変換は再帰します。`<esc>` のような、lhs と rhs 内のキーストローク記述子の文法については、[このページ](https://github.com/akahuku/wasavi/wiki/Syntax-of-key-stroke-descriptor) を参照してください
 	+ `:map [noremap] lhs rhs` も登録しますが、
 	  こちらは再帰しません
 	+ `:map` はノーマルモード用のマップを対象とします。一方、
