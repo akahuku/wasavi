@@ -148,12 +148,6 @@ function _toNativeControl (code) {
 	}
 	return String.fromCharCode(code);
 }
-function ensureNewline (s) {
-	if (s.length && s.substr(-1) != '\n') {
-		s += '\n';
-	}
-	return s;
-}
 function trimTerm (s, ch) {
 	ch || (ch = '\n');
 	if (s.length && s.substr(-1) == ch) {

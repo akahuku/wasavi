@@ -581,8 +581,10 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 		wrapper.compositionUpdate(e.data);
 	}
 	function handleCompositionEnd (e) {
-		var result = wrapper.compositionComplete(e.data);
-		return result;
+		setTimeout(function () {
+			buffer.ensureNewline(buffer.selectionStart);
+		}, 1);
+		return wrapper.compositionComplete(e.data);
 	}
 	function setupEventHandlers (install) {
 		var method = install ? 'addListener' : 'removeListener';

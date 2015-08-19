@@ -2065,6 +2065,17 @@ Wasavi.Editor.prototype = new function () {
 			this.unEmphasis(className);
 			return result;
 		},
+		ensureNewline: function () {
+			var a = arg2pos(arguments);
+			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+				return;
+			}
+			var row = this.elm.childNodes[a.row];
+			if (row.textContent.substr(-1) != '\n') {
+				row.appendChild(document.createTextNode('\n'));
+				row.normalize();
+			}
+		},
 		getSelection: function () {
 			if (this.isLineOrientSelection) {
 				return this.getSelectionRows.apply(this, arguments);
@@ -2077,7 +2088,10 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getSelectionRows: function () {
 			var r = selectRows.apply(this, arguments);
-			var content = ensureNewline(r.r.toString());
+			var content = r.r.toString();
+			if (content.length && content.substr(-1) != '\n') {
+				content += '\n';
+			}
 			return content;
 		},
 		leftPos: function () {
