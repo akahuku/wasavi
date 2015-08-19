@@ -1259,31 +1259,31 @@ function handleBackendMessage (req) {
 		var logbuf = [];
 		var qaBlacklist;
 		for (var i in req.items) {
-			var item = req.items[i];
-			switch (item.key) {
+			var value = req.items[i];
+			switch (i) {
 			case 'targets':
-				allowedElements = item.value;
-				logbuf.push(item.key);
+				allowedElements = value;
+				logbuf.push(i);
 				break;
 
 			case 'shortcutCode':
-				shortcutCode = item.value;
-				logbuf.push(item.key);
+				shortcutCode = value;
+				logbuf.push(i);
 				break;
 
 			case 'quickActivation':
-				quickActivation = item.value;
-				logbuf.push(item.key);
+				quickActivation = value;
+				logbuf.push(i);
 				break;
 
 			case 'logMode':
-				logMode = item.value;
-				logbuf.push(item.key);
+				logMode = value;
+				logbuf.push(i);
 				break;
 
 			case 'qaBlacklist':
-				qaBlacklist = item.value;
-				logbuf.push(item.key);
+				qaBlacklist = value;
+				logbuf.push(i);
 				break;
 			}
 		}

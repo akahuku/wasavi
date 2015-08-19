@@ -4632,16 +4632,16 @@ function handleBackendMessage (req) {
 	 */
 	case 'update-storage':
 		for (var i in req.items) {
-			var item = req.items[i];
-			switch (item.key) {
+			var value = req.items[i];
+			switch (i) {
 			case lineInputHistories.storageKey:
-				!testMode && lineInputHistories.load(item.value);
+				!testMode && lineInputHistories.load(value);
 				break;
 			case registers.storageKey:
-				!testMode && registers.load(item.value);
+				!testMode && registers.load(value);
 				break;
 			case 'logMode':
-				logMode = item.value;
+				logMode = value;
 				break;
 			}
 		}
