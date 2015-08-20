@@ -1131,9 +1131,9 @@ function install (x, req) {
 		whiteSpace:'pre',
 		lineHeight:1
 	});
-	scaler.textContent = '0';
+	scaler.textContent = multiply('0', 100);
 	lineHeight = scaler.offsetHeight;
-	charWidth = scaler.offsetWidth;
+	charWidth = scaler.offsetWidth / 100;
 	scaler.parentNode.removeChild(scaler);
 
 	// style
@@ -1594,12 +1594,7 @@ function invalidateIdealWidthPixels () {
 function refreshIdealWidthPixels () {
 	if (idealWidthPixels >= 0) return;
 	var n = buffer.selectionStart;
-	var line = buffer.rows(n).substr(0, n.col);
-	var textspan = $('wasavi_singleline_scaler');
-	if (textspan.textContent != line) {
-		textspan.textContent = line;
-	}
-	idealWidthPixels = textspan.offsetWidth;
+	idealWidthPixels = getPixelWidth(buffer.rows(n).substr(0, n.col));
 
 	var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
 	var curRect = buffer.charRectAt(n);
@@ -1865,9 +1860,7 @@ function processAutoDivide (e) {
 	}
 }
 function needBreakUndo (s, ch) {
-	var scaler = $('wasavi_singleline_scaler');
-	scaler.textContent = s;
-	if (scaler.offsetWidth < charWidth * config.vars.undoboundlen) return;
+	if (getPixelWidth(s) < charWidth * config.vars.undoboundlen) return;
 	return unicodeUtils.isSpace(ch)
 		|| unicodeUtils.isSTerm(ch)
 		|| unicodeUtils.isPTerm(ch)
@@ -2589,14 +2582,19 @@ function getFileInfo (fullPath) {
 
 	return result.join(' ');
 }
-function getLogicalColumn () {
-	var line = buffer.rows(buffer.selectionStartRow).substr(0, buffer.selectionStartCol);
+function getPixelWidth (line) {
 	var textspan = $('wasavi_singleline_scaler');
 	if (textspan.textContent != line) {
 		textspan.textContent = line;
 	}
-	// TODO: use more trustworthy method
-	return Math.floor(textspan.offsetWidth / charWidth + 0.5);
+	return textspan.offsetWidth;
+}
+function getLogicalColumn () {
+	var line = buffer
+		.rows(buffer.selectionStartRow)
+		.substr(0, buffer.selectionStartCol);
+	var pixelWidth = getPixelWidth(line);
+	return Math.floor(pixelWidth / charWidth + 0.5);
 }
 function getFileSystemIndex (name) {
 	var result = -1;
