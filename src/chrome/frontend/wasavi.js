@@ -2001,6 +2001,11 @@ function processInput (e, ignoreAbbrev) {
 		subkey: inputMode
 	};
 
+	// override the code with 32 if key was <S-space>
+	if (result.code == -32800) {
+		result.code = e.code = 32;
+	}
+
 	modeHandlers[inputMode].call(modeHandlers, e, result);
 
 	if (terminated) {
