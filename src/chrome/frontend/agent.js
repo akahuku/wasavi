@@ -1229,27 +1229,49 @@ function handleBackendMessage (req) {
 
 	case 'write':
 		if (!wasaviFrame) break;
-		var result = setValue(targetElement, req.value, req.isForce);
 		var payload = {type:'write-response'};
-		if (typeof result == 'number') {
-			payload.state = 'complete';
-			payload.meta = {
-				path:req.path,
-				bytes:result
+		try {
+			var result = setValue(targetElement, req.value, req.isForce);
+			if (typeof result == 'number') {
+				var ev;
+
+				if (targetElement.nodeName == 'INPUT'
+				|| targetElement.nodeName == 'TEXTAREA') {
+					// input event
+					// NOTE: input event constructor is fluid.
+					ev = document.createEvent('Event');
+					ev.initEvent('input', true, false);
+					targetElement.dispatchEvent(ev);
+
+					// change event
+					ev = document.createEvent('Event');
+					ev.initEvent('change', true, false);
+					targetElement.dispatchEvent(ev);
+				}
+
+				payload.state = 'complete';
+				payload.meta = {
+					path:req.path,
+					bytes:result
+				};
+			}
+			else if (Object.prototype.toString.call(result) == '[object Array]') {
+				payload.error = result;
+			}
+			else {
+				payload.error = _('Internal state error.');
+			}
+		}
+		catch (ex) {
+			payload.error = _('Internal exception: ' + ex.message);
+		}
+		finally {
+			payload.exstate = {
+				isBuffered:req.isBuffered
 			};
-		}
-		else if (Object.prototype.toString.call(result) == '[object Array]') {
-			payload.error = result;
-		}
-		else {
-			payload.error = _('Internal state error.');
-		}
 
-		payload.exstate = {
-			isBuffered:req.isBuffered
-		};
-
-		notifyToChild(wasaviFrameInternalId, payload);
+			notifyToChild(wasaviFrameInternalId, payload);
+		}
 		break;
 
 	/*

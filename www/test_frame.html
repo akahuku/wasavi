@@ -96,6 +96,12 @@
 						});
 					}
 				}
+				function doLog (message) {
+					var t = document.getElementById('test-log');
+					if (!t) return;
+					t.value += '\n' + Array.prototype.slice.call(arguments).join('\t');
+					t.scrollTop = t.scrollHeight - t.clientHeight;
+				}
 
 				document
 				.getElementById('container')
@@ -162,6 +168,16 @@
 						}
 					}
 				}, false);
+
+				(function () {
+					function handler (e) {
+						doLog(e.target.id + ': ' + e.type + '(' + Object.prototype.toString.call(e) + ') event fired.');
+					}
+					['t1', 't2', 't3'].forEach(function (id) {
+						document.getElementById(id).addEventListener('input', handler, false);
+						document.getElementById(id).addEventListener('change', handler, false);
+					});
+				})()
 			}, false);
 		</script>
 	</head>
