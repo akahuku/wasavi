@@ -502,6 +502,7 @@
 			ext.resource('mock.html', function (data) {
 				if (typeof data != 'string' || data == '') {
 					reject(new Error('Invalid content of mock.html.'));
+					return;
 				}
 
 				data = data
@@ -570,6 +571,7 @@
 					}));
 					if (isNaN(statusLineHeight)) {
 						reject(new Error('invalid statusLineHeight: ' + statusLineHeight));
+						return;
 					}
 
 					resolve();
