@@ -8,6 +8,9 @@
 	"homepage": "http://appsweets.net/wasavi/",
 	"id": "jid1-bmMwuNrx3u5hqQ",
 	"description": "vi editor for any web page.",
+	"permissions": {
+		"private-browsing": true
+	},
 	"preferences": [{
 		"type": "control",
 		"name": "optionsOpener",
