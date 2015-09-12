@@ -3,13 +3,18 @@
 	"license": "Apache License, Version 2.0",
 	"author": "akahuku@gmail.com",
 	"version": "0.0.1",
-	"fullName": "wasavi",
-	"icon": "data/images/icon128.png",
+	"title": "wasavi",
+	"icon": "icon.png",
 	"homepage": "http://appsweets.net/wasavi/",
-	"id": "jid1-bmMwuNrx3u5hqQ",
+	"id": "jid1-bmMwuNrx3u5hqQ@jetpack",
 	"description": "vi editor for any web page.",
+	"updateURL": "https://github.com/akahuku/wasavi/raw/master/update.rdf",
 	"permissions": {
 		"private-browsing": true
+	},
+	"main": "lib/main.js",
+	"engines": {
+		"firefox": ">=38.0a1 <=42.*"
 	},
 	"preferences": [{
 		"type": "control",

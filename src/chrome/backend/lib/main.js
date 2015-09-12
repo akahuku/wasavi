@@ -318,7 +318,12 @@
 			}
 		},
 		clear: function () {
-			['sync', 'local'].forEach(function (storage) {
+			var storages = Array.prototype.slice.call(arguments);
+			if (storages.length == 0) {
+				storages.push('sync', 'local');
+			}
+			storages.forEach(function (storage) {
+				if (!(storage in this.info)) return;
 				for (var key in this.info[storage]) {
 					ext.storage.setItem(key, undefined);
 				}
@@ -462,7 +467,7 @@
 			}
 			function handleGetSyncStorage (items) {
 				if (config) {
-					config.clear();
+					config.clear('sync');
 					for (var i in items) {
 						ext.storage.setItem(i, items[i]);
 					}
