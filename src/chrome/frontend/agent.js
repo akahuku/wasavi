@@ -628,7 +628,7 @@ function toPlainText (input) {
 					t[t.length - 1].whiteSpace = getStyle(c.parentNode, 'whiteSpace');
 					t[t.length - 1].nodeName = c.parentNode.nodeName;
 				}
-				var nodeValue = c.nodeValue.replace(/^\s+|\s+$/g, '');
+				var nodeValue = c.nodeValue;
 				if (forceInline) {
 					nodeValue = ' ' + nodeValue.replace(/\n/g, ' ');
 				}
