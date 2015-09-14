@@ -263,6 +263,9 @@ $(BLINKOPERA_MTIME_PATH): FORCE
 $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) \
+		--exclude 'lib/init.js' \
+		--exclude 'lib/es6-promise.min.js' \
+		--exclude 'lib/kosian/init.js' \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	strip script tag from options.html

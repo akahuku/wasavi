@@ -373,7 +373,8 @@
 				base64.encode(
 					getShrinkedCode(
 						self.data.load('scripts/key_hook.js'))),
-			wasaviFrameSource: wasaviFrameSource
+			wasaviFrameSource: wasaviFrameSource,
+			wasaviOptionsUrl: self.data.url('options.html')
 		};
 	}
 

@@ -497,7 +497,7 @@
 				.replace(/@/g, '-at-')
 				.replace(/\./g, '-dot-');
 			return new UrlInfo(
-				'resource://' + extensionHostname + '/wasavi/data/options.html',
+				self.options.wasaviOptionsUrl,
 				self.options.wasaviFrameSource
 			);
 		};
