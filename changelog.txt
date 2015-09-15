@@ -1,3 +1,55 @@
+0.6.579
+
+	* do not trim spaces in a content editable element (#102)
+	* migrate to jpm tool on firefox
+	* init only sync items when got a sign-in change event on chrome
+	* fire input/change event after update of the element (#100)
+	* allow wasavi work in a private window (#101)
+
+	* contenteditable な要素を編集する際に空白を削除しないようにした (#102)
+	* firefox 上での開発は jpm を使用するようにした
+	* chrome でサインイン情報が変更された際、同期対象設定だけを初期化する
+	ようにした
+	* 要素を更新した直後に input/change イベントを発行するようにした (#100)
+	* firefox のプライベートウィンドウ上でも動作するようにした (#101)
+
+0.6.570
+
+	* treat <S-space> as just a space (#98)
+	* improve the precision of charWidth variable
+	* fix the issue storage synchronizing between document fails
+	* fix the issue that input mode via IME sometimes freezes on chrome
+	* add the link of document of key stroke descriptor to readme
+	* fix pseudo-br tag stays inside a text node in option page
+	* add break-word style
+	* do not build xpi files for AMO
+
+	* <S-space> を単なる空白として扱うよう修正 (#98)
+	* charWidth 変数の精度を向上
+	* 文書間の設定の共有に失敗することがあるのを修正
+	* chrome 上で IME を通した入力がフリーズすることがあるのを修正
+	* キーストロークの記述についてのリンクを readme に追加した
+	* オプションページで、テキストの末尾に擬似改行タグが残ったままになるのを
+	修正
+	* エディタの行に break-word スタイルを施すようにした
+	* AMO 向けに xpi をビルドするのをやめた
+
+0.6.559
+
+	* remove links to AMO from readme documents
+
+	* readme 文書から AMO へのリンクを削除
+
+0.6.557
+
+	* add a text describes role of binary files
+	* various fixes to pass the AMO code validator
+	* do nothing if document is not available in ensureRun()
+
+	* バイナリファイルの役割を記述するテキストを追加した
+	* AMO のバリデータでエラーがでないよういろいろ修正
+	* 文書が無効である場合は agent の処理を何もしないようにした
+
 0.6.545
 
 	* use storage.sync API on chrome (#97)
