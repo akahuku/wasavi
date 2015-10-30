@@ -1861,6 +1861,9 @@ Wasavi.Editor = function (element) {
 	}
 	this._ssrow = this._sscol = this._serow = this._secol = 0;
 	this.isLineOrientSelection = false;
+
+	this.unicodeCacheMax = 20;
+	this._unicodeCache = null;
 };
 Wasavi.Editor.prototype = new function () {
 	function arg2pos (args) {
@@ -1933,7 +1936,8 @@ Wasavi.Editor.prototype = new function () {
 		}
 
 		s.col = 0;
-		e.col = this.elm.childNodes[e.row].textContent.length;
+		e.col = this.isLineOrientSelection ?
+			0 : this.elm.childNodes[e.row].textContent.length;
 
 		var r = document.createRange();
 		r.setStartBefore(this.elm.childNodes[s.row]);
@@ -2058,10 +2062,11 @@ Wasavi.Editor.prototype = new function () {
 			}
 			return unicodeUtils.getScriptClass(cp);
 		},
-		charRectAt: function () {
-			var a = arg2pos(arguments);
+		charRectAt: function (a, length) {
 			var className = 'char-rect-at';
-			var result = this.emphasis(a, 1, className)[0].getBoundingClientRect();
+			var result = this
+				.emphasis(a, length || 1, className)[0]
+				.getBoundingClientRect();
 			this.unEmphasis(className);
 			return result;
 		},
@@ -2078,7 +2083,7 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getSelection: function () {
 			if (this.isLineOrientSelection) {
-				return this.getSelectionRows.apply(this, arguments);
+				return this.getSelectionLinewise.apply(this, arguments);
 			}
 			else {
 				var r = select.apply(this, arguments);
@@ -2086,7 +2091,7 @@ Wasavi.Editor.prototype = new function () {
 				return content;
 			}
 		},
-		getSelectionRows: function () {
+		getSelectionLinewise: function () {
 			var r = selectRows.apply(this, arguments);
 			var content = r.r.toString();
 			if (content.length && content.substr(-1) != '\n') {
@@ -2107,6 +2112,21 @@ Wasavi.Editor.prototype = new function () {
 			}
 			return a;
 		},
+		leftClusterPos: function () {
+			var a = arg2pos(arguments);
+			if (a.col == 0) {
+				if (a.row > 0) {
+					a.row--;
+					a.col = this.elm.childNodes[a.row].textContent.length - 1;
+				}
+			}
+			else {
+				var clusters = this.getGraphemeClusters(a);
+				var index = clusters.getClusterIndexFromUTF16Index(a.col);
+				a.col = clusters.rawIndexAt(index - 1);
+			}
+			return a;
+		},
 		rightPos: function () {
 			var a = arg2pos(arguments);
 			var node = this.elm.childNodes[a.row].textContent;
@@ -2119,6 +2139,23 @@ Wasavi.Editor.prototype = new function () {
 			}
 			else {
 				a.col++;
+			}
+			return a;
+		},
+		rightClusterPos: function () {
+			var a = arg2pos(arguments);
+			var node = this.elm.childNodes[a.row].textContent;
+			if (a.col >= node.length
+			||  a.col == node.length - 1 && node.charAt(a.col) == '\n') {
+				if (a.row < this.elm.childNodes.length - 1) {
+					a.row++;
+					a.col = 0;
+				}
+			}
+			else {
+				var clusters = this.getGraphemeClusters(a);
+				var index = clusters.getClusterIndexFromUTF16Index(a.col);
+				a.col = clusters.rawIndexAt(index + 1);
 			}
 			return a;
 		},
@@ -2139,33 +2176,6 @@ Wasavi.Editor.prototype = new function () {
 			var a = arg2pos(arguments);
 			var re = spc('^(S*).*\\n$').exec(this.elm.childNodes[a.row].textContent);
 			a.col = re ? re[1].length : 0;
-			return a;
-		},
-		getLineTopDenotativeOffset: function () {
-			var a = arg2pos(arguments);
-			a.col && a.col--;
-			var curRect = this.charRectAt(a);
-			while (--a.col >= 0) {
-				var newRect = this.charRectAt(a);
-				if (newRect.top < curRect.top) {
-					a.col++;
-					break;
-				}
-			}
-			a.col = Math.max(a.col, 0);
-			return a;
-		},
-		getLineTailDenotativeOffset: function () {
-			var a = arg2pos(arguments);
-			var curRect = this.charRectAt(a);
-			while (!this.isEndOfText(a) && !this.isNewline(a)) {
-				a.col++;
-				var newRect = this.charRectAt(a);
-				if (newRect.top > curRect.top) {
-					a.col--;
-					break;
-				}
-			}
 			return a;
 		},
 		getIndent: function () {
@@ -2214,53 +2224,148 @@ Wasavi.Editor.prototype = new function () {
 			}
 			return document.querySelectorAll(q.join(''));
 		},
-		// vim compatible cursor iterators
-		inc: function (pos) {
-			var p = pos || this.selectionStart;
-			try {
-				var s = this.rows(p);
-				if (p.col < s.length) {
-					p.col++;
-					return p.col < s.length ? 0 : 2;
-				}
-				if (p.row < this.rowLength - 1) {
-					p.col = 0;
-					p.row++;
-					return 1;
-				}
-				return -1;
-			}
-			finally {
-				!pos && this.setSelectionRange(p);
-			}
+		// UAX#29
+		invalidateUnicodeCache: function () {
+			this._unicodeCache = null;
 		},
-		dec: function (pos) {
-			var p = pos || this.selectionStart;
-			try {
-				if (p.col > 0) {
-					p.col--;
-					return 0;
-				}
-				if (p.row > 0) {
-					p.row--;
-					p.col = this.rows(p.row).length;
-					return 1;
-				}
-				return -1;
+		initUnicodeCache: function () {
+			if (!this._unicodeCache) {
+				this._unicodeCache = {
+					clusters: [],
+					clusterIndexes: [],
+					words: [],
+					wordsIndexes: []
+				};
 			}
-			finally {
-				!pos && this.setSelectionRange(p);
+			return this._unicodeCache;
+		},
+		getGraphemeClusters: function (n) {
+			if (n == undefined) {
+				n = this._ssrow;
 			}
+			else if (n instanceof Wasavi.Position) {
+				n = n.row;
+			}
+			if (typeof n != 'number' || isNaN(n)) {
+				throw new Error('Editor#getGraphemeClusters: invalid arg: ' + n);
+			}
+			var uc = this.initUnicodeCache();
+			if (!uc.clusters[n]) {
+				uc.clusters[n] = Unistring(this.rows(n));
+				uc.clusterIndexes.push(n);
+				while (uc.clusterIndexes.length > this.unicodeCacheMax) {
+					var top = uc.clusterIndexes.shift();
+					delete uc.clusters[top];
+				}
+			}
+			return uc.clusters[n];
 		},
-		incl: function (pos) {
-			var r = this.inc(pos);
-			return r >= 1 && (pos && pos.col || !pos && this.selectionStartCol) ?
-				this.inc(pos) : r;
+		getWords: function (n) {
+			if (n == undefined) {
+				n = this._ssrow;
+			}
+			else if (n instanceof Wasavi.Position) {
+				n = n.row;
+			}
+			if (typeof n != 'number' || isNaN(n)) {
+				throw new Error('Editor#getWords: invalid arg: ' + n);
+			}
+			var uc = this.initUnicodeCache();
+			if (!uc.words[n]) {
+				uc.words[n] = Unistring.getWords(this.rows(n), true);
+				uc.wordsIndexes.push(n);
+				while (uc.wordsIndexes.length > this.unicodeCacheMax) {
+					var top = uc.wordsIndexes.shift();
+					delete uc.words[top];
+				}
+			}
+			return uc.words[n];
 		},
-		decl: function (pos) {
-			var r = this.dec(pos);
-			return r == 1 && (pos && pos.col || !pos && this.selectionStartCol) ?
-				this.dec(pos) : r;
+		getClosestOffsetToPixels: function (n, pixels) {
+			var clusters = this.getGraphemeClusters(n);
+			var index = clusters.getClusterIndexFromUTF16Index(n.col);
+			if (clusters.length == 0 || index < 0) {
+				n.col = 0;
+				return n;
+			}
+
+			var node = this.elm.appendChild(
+				this.elm.childNodes[n.row].cloneNode(false));
+			var row = this.elm.childNodes.length - 1;
+			node.textContent = this.elm.childNodes[n.row].textContent;
+
+			var right = this.emphasis(
+				new Wasavi.Position(row, n.col),
+				this.rows(row).length - n.col,
+				'closest')[0];
+
+			if (right && right.firstChild) {
+				var width = 0;
+				var widthp = 0;
+				var delta = 1;
+				var phase = 0;
+
+				var rightText = right.firstChild;
+				var left = right.parentNode.insertBefore(document.createElement('span'), right);
+				var leftText = left.appendChild(document.createTextNode(''));
+
+				left.className = 'closest';
+				//left.style.backgroundColor = 'cyan';
+				//right.style.backgroundColor = 'red';
+
+				while (index < clusters.length) {
+					var clusterLength = Math.min(delta, clusters.length - index);
+					var fragment = clusters.substr(index, clusterLength).toString();
+					var length = fragment.length;
+
+					leftText.appendData(fragment);
+					rightText.deleteData(0, length);
+
+					index += delta;
+					width = left.offsetWidth;
+					var lines = left.getClientRects().length;
+
+					if (width >= pixels || lines >= 2) {
+						if (phase == 2 || width == pixels) {
+							if (lines >= 2) {
+								index -= 2;
+							}
+							else {
+								index -= Math.abs(widthp - pixels) <= Math.abs(width - pixels) ? 1 : 0;
+							}
+							break;
+						}
+
+						index -= delta;
+						leftText.deleteData(
+							leftText.nodeValue.length - length, length);
+						rightText.insertData(0, fragment);
+						if (phase == 1) {
+							if (delta > 2) {
+								delta = Math.max(1, delta >> 1);
+							}
+							else {
+								delta = 1;
+								phase = 2;
+							}
+						}
+						else {
+							phase = 1;
+							delta = Math.max(1, delta >> 1);
+						}
+						continue;
+					}
+
+					widthp = width;
+					if (phase == 0) {
+						delta <<= 1;
+					}
+				}
+			}
+
+			node.parentNode.removeChild(node);
+			n.col = clusters.rawIndexAt(minmax(0, index, clusters.length));
+			return n;
 		},
 
 		// setter
@@ -2387,44 +2492,45 @@ Wasavi.Editor.prototype = new function () {
 				totalLength = next;
 			}
 
+			this.invalidateUnicodeCache();
+
 			return arg;
 		},
 		overwriteChars: function (arg, text) {
 			fixLineTail(this.elm.childNodes[arg.row]);
+			text = Unistring(text);
 
 			var iter = document.createNodeIterator(
 				this.elm.childNodes[arg.row], window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
 			var node;
-			var textOffset = 0;
-			var rowTextLength = this.rows(arg).length;
 
-			while (textOffset < text.length && (node = iter.nextNode())) {
-				var next = totalLength + node.nodeValue.length;
+			while (text.length && (node = iter.nextNode())) {
+				var next = totalLength + node.length;
 				if (!(totalLength <= arg.col && arg.col < next)) {
 					totalLength = next;
 					continue;
 				}
 
-				var nodeValueOffset = Math.max(arg.col - totalLength, 0);
-				var overwriteCount = 0;
-				if (next >= rowTextLength) {
-					overwriteCount = text.length - textOffset;
-				}
-				else {
-					overwriteCount = Math.min(
-						node.nodeValue.length - nodeValueOffset, text.length - textOffset);
-				}
+				var nodeText = Unistring(node.nodeValue);
+				var nodeUTF16Offset = Math.max(arg.col - totalLength, 0);
+				var nodeClusterOffset = nodeText.getClusterIndexFromUTF16Index(nodeUTF16Offset);
+				var overwriteClusterCount = next >= this.rows(arg).length ?
+					text.length :
+					Math.min(nodeText.length - nodeClusterOffset, text.length);
+				var overwriting = text.substr(0, overwriteClusterCount);
 
-				node.nodeValue =
-					node.nodeValue.substring(0, nodeValueOffset) +
-					text.substring(textOffset, overwriteCount) +
-					node.nodeValue.substring(nodeValueOffset + overwriteCount);
-				arg.col += overwriteCount;
-				textOffset += overwriteCount;
-				totalLength = next;
+				node.nodeValue = Unistring('')
+					.append(nodeText.substring(0, nodeClusterOffset))
+					.append(overwriting)
+					.append(nodeText.substring(nodeClusterOffset + overwriteClusterCount))
+					.toString();
+				arg.col += overwriting.toString().length;
+				text = text.substr(overwriteClusterCount);
+				totalLength += node.length;
 			}
 
+			this.invalidateUnicodeCache();
 			fixLineTail(this.elm.childNodes[arg.row]);
 
 			return arg;
@@ -2618,76 +2724,94 @@ loop:			while (node) {
 				}
 			}
 
+			this.invalidateUnicodeCache();
+
 			return currentIndents;
 		},
-		deleteRange: function () {
-			if (this.isLineOrientSelection) {
-				return this.deleteRangeRows.apply(this, arguments);
-			}
-			var args = toArray(arguments);
-			var func = popLastArg(args);
-			var r = select.apply(this, args);
-			var content = r.r.toString();
-			var result = content.length;
-			func && func(content, r.r.cloneContents());
+		deleteRange: (function () {
+			function deleteCharwise (r, func) {
+				var content = r.r.toString();
+				var result = content.length;
 
-			if (r.s.row == r.e.row) {
-				r.r.deleteContents();
-				this.elm.childNodes[r.s.row].normalize();
-			}
-			else {
-				var r2 = document.createRange();
-				setRange.call(this, r2, r.s);
-				r2.setEndAfter(this.elm.childNodes[r.s.row].lastChild);
-				r2.deleteContents();
-
-				setRange.call(this, r2, r.e);
-				r2.setEndAfter(this.elm.childNodes[r.e.row].lastChild);
-				this.elm.childNodes[r.s.row].appendChild(r2.extractContents());
-				this.elm.childNodes[r.s.row].normalize();
-
-				if (r.e.row - r.s.row >= 1) {
-					r2.setStartBefore(this.elm.childNodes[r.s.row + 1]);
-					r2.setEndAfter(this.elm.childNodes[r.e.row]);
+				if (result == 0) {
+					return result;
+				}
+				if (func) {
+					func(content, r.r.cloneContents());
+				}
+				if (r.s.row == r.e.row) {
+					r.r.deleteContents();
+					this.elm.childNodes[r.s.row].normalize();
+				}
+				else {
+					var r2 = document.createRange();
+					setRange.call(this, r2, r.s);
+					r2.setEndAfter(this.elm.childNodes[r.s.row].lastChild);
 					r2.deleteContents();
+
+					setRange.call(this, r2, r.e);
+					r2.setEndAfter(this.elm.childNodes[r.e.row].lastChild);
+					this.elm.childNodes[r.s.row].appendChild(r2.extractContents());
+					this.elm.childNodes[r.s.row].normalize();
+
+					if (r.e.row - r.s.row >= 1) {
+						r2.setStartBefore(this.elm.childNodes[r.s.row + 1]);
+						r2.setEndAfter(this.elm.childNodes[r.e.row]);
+						r2.deleteContents();
+					}
+				}
+				return result;
+			}
+			function deleteLinewise (r, func) {
+				var content = r.r.toString();
+				var result = r.e.row - r.s.row + 1;
+
+				if (func) {
+					func(content, r.r.cloneContents());
+				}
+				r.r.deleteContents();
+				if (this.elm.childNodes.length == 0) {
+					this.elm
+						.appendChild(document.createElement('div'))
+						.appendChild(document.createTextNode('\n'));
+				}
+				if (r.s.row >= this.elm.childNodes.length) {
+					r.s.row = this.elm.childNodes.length - 1;
+				}
+				return result;
+			}
+			return function deleteRange () {
+				var args = toArray(arguments);
+				var func = popLastArg(args);
+				var result, rangeInfo;
+
+				if (this.isLineOrientSelection) {
+					rangeInfo = selectRows.apply(this, args);
+					result = deleteLinewise.call(this, rangeInfo, func);
+				}
+				else {
+					rangeInfo = select.apply(this, args);
+					result = deleteCharwise.call(this, rangeInfo, func);
 				}
 
-			}
-			this.selectionStart = r.s;
-			this.selectionEnd = r.s;
+				this.selectionStart = rangeInfo.s;
+				this.selectionEnd = rangeInfo.s;
+				this.invalidateUnicodeCache();
 
-			return result;
-		},
-		deleteRangeRows: function () {
-			var args = toArray(arguments);
-			var func = popLastArg(args);
-			var r = selectRows.apply(this, args);
-			var content = r.r.toString();
-			var result = r.e.row - r.s.row + 1;
-			func && func(content, r.r.cloneContents());
-			r.r.deleteContents();
-			if (this.elm.childNodes.length == 0) {
-				this.elm
-					.appendChild(document.createElement('div'))
-					.appendChild(document.createTextNode('\n'));
-			}
-			if (r.s.row >= this.elm.childNodes.length) {
-				r.s.row = this.elm.childNodes.length - 1;
-			}
-			this.selectionStart = r.s;
-			this.selectionEnd = r.s;
-
-			return result;
-		},
-		selectRows: function (count) {
+				return result;
+			};
+		})(),
+		selectRowsLinewise: function (count) {
 			var s = this.selectionStart;
 			var e = new Wasavi.Position(
-				Math.min(this.selectionEndRow + count - 1,
-				this.elm.childNodes.length - 1), 0);
+				Math.min(
+					this.selectionEndRow + count - 1,
+					this.elm.childNodes.length - 1),
+				0);
+			this.isLineOrientSelection = true;
 			var r = selectRows.call(this, s, e);
 			this.selectionStart = r.s;
 			this.selectionEnd = r.e;
-			this.isLineOrientSelection = true;
 			return r.e.row - r.s.row + 1;
 		},
 		divideLine: function (n) {
@@ -2719,6 +2843,7 @@ loop:			while (node) {
 			n.col = 0;
 			this.selectionStart = n;
 			this.selectionEnd = n;
+			this.invalidateUnicodeCache();
 		},
 		extendSelectionTo: function (n) {
 			var s = this.selectionStart;
@@ -2766,17 +2891,15 @@ loop:			while (node) {
 			var result = r.toString().length;
 			return result;
 		},
-		emphasis: function (s, e, className) {
-			return typeof e == 'number' ?
-				this.emphasis_p_length(s, e, className) :
-				this.emphasis_p_p(s, e, className);
-		},
-		emphasis_p_length: function (s, length, className) {
+		emphasis: function (s, length, className) {
 			if (typeof s == 'number') {
 				s = this.linearPositionToBinaryPosition(s);
 			}
 			else {
 				s || (s = this.selectionStart);
+			}
+			if (typeof length != 'number') {
+				throw new Error('emphasis: length is not a number');
 			}
 
 			var isInRange = false;
@@ -2826,53 +2949,6 @@ whole:
 						}
 					}
 				}
-			}
-
-			return result;
-		},
-		emphasis_p_p: function (s, e, className) {
-			s || (s = this.selectionStart);
-			e || (e = this.selectionEnd);
-			className || (className = EMPHASIS_CLASS);
-
-			if (s.gt(e)) {
-				var t = s; s = e; e = t;
-			}
-
-			var result = [];
-			var r = document.createRange();
-			var f = document.createDocumentFragment();
-			var snode = this.elm.childNodes[s.row];
-			var enode = this.elm.childNodes[e.row];
-			r.setStart(snode.firstChild, s.col);
-			r.setEnd(enode.firstChild, e.col);
-			f.appendChild(r.extractContents());
-
-			function createSpan (content) {
-				var span = document.createElement('span');
-				span.className = className;
-				span.textContent = content || '';
-				result.push(span);
-				return span;
-			}
-
-			if (f.childNodes.length >= 2) {
-				snode.appendChild(createSpan(f.firstChild.textContent));
-				enode.insertBefore(createSpan(f.lastChild.textContent), enode.firstChild);
-				f.removeChild(f.firstChild);
-				f.removeChild(f.lastChild);
-				if (f.childNodes.length) {
-					for (var i = 0, goal = f.childNodes.length; i < goal; i++) {
-						f.childNodes[i].replaceChild(
-							createSpan(f.childNodes[i].textContent), f.childNodes[i].firstChild);
-					}
-					r.insertNode(f);
-				}
-			}
-			else {
-				var span = createSpan();
-				span.appendChild(f);
-				r.insertNode(span);
 			}
 
 			return result;
@@ -3197,14 +3273,24 @@ Wasavi.InputHandler.prototype = {
 	},
 	setStartPosition: function (pos) {
 		var p = pos.clone();
-		p.col--;
+		if (p.row == 0 && p.col == 0) {
+			p.col--;
+		}
+		else {
+			p = this.app.buffer.leftClusterPos(p);
+		}
 		this.app.marks.setInputOriginMark(p);
 	},
 	getStartPosition: function () {
 		var p = this.app.marks.getInputOriginMark();
 		if (p) {
 			p = p.clone();
-			p.col++;
+			if (p.col < 0) {
+				p.col = 0;
+			}
+			else {
+				p = this.app.buffer.rightClusterPos(p);
+			}
 		}
 		return p;
 	},

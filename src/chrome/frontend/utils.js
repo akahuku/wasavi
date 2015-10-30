@@ -232,14 +232,6 @@ function emptyNodeContents (node) {
 	r.selectNodeContents(node);
 	r.deleteContents();
 }
-function insertToLineInput (t, s) {
-	var ss = t.selectionStart;
-	var se = t.selectionEnd;
-	s = toVisibleControl(s);
-	t.value = t.value.substring(0, ss) + s + t.value.substring(se);
-	t.selectionStart = ss + s.length;
-	t.selectionEnd = t.selectionStart;
-}
 function _ () {
 	var args = toArray(arguments);
 	var format = args.shift();

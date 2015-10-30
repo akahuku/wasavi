@@ -412,6 +412,7 @@
 					'frontend/extension_wrapper.js',
 					'frontend/init.js',
 					'frontend/utils.js',
+					'frontend/unistring.js',
 					'frontend/unicode_utils.js',
 					'frontend/qeema.js',
 					'frontend/classes.js',

@@ -1805,8 +1805,8 @@ var cache = {};
 				// delete
 				t.isLineOrientSelection = true;
 				t.setSelectionRange(new Wasavi.Position(r[0], 0));
-				t.selectRows(rows);
-				var content = t.getSelectionRows();
+				t.selectRowsLinewise(rows);
+				var content = t.getSelectionLinewise();
 				app.edit.deleteSelection();
 				t.isLineOrientSelection = false;
 
@@ -2132,7 +2132,7 @@ var cache = {};
 		app.editLogger.open('ex+sort', function () {
 			t.isLineOrientSelection = true;
 			t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-			t.selectRows(worker.rows);
+			t.selectRowsLinewise(worker.rows);
 			app.edit.deleteSelection();
 			t.isLineOrientSelection = false;
 

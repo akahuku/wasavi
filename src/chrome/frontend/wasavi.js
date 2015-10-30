@@ -949,6 +949,83 @@ function ExCommandExecutor (app) {
 		}
 	);
 }
+function Buffer () {
+	Wasavi.Editor.apply(this, arguments);
+}
+Buffer.prototype = Object.create(Wasavi.Editor.prototype, {
+	deleteRangeEx: {value: function (start, end, foldedMarkRegisterer, callback) {
+		var args = [];
+		var that = this;
+		start && args.push(start);
+		end   && args.push(end);
+		args.push(function (content, fragment) {
+			var deleteMarks = fragment.querySelectorAll('span.' + MARK_CLASS);
+			var deleteMarksDest = {};
+			for (var i = 0; i < deleteMarks.length; i++) {
+				var name = deleteMarks[i].getAttribute('data-index');
+				var position = marks.get(name);
+				if (position) {
+					deleteMarksDest[name] = position.clone();
+				}
+			}
+			if (!that.isLineOrientSelection) {
+				foldedMarkRegisterer(fragment);
+			}
+			if (callback) {
+				callback(content, fragment, deleteMarksDest);
+			}
+		});
+		return this.deleteRange.apply(this, args);
+	}},
+	emphasisBound: {value: (function () {
+		function createSpan (content) {
+			var span = document.createElement('span');
+			span.className = BOUND_CLASS;
+			span.textContent = content || '';
+			return span;
+		}
+		return function emphasisBound (s, e) {
+			s || (s = this.selectionStart);
+			e || (e = this.selectionEnd);
+
+			if (s.gt(e)) {
+				var t = s; s = e; e = t;
+			}
+
+			var r = document.createRange();
+			var f = document.createDocumentFragment();
+			var snode = this.elm.childNodes[s.row];
+			var enode = this.elm.childNodes[e.row];
+			r.setStart(snode.firstChild, s.col);
+			r.setEnd(enode.firstChild, e.col);
+			f.appendChild(r.extractContents());
+
+			if (f.childNodes.length >= 2) {
+				snode.appendChild(createSpan(f.firstChild.textContent));
+				enode.insertBefore(createSpan(f.lastChild.textContent), enode.firstChild);
+				f.removeChild(f.firstChild);
+				f.removeChild(f.lastChild);
+				if (f.childNodes.length) {
+					for (var i = 0, goal = f.childNodes.length; i < goal; i++) {
+						f.childNodes[i].replaceChild(
+							createSpan(f.childNodes[i].textContent),
+							f.childNodes[i].firstChild);
+					}
+					r.insertNode(f);
+				}
+			}
+			else {
+				var span = createSpan();
+				span.appendChild(f);
+				r.insertNode(span);
+			}
+		};
+	})()},
+	unEmphasisBound: {value: function (start, end) {
+		return this.unEmphasis(BOUND_CLASS, start, end);
+	}}
+});
+Buffer.prototype.constructor = Wasavi.Editor;
 
 diag('defining functions');
 
@@ -1174,7 +1251,7 @@ function install (x, req) {
 	var focusHolder = $('wasavi_focus_holder');
 
 	// buffer
-	buffer = new Wasavi.Editor($('wasavi_editor'));
+	buffer = new Buffer($('wasavi_editor'));
 
 	// text length scaler
 	var textspan = $('wasavi_singleline_scaler');
@@ -1579,6 +1656,19 @@ function showLineInput (prefix, value, curpos) {
 	value || (value = '');
 	$('wasavi_footer_input_indicator').textContent = prefix;
 	input.value = value;
+	lineInputInfo = {
+		input: input,
+		clusters: null,
+		getClusters: function () {
+			if (!this.clusters) {
+				this.clusters = Unistring(this.input.value);
+			}
+			return this.clusters;
+		},
+		invalidate: function () {
+			this.clusters = null;
+		}
+	};
 	if (isNumber(curpos)) {
 		input.selectionStart = input.selectionEnd = curpos;
 	}
@@ -1598,7 +1688,7 @@ function refreshIdealWidthPixels () {
 
 	var curRectTop = buffer.rowNodes(n).getBoundingClientRect();
 	var curRect = buffer.charRectAt(n);
-	idealDenotativeWidthPixels = curRect.left - curRectTop.left + parseInt((curRect.right - curRect.left) / 2);
+	idealDenotativeWidthPixels = curRect.left - curRectTop.left;
 }
 
 // for flag request
@@ -1831,7 +1921,7 @@ function processAutoDivide (e) {
 
 		var n = buffer.selectionStart;
 		while (n.col > 0) {
-			var left = buffer.leftPos(n);
+			var left = buffer.leftClusterPos(n);
 			if (!spc('S').test(buffer.charAt(left))) {
 				break;
 			}
@@ -1853,7 +1943,7 @@ function processAutoDivide (e) {
 	if (prepared) {
 		buffer.setSelectionRange(marks.getPrivate(tmpMark));
 		marks.setPrivate(tmpMark);
-		inputHandler.inputHeadPosition = buffer.leftPos(buffer.selectionStart);
+		inputHandler.inputHeadPosition = buffer.leftClusterPos(buffer.selectionStart);
 		inputHandler.text = inputStateSaved.text;
 		inputHandler.textFragment = inputStateSaved.textFragment;
 		inputHandler.updateText(e);
@@ -1928,7 +2018,6 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 		if (canContinue !== false) {
 			isEditCompleted && doEditComplete();
 			completeSelectionRange(ss, se);
-
 			buffer.isLineOrientSelection =
 			isEditCompleted =
 			isVerticalMotion =
@@ -2094,7 +2183,7 @@ function extendRightIfInclusiveMotion () {
 	||  prefixInput.motion == ',' && lastHorzFindCommand.direction == -1
 	||  'eEft%'.indexOf(prefixInput.motion) >= 0) {
 		if (!buffer.isNewline(buffer.selectionEnd)) {
-			buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
+			buffer.selectionEnd = buffer.rightClusterPos(buffer.selectionEnd);
 		}
 	}
 }
@@ -2121,7 +2210,7 @@ function adjustDeleteOperationPos (isLineOrient, actualCount) {
 		}
 
 		actualCount--;
-		buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
+		buffer.selectionEnd = buffer.leftClusterPos(buffer.selectionEnd);
 	}
 	return {
 		isLineOrient:isLineOrient,
@@ -2195,6 +2284,16 @@ function isAlias (c, op) {
 function isMotionErrored () {
 	return requestedState.message
 		|| requestedState.notice && requestedState.notice.bell;
+}
+function insertToLineInput (info, s) {
+	var t = info.input;
+	var ss = t.selectionStart;
+	var se = t.selectionEnd;
+	s = toVisibleControl(s);
+	t.value = t.value.substring(0, ss) + s + t.value.substring(se);
+	t.selectionStart = ss + s.length;
+	t.selectionEnd = t.selectionStart;
+	info.invalidate();
 }
 
 // for file system
@@ -2271,8 +2370,7 @@ function ensureBoundPosition (p1, p2, mode) {
 	}
 	switch (mode || inputMode) {
 	case 'bound':
-		p2 = p2.clone();
-		p2.col++;
+		p2 = buffer.rightClusterPos(p2.clone());
 		break;
 	case 'bound_line':
 		p1 = p1.clone();
@@ -2286,7 +2384,7 @@ function ensureBoundPosition (p1, p2, mode) {
 function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 	var p = ensureBoundPosition(marks.getPrivate('<'), marks.getPrivate('>'));
 	var act = p[1].row - p[0].row + 1;
-	buffer.unEmphasis(BOUND_CLASS);
+	buffer.unEmphasisBound();
 
 	if (callback1) {
 		buffer.setSelectionRange(p[0], p[1]);
@@ -2324,11 +2422,11 @@ function extendBound (p, mode) {
 			setBound(p, anchor, mode, true);
 		}
 		else if (p.lt(focus)) { // shrink
-			buffer.unEmphasis(BOUND_CLASS, p.row, focus.row);
+			buffer.unEmphasisBound(p.row, focus.row);
 			setBound(new Wasavi.Position(p.row, 0), p, mode);
 		}
 		else if (p.gt(focus)) { // enlarge
-			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
+			buffer.unEmphasisBound(focus.row, focus.row);
 			setBound(new Wasavi.Position(focus.row, 0), p, mode);
 		}
 	}
@@ -2337,11 +2435,11 @@ function extendBound (p, mode) {
 			setBound(p, anchor, mode, true);
 		}
 		else if (p.gt(focus)) { // shrink
-			buffer.unEmphasis(BOUND_CLASS, focus.row, p.row);
+			buffer.unEmphasisBound(focus.row, p.row);
 			setBound(p, new Wasavi.Position(p.row, buffer.rows(p).length - 1), mode);
 		}
 		else if (p.lt(focus)) { // enlarge
-			buffer.unEmphasis(BOUND_CLASS, focus.row, focus.row);
+			buffer.unEmphasisBound(focus.row, focus.row);
 			setBound(p, new Wasavi.Position(focus.row, buffer.rows(focus).length - 1), mode);
 		}
 	}
@@ -2793,22 +2891,6 @@ function getCurrentViewPositionIndices () {
 
 	return result;
 }
-function getNextProp (n) {
-	var ikw = config.vars.iskeyword;
-	var p = buffer.charClassAt(n, true, ikw);
-	var sid = p & ~0xff;
-	var type = p & 0xff;
-	switch (sid) {
-	// special method for common script (0) and inherited script (3)
-	case 0: case 3:
-		if (type != 0 && n.col > 0) {
-			var p2 = buffer.charClassAt(buffer.leftPos(n), true, ikw);
-			p = (p2 & ~0xff) | type;
-		}
-		break;
-	}
-	return p;
-}
 
 // setters
 function setLocalStorage (keyName, value) {
@@ -2878,8 +2960,8 @@ function setInputMode (newInputMode, opts) {
 }
 function setBound (p1, p2, mode, fullRefresh) {
 	var p = ensureBoundPosition(p1, p2, mode);
-	fullRefresh && buffer.unEmphasis(BOUND_CLASS);
-	buffer.emphasis(p[0], p[1], BOUND_CLASS);
+	fullRefresh && buffer.unEmphasisBound();
+	buffer.emphasisBound(p[0], p[1]);
 }
 function setTabStop (ts) {
 	var editor = $('wasavi_editor');
@@ -2906,8 +2988,15 @@ function setTabStop (ts) {
 function motionLeft (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionStart;
-	c != '' && n.col <= 0 && requestNotice({silent:_('Top of line.')});
-	n.col = Math.max(n.col - count, 0);
+	var clusters = buffer.getGraphemeClusters(n);
+	var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
+	if (c != '' && clusterIndex <= 0) {
+		requestNotice({silent:_('Top of line.')});
+	}
+	if (clusters.length) {
+		n.col = clusters.rawIndexAt(Math.max(
+			clusterIndex - count, 0));
+	}
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
@@ -2916,10 +3005,15 @@ function motionLeft (c, count) {
 function motionRight (c, count) {
 	count || (count = 1);
 	var n = buffer.selectionEnd;
-	var length = buffer.rows(n).length;
-	var offset = isEditing() ? 0 : 1;
-	c != '' && n.col >= length - offset && requestNotice({silent:_('Tail of line.')});
-	n.col = Math.min(n.col + count, length);
+	var clusters = buffer.getGraphemeClusters(n);
+	var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
+	if (c != '' && clusterIndex >= clusters.length - (isEditing() ? 0 : 1)) {
+		requestNotice({silent:_('Tail of line.')});
+	}
+	if (clusters.length) {
+		n.col = clusters.rawIndexAt(Math.min(
+			clusterIndex + count, clusters.length));
+	}
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
@@ -2940,230 +3034,408 @@ function motionLineEnd (c) {
 	return true;
 }
 function motionLineStartDenotative (c, realTop) {
-	var n = buffer.getLineTopDenotativeOffset(buffer.selectionStart);
-	if (!realTop) {
-		while (!buffer.isEndOfText(n) && !buffer.isNewline(n) && spc('S').test(buffer.charAt(n))) {
-			n.col++;
+	var n = buffer.selectionStart;
+	var line = buffer.getGraphemeClusters(n);
+	var index = line.getClusterIndexFromUTF16Index(n.col);
+	var initialIndex = index;
+	var curRect = buffer.charRectAt(n, line.rawStringAt(index).length);
+	while (index > 0) {
+		index--;
+		n.col = line.rawIndexAt(index);
+		var newRect = buffer.charRectAt(n, line.rawStringAt(index).length);
+		if (newRect.top < curRect.top) {
+			index++;
+			break;
 		}
 	}
+	if (!realTop) {
+		while (index < initialIndex && spc('S').test(line.charAt(index))) {
+			index++;
+		}
+	}
+	n.col = line.rawIndexAt(index);
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineEndDenotative (c) {
-	var n = buffer.getLineTailDenotativeOffset(buffer.selectionEnd);
+	var n = buffer.selectionEnd;
+	var line = buffer.getGraphemeClusters(n);
+	var index = line.getClusterIndexFromUTF16Index(n.col);
+	var curRect = buffer.charRectAt(n, line.rawStringAt(index).length);
+	while (index < line.length) {
+		index++;
+		n.col = line.rawIndexAt(index);
+		var newRect = buffer.charRectAt(n, line.rawStringAt(index).length);
+		if (newRect.top > curRect.top) {
+			index--;
+			break;
+		}
+	}
+	n.col = line.rawIndexAt(index);
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
 	return true;
 }
-function motionNextWord (c, count, bigWord, wordEnd) {
-	var n = buffer.selectionEnd;
-	var ikw = config.vars.iskeyword;
-	count || (count = 1);
-	n.col >= buffer.rows(n).length - 1 && n.row >= buffer.rowLength - 1 && requestNotice({silent:_('Tail of text.')});
-
-	function doBigWord () {
+var motionNextWord = (function () {
+	function doBigWord (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = words.wordIndexOf(n.col);
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true, ikw);
-			var foundSpace = prop === 0;
-
 			while (!buffer.isEndOfText(n)) {
-				if (buffer.isNewline(n)) {
+				if (wordIndex >= words.length || buffer.isNewline(n)) {
 					if (!prefixInput.isEmptyOperation && i + 1 == count) {
+						n = buffer.getLineTailOffset(n);
 						break;
 					}
-					var tmp = buffer.rightPos(n);
-					if (buffer.isNewline(tmp)) {
-						n = tmp;
+					n = buffer.rightPos(buffer.getLineTailOffset(n));
+					if (buffer.isEndOfText(n)) {
+						break;
+					}
+					n.col = -1;
+					words = buffer.getWords(n);
+					wordIndex = 0;
+					continue;
+				}
+
+				if (words[wordIndex].type == Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index + words[wordIndex].length);
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol > n.col) {
+						n.col = newcol;
+						break;
+					}
+				}
+				else if (wordIndex == 0 && words[wordIndex].type != Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index);
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol > n.col) {
+						n.col = newcol;
 						break;
 					}
 				}
 
-				n = buffer.rightPos(n);
-
-				var nextprop = getNextProp(n);
-				if (nextprop === 0 && !foundSpace) {
-					foundSpace = true;
-				}
-				else if (nextprop !== 0 && foundSpace) {
-					break;
-				}
+				wordIndex++;
 			}
 		}
+		return n;
 	}
 
-	function doWord () {
+	function doWord (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = words.wordIndexOf(n.col);
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true, ikw);
-
 			while (!buffer.isEndOfText(n)) {
-				if (buffer.isNewline(n)) {
+				if (wordIndex >= words.length || buffer.isNewline(n)) {
 					if (!prefixInput.isEmptyOperation && i + 1 == count) {
+						n = buffer.getLineTailOffset(n);
 						break;
 					}
-					var tmp = buffer.rightPos(n);
-					if (buffer.isNewline(tmp)) {
-						n = tmp;
+					n = buffer.rightPos(buffer.getLineTailOffset(n));
+					if (buffer.isEndOfText(n)) {
 						break;
 					}
+					n.col = -1;
+					words = buffer.getWords(n);
+					wordIndex = 0;
+					continue;
 				}
 
-				n = buffer.rightPos(n);
+				if (words[wordIndex].type == Unistring.WBP.Space) {
+					wordIndex++;
+					continue;
+				}
 
-				var nextprop = getNextProp(n);
-				if (prop !== nextprop && nextprop !== 0) {
+				var clusters = buffer.getGraphemeClusters(n);
+				var lastIndex = clusters.getClusterIndexFromUTF16Index(
+					words[wordIndex].index);
+				var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+				if (newcol > n.col) {
+					n.col = newcol;
 					break;
 				}
-				prop = nextprop;
+
+				wordIndex++;
 			}
 		}
+		return n;
 	}
 
-	function doBigWordEnd () {
+	function doBigWordEnd (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = words.wordIndexOf(n.col);
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true, ikw);
-			var startn = n;
-
 			while (!buffer.isEndOfText(n)) {
-				var prevn = n;
-				n = buffer.rightPos(n);
-
-				var nextprop = getNextProp(n);
-				if (prop !== nextprop && nextprop === 0 && buffer.getSelection(startn, n).length > 1) {
-					n = prevn;
-					break;
+				if (wordIndex >= words.length || buffer.isNewline(n)) {
+					n = buffer.rightPos(buffer.getLineTailOffset(n));
+					if (buffer.isEndOfText(n)) {
+						break;
+					}
+					n.col = 0;
+					words = buffer.getWords(n);
+					wordIndex = 0;
+					continue;
 				}
 
-				if (buffer.isNewline(n)) {
-					var tmp = buffer.rightPos(n);
-					if (buffer.isNewline(tmp)) {
-						n = tmp;
+				if (wordIndex > 0 && words[wordIndex].type == Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index) - 1;
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol > n.col) {
+						n.col = newcol;
+						break;
+					}
+				}
+				else if (wordIndex == words.length - 1 && words[wordIndex].type != Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index + words[wordIndex].length) - 1;
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol > n.col) {
+						n.col = newcol;
 						break;
 					}
 				}
 
-				prop = nextprop;
+				wordIndex++;
 			}
 		}
+		return n;
 	}
 
-	function doWordEnd () {
+	function doWordEnd (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = words.wordIndexOf(n.col);
 		for (var i = 0; i < count; i++) {
-			var prop = buffer.charClassAt(n, true, ikw);
-			var startn = n;
-
 			while (!buffer.isEndOfText(n)) {
-				var prevn = n;
-				n = buffer.rightPos(n);
+				if (wordIndex >= words.length || buffer.isNewline(n)) {
+					n = buffer.rightPos(buffer.getLineTailOffset(n));
+					if (buffer.isEndOfText(n)) {
+						break;
+					}
+					n.col = 0;
+					words = buffer.getWords(n);
+					wordIndex = 0;
+					continue;
+				}
 
-				var nextprop = getNextProp(n);
-				if (prop !== nextprop && prop !== 0 && buffer.getSelection(startn, n).length > 1) {
-					n = prevn;
+				if (words[wordIndex].type == Unistring.WBP.Space) {
+					wordIndex++;
+					continue;
+				}
+
+				var clusters = buffer.getGraphemeClusters(n);
+				var lastIndex = clusters.getClusterIndexFromUTF16Index(
+					words[wordIndex].index +
+					words[wordIndex].length) - 1;
+				var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+				if (newcol > n.col) {
+					n.col = newcol;
 					break;
 				}
 
-				if (buffer.isNewline(n)) {
-					var tmp = buffer.rightPos(n);
-					if (buffer.isNewline(tmp)) {
-						n = tmp;
+				wordIndex++;
+			}
+		}
+		return n;
+	}
+
+	return function motionNextWord (c, count, bigWord, wordEnd) {
+		var n = buffer.selectionEnd;
+		count || (count = 1);
+		if (n.col >= buffer.rows(n).length - 1 && n.row >= buffer.rowLength - 1) {
+			requestNotice({silent:_('Tail of text.')});
+		}
+
+		if (prefixInput.isEmptyOperation || !buffer.isNewline(n)) {
+			if (bigWord) {
+				n = (wordEnd ? doBigWordEnd : doBigWord)(n, count);
+			}
+			else {
+				n = (wordEnd ? doWordEnd : doWord)(n, count);
+			}
+		}
+
+		buffer.selectionEnd = n;
+		prefixInput.motion = c;
+		invalidateIdealWidthPixels();
+		return true;
+	};
+})();
+var motionPrevWord = (function () {
+	function doBigWord (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = getWordIndex(words, n);
+		for (var i = 0; i < count; i++) {
+			while (n.row > 0 || n.col > 0) {
+				if (wordIndex < 0) {
+					if (n.row == 0) {
+						n.col = 0;
+						break;
+					}
+					n.row--;
+					n.col = buffer.rows(n).length;
+					words = buffer.getWords(n);
+					wordIndex = words.length - 1;
+					continue;
+				}
+				if (words[wordIndex].type == Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index + words[wordIndex].length);
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol < n.col) {
+						n.col = newcol;
+						break;
+					}
+				}
+				else if (wordIndex == 0 && words[wordIndex].type != Unistring.WBP.Space) {
+					var clusters = buffer.getGraphemeClusters(n);
+					var lastIndex = clusters.getClusterIndexFromUTF16Index(
+						words[wordIndex].index);
+					var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+					if (newcol < n.col) {
+						n.col = newcol;
 						break;
 					}
 				}
 
-				prop = nextprop;
+				wordIndex--;
 			}
 		}
+		return n;
 	}
+	function doWord (n, count) {
+		var words = buffer.getWords(n);
+		var wordIndex = getWordIndex(words, n);
+		for (var i = 0; i < count; i++) {
+			while (n.row > 0 || n.col > 0) {
+				if (wordIndex < 0) {
+					if (n.row == 0) {
+						n.col = 0;
+						break;
+					}
+					n.row--;
+					n.col = buffer.rows(n).length;
+					words = buffer.getWords(n);
+					wordIndex = words.length - 1;
+					continue;
+				}
 
-	if (prefixInput.isEmptyOperation || !buffer.isNewline(n)) {
-		if (bigWord) {
-			wordEnd ? doBigWordEnd() : doBigWord();
+				if (words[wordIndex].type == Unistring.WBP.Space) {
+					wordIndex--;
+					continue;
+				}
+
+				var clusters = buffer.getGraphemeClusters(n);
+				var lastIndex = clusters.getClusterIndexFromUTF16Index(
+					words[wordIndex].index);
+				var newcol = clusters.rawIndexAt(Math.max(0, lastIndex));
+
+				if (newcol < n.col) {
+					n.col = newcol;
+					break;
+				}
+
+				wordIndex--;
+			}
+		}
+		return n;
+	}
+	function doEditingWord (n, specialStops) {
+		var words = buffer.getWords(n);
+		insertSpecialStops(n, words, specialStops);
+		var wordIndex = getWordIndex(words, n);
+		if (n.col == 0) {
+			if (n.row) {
+				n.row--;
+				n.col = buffer.rows(n).length;
+			}
 		}
 		else {
-			wordEnd ? doWordEnd() : doWord();
+			var clusters = buffer.getGraphemeClusters(n);
+			do {
+				var type = words[wordIndex].type;
+				n.col = words[wordIndex].index;
+			} while (wordIndex-- > 0 && type == Unistring.WBP.Space && n.col > 0);
 		}
+		return n;
 	}
-
-	buffer.selectionEnd = n;
-	prefixInput.motion = c;
-	invalidateIdealWidthPixels();
-	return true;
-}
-function motionPrevWord (c, count, bigWord, specialStops) {
-	var n = buffer.selectionStart;
-	var ikw = config.vars.iskeyword;
-	count || (count = 1);
-	n.col <= 0 && n.row <= 0 && requestNotice({silent:_('Top of text.')});
-
-	function isStopPosition (stop) {return stop.eq(n);}
-
-	if (specialStops && !(specialStops instanceof Array)) {
-		specialStops = [specialStops];
+	function getWordIndex (words, n) {
+		return buffer.isNewline(n) || buffer.isEndOfText(n) ?
+			words.length - 1 :
+			words.wordIndexOf(n.col);
 	}
-	if (bigWord) {
-		for (var i = 0; i < count; i++) {
-			n = buffer.leftPos(n);
-			var prop = buffer.charClassAt(n, true, ikw);
-			var nonSpaceFound = prop !== 0;
-
-			while (n.row > 0 || n.col > 0) {
-				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
-				if (specialStops && specialStops.some(isStopPosition)) {break;}
-
-				var prevn = n;
-				n = buffer.leftPos(n);
-				if (n.eq(prevn)) {break;}
-
-				var nextprop = getNextProp(n);
-				if (nextprop !== 0 && !nonSpaceFound) {
-					nonSpaceFound = true;
-				}
-				else if (nextprop === 0 && nonSpaceFound) {
-					n = prevn;
-					break;
-				}
-				prop = nextprop;
-			}
+	function insertSpecialStops (n, words, specialStops) {
+		if (!specialStops) {
+			return;
 		}
-	}
-	else {
-		for (var i = 0; i < count; i++) {
-			n = buffer.leftPos(n);
-			var prop = buffer.charClassAt(n, true, ikw);
-			var nonSpaceFound = prop !== 0;
-
-			while (n.row > 0 || n.col > 0) {
-				if (buffer.isNewline(n) && buffer.isNewline(buffer.leftPos(n))) {break;}
-				if (specialStops && specialStops.some(isStopPosition)) {break;}
-
-				var prevn = n;
-				n = buffer.leftPos(n);
-				if (n.eq(prevn)) {break;}
-
-				var nextprop = getNextProp(n);
-				if (nextprop !== 0 && !nonSpaceFound) {
-					nonSpaceFound = true;
-				}
-				else if (prop !== nextprop) {
-					n = prevn;
-					break;
-				}
-				prop = nextprop;
-			}
+		if (!(specialStops instanceof Array)) {
+			specialStops = [specialStops];
 		}
+		specialStops.forEach(function (pos) {
+			if (pos.row != n.row) return;
+
+			var index = words.wordIndexOf(pos.col);
+			if (index < 0) return;
+
+			var a = words[index];
+			if (pos.col == a.index) return;
+
+			var alength = pos.col - a.index;
+			var btext = a.text.substring(alength);
+
+			words.splice(index + 1, 0, {
+				text: btext,
+				index: a.index + alength,
+				length: btext.length,
+				type: a.type
+			});
+
+			words[index].text = words[index].text.substring(0, alength);
+			words[index].length = alength;
+		});
+		return words;
 	}
+	return function motionPrevWord (c, count, bigWord, specialStops) {
+		var n = buffer.selectionStart;
+		count || (count = 1);
+		if (n.col <= 0 && n.row <= 0) {
+			requestNotice({silent:_('Top of text.')});
+		}
 
-	buffer.selectionStart = n;
-	prefixInput.motion = c;
-	invalidateIdealWidthPixels();
-	return true;
-}
-function motionFindForward (c, count, stopBefore, continuous) {
-	var n = buffer.selectionEnd;
-	count || (count = 1);
+		if (isEditing()) {
+			n = doEditingWord(n, specialStops);
+		}
+		else if (bigWord) {
+			n = doBigWord(n, count);
+		}
+		else {
+			n = doWord(n, count);
+		}
 
+		buffer.selectionStart = n;
+		prefixInput.motion = c;
+		invalidateIdealWidthPixels();
+		return true;
+	};
+})();
+var motionFindForward = (function () {
 	function indexOfEx (line, target, start) {
 		var index = start || 0;
 		var goal = line.length;
@@ -3175,45 +3447,44 @@ function motionFindForward (c, count, stopBefore, continuous) {
 		}
 		return -1;
 	}
+	return function motionFindForward (c, count, stopBefore, continuous) {
+		var n = buffer.selectionEnd;
+		count || (count = 1);
 
-	var startn = n.clone();
-	var found = true;
-	var line = buffer.rows(n);
-	for (var i = 0; i < count; i++) {
-		var index = indexOfEx(line, c, n.col + 1);
-		if (index >= 0) {
-			n.col = index;
-			if (stopBefore
-			&&  continuous
-			&&  i == count - 1
-			&&  startn.eq(new Position(n.row, n.col - 1))) {
-				count++;
+		var startn = n.clone();
+		var found = true;
+		var line = Unistring(buffer.rows(n));
+		var index = line.getClusterIndexFromUTF16Index(n.col);
+		for (var i = 0; i < count; i++) {
+			index = indexOfEx(line, c, index + 1);
+			if (index >= 0) {
+				if (stopBefore
+				&&  continuous
+				&&  i == count - 1
+				&&  startn.eq(new Position(n.row, line.rawIndexAt(index - 1)))) {
+					count++;
+				}
+			}
+			else {
+				found = false;
+				break;
 			}
 		}
+		if (found) {
+			n.col = line.rawIndexAt(index + (stopBefore ? -1 : 0));
+			buffer.selectionEnd = n;
+		}
 		else {
-			found = false;
-			break;
+			requestNotice({silent:_('Next search target not found.')});
 		}
-	}
-	if (found) {
-		if (stopBefore) {
-			n.col--;
-		}
-		buffer.selectionEnd = n;
-	}
-	else {
-		requestNotice({silent:_('Next search target not found.')});
-	}
-	lastHorzFindCommand.direction = 1;
-	lastHorzFindCommand.letter = c;
-	lastHorzFindCommand.stopBefore = stopBefore;
-	invalidateIdealWidthPixels();
-	return true;
-}
-function motionFindBackward (c, count, stopBefore, continuous) {
-	var n = buffer.selectionStart;
-	count || (count = 1);
-
+		lastHorzFindCommand.direction = 1;
+		lastHorzFindCommand.letter = c;
+		lastHorzFindCommand.stopBefore = stopBefore;
+		invalidateIdealWidthPixels();
+		return true;
+	};
+})();
+var motionFindBackward = (function () {
 	function lastIndexOfEx (line, target, start) {
 		var index = start || 0;
 		while (index >= 0) {
@@ -3224,41 +3495,43 @@ function motionFindBackward (c, count, stopBefore, continuous) {
 		}
 		return -1;
 	}
+	return function motionFindBackward (c, count, stopBefore, continuous) {
+		var n = buffer.selectionStart;
+		count || (count = 1);
 
-	var startn = n.clone();
-	var found = true;
-	var line = buffer.rows(n);
-	for (var i = 0; i < count; i++) {
-		var index = lastIndexOfEx(line, c, n.col - 1);
-		if (index >= 0) {
-			n.col = index;
-			if (stopBefore
-			&&  continuous
-			&&  i == count - 1
-			&&  startn.eq(new Position(n.row, n.col + 1))) {
-				count++;
+		var startn = n.clone();
+		var found = true;
+		var line = Unistring(buffer.rows(n));
+		var index = line.getClusterIndexFromUTF16Index(n.col);
+		for (var i = 0; i < count; i++) {
+			index = lastIndexOfEx(line, c, index - 1);
+			if (index >= 0) {
+				if (stopBefore
+				&&  continuous
+				&&  i == count - 1
+				&&  startn.eq(new Position(n.row, line.rawIndexAt(index + 1)))) {
+					count++;
+				}
+			}
+			else {
+				found = false;
+				break;
 			}
 		}
+		if (found) {
+			n.col = line.rawIndexAt(index + (stopBefore ? 1 : 0));
+			buffer.selectionStart = n;
+		}
 		else {
-			found = false;
-			break;
+			requestNotice({silent:_('Previous search target not found.')});
 		}
-	}
-	if (found) {
-		if (stopBefore) {
-			n.col++;
-		}
-		buffer.selectionStart = n;
-	}
-	else {
-		requestNotice({silent:_('Previous search target not found.')});
-	}
-	lastHorzFindCommand.direction = -1;
-	lastHorzFindCommand.letter = c;
-	lastHorzFindCommand.stopBefore = stopBefore;
-	invalidateIdealWidthPixels();
-	return true;
-}
+		lastHorzFindCommand.direction = -1;
+		lastHorzFindCommand.letter = c;
+		lastHorzFindCommand.stopBefore = stopBefore;
+		invalidateIdealWidthPixels();
+		return true;
+	};
+})();
 function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 	var result;
 	switch (direction) {
@@ -3360,6 +3633,7 @@ function motionFindByRegexBackward (c, count, opts) {
 	function leftPos (n) {
 		if (n <= 0) return 0;
 		n--;
+		if (unicodeUtils.isHighSurrogate(text.charCodeAt(n))) {n--;}
 		if (text.charCodeAt(n) == 0x0a) {n--;}
 		return n;
 	}
@@ -3428,58 +3702,22 @@ function motionFindByRegexBackward (c, count, opts) {
 function motionUpDown (c, count, isDown) {
 	count || (count = 1);
 	refreshIdealWidthPixels();
-	var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
-	var goalWidth = idealWidthPixels;
 
+	var n;
 	if (isDown) {
+		n = buffer.selectionEnd;
 		n.row >= buffer.rowLength - 1 && requestNotice({silent:_('Tail of text.')});
 		n.row = Math.min(n.row + count, buffer.rowLength - 1);
 	}
 	else {
+		n = buffer.selectionStart;
 		n.row <= 0 && requestNotice({silent:_('Top of text.')});
 		n.row = Math.max(n.row - count, 0);
 	}
 
-	var widthp = 0;
-	var line = buffer.rows(n);
-	var goal = line.length;
-	var index = 0;
-	var delta = 1;
-	var adjusting = false;
+	n.col = 0;
+	n = buffer.getClosestOffsetToPixels(n, idealWidthPixels);
 
-	var textspan = $('wasavi_singleline_scaler');
-	var text = textspan.firstChild
-		|| textspan.appendChild(document.createTextNode(''));
-	text.nodeValue = '';
-
-	while (index < goal && !buffer.isNewline(n.row, index)) {
-		if (delta > 1 && index + delta >= goal) {
-			delta >>= 1;
-			continue;
-		}
-
-		text.appendData(line.substr(index, delta));
-		index += delta;
-		var width = textspan.offsetWidth;
-		if (width >= goalWidth) {
-			if (adjusting) {
-				index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
-				break;
-			}
-			else {
-				adjusting = true;
-				index -= delta;
-				text.deleteData(index, text.nodeValue.length - index);
-				delta = 1;
-				continue;
-			}
-		}
-
-		widthp = width;
-		if (!adjusting) delta <<= 1;
-	}
-
-	n.col = minmax(0, index, goal);
 	if (isDown) {
 		buffer.selectionEnd = n;
 	}
@@ -3497,62 +3735,71 @@ function motionUp (c, count) {
 function motionDown (c, count) {
 	return motionUpDown(c, count, true);
 }
-function motionUpDownDenotative (c, count, isDown) {
-	count || (count = 1);
-	refreshIdealWidthPixels();
-	var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
-	var overed = false;
-
+var motionUpDownDenotative = (function () {
 	function findNextTopOfWrapLine (start) {
 		var n = start.clone();
+		var clusters = buffer.getGraphemeClusters(n).clone();
+		var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
+		var cursorLength = clusters.rawStringAt(clusterIndex).length;
 
 		var foundBoundary = false;
-		var rightText = buffer.emphasis(
-			new Position(n.row, n.col + 1),
-			buffer.rows(n).length - n.col - 1, 'wrapspan')[0];
+		var right = buffer.emphasis(
+			new Position(n.row, n.col + cursorLength),
+			buffer.rows(n).length - (n.col + cursorLength),
+			'wrapspan')[0];
 
-		if (rightText && rightText.firstChild) {
-			rightText = rightText.firstChild;
-
-			var left = buffer.emphasis(n, 1, 'wrapspan')[0];
-			var leftText = left.firstChild;
-			var initialHeight = left.offsetHeight;
+		if (right && right.firstChild) {
 			var delta = 1;
-			var adjusting = false;
+			var phase = 0;
 
-			while (rightText.nodeValue.length) {
-				var length = Math.min(delta, rightText.nodeValue.length);
-				leftText.appendData(rightText.nodeValue.substr(0, length));
+			var rightText = right.firstChild;
+			var left = buffer.emphasis(n, cursorLength, 'wrapspan')[0];
+			var leftText = left.firstChild;
 
-				// over 2 lines
-				if (!adjusting && delta > 1 && left.offsetHeight > initialHeight + lineHeight) {
-					leftText.deleteData(
-						leftText.nodeValue.length - length, length);
-					delta = Math.max(1, delta >> 1);
-					continue;
-				}
+			clusters.delete(0, clusterIndex + 1);
+			//left.style.backgroundColor = 'cyan';
+			//right.style.backgroundColor = 'red';
 
-				// 2 lines
-				if (left.offsetHeight > initialHeight) {
-					if (adjusting) {
-						rightText.deleteData(0, length);
-						n.col += length;
+			while (clusters.length) {
+				var clusterLength = Math.min(delta, clusters.length);
+				var clusterFragment = clusters.substr(0, clusterLength);
+				var fragment = clusterFragment.toString();
+				var length = fragment.length;
+
+				clusters.delete(0, clusterLength);
+				leftText.appendData(fragment);
+				rightText.deleteData(0, length);
+
+				if (left.getClientRects().length >= 2) {
+					if (phase == 2) {
+						n.col += Unistring(leftText.nodeValue).delete(-1).toString().length;
 						foundBoundary = true;
 						break;
 					}
-					else {
-						adjusting = true;
-						leftText.deleteData(
-							leftText.nodeValue.length - length, length);
-						delta = 1;
-						continue;
+
+					clusters.insert(clusterFragment, 0);
+					leftText.deleteData(
+						leftText.nodeValue.length - length, length);
+					rightText.insertData(0, fragment);
+					if (phase == 1) {
+						if (delta > 2) {
+							delta = Math.max(1, delta >> 1);
+						}
+						else {
+							delta = 1;
+							phase = 2;
+						}
 					}
+					else {
+						phase = 1;
+						delta = Math.max(1, delta >> 1);
+					}
+					continue;
 				}
 
-				// 1 line
-				rightText.deleteData(0, length);
-				n.col += length;
-				if (!adjusting) delta <<= 1;
+				if (phase == 0) {
+					delta <<= 1;
+				}
 			}
 		}
 
@@ -3574,53 +3821,67 @@ function motionUpDownDenotative (c, count, isDown) {
 
 	function findPrevTailOfWrapLine (start) {
 		var n = start.clone();
+		var clusters = buffer.getGraphemeClusters(n).clone();
+		var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
 
 		var foundBoundary = false;
-		var leftText = buffer.emphasis(
-			new Position(n.row, 0), n.col,
+		var left = buffer.emphasis(
+			new Position(n.row, 0),
+			n.col,
 			'wrapspan')[0];
 
-		if (leftText && leftText.firstChild) {
-			leftText = leftText.firstChild;
-
-			var right = buffer.emphasis(n, 1, 'wrapspan')[0];
-			var rightText = right.firstChild;
-			var initialHeight = right.offsetHeight;
+		if (left && left.firstChild) {
 			var delta = 1;
-			var adjusting = false;
+			var phase = 0;
 
-			while (leftText.nodeValue.length) {
-				var length = Math.min(delta, leftText.nodeValue.length);
-				rightText.insertData(0, leftText.nodeValue.substr(-length));
+			var leftText = left.firstChild;
+			var right = buffer.emphasis(
+				n, clusters.rawStringAt(clusterIndex).length, 'wrapspan')[0];
+			var rightText = right.firstChild;
+
+			clusters.delete(clusterIndex);
+			//left.style.backgroundColor = 'red';
+			//right.style.backgroundColor = 'cyan';
+
+			while (clusters.length) {
+				var clusterLength = Math.min(delta, clusters.length);
+				var clusterFragment = clusters.substr(-clusterLength);
+				var fragment = clusterFragment.toString();
+				var length = fragment.length;
+
+				clusters.delete(-clusterLength);
+				rightText.insertData(0, fragment);
 				leftText.deleteData(leftText.nodeValue.length - length, length);
 
-				// over 2 lines
-				if (!adjusting && delta > 1 && right.offsetHeight > initialHeight + lineHeight) {
-					leftText.appendData(rightText.nodeValue.substr(0, length));
-					rightText.deleteData(0, length);
-					delta = Math.max(1, delta >> 1);
-					continue;
-				}
-
-				// 2 lines
-				if (right.offsetHeight > initialHeight) {
-					if (adjusting) {
-						n.col -= length;
+				if (right.getClientRects().length >= 2) {
+					if (phase == 2) {
+						n.col -= Unistring(rightText.nodeValue).delete(-1).toString().length;
 						foundBoundary = true;
 						break;
 					}
-					else {
-						adjusting = true;
-						leftText.appendData(rightText.nodeValue.substr(0, length));
-						rightText.deleteData(0, length);
-						delta = 1;
-						continue;
+
+					clusters.append(clusterFragment);
+					leftText.appendData(fragment);
+					rightText.deleteData(0, length);
+					if (phase == 1) {
+						if (delta > 2) {
+							delta = Math.max(1, delta >> 1);
+						}
+						else {
+							delta = 1;
+							phase = 2;
+						}
 					}
+					else {
+						phase = 1;
+						delta = Math.max(1, delta >> 1);
+					}
+					continue;
 				}
 
-				// 1 line
-				n.col -= length;
-				if (!adjusting) delta <<= 1;
+				if (phase == 0) {
+					delta <<= 1;
+				}
 			}
 		}
 
@@ -3641,70 +3902,55 @@ function motionUpDownDenotative (c, count, isDown) {
 	}
 
 	function findPrevTopOfWrapLine (start) {
-		for (var i = 0; i < 2; i++) {
-			if (findPrevTailOfWrapLine(start)) {
-				switch (i) {
-				case 0:
-					return true;
-				case 1:
-					start.row = start.col = 0;
-					return false;
-				}
-			}
+		if (findPrevTailOfWrapLine(start)) {
+			return true;
 		}
-		var next = buffer.rightPos(start);
+		if (findPrevTailOfWrapLine(start)) {
+			start.row = start.col = 0;
+			return false;
+		}
+		var next = buffer.rightClusterPos(start);
 		start.row = next.row;
 		start.col = next.col;
 		return false;
 	}
 
-	for (var i = 0; i < count; i++) {
-		if (isDown  && findNextTopOfWrapLine(n)
-		||  !isDown && findPrevTopOfWrapLine(n)) {
-			overed = true;
-			break;
-		}
-	}
+	return function motionUpDownDenotative (c, count, isDown) {
+		count || (count = 1);
+		refreshIdealWidthPixels();
+		var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
+		var overed = false;
 
-	if (overed) {
-		if (i == 0) {
-			requestNotice({
-				silent:isDown ? _('Tail of text.') : _('Top of text.')
-			});
-		}
-	}
-	else {
-		var goalWidth = idealDenotativeWidthPixels;
-		var textspan = $('wasavi_singleline_scaler');
-		var width = 0;
-		var widthp = 0;
-		var line = buffer.rows(n);
-		var index = n.col;
-
-		textspan.textContent = '';
-
-		while (index < line.length && !buffer.isNewline(n.row, index)) {
-			textspan.textContent += line.substr(index++, 1);
-			width = textspan.offsetWidth;
-
-			if (width >= goalWidth) {
-				index -= Math.abs(widthp - goalWidth) <= Math.abs(width - goalWidth) ? 1 : 0;
+		for (var i = 0; i < count; i++) {
+			if (isDown  && findNextTopOfWrapLine(n)
+			||  !isDown && findPrevTopOfWrapLine(n)) {
+				overed = true;
 				break;
 			}
-			widthp = width;
 		}
-		n.col = index;
-		if (isDown) {
-			buffer.selectionEnd = n;
+
+		if (overed) {
+			if (i == 0) {
+				requestNotice({
+					silent:isDown ? _('Tail of text.') : _('Top of text.')
+				});
+			}
 		}
 		else {
-			buffer.selectionStart = n;
+			n = buffer.getClosestOffsetToPixels(n, idealDenotativeWidthPixels);
+			if (isDown) {
+				buffer.selectionEnd = n;
+			}
+			else {
+				buffer.selectionStart = n;
+			}
 		}
-	}
-	prefixInput.motion = c;
-	isVerticalMotion = true;
-	return true;
-}
+		invalidateIdealWidthPixels();
+		prefixInput.motion = c;
+		isVerticalMotion = true;
+		return true;
+	};
+})();
 function scrollView (c, count) {
 	function down (count) {
 		var index = Math.min(v.top + count, buffer.rowLength - 1);
@@ -3749,24 +3995,27 @@ function deleteSelection (isSubseq) {
 	var result = 0;
 	(isSubseq ? $call : editLogger.open).call(editLogger, 'deleteSelection', function () {
 		marks.update(buffer.selectionStart, function (foldedMarkRegisterer) {
-			result = buffer.deleteRange(function (content, fragment) {
-				var deleteMarks = fragment.querySelectorAll('span.' + MARK_CLASS);
-				var deleteMarksDest = {};
-				for (var i = 0; i < deleteMarks.length; i++) {
-					var name = deleteMarks[i].getAttribute('data-index');
-					var position = marks.get(name);
-					position && (deleteMarksDest[name] = position.clone());
+			result = buffer.deleteRangeEx(
+				null, null, foldedMarkRegisterer,
+				function (content, fragment, deleteMarksDest) {
+					if (!isSubseq) {
+						var isLastLine =
+							buffer.selectionEndRow == buffer.rowLength - 1
+							&& (buffer.selectionEndCol > 0 || buffer.isLineOrientSelection);
+
+						editLogger.write(
+							Wasavi.EditLogger.ITEM_TYPE.DELETE,
+							buffer.selectionStart,
+							content,
+							buffer.selectionEnd,
+							buffer.isLineOrientSelection,
+							isLastLine,
+							deleteMarksDest
+						);
+					}
+					isEditCompleted = true;
 				}
-				!buffer.isLineOrientSelection && foldedMarkRegisterer(fragment);
-				!isSubseq && editLogger.write(
-					Wasavi.EditLogger.ITEM_TYPE.DELETE,
-					buffer.selectionStart, content,
-					buffer.selectionEnd, buffer.isLineOrientSelection,
-					buffer.selectionEndRow == buffer.rowLength - 1 && buffer.selectionEndCol > 0,
-					deleteMarksDest
-				);
-				isEditCompleted = true;
-			});
+			);
 		});
 	});
 	return result;
@@ -3816,7 +4065,8 @@ function insert (s, opts) {
 					buffer.selectionStart, re[i], keepPosition
 				);
 				marks.update(buffer.selectionStart, function () {
-					buffer.setSelectionRange(buffer.insertChars(buffer.selectionStart, re[i]));
+					buffer.setSelectionRange(buffer.insertChars(
+						buffer.selectionStart, re[i]));
 				});
 				break;
 			}
@@ -3841,22 +4091,23 @@ function overwrite (s, opts) {
 			Wasavi.EditLogger.ITEM_TYPE.OVERWRITE,
 			startn, s, buffer.rows(startn)
 		);
-		marks.update(startn, function () {
-			var re = s.match(/\n|[^\n]+/g);
-			if (!re) return;
-			for (var i = 0; i < re.length; i++) {
-				switch (re[i]) {
-				case '\n':
-					isMultilineTextInput(targetElement) && buffer.divideLine();
-					break;
+		var re = s.match(/\n|[^\n]+/g);
+		if (!re) return;
 
-				default:
+		for (var i = 0; i < re.length; i++) {
+			switch (re[i]) {
+			case '\n':
+				isMultilineTextInput(targetElement) && buffer.divideLine();
+				break;
+
+			default:
+				marks.update(buffer.selectionStart, function () {
 					buffer.setSelectionRange(buffer.overwriteChars(buffer.selectionStart, re[i]));
-					break;
-				}
+				});
+				break;
 			}
-			isEditCompleted = true;
-		});
+		}
+		isEditCompleted = true;
 		keepPosition && buffer.setSelectionRange(startn);
 	});
 }
@@ -3940,7 +4191,7 @@ function reformat (width) {
 
 				var n = buffer.selectionStart;
 				while (n.col > 0) {
-					var left = buffer.leftPos(n);
+					var left = buffer.leftClusterPos(n);
 					if (!spc('S').test(buffer.charAt(left))) {
 						break;
 					}
@@ -4011,8 +4262,10 @@ function deleteChars (count, isForward, isSubseq, withYank, canJoin) {
 		if (isForward) {
 			var n = buffer.selectionEnd;
 			var tail = buffer.getLineTailOffset(n);
+			var clusters = buffer.getGraphemeClusters(n);
+			var index = clusters.getClusterIndexFromUTF16Index(n.col);
 			if (n.col < tail.col) {
-				n.col = Math.min(tail.col, n.col + count);
+				n.col = clusters.rawIndexAt(Math.min(clusters.length, index + count));
 				buffer.selectionEnd = n;
 				withYank && yank();
 				deleteSelection(isSubseq);
@@ -4026,8 +4279,10 @@ function deleteChars (count, isForward, isSubseq, withYank, canJoin) {
 		}
 		else {
 			var n = buffer.selectionStart;
+			var clusters = buffer.getGraphemeClusters(n);
+			var index = clusters.getClusterIndexFromUTF16Index(n.col);
 			if (n.col > 0) {
-				n.col = Math.max(0, n.col - count);
+				n.col = clusters.rawIndexAt(Math.max(0, index - count));
 				buffer.selectionStart = n;
 				withYank && yank();
 				deleteSelection(isSubseq);
@@ -4092,8 +4347,8 @@ function yank (count, isLineOrient, register) {
 	var result = 0;
 	if (isLineOrient || buffer.isLineOrientSelection) {
 		count || (count = 1);
-		result = buffer.selectRows(count);
-		var content = buffer.getSelectionRows();
+		result = buffer.selectRowsLinewise(count);
+		var content = buffer.getSelectionLinewise();
 		registers.set(
 			register == undefined ? prefixInput.register : register,
 			content, true, true);
@@ -4178,7 +4433,7 @@ function paste (count, opts) {
 	}
 	else {
 		if (isForward) {
-			n = buffer.rightPos(n);
+			n = buffer.rightClusterPos(n);
 			buffer.setSelectionRange(n);
 		}
 		editLogger.open('paste#2', function () {
@@ -4190,14 +4445,14 @@ function paste (count, opts) {
 			}
 		});
 		if (isForward) {
-			buffer.setSelectionRange(buffer.leftPos(buffer.selectionStart));
+			buffer.setSelectionRange(buffer.leftClusterPos(buffer.selectionStart));
 		}
 	}
 	isEditCompleted = true;
 	return true;
 }
 function startEdit (c, opts) {
-	if (buffer.selected) return inputEscape(opts.e.key);
+	if (buffer.selected) return inputEscape('Editing');
 
 	requestInputMode('edit', {callback:function () {
 		opts || (opts = {});
@@ -4214,8 +4469,9 @@ function startEdit (c, opts) {
 			n = buffer.getLineTopOffset2(buffer.selectionStart);
 			break;
 		case 2:// append
-			n = buffer.selectionEnd;
-			n.col = Math.min(n.col + 1, buffer.rows(n).length);
+			n = buffer.isNewline(buffer.selectionEnd) ?
+				buffer.selectionEnd :
+				buffer.rightClusterPos(buffer.selectionEnd);
 			break;
 		case 3:// append at tail
 			n = buffer.getLineTailOffset(buffer.selectionEnd);
@@ -4246,7 +4502,7 @@ function openLine (c, after) {
 			isTopOfText = true;
 		}
 		else {
-			n = buffer.leftPos(n);
+			n = buffer.leftClusterPos(n);
 			buffer.setSelectionRange(n);
 		}
 	}
@@ -4267,19 +4523,20 @@ function openLine (c, after) {
 function toggleCase (count, allowMultiLine) {
 	count || (count = 1);
 	if (buffer.selected) {
-		count = buffer.getSelection().length;
+		count = Unistring(buffer.getSelection()).length;
 		buffer.setSelectionRange(buffer.selectionStart);
 	}
 	editLogger.open('toggleCase', function () {
 		var n = buffer.selectionStart;
 		while (count > 0 && n.row < buffer.rowLength) {
-			var text = buffer.rows(n);
-			var original = text.substr(n.col, Math.min(count, text.length - n.col));
+			var text = buffer.getGraphemeClusters(n);
+			var index = text.getClusterIndexFromUTF16Index(n.col);
+			var original = text.substr(index, count);
 
 			if (original.length) {
 				var replacer = '';
 				for (var i = 0, goal = original.length; i < goal; i++) {
-					var c = original.charAt(i);
+					var c = original.rawStringAt(i);
 					var l = c.toLowerCase();
 					var u = c.toUpperCase();
 					if (c == l && c != u) {
@@ -4292,7 +4549,7 @@ function toggleCase (count, allowMultiLine) {
 						replacer += c;
 					}
 				}
-				editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
+				editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text.toString());
 				buffer.setSelectionRange(buffer.overwriteChars(n, replacer));
 			}
 
@@ -4307,18 +4564,20 @@ function toggleCase (count, allowMultiLine) {
 function unifyCase (count, toUpper, allowMultiLine) {
 	count || (count = 1);
 	if (buffer.selected) {
-		count = buffer.getSelection().length;
+		count = Unistring(buffer.getSelection()).length;
 		buffer.setSelectionRange(buffer.selectionStart);
 	}
 	editLogger.open('unifyCase', function () {
 		var n = buffer.selectionStart;
+		var method = toUpper ? 'toUpperCase' : 'toLowerCase';
 		while (count > 0 && n.row < buffer.rowLength) {
-			var text = buffer.rows(n);
-			var original = text.substr(n.col, Math.min(count, text.length - n.col));
+			var text = buffer.getGraphemeClusters(n);
+			var index = text.getClusterIndexFromUTF16Index(n.col);
+			var original = text.substr(index, count);
 
 			if (original.length) {
-				var replacer = toUpper ? original.toUpperCase() : original.toLowerCase();
-				editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
+				var replacer = original[method]().toString();
+				editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text.toString());
 				buffer.setSelectionRange(buffer.overwriteChars(n, replacer));
 			}
 
@@ -4331,13 +4590,14 @@ function unifyCase (count, toUpper, allowMultiLine) {
 	return true;
 }
 function quickReplace (c, count, allowMultiLine) {
+	var clusters = buffer.getGraphemeClusters();
+	var clusterIndex = clusters.getClusterIndexFromUTF16Index(buffer.selectionStartCol);
 	count || (count = 1);
 	if (buffer.selected) {
-		count = buffer.getSelection().length;
+		count = Unistring(buffer.getSelection()).length;
 		buffer.setSelectionRange(buffer.selectionStart);
 	}
-	if (!allowMultiLine
-	&& count > buffer.rows(buffer.selectionStartRow).length - buffer.selectionStartCol) {
+	if (!allowMultiLine && count > clusters.length - clusterIndex) {
 		requestShowMessage(_('Replace count too large.'), true);
 		isEditCompleted = true;
 		invalidateIdealWidthPixels();
@@ -4345,7 +4605,10 @@ function quickReplace (c, count, allowMultiLine) {
 	}
 	editLogger.open('quickReplace', function () {
 		if (c == '\r' || c == '\n') {
-			buffer.selectionEnd = buffer.offsetBy(buffer.selectionStart, count);
+			buffer.selectionEnd = buffer.offsetBy(
+				buffer.selectionStart,
+				clusters.substr(clusterIndex, count).toString().length
+			);
 			deleteSelection();
 			insert('\n');
 		}
@@ -4355,16 +4618,16 @@ function quickReplace (c, count, allowMultiLine) {
 			var scaler = $('wasavi_singleline_scaler');
 			var widthCache = [0];
 			while (count > 0 && n.row < buffer.rowLength) {
-				var text = buffer.rows(n);
-				var original = text.substr(n.col, Math.min(count, text.length - n.col));
+				var text = buffer.getGraphemeClusters(n);
+				var index = text.getClusterIndexFromUTF16Index(n.col);
+				var original = text.substr(index, count);
 
-				scaler.textContent = original;
+				scaler.textContent = original.toString();
 				var originalWidth = scaler.offsetWidth;
-				var subCount = 0;
 				var subString = '';
-				var subWidth = 0;
 
-				for (scaler.textContent = ''; true; ) {
+				while (true) {
+					var subWidth = 0;
 					subString += c;
 
 					if (widthCache.length > subString.length) {
@@ -4376,20 +4639,18 @@ function quickReplace (c, count, allowMultiLine) {
 					}
 
 					if (subWidth == 0) {
-						subCount = 0;
+						subString = '';
 						break;
 					}
-					if (subWidth > originalWidth) {
+					if (subWidth >= originalWidth) {
 						break;
 					}
-
-					subCount++;
 				}
 
-				if (originalWidth > 0 && subCount > 0) {
-					var replacer = multiply(c, subCount);
-					editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text);
-					buffer.setSelectionRange(buffer.leftPos(buffer.overwriteChars(n, replacer)));
+				if (originalWidth > 0 && subString.length > 0) {
+					var replacer = multiply(c, subString.length);
+					editLogger.write(Wasavi.EditLogger.ITEM_TYPE.OVERWRITE, n, replacer, text.toString());
+					buffer.setSelectionRange(buffer.leftClusterPos(buffer.overwriteChars(n, replacer)));
 				}
 
 				count -= allowMultiLine ? (original.length + 1) : count;
@@ -4704,6 +4965,19 @@ var completer = new Wasavi.Completer(appProxy,
 			/^(\s*)(set?.*\s+theme=)((?:\\.|\S)*)(.*)$/, 3,
 			function (prefix, notifyCandidates) {
 				notifyCandidates(theme.colorSets.sort());
+			}
+		],
+
+		// debug command completion
+		[
+			/^(\s*)(sushi\s+)(.+)(.*)/, 3,
+			function (prefix, notifyCandidates) {
+				notifyCandidates([
+					'reset-search-info',
+					'dump-undo-info',
+					'dump-internal-ids',
+					'dump-options-doc'
+				].sort());
 			}
 		],
 
@@ -5054,6 +5328,7 @@ var terminated;
 var state;
 var registers;
 var lineInputHistories;
+var lineInputInfo;
 var marks;
 var cursor;
 var scroller;
@@ -5159,7 +5434,7 @@ var modeHandlers = {
 		cursor.windup();
 
 		if (r.subkey == inputMode && r.code == 0x1b) {
-			buffer.unEmphasis(BOUND_CLASS);
+			buffer.unEmphasisBound();
 			popInputMode();
 			requestShowPrefixInput();
 			r.needEmitEvent = true;
@@ -5215,7 +5490,9 @@ var modeHandlers = {
 
 			var n = buffer.selectionStart;
 			inputHandler.setStartPosition(n);
-			n.col = Math.max(n.col - 1, 0);
+			if (n.col > 0) {
+				n = buffer.leftClusterPos(n);
+			}
 			buffer.setSelectionRange(n);
 
 			popInputMode();
@@ -5392,10 +5669,9 @@ var modeHandlers = {
 		else {
 			if (r.code >= 1) {
 				lineInputHistories.isInitial = true;
-				insertToLineInput(input, r.letter);
+				insertToLineInput(lineInputInfo, r.letter);
 			}
 			processInputSupplement(e);
-			//keyManager.init(input);
 		}
 
 		if (!isCompleteResetCanceled) {
@@ -5635,7 +5911,7 @@ var commandMap = {
 			// special shift behavior followed vim.
 			if (!isLineOrient && buffer.selectionEndCol == 0 && actualCount > 1) {
 				actualCount--;
-				buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
+				buffer.selectionEnd = buffer.leftClusterPos(buffer.selectionEnd);
 			}
 
 			(o.key == '<' ? unshift : shift)(actualCount, 1);
@@ -5805,10 +6081,9 @@ var commandMap = {
 	},
 	// direct jump to specified column
 	'|':function (c) {
-		// TODO: need to treat specified column index as logical number
-		//       which in consideration of a proportional font width.
-		var n = buffer.selectionStart;
-		n.col = Math.min(prefixInput.count - 1, buffer.rows(n).length);
+		var n = buffer.getClosestOffsetToPixels(
+			new Position(buffer.selectionStartRow, 0),
+			charWidth * (prefixInput.count - 1));
 		buffer.extendSelectionTo(n);
 		prefixInput.motion = c;
 		invalidateIdealWidthPixels();
@@ -5972,6 +6247,10 @@ var commandMap = {
 				if ('\'`[]'.indexOf(c) >= 0) {
 					marks.setJumpBaseMark();
 				}
+				var clusters = buffer.getGraphemeClusters(offset);
+				var clusterIndex = clusters.getClusterIndexFromUTF16Index(offset.col);
+				clusterIndex = minmax(0, clusterIndex, clusters.length);
+				offset.col = clusters.rawIndexAt(clusterIndex);
 				if (o.key == "'") {
 					buffer.extendSelectionTo(buffer.getLineTopOffset2(offset));
 					isVerticalMotion = true;
@@ -6114,7 +6393,7 @@ var commandMap = {
 		&& !spc('S').test(buffer.charAt(buffer.selectionStart))) {
 			motionNextWord(c, prefixInput.count, o.key == 'W', true);
 			if (!buffer.isNewline(buffer.selectionEnd)) {
-				buffer.selectionEnd = buffer.rightPos(buffer.selectionEnd);
+				buffer.selectionEnd = buffer.rightClusterPos(buffer.selectionEnd);
 			}
 			return true;
 		}
@@ -6126,7 +6405,7 @@ var commandMap = {
 	b:function (c, o) {
 		motionPrevWord(c, prefixInput.count, o.key == 'B');
 		if (prefixInput.operation == 'c' && buffer.selectionEndCol == 0) {
-			buffer.selectionEnd = buffer.leftPos(buffer.selectionEnd);
+			buffer.selectionEnd = buffer.leftClusterPos(buffer.selectionEnd);
 		}
 		return true;
 	},
@@ -6274,7 +6553,7 @@ var commandMap = {
 
 		var direction, offset;
 		if (o.key == '*') {
-			buffer.setSelectionRange(ss1, buffer.leftPos(se2));
+			buffer.setSelectionRange(ss1, buffer.leftClusterPos(se2));
 			direction = 1;
 			offset = buffer.selectionEnd;
 		}
@@ -6446,22 +6725,16 @@ var commandMap = {
 				if (!prefixInput.isEmptyOperation) {
 					return inputEscape(o.e.key);
 				}
-				var ss = buffer.selectionStart;
-				var ch1 = toNativeControl(buffer.charAt(ss)), ch2 = '';
-				var cp = ch1.charCodeAt(0);
-				if (unicodeUtils.isHighSurrogate(cp)) {
-					ch2 = toNativeControl(buffer.charAt(buffer.rightPos(ss)));
-					if (unicodeUtils.isLowSurrogate(ch2.charCodeAt(0))) {
-						cp = unicodeUtils.toUCS32(cp, ch2.charCodeAt(0));
-					}
-					else {
-						ch2 = '';
-					}
-				}
+				var clusters = buffer.getGraphemeClusters();
+				var index = clusters.getClusterIndexFromUTF16Index(buffer.selectionStartCol);
+				var cluster = toNativeControl(clusters.rawStringAt(index));
+				var codePoints = clusters.codePointsAt(index).map(function (cp) {
+					return Unistring.getCodePointString(cp, 'unicode');
+				}).join(' ');
+
 				requestShowMessage(
-					'"' + toVisibleControl(ch1) + toVisibleControl(ch2) + '"' +
-					' U+' + (cp <= 0xffff ? ('0000' + cp.toString(16)).substr(-4) : cp.toString(16)).toUpperCase() +
-					' (' + cp + ')');
+					'"' + toVisibleControl(cluster) + '"' +
+					' ' + codePoints);
 				break;
 
 			case 'g':// motion
@@ -7261,7 +7534,7 @@ var boundMap = {
 				var m1 = marks.get('<');
 				var m2 = marks.get('>');
 				if (m1 && m2) {
-					buffer.unEmphasis(BOUND_CLASS);
+					buffer.unEmphasisBound();
 					marks.setPrivate('<', m1);
 					marks.setPrivate('>', m2);
 					buffer.setSelectionRange(m2);
@@ -7323,11 +7596,11 @@ var boundMap = {
 				marks.getPrivate('<'),
 				marks.getPrivate('>'),
 				buffer.selectionStart,
-				isVerticalMotion ? buffer.selectionEnd : buffer.leftPos(buffer.selectionEnd)
+				isVerticalMotion ? buffer.selectionEnd : buffer.leftClusterPos(buffer.selectionEnd)
 			].sort(function (a, b) {return a.eq(b) ? 0 : a.lt(b) ? -1 : 1});
 			if (inputMode != preferredMode || buffer.selectionStart.lt(marks.getPrivate('<'))) {
 				inputMode = preferredMode;
-				buffer.unEmphasis(BOUND_CLASS);
+				buffer.unEmphasisBound();
 				marks.setPrivate('<', buffer.selectionStart);
 				requestShowPrefixInput();
 			}
@@ -7379,8 +7652,8 @@ var boundMap = {
 			// bound content
 			var content, isLineOrient = buffer.isLineOrientSelection;
 			if (isLineOrient) {
-				buffer.selectRows(1);
-				content = buffer.getSelectionRows();
+				buffer.selectRowsLinewise(1);
+				content = buffer.getSelectionLinewise();
 			}
 			else {
 				content = buffer.getSelection();
@@ -7449,7 +7722,7 @@ var boundMap = {
 		||  inputMode == 'bound_line' && c == 'V') {
 			return operateToBound(c, o, false);
 		}
-		buffer.unEmphasis(BOUND_CLASS);
+		buffer.unEmphasisBound();
 		inputMode = inputMode == 'bound' ? 'bound_line' : 'bound';
 		lastBoundMode = c;
 		extendBound(buffer.selectionStart);
@@ -7488,7 +7761,7 @@ var editMap = {
 		if (needShift || re) {
 			inputHandler.flush();
 			if (!needShift && re[2]) {
-				n.col--;
+				n.col--; // n points '0' or '^' so it is ok to decrement simply
 				buffer.selectionStart = n;
 				deleteSelection();
 				marks.setPrivate(tmpMark, buffer.selectionStart);
@@ -7765,6 +8038,12 @@ var editMap = {
 						if (code == 10 || code == 13) {
 							insert('\n');
 						}
+						else if (goal == 1
+							&& (unicodeUtils.isHighSurrogate(code)
+								|| unicodeUtils.isLowSurrogate(code))) {
+							requestNotice(_('Cannot input a surrogate code point.'));
+							break;
+						}
 						else {
 							if (code >= 0 && code != 9 && code <= 31 || code == 0x7f) {
 								ch = toVisibleControl(code);
@@ -7854,39 +8133,45 @@ var lineInputEditMap = {
 	},
 	'\u0001'/*^A*/:function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = 0;
-		//keyManager.init(o.target);
 		return true;
 	},
 	'\u0002'/*^B*/:function (c, o) {
-		o.target.selectionStart = o.target.selectionEnd = Math.max(0, o.target.selectionStart - 1);
-		//keyManager.init(o.target);
+		var ss = o.target.selectionStart;
+		var clusters = lineInputInfo.getClusters();
+		var index = clusters.getClusterIndexFromUTF16Index(ss);
+		var newpos = clusters.rawIndexAt(Math.max(0, index - 1));
+		o.target.selectionStart = o.target.selectionEnd = newpos;
 		return true;
 	},
 	'\u0005'/*^E*/:function (c, o) {
 		o.target.selectionStart = o.target.selectionEnd = o.target.value.length;
-		//keyManager.init(o.target);
 		return true;
 	},
 	'\u0006'/*^F*/:function (c, o) {
-		o.target.selectionStart = o.target.selectionEnd =
-			Math.min(o.target.value.length, o.target.selectionEnd + 1);
-		//keyManager.init(o.target);
+		var se = o.target.selectionEnd;
+		var clusters = lineInputInfo.getClusters();
+		var index = clusters.getClusterIndexFromUTF16Index(se);
+		var newpos = clusters.rawIndexAt(Math.min(index + 1, clusters.length));
+		o.target.selectionStart = o.target.selectionEnd = newpos;
 		return true;
 	},
 	'\u0008'/*^H, backspace*/:function (c, o) {
-		if (o.target.selectionStart == o.target.selectionEnd) {
-			var n = Math.max(o.target.selectionStart - 1, 0);
-			o.target.value = o.target.value.substring(0, n) +
-				o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionStart = o.target.selectionEnd = n;
+		var clusters = lineInputInfo.getClusters();
+		var ss = clusters.getClusterIndexFromUTF16Index(o.target.selectionStart);
+		var se = clusters.getClusterIndexFromUTF16Index(o.target.selectionEnd);
+		if (ss == se) {
+			if (ss > 0) {
+				clusters.delete(ss - 1, 1);
+				o.target.value = clusters.toString();
+				o.target.selectionStart = o.target.selectionEnd = clusters.rawIndexAt(ss - 1);
+			}
 		}
 		else {
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionEnd = o.target.selectionStart;
+			clusters.delete(ss, se - ss + 1);
+			o.target.value = clusters.toString();
+			o.target.selectionStart = o.target.selectionEnd = clusters.rawIndexAt(ss);
 		}
 		lineInputHistories.isInitial = true;
-		//keyManager.init(o.target);
 		return true;
 	},
 	'\u0009'/*^I, tab*/:function (c, o) {
@@ -7902,6 +8187,7 @@ var lineInputEditMap = {
 			else {
 				o.target.value = compl.value;
 				o.target.selectionStart = o.target.selectionEnd = compl.pos;
+				lineInputInfo.invalidate();
 				notifier.show(
 					_('matched #{0} of {1}', compl.completed.index + 1, compl.filteredLength),
 					1000 * 3
@@ -7926,7 +8212,7 @@ var lineInputEditMap = {
 				o.target.value = toVisibleControl(line);
 				o.target.selectionStart = o.target.value.length;
 				o.target.selectionEnd = o.target.value.length;
-				//keyManager.init(o.target);
+				lineInputInfo.invalidate();
 			}
 		}
 		return true;
@@ -7944,7 +8230,7 @@ var lineInputEditMap = {
 			o.target.value = toVisibleControl(line);
 			o.target.selectionStart = o.target.value.length;
 			o.target.selectionEnd = o.target.value.length;
-			//keyManager.init(o.target);
+			lineInputInfo.invalidate();
 		}
 		return true;
 	},
@@ -7969,7 +8255,7 @@ var lineInputEditMap = {
 					}
 					else {
 						notifier.hide();
-						insertToLineInput(o.target, data);
+						insertToLineInput(lineInputInfo, data);
 					}
 					processInput(keyManager.nopObject);
 				});
@@ -7988,7 +8274,7 @@ var lineInputEditMap = {
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				notifier.hide();
-				insertToLineInput(o.target, s);
+				insertToLineInput(lineInputInfo, s);
 				return true;
 			}
 			else {
@@ -8012,8 +8298,8 @@ var lineInputEditMap = {
 	'\u0015'/*^U*/:function (c, o) {
 		o.target.value = '';
 		o.target.selectionStart = o.target.selectionEnd = 0;
+		lineInputInfo.invalidate();
 		lineInputHistories.isInitial = true;
-		//keyManager.init(o.target);
 		return true;
 	},
 	'\u0016'/*^V*/:{
@@ -8045,19 +8331,18 @@ var lineInputEditMap = {
 						var code = ch.charCodeAt(0);
 						var e = keyManager.objectFromCode(code);
 
-						if (code == 10) {
-							requestNotice();
+						if (code == 10 || goal == 1 && (unicodeUtils.isHighSurrogate(code) || unicodeUtils.isLowSurrogate(code))) {
+							requestNotice(_('Cannot input a surrogate code point.'));
 							break;
 						}
 						if (code >= 0 && code <= 31 || code == 0x7f) {
 							ch = toVisibleControl(code);
 						}
-						insertToLineInput(o.target, ch);
-						//keyManager.init(o.target);
+						insertToLineInput(lineInputInfo, ch);
 					}
 				}
 				if (result.trail) {
-					insertToLineInput(o.target, result.trail);
+					insertToLineInput(lineInputInfo, result.trail);
 				}
 			}
 			literalInput = null;
@@ -8066,37 +8351,59 @@ var lineInputEditMap = {
 		}
 	},
 	'\u0017'/*^W*/:function (c, o) {
-		if (o.target.selectionStart == o.target.selectionEnd) {
-			var re = /\b(\w+|\W+)$/.exec(o.target.value.substring(0, o.target.selectionStart));
-			if (re) {
-				var n = Math.max(o.target.selectionStart - re[0].length, 0);
-				o.target.value = o.target.value.substring(0, n) +
-					o.target.value.substring(o.target.selectionEnd);
-				o.target.selectionStart = o.target.selectionEnd = n;
+		var ss = o.target.selectionStart;
+		var se = o.target.selectionEnd;
+		if (ss == se) {
+			var words = Unistring.getWords(o.target.value);
+			var wordIndex = words.wordIndexOf(ss);
+			var left;
+			if (wordIndex >= 0 && words[wordIndex].index < ss) {
+				left = words[wordIndex].index;
+			}
+			else if (wordIndex > 0) {
+				wordIndex--;
+				left = words[wordIndex].index;
+			}
+			else if (wordIndex == -1 && words.length > 0) {
+				wordIndex = words.length - 1;
+				left = words[wordIndex].index;
+			}
+			if (isNumber(left)) {
+				o.target.value =
+					o.target.value.substring(0, left) +
+					o.target.value.substring(ss);
+				o.target.selectionStart = o.target.selectionEnd = left;
 			}
 		}
 		else {
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionEnd = o.target.selectionStart;
+			var clusters = lineInputInfo.getClusters();
+			ss = clusters.getClusterIndexFromUTF16Index(ss);
+			se = clusters.getClusterIndexFromUTF16Index(se);
+			clusters.delete(ss, se - ss + 1);
+			o.target.value = clusters.toString();
+			o.target.selectionStart = o.target.selectionEnd = clusters.rawIndexAt(ss);
 		}
+		lineInputInfo.invalidate();
 		lineInputHistories.isInitial = true;
-		//keyManager.init(o.target);
 		return true;
 	},
 	'<A-W>':function () {return this['\u0017'].apply(this, arguments)},
 	'<C-backspace>':function () {return this['\u0017'].apply(this, arguments)},
 	'\u007f':function (c, o) {
-		if (o.target.selectionStart == o.target.selectionEnd) {
-			var n = o.target.selectionStart;
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd + 1);
-			o.target.selectionStart = o.target.selectionEnd = n;
+		var clusters = lineInputInfo.getClusters();
+		var ss = clusters.getClusterIndexFromUTF16Index(o.target.selectionStart);
+		var se = clusters.getClusterIndexFromUTF16Index(o.target.selectionEnd);
+		if (ss == se) {
+			if (ss < clusters.length) {
+				clusters.delete(ss, 1);
+				o.target.value = clusters.toString();
+				o.target.selectionStart = o.target.selectionEnd = clusters.rawIndexAt(ss);
+			}
 		}
 		else {
-			o.target.value = o.target.value.substring(0, o.target.selectionStart) +
-				o.target.value.substring(o.target.selectionEnd);
-			o.target.selectionEnd = o.target.selectionStart;
+			clusters.delete(ss, se - ss + 1);
+			o.target.value = clusters.toString();
+			o.target.selectionStart = o.target.selectionEnd = clusters.rawIndexAt(ss);
 		}
 		lineInputHistories.isInitial = true;
 		return true;
@@ -8176,7 +8483,6 @@ if (global.WasaviExtensionWrapper
 		}
 	});
 }
-
 })(this);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

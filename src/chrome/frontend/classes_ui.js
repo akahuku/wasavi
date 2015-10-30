@@ -328,7 +328,16 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			var cursorColumn = 0;
 			if (ch != '' && /[^\u0000-\u001f\u007f]/.test(ch)) {
 				comCursor.style.display = 'none';
-				var span = getCursorSpan() || buffer.emphasis(undefined, 1, CURSOR_SPAN_CLASS)[0];
+
+				var span = getCursorSpan();
+				if (!span) {
+					var clusters = buffer.getGraphemeClusters();
+					span = buffer.emphasis(
+						undefined,
+						clusters.clusterAt(clusters.getClusterIndexFromUTF16Index(buffer.selectionStartCol)).length,
+						CURSOR_SPAN_CLASS)[0];
+				}
+
 				span.style.color = app.theme.colors.invertFg;
 				span.style.backgroundColor = app.theme.colors.invertBg;
 				span.setAttribute('data-blink-active', '1');
@@ -464,13 +473,11 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 			if (needFix1 && needFix2) {
 				var n = buffer.selectionStart;
 				if (n.col > 0) {
-					var fixed = false;
-					var text = buffer.rows(n);
-					if (n.col >= text.length) {
-						n.col = text.length - 1;
-						fixed = true;
+					var clusters = buffer.getGraphemeClusters(n);
+					if (n.col >= clusters.rawIndexAt(clusters.length)) {
+						n.col = clusters.rawIndexAt(clusters.length - 1);
+						buffer.setSelectionRange(n);
 					}
-					fixed && buffer.setSelectionRange(n);
 				}
 			}
 		}

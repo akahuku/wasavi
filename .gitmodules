@@ -4,3 +4,6 @@
 [submodule "tool"]
 	path = tool
 	url = git@github.com:akahuku/brisket.git
+[submodule "src/lib/unistring"]
+	path = src/lib/unistring
+	url = git@github.com:akahuku/unistring.git

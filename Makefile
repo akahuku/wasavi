@@ -266,6 +266,8 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 		--exclude 'lib/init.js' \
 		--exclude 'lib/es6-promise.min.js' \
 		--exclude 'lib/kosian/init.js' \
+		--exclude 'lib/kosian/OperaImpl.js' \
+		--exclude 'lib/kosian/ChromeImpl.js' \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	strip script tag from options.html

@@ -31,10 +31,132 @@
 
 // almost methods in this class are ported from search.c of vim.
 Wasavi.SearchUtils = function (app) {
+	/*
+	 * classes
+	 */
+
+	/*constructor*/function PairBracketsIndicator (targetChar, buffer, initialPos) {
+		var BLINK_FREQ_SECS = 0.1;
+		var BLINK_COUNT_MAX = 10;
+
+		var timer1, timer2;
+
+		function setColor (visible) {
+			var nodes = buffer.getSpans(EMPHASIS_CLASS);
+			var fg, bg;
+			if (visible) {
+				fg = app.theme.colors.highlightFg;
+				bg = app.theme.colors.highlightBg;
+			}
+			else {
+				fg = app.theme.colors.rowFg;
+				bg = 'transparent';
+			}
+			for (var i = 0; i < nodes.length; i++) {
+				nodes[i].style.color = fg;
+				nodes[i].style.backgroundColor = bg;
+			}
+		}
+		function clear () {
+			timer1 && clearTimeout(timer1);
+			timer2 && clearInterval(timer2);
+			timer1 = timer2 = null;
+			buffer.unEmphasis();
+		}
+
+		this.clear = clear;
+		this.dispose = clear;
+
+		timer1 = setTimeout(function () {
+			timer1 = null;
+			buffer.emphasis(initialPos, 1);
+			var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
+			var visible = true;
+			setColor(visible);
+			timer2 = setInterval(function () {
+				count--;
+				if (count <= 0) {
+					buffer.unEmphasis();
+					clearInterval(timer2);
+					timer2 = null;
+				}
+				else {
+					visible = !visible;
+					setColor(visible);
+				}
+			}, 1000 * BLINK_FREQ_SECS);
+		}, 1);
+	}
+	/*constructor*/function BufferIterator (buffer) {
+		this.buffer = buffer;
+	}
+	BufferIterator.prototype = {
+		inc: function (pos) {
+			var p = pos || this.buffer.selectionStart;
+			try {
+				var s = this.buffer.rows(p);
+				if (p.col < s.length) {
+					p.col = this.buffer.rightClusterPos(p).col;
+					return p.col < s.length ? 0 : 2;
+				}
+				if (p.row < this.buffer.rowLength - 1) {
+					p.col = 0;
+					p.row++;
+					return 1;
+				}
+				return -1;
+			}
+			finally {
+				!pos && this.buffer.setSelectionRange(p);
+			}
+		},
+		dec: function (pos) {
+			var p = pos || this.buffer.selectionStart;
+			try {
+				if (p.col > 0) {
+					p.col = this.buffer.leftClusterPos(p).col;
+					return 0;
+				}
+				if (p.row > 0) {
+					p.row--;
+					p.col = this.buffer.rows(p).length;
+					return 1;
+				}
+				return -1;
+			}
+			finally {
+				!pos && this.buffer.setSelectionRange(p);
+			}
+		},
+		incl: function (pos) {
+			var r = this.inc(pos);
+			if (r >= 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
+				r = this.inc(pos);
+			}
+			return r;
+		},
+		decl: function (pos) {
+			var r = this.dec(pos);
+			if (r == 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
+				r = this.dec(pos);
+			}
+			return r;
+		}
+	};
+
+	/*
+	 * variables
+	 */
+
 	var buffer = app.buffer;
 	var spaces = spc('S');
+	var iterator = new BufferIterator(buffer);
 	var paragraphs;
 	var sections;
+
+	/*
+	 * private functions
+	 */
 
 	function findNextQuote (line, col, quoteChar) {
 		var escapeChar = app.config.vars.quoteescape;
@@ -86,9 +208,9 @@ Wasavi.SearchUtils = function (app) {
 		buffer.setSelectionRange(n);
 	}
 	function findFirstBlank (pos) {
-		while (buffer.decl(pos) != -1) {
+		while (iterator.decl(pos) != -1) {
 			if (!spaces.test(buffer.charAt(pos || buffer.selectionStart))) {
-				buffer.incl(pos);
+				iterator.incl(pos);
 				break;
 			}
 		}
@@ -100,7 +222,7 @@ Wasavi.SearchUtils = function (app) {
 				findFirstBlank();
 			}
 			if (count == 0 || atStartSent) {
-				buffer.decl();
+				iterator.decl();
 			}
 			atStartSent = !atStartSent;
 		}
@@ -184,14 +306,14 @@ Wasavi.SearchUtils = function (app) {
 	}
 	function findSentenceBoundary (count, isForward, isFindOnly) {
 		var pos = buffer.selectionStart;
-		var iter = isForward ? buffer.incl : buffer.decl;
+		var iter = isForward ? iterator.incl : iterator.decl;
 		var noSkip = false;
 
 		while (count--) {
 loop:		do {
 				if (buffer.isNewline(pos)) {
 					do {
-						if (iter.call(buffer, pos) == -1) break;
+						if (iter.call(iterator, pos) == -1) break;
 					} while (buffer.isNewline(pos));
 					if (isForward) break loop;
 				}
@@ -203,7 +325,7 @@ loop:		do {
 					break loop;
 				}
 				else if (!isForward) {
-					buffer.decl(pos);
+					iterator.decl(pos);
 				}
 
 				var foundDot = false;
@@ -214,9 +336,9 @@ loop:		do {
 							if (foundDot) break;
 							foundDot = true;
 						}
-						if (buffer.decl(pos) == -1) break;
+						if (iterator.decl(pos) == -1) break;
 						if (buffer.isNewline(pos) && isForward) {
-							buffer.incl(pos);
+							iterator.incl(pos);
 							break loop;
 						}
 					}
@@ -240,7 +362,7 @@ loop:		do {
 					if (/[.!?]/.test(c)) {
 						var tpos = pos.clone();
 						while (true) {
-							c = buffer.inc(tpos);
+							c = iterator.inc(tpos);
 							if (c == -1) break;
 							c = buffer.charAt(tpos);
 							if (!/[)\]"']/.test(c)) break;
@@ -248,13 +370,13 @@ loop:		do {
 
 						if (c === -1 || buffer.isNewline(tpos)
 						|| !cpo_J && spaces.test(c)
-						|| cpo_J && (c == ' ' && buffer.inc(tpos) >= 0 && buffer.charAt(tpos) == ' ')) {
+						|| cpo_J && (c == ' ' && iterator.inc(tpos) >= 0 && buffer.charAt(tpos) == ' ')) {
 							pos = tpos;
-							buffer.isNewline(pos) && buffer.inc(pos);
+							buffer.isNewline(pos) && iterator.inc(pos);
 							break;
 						}
 					}
-					if (iter.call(buffer, pos) == -1) {
+					if (iter.call(iterator, pos) == -1) {
 						if (count) return false;
 						noSkip = true;
 						break;
@@ -265,7 +387,7 @@ loop:		do {
 			//
 			if (!noSkip) {
 				while (spaces.test(buffer.charAt(pos))) {
-					if (buffer.incl(pos) == -1) break;
+					if (iterator.incl(pos) == -1) break;
 				}
 			}
 		}
@@ -506,7 +628,7 @@ loop:		do {
 		//
 		var pos = startPos.clone();
 		while (spaces.test(buffer.charAt(pos))) {
-			buffer.incl(pos);
+			iterator.incl(pos);
 		}
 		if (pos.eq(buffer.selectionStart)) {
 			if (includeAnchor) {
@@ -528,7 +650,7 @@ loop:		do {
 			findSentenceForward(nCount, true);
 		}
 		else {
-			buffer.decl();
+			iterator.decl();
 		}
 
 		//
@@ -536,7 +658,7 @@ loop:		do {
 			if (startBlank) {
 				findFirstBlank();
 				if (spaces.test(buffer.charAt(buffer.selectionStart))) {
-					buffer.decl();
+					iterator.decl();
 				}
 			}
 			else if (!spaces.test(buffer.charAt(buffer.selectionStart))) {
@@ -545,7 +667,7 @@ loop:		do {
 		}
 
 		//
-		buffer.incl();
+		iterator.incl();
 		buffer.setSelectionRange(startPos, buffer.selectionStart);
 		return true;
 	}
@@ -925,58 +1047,6 @@ sequential at:
 		}
 		sections = [];
 		m.replace(/../g, function (a) {sections.push(a)});
-	}
-	/*constructor*/function PairBracketsIndicator (targetChar, buffer, initialPos) {
-		var BLINK_FREQ_SECS = 0.1;
-		var BLINK_COUNT_MAX = 10;
-
-		var timer1, timer2;
-
-		function setColor (visible) {
-			var nodes = buffer.getSpans(EMPHASIS_CLASS);
-			var fg, bg;
-			if (visible) {
-				fg = app.theme.colors.highlightFg;
-				bg = app.theme.colors.highlightBg;
-			}
-			else {
-				fg = app.theme.colors.rowFg;
-				bg = 'transparent';
-			}
-			for (var i = 0; i < nodes.length; i++) {
-				nodes[i].style.color = fg;
-				nodes[i].style.backgroundColor = bg;
-			}
-		}
-		function clear () {
-			timer1 && clearTimeout(timer1);
-			timer2 && clearInterval(timer2);
-			timer1 = timer2 = null;
-			buffer.unEmphasis();
-		}
-
-		this.clear = clear;
-		this.dispose = clear;
-
-		timer1 = setTimeout(function () {
-			timer1 = null;
-			buffer.emphasis(initialPos, 1);
-			var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
-			var visible = true;
-			setColor(visible);
-			timer2 = setInterval(function () {
-				count--;
-				if (count <= 0) {
-					buffer.unEmphasis();
-					clearInterval(timer2);
-					timer2 = null;
-				}
-				else {
-					visible = !visible;
-					setColor(visible);
-				}
-			}, 1000 * BLINK_FREQ_SECS);
-		}, 1);
 	}
 	function getPairBracketsIndicator (targetChar, buffer, initialPos) {
 		if (targetChar != '' && CLOSE_BRACKETS.indexOf(targetChar) >= 0) {

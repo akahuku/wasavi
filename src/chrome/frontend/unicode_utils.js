@@ -178,196 +178,8 @@ var unicodeUtils = (function () {
 		'\\ufe54-\\ufe66\\ufe68-\\ufe6b\\ufeff\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65'
 	].join('') + ']');
 
-	// Scripts of Unicode 6.2.0
-	/*const*/var SCRIPT_TABLE = [
-		0x0041, 0x005a,  1, // Latin
-		0x0061, 0x007a,  1, // Latin
-		0x00aa, 0x00aa,  1, // Latin
-		0x00ba, 0x00ba,  1, // Latin
-		0x00c0, 0x00d6,  1, // Latin
-		0x00d8, 0x00f6,  1, // Latin
-		0x00f8, 0x02b8,  1, // Latin
-		0x02e0, 0x02e4,  1, // Latin
-		0x02ea, 0x02eb,  2, // Bopomofo
-		0x0300, 0x036f,  3, // Inherited
-		0x0370, 0x0373,  4, // Greek
-		0x0375, 0x037d,  4, // Greek
-		0x0384, 0x0384,  4, // Greek
-		0x0386, 0x0386,  4, // Greek
-		0x0388, 0x03e1,  4, // Greek
-		0x03e2, 0x03ef,  5, // Coptic
-		0x03f0, 0x03ff,  4, // Greek
-		0x0400, 0x0484,  6, // Cyrillic
-		0x0485, 0x0486,  3, // Inherited
-		0x0487, 0x0527,  6, // Cyrillic
-		0x0531, 0x0587,  7, // Armenian
-		0x058a, 0x058f,  7, // Armenian
-		0x0591, 0x05f4,  8, // Hebrew
-		0x0600, 0x060b,  9, // Arabic
-		0x060d, 0x061a,  9, // Arabic
-		0x061e, 0x061e,  9, // Arabic
-		0x0620, 0x063f,  9, // Arabic
-		0x0641, 0x064a,  9, // Arabic
-		0x064b, 0x0655,  3, // Inherited
-		0x0656, 0x065f,  9, // Arabic
-		0x066a, 0x066f,  9, // Arabic
-		0x0670, 0x0670,  3, // Inherited
-		0x0671, 0x06dc,  9, // Arabic
-		0x06de, 0x06ff,  9, // Arabic
-		0x0700, 0x074f, 10, // Syriac
-		0x0750, 0x077f,  9, // Arabic
-		0x0780, 0x07b1, 11, // Thaana
-		0x07c0, 0x07fa, 12, // Nko
-		0x0800, 0x083e, 13, // Samaritan
-		0x0840, 0x085e, 14, // Mandaic
-		0x08a0, 0x08fe,  9, // Arabic
-		0x0900, 0x0950, 15, // Devanagari
-		0x0951, 0x0952,  3, // Inherited
-		0x0953, 0x0963, 15, // Devanagari
-		0x0966, 0x097f, 15, // Devanagari
-		0x0981, 0x09fb, 16, // Bengali
-		0x0a01, 0x0a75, 17, // Gurmukhi
-		0x0a81, 0x0af1, 18, // Gujarati
-		0x0b01, 0x0b77, 19, // Oriya
-		0x0b82, 0x0bfa, 20, // Tamil
-		0x0c01, 0x0c7f, 21, // Telugu
-		0x0c82, 0x0cf2, 22, // Kannada
-		0x0d02, 0x0d7f, 23, // Malayalam
-		0x0d82, 0x0df4, 24, // Sinhala
-		0x0e01, 0x0e3a, 25, // Thai
-		0x0e40, 0x0e5b, 25, // Thai
-		0x0e81, 0x0edf, 26, // Lao
-		0x0f00, 0x0fd4, 27, // Tibetan
-		0x0fd9, 0x0fda, 27, // Tibetan
-		0x1000, 0x109f, 28, // Myanmar
-		0x10a0, 0x10fa, 29, // Georgian
-		0x10fc, 0x10ff, 29, // Georgian
-		0x1100, 0x11ff, 30, // Hangul
-		0x1200, 0x1399, 31, // Ethiopic
-		0x13a0, 0x13f4, 32, // Cherokee
-		0x1400, 0x167f, 33, // Canadian_Aboriginal
-		0x1680, 0x169c, 34, // Ogham
-		0x16a0, 0x16ea, 35, // Runic
-		0x16ee, 0x16f0, 35, // Runic
-		0x1700, 0x1714, 36, // Tagalog
-		0x1720, 0x1734, 37, // Hanunoo
-		0x1740, 0x1753, 38, // Buhid
-		0x1760, 0x1773, 39, // Tagbanwa
-		0x1780, 0x17f9, 40, // Khmer
-		0x1800, 0x1801, 41, // Mongolian
-		0x1804, 0x1804, 41, // Mongolian
-		0x1806, 0x18aa, 41, // Mongolian
-		0x18b0, 0x18f5, 33, // Canadian_Aboriginal
-		0x1900, 0x194f, 42, // Limbu
-		0x1950, 0x1974, 43, // Tai_Le
-		0x1980, 0x19df, 44, // New_Tai_Lue
-		0x19e0, 0x19ff, 40, // Khmer
-		0x1a00, 0x1a1f, 45, // Buginese
-		0x1a20, 0x1aad, 46, // Tai_Tham
-		0x1b00, 0x1b7c, 47, // Balinese
-		0x1b80, 0x1bbf, 48, // Sundanese
-		0x1bc0, 0x1bff, 49, // Batak
-		0x1c00, 0x1c4f, 50, // Lepcha
-		0x1c50, 0x1c7f, 51, // Ol_Chiki
-		0x1cc0, 0x1cc7, 48, // Sundanese
-		0x1cd0, 0x1cd2,  3, // Inherited
-		0x1cd4, 0x1ce0,  3, // Inherited
-		0x1ce2, 0x1ce8,  3, // Inherited
-		0x1ced, 0x1ced,  3, // Inherited
-		0x1cf4, 0x1cf4,  3, // Inherited
-		0x1d00, 0x1d25,  1, // Latin
-		0x1d26, 0x1d2a,  4, // Greek
-		0x1d2b, 0x1d2b,  6, // Cyrillic
-		0x1d2c, 0x1d5c,  1, // Latin
-		0x1d5d, 0x1d61,  4, // Greek
-		0x1d62, 0x1d65,  1, // Latin
-		0x1d66, 0x1d6a,  4, // Greek
-		0x1d6b, 0x1d77,  1, // Latin
-		0x1d78, 0x1d78,  6, // Cyrillic
-		0x1d79, 0x1dbe,  1, // Latin
-		0x1dbf, 0x1dbf,  4, // Greek
-		0x1dc0, 0x1dff,  3, // Inherited
-		0x1e00, 0x1eff,  1, // Latin
-		0x1f00, 0x1ffe,  4, // Greek
-		0x200c, 0x200d,  3, // Inherited
-		0x2071, 0x2071,  1, // Latin
-		0x207f, 0x207f,  1, // Latin
-		0x2090, 0x209c,  1, // Latin
-		0x20d0, 0x20f0,  3, // Inherited
-		0x2126, 0x2126,  4, // Greek
-		0x212a, 0x212b,  1, // Latin
-		0x2132, 0x2132,  1, // Latin
-		0x214e, 0x214e,  1, // Latin
-		0x2160, 0x2188,  1, // Latin
-		0x2800, 0x28ff, 52, // Braille
-		0x2c00, 0x2c5e, 53, // Glagolitic
-		0x2c60, 0x2c7f,  1, // Latin
-		0x2c80, 0x2cff,  5, // Coptic
-		0x2d00, 0x2d2d, 29, // Georgian
-		0x2d30, 0x2d7f, 54, // Tifinagh
-		0x2d80, 0x2dde, 31, // Ethiopic
-		0x2de0, 0x2dff,  6, // Cyrillic
-		0x2e80, 0x2fd5, 55, // Han
-		0x3005, 0x3005, 55, // Han
-		0x3007, 0x3007, 55, // Han
-		0x3021, 0x3029, 55, // Han
-		0x302a, 0x302d,  3, // Inherited
-		0x302e, 0x302f, 30, // Hangul
-		0x3038, 0x303b, 55, // Han
-		0x3041, 0x3096, 56, // Hiragana
-		0x3099, 0x309a,  3, // Inherited
-		0x309d, 0x309f, 56, // Hiragana
-		0x30a1, 0x30fa, 57, // Katakana
-		0x30fd, 0x30ff, 57, // Katakana
-		0x3105, 0x312d,  2, // Bopomofo
-		0x3131, 0x318e, 30, // Hangul
-		0x31a0, 0x31ba,  2, // Bopomofo
-		0x31f0, 0x31ff, 57, // Katakana
-		0x3200, 0x321e, 30, // Hangul
-		0x3260, 0x327e, 30, // Hangul
-		0x32d0, 0x3357, 57, // Katakana
-		0x3400, 0x4db5, 55, // Han
-		0x4e00, 0x9fcc, 55, // Han
-		0xa000, 0xa4c6, 58, // Yi
-		0xa4d0, 0xa4ff, 59, // Lisu
-		0xa500, 0xa62b, 60, // Vai
-		0xa640, 0xa69f,  6, // Cyrillic
-		0xa6a0, 0xa6f7, 61, // Bamum
-		0xa722, 0xa787,  1, // Latin
-		0xa78b, 0xa7ff,  1, // Latin
-		0xa800, 0xa82b, 62, // Syloti_Nagri
-		0xa840, 0xa877, 63, // Phags_Pa
-		0xa880, 0xa8d9, 64, // Saurashtra
-		0xa8e0, 0xa8fb, 15, // Devanagari
-		0xa900, 0xa92f, 65, // Kayah_Li
-		0xa930, 0xa95f, 66, // Rejang
-		0xa960, 0xa97c, 30, // Hangul
-		0xa980, 0xa9df, 67, // Javanese
-		0xaa00, 0xaa5f, 68, // Cham
-		0xaa60, 0xaa7b, 28, // Myanmar
-		0xaa80, 0xaadf, 69, // Tai_Viet
-		0xaae0, 0xaaf6, 70, // Meetei_Mayek
-		0xab01, 0xab2e, 31, // Ethiopic
-		0xabc0, 0xabf9, 70, // Meetei_Mayek
-		0xac00, 0xd7fb, 30, // Hangul
-		0xf900, 0xfad9, 55, // Han
-		0xfb00, 0xfb06,  1, // Latin
-		0xfb13, 0xfb17,  7, // Armenian
-		0xfb1d, 0xfb4f,  8, // Hebrew
-		0xfb50, 0xfd3d,  9, // Arabic
-		0xfd50, 0xfdfc,  9, // Arabic
-		0xfe00, 0xfe0f,  3, // Inherited
-		0xfe20, 0xfe26,  3, // Inherited
-		0xfe70, 0xfefc,  9, // Arabic
-		0xff21, 0xff3a,  1, // Latin
-		0xff41, 0xff5a,  1, // Latin
-		0xff66, 0xff6f, 57, // Katakana
-		0xff71, 0xff9d, 57, // Katakana
-		0xffa0, 0xffdc, 30  // Hangul
-	];
-
 	// line break property in Unicode 6.2.0
-	// generated by ./make-linebreak-dict.php js
+	// generated by "src/unicode-tools/make-linebreak-dict.php js"
 	/*const*/var BREAK_PROP = {
 		OP:  0, CL:  1, CP:  2, QU:  3, GL:  4, NS:  5, EX:  6, SY:  7,
 		IS:  8, PR:  9, PO: 10, NU: 11, AL: 12, HL: 13, ID: 14, IN: 15,
@@ -379,7 +191,7 @@ var unicodeUtils = (function () {
 	};
 
 	// line break pair table in Unicode 6.2.0
-	// manually ported from http://unicode.org/reports/tr14/
+	// ported manually from http://unicode.org/reports/tr14/
 	/*const*/var BREAK_PAIRS_TABLE = [
 		'44444444444444444444434444444',
 		'04411444411000001100424000000',
@@ -855,7 +667,6 @@ var unicodeUtils = (function () {
 	 * variables
 	 */
 
-	var scriptClassCache = {};
 	var generalSpaceRegexCache = {};
 
 	/*
@@ -871,39 +682,20 @@ var unicodeUtils = (function () {
 			|  data.charCodeAt(index + 1) << 8
 			|  data.charCodeAt(index + 2) << 16;
 	}
+	function pick4 (data, index) {
+		return data.charCodeAt(index)
+			|  data.charCodeAt(index + 1) << 8
+			|  data.charCodeAt(index + 2) << 16
+			|  data.charCodeAt(index + 3) << 24;
+	}
 	function getScriptClass (cp) {
 		//                    0: space
 		// (script-id << 8) | 1: letter (word component)
 		// (script-id << 8) | 2: other
-
 		var ch = String.fromCharCode(cp);
-		if (ch in scriptClassCache)  return scriptClassCache[ch];
-		if (isSpace(ch)) return 0;
-
-		var result = isNonLetter(ch) ? 2 : 1;
-		var low = 0;
-		var high = SCRIPT_TABLE.length / 3 - 1;
-		var mid;
-		while (low <= high) {
-			mid = Math.floor((low + high) / 2);
-			if (cp < SCRIPT_TABLE[mid * 3]) {
-				high = mid - 1;
-			}
-			else if (cp > SCRIPT_TABLE[mid * 3 + 1]) {
-				low = mid + 1;
-			}
-			else {
-				mid *= 3;
-				if (0 <= mid && mid < SCRIPT_TABLE.length - 2
-				&& SCRIPT_TABLE[mid] <= cp && cp <= SCRIPT_TABLE[mid + 1]) {
-					result |= SCRIPT_TABLE[mid + 2] << 8;
-				}
-				break;
-			}
-		}
-
-//console.log('getScriptClass: "' + toVisibleString(ch) + '" (' + cp + ',0x' + cp.toString(16) + '): script/' + (result >> 8) + ', class/' + (result & 255));
-		return scriptClassCache[ch] = result;
+		return isSpace(ch) ?
+			0 :
+			(Unistring.getScriptProp(cp) << 8) | (isNonLetter(ch) ? 2 : 1);
 	}
 	function isSpace (ch) {
 		return REGEX_ZS.test(ch.charAt(0));
