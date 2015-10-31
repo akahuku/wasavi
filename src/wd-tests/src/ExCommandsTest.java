@@ -2063,12 +2063,8 @@ public class ExCommandsTest extends WasaviTest {
 		assertEquals("#1-1", "foobar", text);
 	}
 
-	@Test
+	// NOTE: about a test to write a file to online storage, see FileSystemTest.java
 	public void testWriteToFile () {
-		Wasavi.send("ifoobar\u001b");
-		Wasavi.setInputModeOfWatchTarget("write handler");
-		Wasavi.send(":writ test/foobar\n");
-		assertEquals("#1-1", "Written: /test/foobar [unix] 1 line, 6 characters.", Wasavi.getLastMessage());
 	}
 
 	@Test
@@ -2309,10 +2305,12 @@ public class ExCommandsTest extends WasaviTest {
 			{"c3", "foo897\nbar532\nzoo321", "zoo321\nbar532\nfoo897"},
 			{"c3i", "321zoo\n532bar\n897Foo", "532bar\n897Foo\n321zoo"}
 		};
+		int i = 0;
 		for (String[] t: tests) {
 			Wasavi.send("ggcG" + t[1] + "\u001b");
 			Wasavi.send(":sort " + t[0] + "\n");
-			assertValue(t[2]);
+			assertValue(String.format("#%d", i), t[2]);
+			i++;
 		}
 	}
 }

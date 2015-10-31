@@ -15,8 +15,11 @@ import org.openqa.selenium.WebElement;
 public class BoundTest extends WasaviTest {
 	private void testMark (String name, int line, int col) {
 		int[] p1 = Wasavi.getMark(name);
-		assertNotNull("#testMark-1", p1);
-		assertEquals("#testMark-2",
+		assertNotNull(
+				String.format("#testMark for '%s', 1", name),
+				p1);
+		assertEquals(
+				String.format("#testMark for '%s', 2", name),
 				String.format("line %d, col %d", line, col),
 				String.format("line %d, col %d", p1[0], p1[1]));
 	}

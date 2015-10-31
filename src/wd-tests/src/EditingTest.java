@@ -1116,6 +1116,6 @@ public class EditingTest extends WasaviTest {
 	public void getCodePointUnderCursor () {
 		Wasavi.send("ifoo bar\u001b");
 		Wasavi.send("0ga");
-		assertEquals("#1-1", "\"f\" U+0066 (102)", Wasavi.getLastMessage());
+		assertEquals("#1-1", "\"f\" U+0066", Wasavi.getLastMessage());
 	}
 }

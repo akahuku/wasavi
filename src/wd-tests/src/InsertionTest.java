@@ -947,6 +947,13 @@ public class InsertionTest extends WasaviTest {
 
 	@Test
 	public void testDeleteLineOverrunNoAI () {
+		/*
+		 * three types of word deletion:
+		 *
+		 * ....first        ....first        ....first        ....first
+		 * ....second  -->  ....second  -->  ....second  -->  ....second[]
+		 * ....third[]      ....[]           []
+		 */
 		Wasavi.send(":set noai\n");
 		Wasavi.send("i\tfirst\n\tsecond\n\tthird\u001b");
 		Wasavi.send("a", ctrlw, ctrlw, ctrlw, "\u0015\u001b");
