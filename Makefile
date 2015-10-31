@@ -25,6 +25,7 @@ EMBRYO_DIR = .embryo
 
 RSYNC_OPT = -rptLv --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
+	--exclude 'banner*.xcf' --exclude 'banner*.png' \
 	--exclude '.*' \
 	--exclude '$(CRYPT_SRC_FILE)*'
 
