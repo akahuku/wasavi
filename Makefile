@@ -159,7 +159,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 	sed -e 's/@appid@/$(CHROME_EXT_ID)/g' \
 		-e 's!@location@!$(CHROME_EXT_LOCATION)!g' \
 		-e 's/@version@/$(VERSION)/g' \
-		$(SRC_DIR)/chrome.xml > $(DIST_DIR)/$(notdir $(CHROME_UPDATE_LOCATION))
+		$(SRC_DIR)/template-chrome.xml > $(DIST_DIR)/$(notdir $(CHROME_UPDATE_LOCATION))
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
@@ -194,7 +194,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 	sed -e 's/@appid@/$(OPERA_EXT_ID)/g' \
 		-e 's!@location@!$(OPERA_EXT_LOCATION)!g' \
 		-e 's/@version@/$(VERSION)/g' \
-		$(SRC_DIR)/opera.xml > $(DIST_DIR)/$(notdir $(OPERA_UPDATE_LOCATION))
+		$(SRC_DIR)/template-opera.xml > $(DIST_DIR)/$(notdir $(OPERA_UPDATE_LOCATION))
 
 #	zip it
 	rm -f $@
@@ -242,7 +242,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 	sed -e 's/@appid@/$(BLINKOPERA_EXT_ID)/g' \
 		-e 's!@location@!$(BLINKOPERA_EXT_LOCATION)!g' \
 		-e 's/@version@/$(VERSION)/g' \
-		$(SRC_DIR)/opera-blink.xml > $(DIST_DIR)/$(notdir $(BLINKOPERA_UPDATE_LOCATION))
+		$(SRC_DIR)/template-opera-blink.xml > $(DIST_DIR)/$(notdir $(BLINKOPERA_UPDATE_LOCATION))
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
@@ -286,13 +286,9 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 		--ver $(VERSION)
 
 #	build xpi using jpm
-	cd $(FIREFOX_EMBRYO_SRC_PATH) && jpm xpi && mv *.$(FIREFOX_SUFFIX) ../../$@
-
-#	build update.rdf
-	tool/update-update-rdf.rb \
-		--package $(FIREFOX_EMBRYO_SRC_PATH)/package.json \
-		--template $(SRC_DIR)/template-update.rdf \
-		> $(DIST_DIR)/update.rdf
+	cd $(FIREFOX_EMBRYO_SRC_PATH) && jpm xpi
+	mv $(FIREFOX_EMBRYO_SRC_PATH)/*.$(FIREFOX_SUFFIX) $@
+	mv $(FIREFOX_EMBRYO_SRC_PATH)/*.update.rdf $(DIST_DIR)/firefox.rdf
 
 #	extract install.rdf
 	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf

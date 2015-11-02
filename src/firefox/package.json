@@ -9,6 +9,7 @@
 	"id": "jid1-bmMwuNrx3u5hqQ@jetpack",
 	"description": "vi editor for any web page.",
 	"updateURL": "https://github.com/akahuku/wasavi/raw/master/update.rdf",
+	"updateLink": "https://github.com/akahuku/wasavi/raw/master/wasavi.xpi",
 	"permissions": {
 		"private-browsing": true
 	},
