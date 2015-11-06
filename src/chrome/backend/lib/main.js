@@ -24,7 +24,7 @@
 
 	/* <<<1 consts */
 
-	var TEST_MODE_URL = 'http://127.0.0.1/test_frame.html';
+	var TEST_MODE_URL = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/;
 	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
 	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
 	var HOME_URL = 'http://appsweets.net/wasavi/';
@@ -355,7 +355,7 @@
 	}
 
 	function isTestUrl (url) {
-		if (url.indexOf(TEST_MODE_URL) === 0) return true;
+		if (TEST_MODE_URL.test(url)) return true;
 		if ((url.indexOf(APP_MODE_URL) === 0 || url.indexOf(APP_MODE_URL_SECURE) === 0) && /[?&]testmode/.test(url)) return true;
 		return false;
 	}

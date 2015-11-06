@@ -1456,7 +1456,7 @@ function handleConnect (req) {
  */
 
 extension = WasaviExtensionWrapper.create();
-isTestFrame = window.location.href.indexOf('http://127.0.0.1/test_frame.html') == 0;
+isTestFrame = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/.test(window.location.href);
 isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
 createPageAgent(true, false);
