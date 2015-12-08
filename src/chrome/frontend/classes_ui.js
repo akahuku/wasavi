@@ -60,6 +60,42 @@ Wasavi.Theme = function (app) {
 		boundBg:['#wasavi_editor>div span.' + BOUND_CLASS, '']
 	};
 	var colorSets = {
+		solarized: {
+			statusHue:'#eee8d5',
+			background:'#fdf6e3',
+			overTextMarkerFg:'#93a1a1',
+			warnedStatusFg:'#fdf6e3', warnedStatusBg:'#dc322f',
+			invertFg:'#fdf6e3', invertBg:'#657b83',
+			blurFg:'#fdf6e3', blurBg:'#eee8d5',
+
+			rowBgOdd:'#fdf6e3',
+			editCursorFg:'#657b83',
+			statusFg:'#586e75',
+			lineNumberFg:'#93a1a1', lineNumberBg:'#eee8d5',
+			rowFg:'#657b83', rowBg:'#fdf6e3',
+			highlightFg:'#fdf6e3', highlightBg:'#93a1a1',
+			lineInputFg:'#fdf6e3', lineInputBg:'rgba(0,0,0,0.5)',
+			consoleFg:'#fdf6e3', consoleBg:'rgba(0,0,0,0.8)',
+			boundFg:'#fdf6e3', boundBg:'#93a1a1'
+		},
+		solarized_dark: {
+			statusHue:'#073642',
+			background:'#002b36',
+			overTextMarkerFg:'#586e75',
+			warnedStatusFg:'#fdf6e3', warnedStatusBg:'#dc322f',
+			invertFg:'#002b36', invertBg:'#839496',
+			blurFg:'#002b36', blurBg:'#eee8d5',
+
+			rowBgOdd:'#002b36',
+			editCursorFg:'#839496',
+			statusFg:'#586e75',
+			lineNumberFg:'#586e75', lineNumberBg:'#eee8d5',
+			rowFg:'#839496', rowBg:'#002b36',
+			highlightFg:'#002b36', highlightBg:'#586e75',
+			lineInputFg:'#002b36', lineInputBg:'rgba(0,0,0,0.5)',
+			consoleFg:'#002b36', consoleBg:'rgba(0,0,0,0.8)',
+			boundFg:'#002b36', boundBg:'#586e75'
+		},
 		blight: {
 			statusHue:'#4f6881',
 			background:'white',
