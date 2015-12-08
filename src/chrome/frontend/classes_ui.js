@@ -92,8 +92,8 @@ Wasavi.Theme = function (app) {
 			lineNumberFg:'#586e75', lineNumberBg:'#eee8d5',
 			rowFg:'#839496', rowBg:'#002b36',
 			highlightFg:'#002b36', highlightBg:'#586e75',
-			lineInputFg:'#002b36', lineInputBg:'rgba(0,0,0,0.5)',
-			consoleFg:'#002b36', consoleBg:'rgba(0,0,0,0.8)',
+			lineInputFg:'#002b36', lineInputBg:'rgba(255,255,255,0.5)',
+			consoleFg:'#002b36', consoleBg:'rgba(159,205,74,0.9)',
 			boundFg:'#002b36', boundBg:'#586e75'
 		},
 		blight: {
