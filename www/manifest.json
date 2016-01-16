@@ -1,0 +1,13 @@
+{
+  "short_name": "Wasavi",
+  "name": "Wasavi - online vi editor",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16",
+      "type": "image/vnd.microsoft.icon"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+}
