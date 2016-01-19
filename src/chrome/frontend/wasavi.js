@@ -8440,7 +8440,12 @@ if (global.WasaviExtensionWrapper
 						document.doctype.parentNode.replaceChild(doctype, document.doctype) :
 						document.insertBefore(doctype, document.childNodes[0]);
 
-					document.head.innerHTML = req.headHTML;
+					// set head content only if head is empty
+					if (document.head.innerHTML.replace(/^\s+|\s+$/g, '') == '') {
+						document.head.innerHTML = req.headHTML;
+					}
+
+					// override body content always
 					document.body.innerHTML = req.bodyHTML;
 				}
 				callback();

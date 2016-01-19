@@ -376,6 +376,6 @@ run-firefox: FORCE
 	$(FIREFOX) -profile $(FIREFOX_TEST_PROFILE_PATH)
 
 dbgfx: FORCE
-	cd $(FIREFOX_SRC_PATH) && jpm run -b `which firefox` -p $(abspath $(FIREFOX_TEST_PROFILE_PATH)) --no-copy --binary-args http://127.0.0.1/test_frame.html
+	cd $(FIREFOX_SRC_PATH) && jpm run -b `which firefox` -p $(abspath $(FIREFOX_TEST_PROFILE_PATH)) --no-copy --binary-args http://127.0.0.1:8888/test_frame.html
 
 # end
