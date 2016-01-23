@@ -116,7 +116,7 @@ Tips and Tricks
 
 * to maximize the wasavi: `:set fullscreen` or `:set fs`
 * to restore the wasavi: `:set nofullscreen` or `:set nofs`
-* to change a color theme: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix`
+* to change a color theme: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix` or `:set theme=solarized` or `:set theme=solarized_dark`
 * to modify initial settings:
   open preference wasavi extension (or enter `:options` on wasavi), and edit "exrc" textbox.
 * abbreviate syntax is

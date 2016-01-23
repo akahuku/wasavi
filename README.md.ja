@@ -116,7 +116,7 @@ Tips and Tricks
 
 * wasavi の最大化: `:set fullscreen` or `:set fs`
 * wasavi を元に戻す: `:set nofullscreen` or `:set nofs`
-* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix`
+* カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix` or `:set theme=solarized` or `:set theme=solarized_dark`
 * 初期設定を変更する:
   各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
   （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集する
