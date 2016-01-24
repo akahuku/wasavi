@@ -8,6 +8,15 @@ consumer_keys.json
 consumer_keys.bin
 wasavi.pem
 app.mk
+.rsync*
+mkmain
+mkqeema
+push
+resetbins
+server
+signxpi
+syncsrc
+syncwww
 .embryo/
 src/chrome/backend/oldlib/
 src/wd-tests/dst/
