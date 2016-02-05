@@ -32,7 +32,7 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
   ![インクリメンタルサーチ](http://appsweets.net/wasavi/isearch.png)
 
-* [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive アカウント上のファイルを読み書きできます。
+* [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive/OneDrive アカウント上のファイル、を読み書きできます。
 
   ![stand alone](http://appsweets.net/wasavi/web-app.png)
 
@@ -99,7 +99,7 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 ## 単体のテキストエディタとしての利用
 
-wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive のファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive へのアクセスのために OAuth による承認が必要です。
+wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive/OneDrive またはローカルのファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive/OneDrive へのアクセスのために OAuth による承認が必要です。
 
 ## 自動的な設定の上書き
 
@@ -145,10 +145,11 @@ Tips and Tricks
 * オンラインストレージをファイルシステムとして使用する:
 	+ `:filesystem status` は、現在使用可能なファイルシステムを表示します
 	+ `:filesystem default` は、デフォルトのファイルシステムを取得します。
-	  設定の際は `:filesystem default dropbox` や `:filesystem default gdrive` と入力します
+	  設定の際は `:filesystem default dropbox` や `:filesystem default gdrive` や `:filesystem default onedrive` と入力します
 	+ `:filesystem reset` はアクセストークンを破棄します。こちらも、ファイルシステム名を
 	  指定することができます
 	+ ファイル名の先頭にファイルシステム名を明示することができます: `:read dropbox:/hello.txt`
+* ローカルファイルへのアクセス方法は [ドキュメント](https://github.com/akahuku/wasavi/wiki/Local-access) を参照してください
 * A から Z までのレジスタを読み込む際、いくつかのレジスタは特別な内容を返します:
 	+ `B` register: ユーザーエージェント文字列
 	+ `D` register: 現在の日付時刻文字列（`datetime` オプションを strftime(3) のテンプレートとして使用します）

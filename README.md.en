@@ -32,7 +32,7 @@ Salient Features
 
   ![incremental search](http://appsweets.net/wasavi/isearch.png)
 
-* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive account.
+* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive/OneDrive account or local files.
 
   ![stand alone](http://appsweets.net/wasavi/web-app.png)
 
@@ -99,7 +99,7 @@ This plugin will control suspend mode of Keysnail according to the state of wasa
 
 ## How to use wasavi as an independent text editor
 
-Install the wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive files. You will have to authorize wasavi via OAuth to access these storages.
+Install the wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive/OneDrive files or local files. You will have to authorize wasavi via OAuth to access these storages.
 
 ## About automatic setting override
 
@@ -143,10 +143,11 @@ Tips and Tricks
 * use a online storage as file system:
 	+ `:filesystem status` shows all file systems currently available.
 	+ `:filesystem default` shows default file system. You can set default file system
-	  via `:filesystem default dropbox` or `:filesystem default gdrive`.
+	  via `:filesystem default dropbox` or `:filesystem default gdrive` or `:filesystem default onedrive`.
 	+ `:filesystem reset` discards the access token for online storage.
 	+ You can place the file system name at the head of a file name explicitly:
 	  for instance, `:read dropbox:/hello.txt`.
+* To access local files, see [document](https://github.com/akahuku/wasavi/wiki/Local-access).
 * When you read from the register of A to Z, some registers returns special content:
 	+ `B` register: user agent string
 	+ `D` register: current date time string (formatted by using `datetime` option as template of strftime(3))

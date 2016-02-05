@@ -92,6 +92,9 @@
 			},
 			onedrive: {
 				enabled: true
+			},
+			file: {
+				enabled: true
 			}
 		},
 
@@ -176,7 +179,8 @@
 				def: {
 					dropbox:  {enabled:true, isDefault:true},
 					gdrive:   {enabled:true},
-					onedrive: {enabled:true}
+					onedrive: {enabled:true},
+					file:     {enabled:true}
 				},
 				set: function (value) {
 					ext.fileSystem.setInfo(value);
@@ -908,6 +912,7 @@
 			ext.fileSystem.read(
 				path, sender,
 				{
+					encoding: data.encoding,
 					onresponse: function (d) {
 						if (!d) return;
 						d.internalId = command.internalId;
@@ -924,6 +929,7 @@
 			ext.fileSystem.write(
 				path, sender, data.value,
 				{
+					encoding: data.encoding,
 					delaySecs: data.isBuffered ? undefined : 0,
 					onresponse: function (d) {
 						if (!d) return;

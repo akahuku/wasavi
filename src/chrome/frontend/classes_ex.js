@@ -540,6 +540,7 @@ function writeCore (app, t, a, pa) {
 	else {
 		payload.type = 'fsctl';
 		payload.subtype = 'write';
+		payload.encoding = 'UTF-8';
 		requestId = app.extensionChannel.postMessage(payload, true, true);
 	}
 	app.low.registerMultiplexCallback(requestId, 'write');
@@ -1447,6 +1448,7 @@ var cache = {};
 		else {
 			payload.type = 'fsctl';
 			payload.subtype = 'read';
+			payload.encoding = 'UTF-8';
 			requestId = app.extensionChannel.postMessage(payload, true, true);
 		}
 		app.low.registerMultiplexCallback(requestId, 'edit');
@@ -1922,6 +1924,7 @@ var cache = {};
 		var requestId = app.extensionChannel.postMessage({
 			type:'fsctl',
 			subtype:'read',
+			encoding:'UTF-8',
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		}, true, true);
 		app.low.registerMultiplexCallback(requestId, 'read');

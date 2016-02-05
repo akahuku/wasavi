@@ -5039,7 +5039,7 @@ var completer = new Wasavi.Completer(appProxy,
 			],
 			3,
 			function (prefix, notifyCandidates, line) {
-				var drive = '', pathRegalized, pathInput;
+				var drive = '', pathRegalized, pathInput, prefixBaseName;
 
 				pathRegalized = pathInput = extractDriveName(prefix, function (d) {drive = d});
 				pathRegalized = regalizeFilePath(drive + pathRegalized);
@@ -5052,6 +5052,7 @@ var completer = new Wasavi.Completer(appProxy,
 				}
 
 				pathInput = pathInput.replace(/[^\/]+$/, '');
+				prefixBaseName = /[^\/]*$/.exec(prefix)[0];
 
 				extensionChannel.postMessage(
 					{
@@ -5090,6 +5091,11 @@ var completer = new Wasavi.Completer(appProxy,
 									}
 									pathFixed = re[1];
 									baseName = re[2];
+								}
+
+								// remove dotfile if prefix does not start with a dot.
+								if (prefixBaseName.charAt(0) != '.' && baseName.charAt(0) == '.') {
+									return '';
 								}
 
 								if (pathInput.charAt(0) != '/') {
@@ -8195,6 +8201,9 @@ var lineInputEditMap = {
 			}
 			notifyCommandComplete();
 		});
+	},
+	'<S-tab>':function (c, o) {
+		return this['\u0009'].apply(this, arguments);
 	},
 	'\u000e'/*^N*/:function (c, o) {
 		if (lineInputHistories.isInitial) {
