@@ -1,32 +1,20 @@
+0.6.601
+
+	* enable locale file access (#110)
+
+	* ローカルファイルへアクセスできるようにした
+
 0.6.597
 
-	* some fixes to work the webapp manifest correctly
-	* include the webapp manifest in the index.html
 	* Create manifest file
-	* fix command line background
 	* add solarized themes
-	* use regexp to detect a test page
-	* rename update manifest files
-	* modify some tests
 	* handle complex Unicode characters (#103)
 	* sign 0.6.583 for firefox
-	* update brisket script for firefox
-	* add some localized messages (firefox)
-	* fix option page url on firefox
 
-	* webapp のマニフェストが正しく機能するためのいくつかの修正
-	* webapp のマニフェストを index.html に含めた
 	* マニフェストファイルの追加
-	* solarized テーマでコンソールの背景を修正
 	* solarized テーマの追加
-	* 開発用のテストページかどうかを判断するのに正規表現を使うようにした
-	* 拡張の自動更新用のファイルを名称変更
-	* 機能テストをいくつか修正
 	* Unicode の結合文字列や書記素クラスタを扱えるようにした
 	* firefox 版 0.6.583 に署名をつけた
-	* firefox 版のビルドスクリプトを更新
-	* firefox 版にいくつかの日本語のメッセージを追加
-	* firefox 版でオプションページの URL をバックグラウンドから与えるようにした
 
 0.6.579
 
