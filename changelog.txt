@@ -1,3 +1,11 @@
+0.6.603
+
+	* update kosian (treat OneDrive's album as a folder)
+	* update kosian (fix OAuth2 credential is not stored correctly)
+
+	* OneDrive でアルバムもフォルダとして扱うようにした
+	* OAuth2 の認証情報が正しく保存されていなかったのを修正
+
 0.6.601
 
 	* enable locale file access (#110)
