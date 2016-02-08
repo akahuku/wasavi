@@ -8,14 +8,14 @@
 	"homepage": "http://appsweets.net/wasavi/",
 	"id": "jid1-bmMwuNrx3u5hqQ@jetpack",
 	"description": "vi editor for any web page.",
-	"updateURL": "https://github.com/akahuku/wasavi/raw/master/update.rdf",
+	"updateURL": "https://github.com/akahuku/wasavi/raw/master/firefox.rdf",
 	"updateLink": "https://github.com/akahuku/wasavi/raw/master/wasavi.xpi",
 	"permissions": {
 		"private-browsing": true
 	},
 	"main": "lib/main.js",
 	"engines": {
-		"firefox": ">=38.0a1 <=42.*"
+		"firefox": ">=38.0a1 <=45.*"
 	},
 	"preferences": [{
 		"type": "control",
