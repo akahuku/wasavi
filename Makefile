@@ -1,7 +1,7 @@
 # application macros
 # ========================================
 
-VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g'`.`git rev-list --count HEAD`)
+VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g' -e 's/^\([0-9]\+\.[0-9]\+\).*/\1/g'`.`git rev-list --count HEAD`)
 
 SHELL := /bin/sh
 
@@ -113,7 +113,7 @@ FORCE:
 .PHONY: all clean message \
 	test-chrome test-opera test-firefox \
 	run-chrome run-opera run-firefox \
-	dbgfx \
+	dbgfx version \
 	FORCE
 
 
@@ -377,5 +377,8 @@ run-firefox: FORCE
 
 dbgfx: FORCE
 	cd $(FIREFOX_SRC_PATH) && LANG=C jpm run -b `which firefox` -p $(abspath $(FIREFOX_TEST_PROFILE_PATH)) --no-copy --binary-args http://127.0.0.1:8888/test_frame.html
+
+version: FORCE
+	@echo $(VERSION)
 
 # end
