@@ -225,7 +225,7 @@
         @keyframes blink { 25% {opacity:0} 75% {opacity:1} }
 .blink {
 	-webkit-animation:blink 1s linear infinite;
-	animation:blink 1s linear infinite;
+	animation:blink 1s step-end infinite;
 }
 
 #wasavi_console_scaler {
