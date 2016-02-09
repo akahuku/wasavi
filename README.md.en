@@ -85,6 +85,15 @@ See [this table](https://github.com/akahuku/wasavi/wiki/All-Options-which-wasavi
 
 Note: there are also options which are accepted but don't have any effect yet.
 
+## How to modify initial settings:
+
+Open preference wasavi extension (or enter `:options` on wasavi),
+and edit "exrc" textbox.
+
+## How to access local files
+
+See [document](https://github.com/akahuku/wasavi/wiki/Local-access).
+
 ## How to use wasavi with Vimperator on Firefox
 
 Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) in your Vimperator plugin directory, for example,  `~/.vimperator/plugin` or `%HOME%\vimperator\plugin`.
@@ -117,8 +126,6 @@ Tips and Tricks
 * to maximize the wasavi: `:set fullscreen` or `:set fs`
 * to restore the wasavi: `:set nofullscreen` or `:set nofs`
 * to change a color theme: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix` or `:set theme=solarized` or `:set theme=solarized_dark`
-* to modify initial settings:
-  open preference wasavi extension (or enter `:options` on wasavi), and edit "exrc" textbox.
 * abbreviate syntax is
 	+ `:abbreviate` displays all the abbreviations currently registered.
 	+ `:abbreviate [clear]` clears all the abbreviations.
@@ -147,7 +154,6 @@ Tips and Tricks
 	+ `:filesystem reset` discards the access token for online storage.
 	+ You can place the file system name at the head of a file name explicitly:
 	  for instance, `:read dropbox:/hello.txt`.
-* To access local files, see [document](https://github.com/akahuku/wasavi/wiki/Local-access).
 * When you read from the register of A to Z, some registers returns special content:
 	+ `B` register: user agent string
 	+ `D` register: current date time string (formatted by using `datetime` option as template of strftime(3))

@@ -85,6 +85,15 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 注意: 受け入れるが、まだ何の効力も持たないオプションもあります。
 
+## 初期設定を変更する
+
+各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
+（または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集してください。
+
+## ローカルファイルにアクセスする
+
+[ドキュメント](https://github.com/akahuku/wasavi/wiki/Local-access) を参照してください。
+
 ## Firefox で Vimperator と共存する
 
 [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) を Vimperator のプラグインディレクトリに置いてください。たとえば `~/.vimperator/plugin` や `%HOME%\vimperator\plugin` です。
@@ -117,9 +126,6 @@ Tips and Tricks
 * wasavi の最大化: `:set fullscreen` or `:set fs`
 * wasavi を元に戻す: `:set nofullscreen` or `:set nofs`
 * カラーテーマを変える: `:set theme=blight` or `:set theme=charcoal` or `:set theme=matrix` or `:set theme=solarized` or `:set theme=solarized_dark`
-* 初期設定を変更する:
-  各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
-  （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集する
 * :abbreviate の文法は:
 	+ `:abbreviate` は、登録されている全ての略語を表示します
 	+ `:abbreviate [clear]` は、全ての略語を削除します
@@ -149,7 +155,6 @@ Tips and Tricks
 	+ `:filesystem reset` はアクセストークンを破棄します。こちらも、ファイルシステム名を
 	  指定することができます
 	+ ファイル名の先頭にファイルシステム名を明示することができます: `:read dropbox:/hello.txt`
-* ローカルファイルへのアクセス方法は [ドキュメント](https://github.com/akahuku/wasavi/wiki/Local-access) を参照してください
 * A から Z までのレジスタを読み込む際、いくつかのレジスタは特別な内容を返します:
 	+ `B` register: ユーザーエージェント文字列
 	+ `D` register: 現在の日付時刻文字列（`datetime` オプションを strftime(3) のテンプレートとして使用します）
