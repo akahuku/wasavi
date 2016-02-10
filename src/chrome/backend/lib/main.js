@@ -177,10 +177,10 @@
 			},
 			fstab: {
 				def: {
-					dropbox:  {enabled:true, isDefault:true},
-					gdrive:   {enabled:true},
-					onedrive: {enabled:true},
-					file:     {enabled:true}
+					dropbox:  {enabled: true, isDefault: true},
+					gdrive:   {enabled: true},
+					onedrive: {enabled: true},
+					file:     {enabled: true}
 				},
 				set: function (value) {
 					ext.fileSystem.setInfo(value);
@@ -231,7 +231,7 @@
 	/* <<<1 classes */
 
 	function Config (info, opts) {
-		Object.defineProperty(this, 'info', {value:info});
+		Object.defineProperty(this, 'info', {value: info});
 		this.opts_ = opts || {};
 		this.init();
 	}
@@ -527,7 +527,7 @@
 				wasaviFrameContent = /<body[^>]*>(.+?)<\/body>/.exec(data)[1];
 
 				resolve();
-			}, {noCache:true});
+			}, {noCache: true});
 		});
 	}
 
@@ -614,7 +614,7 @@
 				else {
 					reject(new Error('Cannot retrieve statusLineHeight calculator.'));
 				}
-			}, {noCache:true});
+			}, {noCache: true});
 		});
 	}
 
@@ -647,12 +647,12 @@
 						}
 						resolve();
 					},
-					{noCache:true, mimeType:'text/plain;charset=x-user-defined'}
+					{noCache: true, mimeType: 'text/plain;charset=x-user-defined'}
 				);
 			});
 		}
 		return new Promise(function (resolve, reject) {
-			unicodeDictData = {fftt:{}};
+			unicodeDictData = {fftt: {}};
 
 			var list = [
 				['fftt_general.dat', 'fftt', 'General'],
@@ -776,7 +776,7 @@
 		var items;
 
 		if ('key' in data && 'value' in data) {
-			items = [{key:data.key, value:data.value}];
+			items = [{key: data.key, value: data.value}];
 		}
 		else if ('items' in data) {
 			items = data.items;
@@ -812,9 +812,9 @@
 	function handleSetMemorandum (command, data, sender, respond) {
 		memorandum.set(data.url, data.value);
 		ext.postMessage(sender, {
-			type:'fileio-write-response',
-			internalId:command.internalId,
-			requestNumber:command.requestNumber,
+			type: 'fileio-write-response',
+			internalId: command.internalId,
+			requestNumber: command.requestNumber,
 			state: 'complete',
 			meta: {
 				path: '',
@@ -829,9 +829,9 @@
 	function handleGetMemorandum (command, data, sender, respond) {
 		var content = memorandum.get(data.url);
 		ext.postMessage(sender, {
-			type:'fileio-read-response',
-			internalId:command.internalId,
-			requestNumber:command.requestNumber,
+			type: 'fileio-read-response',
+			internalId: command.internalId,
+			requestNumber: command.requestNumber,
 			state: 'complete',
 			meta: {
 				path: '',
@@ -846,107 +846,117 @@
 		playSound('launch');
 	}
 
-	function handleFsCtl (command, data, sender, respond) {
-		var result = false;
+	function handleFsCtlReset (command, data, sender, respond) {
+		ext.fileSystem.clearCredentials(data.name);
+	}
+
+	function handleFsCtlGetEntries (command, data, sender, respond) {
 		var path = data.path || '';
-
-		switch (data.subtype) {
-		case 'reset':
-			ext.fileSystem.clearCredentials(data.name);
-			break;
-
-		case 'get-entries':
-			ext.fileSystem.ls(
-				path, null,
-				{
-					onload: function (data) {
-						respond({data: data.contents});
-					},
-					onerror: function (error) {
-						respond({data: null});
-					}
+		ext.fileSystem.ls(
+			path, sender,
+			{
+				onload: function (data) {
+					respond({data: data.contents});
+				},
+				onerror: function (error) {
+					respond({data: null});
 				}
-			);
-			result = true;
-			break;
-
-		case 'chdir':
-			if (path == '') {
-				ext.postMessage(sender, {
-					type:'fileio-chdir-response',
-					internalId:command.internalId,
-					requestNumber:command.requestNumber,
-					data:null
-				});
 			}
-			else {
-				ext.fileSystem.ls(
-					path, sender,
-					{
-						onresponse: function () {
-							return true;
-						},
-						onload: function (data) {
-							ext.postMessage(sender, {
-								type:'fileio-chdir-response',
-								internalId:command.internalId,
-								requestNumber:command.requestNumber,
-								data:data
-							});
-						},
-						onerror: function (error) {
-							ext.postMessage(sender, {
-								type:'fileio-chdir-response',
-								internalId:command.internalId,
-								requestNumber:command.requestNumber,
-								error:error
-							});
-						}
-					}
-				);
-			}
-			break;
+		);
+		return true;
+	}
 
-		case 'read':
-			if (path == '') break;
-			ext.fileSystem.read(
+	function handleFsCtlChDir (command, data, sender, respond) {
+		var path = data.path || '';
+		if (path == '') {
+			ext.postMessage(sender, {
+				type: 'fileio-chdir-response',
+				internalId: command.internalId,
+				requestNumber: command.requestNumber,
+				data: null
+			});
+		}
+		else {
+			ext.fileSystem.ls(
 				path, sender,
 				{
-					encoding: data.encoding,
-					onresponse: function (d) {
-						if (!d) return;
-						d.internalId = command.internalId;
-						if (d.type == 'fileio-read-response') {
-							d.requestNumber = command.requestNumber;
-						}
+					onload: function (data) {
+						ext.postMessage(sender, {
+							type: 'fileio-chdir-response',
+							internalId: command.internalId,
+							requestNumber: command.requestNumber,
+							data: data
+						});
+					},
+					onerror: function (error) {
+						ext.postMessage(sender, {
+							type: 'fileio-chdir-response',
+							internalId: command.internalId,
+							requestNumber: command.requestNumber,
+							error: error
+						});
 					}
 				}
 			);
-			break;
-
-		case 'write':
-			if (path == '') break;
-			ext.fileSystem.write(
-				path, sender, data.value,
-				{
-					encoding: data.encoding,
-					delaySecs: data.isBuffered ? undefined : 0,
-					onresponse: function (d) {
-						if (!d) return;
-						d.internalId = command.internalId;
-						d.exstate = {
-							isBuffered:data.isBuffered
-						};
-						if (d.type == 'fileio-write-response') {
-							d.requestNumber = command.requestNumber;
-						}
-					}
-				}
-			);
-			break;
 		}
+	}
 
-		return result;
+	function handleFsCtlRead (command, data, sender, respond) {
+		var path = data.path || '';
+		if (path == '') return;
+
+		ext.fileSystem.read(
+			path, sender,
+			{
+				encoding: data.encoding,
+				onresponse: function (d, t) {
+					if (!d) return;
+
+					d.internalId = command.internalId;
+
+					console.log('read handler: task: ' + JSON.stringify(t));
+					console.log('              data: ' + JSON.stringify(d));
+					if (d.type == 'fileio-read-response') {
+						d.requestNumber = command.requestNumber;
+					}
+
+					ext.postMessage(sender, d);
+				}
+			}
+		);
+	}
+
+	function handleFsCtlWrite (command, data, sender, respond) {
+		var path = data.path || '';
+		if (path == '') return;
+
+		ext.fileSystem.write(
+			path, sender, data.value,
+			{
+				encoding: data.encoding,
+				delaySecs: data.isBuffered ? undefined : 0,
+				onresponse: function (d) {
+					if (!d) return;
+
+					d.internalId = command.internalId;
+					d.exstate = {
+						isBuffered: data.isBuffered
+					};
+
+					if (d.type == 'fileio-write-response') {
+						d.requestNumber = command.requestNumber;
+					}
+
+					ext.postMessage(sender, d);
+				}
+			}
+		);
+	}
+
+	function handleFsCtl (command, data, sender, respond) {
+		return data.subtype in fsctlMap ?
+			fsctlMap[data.subtype].apply(null, arguments) :
+			false;
 	}
 
 	function handleQueryShortcut (command, data, sender, respond) {
@@ -1001,6 +1011,13 @@
 		'terminated':			handleTerminated,
 		'dump-internal-ids':	handleDumpInternalIds
 	};
+	var fsctlMap = {
+		'reset':				handleFsCtlReset,
+		'get-entries':			handleFsCtlGetEntries ,
+		'chdir':				handleFsCtlChDir,
+		'read':					handleFsCtlRead,
+		'write':				handleFsCtlWrite
+	};
 
 	function handleRequest (command, data, sender, respond) {
 
@@ -1040,7 +1057,7 @@
 				widget.preferences['keyHookScript'] =
 					'data:text/javascript;base64,' +
 					btoa(getShrinkedCode(data));
-			}, {noCache:true, sync:true});
+			}, {noCache: true, sync: true});
 			break;
 		}
 	}
@@ -1072,11 +1089,11 @@
 				ext.request(
 					HOME_URL,
 					{
-						method:'POST',
-						content:{
-							currentVersion:config.get('version') || 'undefined',
-							newVersion:ext.version,
-							platform:platform
+						method: 'POST',
+						content: {
+							currentVersion: config.get('version') || 'undefined',
+							newVersion: ext.version,
+							platform: platform
 						}
 					},
 					function () {
