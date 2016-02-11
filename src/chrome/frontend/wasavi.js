@@ -2074,8 +2074,13 @@ function execLineInputEditMap (r, e, key, subkey, code) {
 	}
 	return true;
 }
-function executeViCommand (arg) {
+function executeViCommand (arg, callback) {
 	var seq = keyManager.createSequences(arg);
+
+	if (isFunction(callback)) {
+		seq.lastItem.callback = callback;
+	}
+
 	keyManager.setDequeue('unshift', seq, mapManager.markExpandedNoremap);
 	keyManager.sweep();
 }
@@ -2100,6 +2105,10 @@ function processInput (e, ignoreAbbrev) {
 	if (terminated) {
 		uninstall();
 		return;
+	}
+
+	if ('callback' in e && isFunction(e.callback)) {
+		e.callback();
 	}
 
 	var messageUpdated = false;
@@ -7098,24 +7107,26 @@ var commandMap = {
 				requestShowMessage(_('Register {0} is not exist.', c), true);
 				return inputEscape();
 			}
-			var command = registers.get(c).data;
-			command = command.replace(/^\n+|\n+$/g, '');
+
+			var command = registers.get(c).data.replace(/^\n+|\n+$/g, '');
 			if (command == '') {
 				requestShowMessage(_('Register {0} is empty.', c), true);
 				return inputEscape();
 			}
+
+			var count = prefixInput.count;
+			var terminator = function () {
+				if (--count > 0) {
+					executeViCommand(command, terminator);
+				}
+				else {
+					registers.set('@', command);
+					terminator = null;
+				}
+			};
+
 			prefixInput.trailer = c;
-			if (prefixInput.isCountSpecified) {
-				var p = new Wasavi.PrefixInput(command);
-				command =
-					p.register +
-					prefixInput.count +
-					p.operation +
-					p.motion +
-					p.trailer;
-			}
-			executeViCommand(command);
-			registers.set('@', command);
+			executeViCommand(command, terminator);
 			return true;
 		}
 	},
