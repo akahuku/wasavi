@@ -542,21 +542,65 @@ function setValue (element, value, isForce) {
 		return _('Cannot rewrite the page itself.');
 	}
 	else {
+		function toDivs (f, value) {
+			var length = 0;
+			value = value.split('\n');
+
+			for (var i = 0, goal = value.length; i < goal; i++) {
+				f.appendChild(document.createElement('div'))
+					.appendChild(document.createTextNode(value[i]));
+				length += value[i].length + 1;
+			}
+
+			return length;
+		}
+
+		function toTextAndBreaks (f, value) {
+			var length = 0;
+			value = value.split('\n');
+
+			for (var i = 0, goal = value.length - 1; i < goal; i++) {
+				f.appendChild(document.createTextNode(value[i]));
+				f.appendChild(document.createElement('br'));
+				length += value[i].length + 1;
+			}
+
+			if (value.length >= 1) {
+				f.appendChild(document.createTextNode(value[value.length - 1]));
+				length += value[i].length;
+			}
+
+			return length;
+		}
+
+		function toPlainText (f, value) {
+			f.appendChild(document.createTextNode(value));
+			return value.length;
+		}
+
+		/*
+		 * There are various newline formats in content editable element:
+		 *
+		 *   - DIV elements: <div></div><div></div> ...
+		 *   - Text and BR elements: #text <br> #text ...
+		 *   - Plain texts: #text (newline is '\n')
+		 *
+		 * These are different depending on sites, so we have to choice
+		 * the correct format by list...
+		 */
+
 		var r = document.createRange();
 		r.selectNodeContents(element);
 		r.deleteContents();
 
 		var f = document.createDocumentFragment();
-		var length = 0;
-		value = value.split('\n');
-		for (var i = 0, goal = value.length - 1; i < goal; i++) {
-			f.appendChild(document.createTextNode(value[i]));
-			f.appendChild(document.createElement('br'));
-			length += value[i].length + 1;
+		var length;
+
+		if (/\bworkflowy\.com$/.test(window.location.hostname)) {
+			length = toPlainText(f, value);
 		}
-		if (value.length >= 1) {
-			f.appendChild(document.createTextNode(value[value.length - 1]));
-			length += value[i].length;
+		else {
+			length = toTextAndBreaks(f, value);
 		}
 
 		try {
