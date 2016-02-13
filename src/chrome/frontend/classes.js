@@ -2908,11 +2908,18 @@ loop:			while (node) {
 			var result = [];
 			className || (className = EMPHASIS_CLASS);
 
-			function createSpan () {
+			function surroundWithSpan (r) {
 				var span = document.createElement('span');
 				span.className = className;
+
+				r.surroundContents(span);
+
+				// Chrome removes text node which includes only newline.
+				if (!span.firstChild) {
+					span.appendChild(document.createTextNode(''));
+				}
+
 				result.push(span);
-				return span;
 			}
 
 whole:
@@ -2935,14 +2942,14 @@ whole:
 						if (offset + length <= nodeLength) {
 							r.setStart(node, offset);
 							r.setEnd(node, offset + length);
-							r.surroundContents(createSpan());
+							surroundWithSpan(r);
 							length = -1;
 							break whole;
 						}
 						else if (nodeLength > 0) {
 							r.setStart(node, offset);
 							r.setEnd(node, nodeLength);
-							r.surroundContents(createSpan());
+							surroundWithSpan(r);
 							length -= nodeLength - offset;
 							offset = 0;
 							node = iter.nextNode();
