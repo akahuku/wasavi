@@ -1,5 +1,18 @@
-0.6.603
+0.6.616
 
+	* use page context script to launch wasavi on CodeMirror (#115)
+	* ensure text node exists after range#surroundContents on Chrome (#119)
+	* fix the handling newline in content editable elements (#117)
+	* fix macro behavior with a count (#114)
+
+	* CodeMirror 上で wasavi を起動させるためにページコンテキストのスクリプト
+	  を使うようにした (#115)
+	* Chrome で range#surroundContents を呼び出した後テキストノードが存在する
+	ことを確認するようにした (#119)
+	* contenteditable な要素における改行の取り扱いを修正 (#117)
+	* カウントを伴うマクロの振る舞いを修正 (#114)
+
+0.6.603
 	* update kosian (treat OneDrive's album as a folder)
 	* update kosian (fix OAuth2 credential is not stored correctly)
 
