@@ -1118,4 +1118,21 @@ public class EditingTest extends WasaviTest {
 		Wasavi.send("0ga");
 		assertEquals("#1-1", "\"f\" U+0066", Wasavi.getLastMessage());
 	}
+
+	// https://github.com/akahuku/wasavi/issues/114
+	@Test
+	public void macroWithCount_issue114 () {
+		Wasavi.send("i0234\u001b");
+		Wasavi.send("yy5p");
+		Wasavi.send("qar1jq");
+		Wasavi.send("@a");
+		Wasavi.send("3@a");
+		assertValue("#1-1",
+			"0234\n" +
+			"1234\n" +
+			"1234\n" +
+			"1234\n" +
+			"1234\n" +
+			"1234");
+	}
 }
