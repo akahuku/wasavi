@@ -66,7 +66,7 @@
   ],
   "web_accessible_resources": [
     "wasavi.html",
-    "scripts/key_hook.js"
+    "scripts/page_context.js"
   ],
   "options_page": "options.html",
   "homepage_url": "http://appsweets.net/",

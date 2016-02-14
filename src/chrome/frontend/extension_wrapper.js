@@ -182,7 +182,7 @@
 				}
 			});
 		},
-		getKeyHookScriptSrc: function (path) {
+		getPageContextScriptSrc: function (path) {
 			return '';
 		},
 		ensureRun: function () {
@@ -296,8 +296,8 @@
 		this.getMessage = function (messageId) {
 			return chrome.i18n.getMessage(messageId);
 		};
-		this.getKeyHookScriptSrc = function () {
-			return chrome.runtime.getURL('scripts/key_hook.js');
+		this.getPageContextScriptSrc = function () {
+			return chrome.runtime.getURL('scripts/page_context.js');
 		};
 		this.urlInfo = new function () {
 			var extensionId = chrome.runtime.id;
@@ -383,8 +383,8 @@
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
 		};
-		this.getKeyHookScriptSrc = function () {
-			return widget.preferences['keyHookScript'];
+		this.getPageContextScriptSrc = function () {
+			return widget.preferences['pageContextScript'];
 		};
 		this.urlInfo = new function () {
 			var extensionId = widget.preferences['widget-id'];
@@ -488,8 +488,8 @@
 		this.setMessageListener = function (handler) {
 			onMessageHandler = handler;
 		};
-		this.getKeyHookScriptSrc = function () {
-			return self.options.keyHookScript;
+		this.getPageContextScriptSrc = function () {
+			return self.options.pageContextScript;
 		};
 		this.urlInfo = new function () {
 			var extensionHostname = self.options.extensionId

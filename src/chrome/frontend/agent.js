@@ -248,7 +248,7 @@ function run (element) {
 			getValueCallback = null;
 			element.classList.remove(className);
 		}, BOOT_WAIT_TIMEOUT_MSECS);
-		fireCustomEvent('WasaviRequestGetContent', {className:className});
+		fireCustomEvent('WasaviRequestGetContent', className);
 	}
 	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
 		runCore(element, {
@@ -507,7 +507,7 @@ function setValue (element, value, isForce) {
 		setTimeout(function () {
 			element.classList.remove(className);
 		}, 1000 * 5);
-		fireCustomEvent('WasaviRequestSetContent', {className:className, content:value});
+		fireCustomEvent('WasaviRequestSetContent', className + '\t' + value);
 		return value.length;
 	}
 	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
@@ -927,7 +927,7 @@ function getFullscreenRect () {
  * ----------------
  */
 
-function createPageAgent (listenKeydown, hookKeyEvents) {
+function createPageAgent (listenKeydown, usePageContextScript) {
 	var parent = document.head || document.body || document.documentElement;
 	if (!parent) return;
 
@@ -937,18 +937,16 @@ function createPageAgent (listenKeydown, hookKeyEvents) {
 		window.addEventListener('keydown', handleKeydown, true);
 	}
 
-	/*
-	if (hookKeyEvents) {
+	if (usePageContextScript) {
 		var s = document.createElement('script');
 		s.onload = function () {
 			this.onload = null;
 			this.parentNode && this.parentNode.removeChild(this);
 		};
 		s.type = 'text/javascript';
-		s.src = extension.getKeyHookScriptSrc();
+		s.src = extension.getPageContextScriptSrc();
 		parent.appendChild(s);
 	}
-	 */
 }
 
 /**
@@ -1503,7 +1501,7 @@ extension = WasaviExtensionWrapper.create();
 isTestFrame = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/.test(window.location.href);
 isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 
-createPageAgent(true, false);
+createPageAgent(true, true);
 extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);

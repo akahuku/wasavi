@@ -102,14 +102,14 @@
 		 * NOTE: The referencing way of key-hook script is
 		 * different for every browser:
 		 *
-		 *   chrome:  scripts/key_hook.js, referenced via
+		 *   chrome:  scripts/page_context.js, referenced via
 		 *            chrome.runtime.getURL()
 		 *
-		 *   opera:   scripts/key_hook.js, referenced via
-		 *            widget.preferences['keyHookScript']
+		 *   opera:   scripts/page_context.js, referenced via
+		 *            widget.preferences['pageContextScript']
 		 *
-		 *   firefox: data/scripts/key_hook.js,
-		 *            keyHookScript property of following object
+		 *   firefox: data/scripts/page_context.js,
+		 *            pageContextScript property of following object
 		 */
 		contentScriptOptions: getContentScriptOptions(),
 
@@ -346,6 +346,9 @@
 			src = src.substring(blankLine + 2);
 		}
 
+		// strip all single line comments
+		src = src.replace(/\/\/.*/g, ' ');
+
 		// remove all newlines
 		src = src.replace(/\n[\n\s]*/g, ' ');
 
@@ -373,10 +376,10 @@
 		var base64 = require('sdk/base64');
 
 		return {
-			keyHookScript: 'data:text/javascript;base64,' +
+			pageContextScript: 'data:text/javascript;base64,' +
 				base64.encode(
 					getShrinkedCode(
-						self.data.load('scripts/key_hook.js'))),
+						self.data.load('scripts/page_context.js'))),
 			wasaviFrameSource: wasaviFrameSource,
 			wasaviOptionsUrl: self.data.url('options.html')
 		};
@@ -1053,8 +1056,8 @@
 		// platform depends tweaks
 		switch (ext.kind) {
 		case 'Opera':
-			ext.resource('scripts/key_hook.js', function (data) {
-				widget.preferences['keyHookScript'] =
+			ext.resource('scripts/page_context.js', function (data) {
+				widget.preferences['pageContextScript'] =
 					'data:text/javascript;base64,' +
 					btoa(getShrinkedCode(data));
 			}, {noCache: true, sync: true});
