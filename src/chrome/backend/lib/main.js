@@ -219,6 +219,9 @@
 					return soundVolume = Math.max(0, Math.min(value, 100));
 				},
 				setOnInit: true
+			},
+			upgradeNotify: {
+				def: true
 			}
 		},
 		local: {
@@ -704,6 +707,7 @@
 		if (isOptions) {
 			o.sounds = config.get('sounds');
 			o.soundVolume = config.get('soundVolume');
+			o.upgradeNotify = config.get('upgradeNotify');
 		}
 
 		// for wasavi and options
@@ -714,7 +718,9 @@
 
 			// for tests
 			if (payload && isTestUrl(payload.url)) {
-				o.exrc += '\nset list';
+				if (!/\bset list\b/.test(o.exrc)) {
+					o.exrc += '\nset list';
+				}
 				if (/[?&]nooverride\b/.test(payload.url)) {
 					o.exrc += '\nset nooverride';
 				}
@@ -1100,10 +1106,10 @@
 						}
 					},
 					function () {
-						ext.openTabWithUrl(HOME_URL);
+						config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
 					},
 					function () {
-						ext.openTabWithUrl(HOME_URL);
+						config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
 					}
 				);
 				config.set('version', ext.version);

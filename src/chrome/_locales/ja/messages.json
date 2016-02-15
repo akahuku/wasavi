@@ -113,6 +113,14 @@
     "message": "音量",
     "description": "Volume"
   },
+  "option_upgrade_head": {
+    "message": "アップグレード後",
+    "description": "When upgraded"
+  },
+  "option_upgrade_notify": {
+    "message": "wasavi のホームページを開く",
+    "description": "Open wasavi homepage"
+  },
   "option_readme": {
     "message": "README",
     "description": "README"
@@ -128,6 +136,10 @@
   "edit_with_wasavi": {
     "message": "wasavi で編集",
     "description": "Edit with wasavi"
+  },
+  "option_open_button_desc": {
+    "message": "新しいタブで設定ページを開く",
+    "description": "Open Options Page with a new tab"
   },
   "_plural_rule@function": {
     "message": "isone(one)"
@@ -344,6 +356,10 @@
     "message": "mkdir -p をエミュレートできません",
     "description": "Cannot emulate mkdir -p"
   },
+  "cannot_input_a_surrogate_code_point": {
+    "message": "サロゲートコードポイントの入力はできません。",
+    "description": "Cannot input a surrogate code point."
+  },
   "cannot_open_@0": {
     "message": "\"{0}\" を開けません。",
     "description": "Cannot open \"{0}\"."
@@ -444,6 +460,10 @@
     "message": "余分な字句: {0}",
     "description": "Extra token: {0}"
   },
+  "failed_to_read": {
+    "message": "読み込みに失敗しました",
+    "description": "Failed to read"
+  },
   "failed_to_retrieve_directory_id": {
     "message": "ディレクトリ ID の取得に失敗しました。",
     "description": "Failed to retrieve directory id."
@@ -463,6 +483,14 @@
   "failed_to_save_@0": {
     "message": "保存に失敗しました ({0})",
     "description": "Failed to save ({0})"
+  },
+  "failed_to_validate_access_token": {
+    "message": "アクセストークンの確認に失敗しました。",
+    "description": "Failed to validate access token."
+  },
+  "failed_to_write": {
+    "message": "書き出しに失敗しました",
+    "description": "Failed to write"
   },
   "file_is_modified_write_or_use_to_override": {
     "message": "ファイルは編集されています（\"!\" 付加で上書きできます）。",
@@ -496,6 +524,10 @@
     "message": "内部エラー: 不正な置換関数",
     "description": "Internal Error: invalid replace function"
   },
+  "internal_exception_": {
+    "message": "内部例外: ",
+    "description": "Internal exception: "
+  },
   "internal_state_error": {
     "message": "内部の状態エラーです。",
     "description": "Internal state error."
@@ -507,6 +539,10 @@
   "invalid_argument": {
     "message": "不正な引数です。",
     "description": "Invalid argument."
+  },
+  "invalid_authentication_state_@0": {
+    "message": "認証の状態が不正: {0}",
+    "description": "Invalid authentication state: {0}"
   },
   "invalid_authentication_state_eca_@0": {
     "message": "認証の状態が不正 (eca): {0}",
@@ -587,6 +623,10 @@
   "invalid_register_name_@0": {
     "message": "不正なレジスタ名: {0}",
     "description": "Invalid register name: {0}"
+  },
+  "invalid_response": {
+    "message": "不正な応答です。",
+    "description": "Invalid response."
   },
   "invalid_section_format_@0": {
     "message": "セクションの書式が不正: {0}",
