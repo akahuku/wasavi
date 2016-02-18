@@ -34,7 +34,7 @@
         "description": ""
     },
     "option_qa_blacklist_tips": {
-        "message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.",
+        "message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* You can also put blank and CSS selector expression after URL, like [c]http://example.net/ [name=\"foo\"][/c]. The selector will changes a blacklisting target to an element from a page.",
         "description": ""
     },
     "option_target_elements_desc": {
@@ -113,6 +113,14 @@
         "message": "Volume",
         "description": ""
     },
+    "option_upgrade_head": {
+        "message": "When upgraded",
+        "description": ""
+    },
+    "option_upgrade_notify": {
+        "message": "Open wasavi homepage",
+        "description": ""
+    },
     "option_readme": {
         "message": "README",
         "description": ""
@@ -127,6 +135,10 @@
     },
     "edit_with_wasavi": {
         "message": "Edit with wasavi",
+        "description": ""
+    },
+    "option_open_button_desc": {
+        "message": "Open Options Page with a new tab",
         "description": ""
     }
 }

@@ -170,8 +170,14 @@ function initPage (req) {
 
 	// log mode
 	el = $('log-mode');
-	if (el && el.nodeName == 'INPUT') {
+	if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
 		el.checked = req.logMode;
+	}
+
+	// upgrade action
+	el = $('upgrade-notify');
+	if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+		el.checked = req.upgradeNotify;
 	}
 
 	/*
@@ -428,8 +434,14 @@ function handleOptionsSave () {
 
 	// log mode
 	el = $('log-mode');
-	if (el && el.nodeName == 'INPUT') {
+	if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
 		items.push({key:'logMode', value:el.checked});
+	}
+
+	// upgrade action
+	el = $('upgrade-notify');
+	if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
+		items.push({key:'upgradeNotify', value:el.checked});
 	}
 
 	/*

@@ -113,6 +113,14 @@
     "message": "Volume",
     "description": "Volume"
   },
+  "option_upgrade_head": {
+    "message": "When upgraded",
+    "description": "When upgraded"
+  },
+  "option_upgrade_notify": {
+    "message": "Open wasavi homepage",
+    "description": "Open wasavi homepage"
+  },
   "option_readme": {
     "message": "README",
     "description": "README"
@@ -128,6 +136,10 @@
   "edit_with_wasavi": {
     "message": "Edit with wasavi",
     "description": "Edit with wasavi"
+  },
+  "option_open_button_desc": {
+    "message": "Open Options Page with a new tab",
+    "description": "Open Options Page with a new tab"
   },
   "_plural_rule@function": {
     "message": "isone(one)"
@@ -344,6 +356,10 @@
     "message": "Cannot emulate mkdir -p",
     "description": "Cannot emulate mkdir -p"
   },
+  "cannot_input_a_surrogate_code_point": {
+    "message": "Cannot input a surrogate code point.",
+    "description": "Cannot input a surrogate code point."
+  },
   "cannot_open_@0": {
     "message": "Cannot open \"{0}\".",
     "description": "Cannot open \"{0}\"."
@@ -444,6 +460,10 @@
     "message": "Extra token: {0}",
     "description": "Extra token: {0}"
   },
+  "failed_to_read": {
+    "message": "Failed to read",
+    "description": "Failed to read"
+  },
   "failed_to_retrieve_directory_id": {
     "message": "Failed to retrieve directory id.",
     "description": "Failed to retrieve directory id."
@@ -463,6 +483,14 @@
   "failed_to_save_@0": {
     "message": "Failed to save ({0})",
     "description": "Failed to save ({0})"
+  },
+  "failed_to_validate_access_token": {
+    "message": "Failed to validate access token.",
+    "description": "Failed to validate access token."
+  },
+  "failed_to_write": {
+    "message": "Failed to write",
+    "description": "Failed to write"
   },
   "file_is_modified_write_or_use_to_override": {
     "message": "File is modified; write or use \"!\" to override.",
@@ -496,6 +524,10 @@
     "message": "Internal Error: invalid replace function",
     "description": "Internal Error: invalid replace function"
   },
+  "internal_exception_": {
+    "message": "Internal exception: ",
+    "description": "Internal exception: "
+  },
   "internal_state_error": {
     "message": "Internal state error.",
     "description": "Internal state error."
@@ -507,6 +539,10 @@
   "invalid_argument": {
     "message": "Invalid argument.",
     "description": "Invalid argument."
+  },
+  "invalid_authentication_state_@0": {
+    "message": "Invalid authentication state: {0}",
+    "description": "Invalid authentication state: {0}"
   },
   "invalid_authentication_state_eca_@0": {
     "message": "Invalid authentication state (eca): {0}",
@@ -587,6 +623,10 @@
   "invalid_register_name_@0": {
     "message": "Invalid register name: {0}",
     "description": "Invalid register name: {0}"
+  },
+  "invalid_response": {
+    "message": "Invalid response.",
+    "description": "Invalid response."
   },
   "invalid_section_format_@0": {
     "message": "Invalid section format: {0}",

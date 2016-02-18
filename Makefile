@@ -336,18 +336,18 @@ message: FORCE
 	tool/update-locales.rb \
 		--indir $(CHROME_SRC_PATH)/_locales
 
-#	update firefox native localized messages
-	tool/update-firefox-locales.rb \
-		--product $(PRODUCT) \
-		--indir $(FIREFOX_SRC_PATH) \
-		--localedir $(CHROME_SRC_PATH)/_locales
-
 #	get diff of messages other than en-US
 	tool/make-messages.rb \
 		--indir=$(CHROME_SRC_PATH) \
 		$(CHROME_SRC_PATH)/frontend/*.js \
 		$(CHROME_SRC_PATH)/backend/*.js \
 		$(CHROME_SRC_PATH)/backend/lib/kosian/*.js
+
+#	update firefox native localized messages
+	tool/update-firefox-locales.rb \
+		--product $(PRODUCT) \
+		--indir $(FIREFOX_SRC_PATH) \
+		--localedir $(CHROME_SRC_PATH)/_locales
 
 
 
