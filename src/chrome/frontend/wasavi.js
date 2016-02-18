@@ -1334,7 +1334,8 @@ function install (x, req) {
 	prefixInput = new Wasavi.PrefixInput;
 	idealWidthPixels = idealDenotativeWidthPixels = -1;
 	isEditCompleted = isVerticalMotion = isReadonlyWarned =
-	isSmoothScrollRequested = isJumpBaseUpdateRequested = false;
+	isSmoothScrollRequested = isJumpBaseUpdateRequested =
+	isUndoFlipped = false;
 	recordedStrokes = new Wasavi.StrokeRecorder;
 	lastSimpleCommand = '';
 	lastHorzFindCommand = {direction:0, letter:'', stopBefore:false};
@@ -4700,6 +4701,52 @@ function reportSave (f) {
 		config.setData('report', report);
 	}
 }
+function undo (count) {
+	var revertedCount = 0;
+	count || (count = 1);
+
+	while (count-- > 0) {
+		var result = editLogger.undo();
+		if (result === false) {
+			break;
+		}
+
+		revertedCount += result;
+	}
+
+	if (revertedCount == 0) {
+		requestShowMessage(_('No undo item.'), true);
+		return;
+	}
+
+	requestShowMessage(_('{0} {operation:0} have reverted.', revertedCount));
+	invalidateIdealWidthPixels();
+	config.setData(editLogger.isClean ? 'nomodified' : 'modified');
+	return true;
+}
+function redo (count) {
+	var redidCount = 0;
+	count || (count = 1);
+
+	while (count-- > 0) {
+		var result = editLogger.redo();
+		if (result === false) {
+			break;
+		}
+
+		redidCount += result;
+	}
+
+	if (redidCount == 0) {
+		requestShowMessage(_('No redo item.'), true);
+		return;
+	}
+
+	requestShowMessage(_('{0} {operation:0} have executed again.', redidCount));
+	invalidateIdealWidthPixels();
+	config.setData(editLogger.isClean ? 'nomodified' : 'modified');
+	return true;
+}
 
 /*
  * event handlers <<<1
@@ -5222,7 +5269,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['smartcase', 'b', true],
 		['undolevels', 'i', 20, function (v) {
 			if (editLogger) {
-				editLogger.logMax = v;
+				editLogger.logMax = v || 1;
 			}
 			return v;
 		}],
@@ -5377,6 +5424,7 @@ var isInteractive;
 var isSmoothScrollRequested;
 var isJumpBaseUpdateRequested;
 var isCompleteResetCanceled;
+var isUndoFlipped;
 
 var lastSimpleCommand;
 var lastHorzFindCommand;
@@ -7013,31 +7061,28 @@ var commandMap = {
 			return /^g/.test(prefixInput.operation) ?
 				true : inputEscape(o.e.key);
 		}
-		var result = editLogger.undo();
-		if (result === false) {
-			requestShowMessage(_('No undo item.'), true);
+		var result;
+		if (config.vars.undolevels == 0) {
+			result = (isUndoFlipped ? redo : undo)();
+			isUndoFlipped = !isUndoFlipped;
 		}
 		else {
-			requestShowMessage(_('{0} {operation:0} have reverted.', result));
-			invalidateIdealWidthPixels();
-			config.setData(editLogger.isClean ? 'nomodified' : 'modified');
-			return true;
+			result = undo(prefixInput.count);
 		}
+		return result;
 	},
 	'\u0012'/*^R*/:function (c, o) {
 		if (!prefixInput.isEmptyOperation) {
 			return inputEscape(o.e.key);
 		}
-		var result = editLogger.redo();
-		if (result === false) {
-			requestShowMessage(_('No redo item.'), true);
+		var result;
+		if (config.vars.undolevels == 0) {
+			result = (isUndoFlipped ? undo : redo)();
 		}
 		else {
-			requestShowMessage(_('{0} {operation:0} have executed again.', result));
-			invalidateIdealWidthPixels();
-			config.setData(editLogger.isClean ? 'nomodified' : 'modified');
-			return true;
+			result = redo(prefixInput.count);
 		}
+		return result;
 	},
 	U:function (c, o) {
 		if (!prefixInput.isEmptyOperation) {
