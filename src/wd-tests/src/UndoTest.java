@@ -579,6 +579,68 @@ public class UndoTest extends WasaviTest {
 		Wasavi.send("\u0012");
 		assertValue("#1-3", "FOO\nBAR bar");
 	}
+
+	@Test
+	public void withCount () {
+		Wasavi.send("afoo \u001b");
+		Wasavi.send("abar \u001b");
+		Wasavi.send("abaz \u001b");
+
+		Wasavi.send("2u");
+		assertValue("#1-1", "foo ");
+		assertEquals("#1-2", "2 operations have reverted.", Wasavi.getLastMessage());
+
+		Wasavi.send("2\u0012");
+		assertValue("#2-1", "foo bar baz ");
+		assertEquals("#2-2", "2 operations have executed again.", Wasavi.getLastMessage());
+
+		Wasavi.send("100u");
+		assertValue("#3-1", "");
+		assertEquals("#3-2", "3 operations have reverted.", Wasavi.getLastMessage());
+
+		Wasavi.send("100\u0012");
+		assertValue("#4-1", "foo bar baz ");
+		assertEquals("#4-2", "3 operations have executed again.", Wasavi.getLastMessage());
+	}
+
+	@Test
+	public void flippingUndo () {
+		Wasavi.send(":set undolevels=0\n");
+		Wasavi.send("afoo bar baz\u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-1", "");
+
+		Wasavi.send("u");
+		assertValue("#2-1", "foo bar baz");
+
+		// in flipping undo mode, count must be ignored
+		Wasavi.send("100u");
+		assertValue("#1-1", "");
+
+		Wasavi.send("100u");
+		assertValue("#2-1", "foo bar baz");
+	}
+
+	@Test
+	public void flippingRedo () {
+		Wasavi.send(":set undolevels=0\n");
+		Wasavi.send("afoo \u001b");
+		Wasavi.send("abar \u001b");
+		Wasavi.send("abaz \u001b");
+
+		Wasavi.send("u");
+		assertValue("#1-1", "foo bar ");
+		Wasavi.send("\u0012");
+		assertValue("#1-2", "foo bar ");
+		assertEquals("#1-3", "No undo item.", Wasavi.getLastMessage());
+
+		Wasavi.send("u");
+		assertValue("#2-1", "foo bar baz ");
+		Wasavi.send("\u0012");
+		assertValue("#2-2", "foo bar baz ");
+		assertEquals("#2-3", "No redo item.", Wasavi.getLastMessage());
+	}
 }
 
 /* vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=java : */
