@@ -94,17 +94,25 @@ and edit "exrc" textbox.
 
 See [document](https://github.com/akahuku/wasavi/wiki/Local-access).
 
-## How to use wasavi with Vimperator on Firefox
+## How to use wasavi with Vimperator/Keysnail/VimFx on Firefox
+
+### Vimperator
 
 Put [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) in your Vimperator plugin directory, for example,  `~/.vimperator/plugin` or `%HOME%\vimperator\plugin`.
 
 This plugin will control the pass-through mode of Vimperator according to the state of wasavi.
 
-## How to use wasavi with Keysnail on Firefox
+### Keysnail
 
 Put [wasavi_mediator.ks.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/keysnail/wasavi_mediator.ks.js) in your Keysnail plugin directory.
 
 This plugin will control suspend mode of Keysnail according to the state of wasavi.
+
+### VimFx
+
+Latest VimFx recognizes wasavi as editable element.  While wasavi is running, VimFx suspends temporarily.
+
+To use VimFx's key binding while wasavi is running, click outside area of wasavi or enter `:set esctoblur` and press `<esc>` in normal mode.  Then keyboard focus would be removed from wasavi, and you can use VimFx's key binding.
 
 ## How to use wasavi as an independent text editor
 

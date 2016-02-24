@@ -923,8 +923,6 @@
 
 					d.internalId = command.internalId;
 
-					console.log('read handler: task: ' + JSON.stringify(t));
-					console.log('              data: ' + JSON.stringify(d));
 					if (d.type == 'fileio-read-response') {
 						d.requestNumber = command.requestNumber;
 					}

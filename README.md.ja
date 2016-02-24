@@ -94,17 +94,25 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 
 [ドキュメント](https://github.com/akahuku/wasavi/wiki/Local-access) を参照してください。
 
-## Firefox で Vimperator と共存する
+## Firefox で Vimperator/Keysnail/VimFx と共存する
+
+### Vimperator
 
 [wasavi_mediator.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/vimperator/wasavi_mediator.js) を Vimperator のプラグインディレクトリに置いてください。たとえば `~/.vimperator/plugin` や `%HOME%\vimperator\plugin` です。
 
 このプラグインは wasavi の状態に従って Vimperator のパススルーモードを制御します。
 
-## Firefox で Keysnail と共存する
+### Keysnail
 
 [wasavi_mediator.ks.js](https://raw.github.com/akahuku/wasavi/master/src/mediators/keysnail/wasavi_mediator.ks.js) を Keysnail のプラグインディレクトリに置いてください。
 
 このプラグインは wasavi の状態に従って Keysanil のサスペンドモードを制御します。
+
+### VimFx
+
+最新の VimFx は wasavi を編集可能な要素の一種として認識し、wasavi の動作中は一時的に VimFx 自身のキーバインドは無効になります。
+
+wasavi の動作中に VimFx のキーバインドを使用するには、ページの wasavi 以外の領域をクリックするか、`:set esctoblur` とした上でノーマルモード時に `<esc>` を押します。フォーカスが wasavi から外れ、VimFx の機能が戻ります。
 
 ## 単体のテキストエディタとしての利用
 

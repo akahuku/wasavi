@@ -2242,7 +2242,14 @@ function inputEscape () {
 		});
 	}
 	else {
-		inputMode == 'command' && requestNotice({silent:_('In command mode.')});
+		if (inputMode == 'command') {
+			if (config.vars.esctoblur) {
+				notifyToParent('request-blur');
+			}
+			else {
+				requestNotice({silent:_('In command mode.')});
+			}
+		}
 	}
 
 	prefixInput.reset();
@@ -5261,6 +5268,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['override', 'b', true, null, {isDynamic:true}],
 		['datetime', 's', '%c'],
 		['cursorblink', 'b', true],
+		['esctoblur', 'b', false],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
@@ -5756,7 +5764,7 @@ var commandMap = {
 	'*nop*':function () {return true},
 
 	// escape
-	'\u001b':inputEscape,
+	'\u001b':function () {return inputEscape()},
 
 	// digits
 	'1':inputDigit, '2':inputDigit, '3':inputDigit, '4':inputDigit, '5':inputDigit,

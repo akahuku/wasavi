@@ -1316,6 +1316,11 @@ function handleBackendMessage (req) {
 		}
 		break;
 
+	case 'request-blur':
+		wasaviFrame.blur();
+		document.body.focus();
+		break;
+
 	/*
 	 * messages from backend
 	 */
