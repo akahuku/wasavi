@@ -1,4 +1,21 @@
+0.6.626
+
+	* partial support for VimFx (#64)
+	* add flipping undo, or pure vi compatible undo (#113)
+	* update copyright year
+	* add "upgradeNotify" option which controls whether wasavi displays a
+	home page when wasavi was upgraded
+	* fix update url for firefox
+
+	* VimFx を一部サポート (#64)
+	* flipping undo、つまり純粋な vi 互換の undo を追加 (#113)
+	* コピーライトの年数を更新
+	* wasavi が更新された時にホームページを表示するかを制御するオプション
+	"upgradeNotify" オプションを追加
+	* firefox の更新 URL を修正
+
 0.6.616
+
 
 	* use page context script to launch wasavi on CodeMirror (#115)
 	* ensure text node exists after range#surroundContents on Chrome (#119)

@@ -887,7 +887,7 @@ function createElementResizeListener (element, callback) {
 	return {connect: connect, disconnect: disconnect, fire: fireIfResized};
 }
 
-function connect () {
+function connect (callback) {
 	var connected = false;
 	var retryRest = 5;
 	var wait = 1000;
@@ -895,7 +895,7 @@ function connect () {
 	var gotInit = function (req) {
 		if (connected) return;
 		connected = true;
-		handleConnect(req);
+		callback(req);
 	};
 	var checkIfConnectedOrRetry = function () {
 		if (connected || retryRest <= 0) return;
@@ -1511,7 +1511,7 @@ extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
 
-connect();
+connect(handleConnect);
 
 })(this);
 
