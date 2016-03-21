@@ -1,5 +1,5 @@
 /**
- * key hook script for wasavi frontend
+ * page-context script for wasavi frontend
  *
  * @author akahuku@gmail.com
  */
@@ -27,14 +27,13 @@ doc.addEventListener('WasaviRequestGetContent', function (e) {
 	if (!node) return;
 
 	var result = '';
-	node.classList.remove(className);
 	if (node.CodeMirror)
 		try {result = node.CodeMirror.getValue()} catch (ex) {result = ''}
 	else if (node.classList.contains('ace_editor') && win.ace)
 		try {result = win.ace.edit(node).getValue()} catch(ex) {result = ''}
 
 	var ev = doc.createEvent('CustomEvent');
-	ev.initCustomEvent('WasaviResponseGetContent', false, false, result);
+	ev.initCustomEvent('WasaviResponseGetContent', false, false, className + '\t' + result);
 	doc.dispatchEvent(ev);
 }, false);
 

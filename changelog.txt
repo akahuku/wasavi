@@ -1,3 +1,7 @@
+0.6.628
+
+	* allow simultaneous multiple instances (#118)
+
 0.6.626
 
 	* partial support for VimFx (#64)
@@ -15,7 +19,6 @@
 	* firefox の更新 URL を修正
 
 0.6.616
-
 
 	* use page context script to launch wasavi on CodeMirror (#115)
 	* ensure text node exists after range#surroundContents on Chrome (#119)

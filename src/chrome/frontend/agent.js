@@ -35,6 +35,7 @@ typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.urlInfo.isExternal
 && (function (global) {
 
+// consts <<<1
 var EXTENSION_SPECIFIER = 'data-texteditor-extension';
 var EXTENSION_CURRENT = 'data-texteditor-extension-current';
 var MARKS_ID = 'data-wasavi-marks';
@@ -42,6 +43,7 @@ var FULLSCREEN_MARGIN = 8;
 var MIN_WIDTH_PIXELS = 320;
 var MIN_HEIGHT_PIXELS = 240;
 var BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
+var INSTANCE_MAX = 0x10000;
 var ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
@@ -54,9 +56,10 @@ var ACCEPTABLE_TYPES = {
 	body:     'enablePage'
 };
 
-var extension;
-var isTestFrame;
-var isOptionsPage;
+// page global variables <<<1
+var extension = WasaviExtensionWrapper.create();
+var isTestFrame = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/.test(window.location.href);
+var isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
 var allowedElements;
 var shortcutCode;
 var fontFamily;
@@ -65,21 +68,29 @@ var devMode;
 var logMode;
 var blacklist;
 var statusLineHeight;
+var wasaviAgentsHash = {};
+var diag = {
+	_messages: null,
+	_lastPush: null,
+	init: function () {
+		this._messages = [];
+		this._lastPush = Date.now();
+		return this;
+	},
+	push: function (s) {
+		if (!this._messages) return;
+		var now = Date.now();
+		this._messages.push(((now - this._lastPush) / 1000).toFixed(3) + 's\t' + s);
+		this._lastPush = now;
+	},
+	out: function () {
+		if (!this._messages) return;
+		error(this._messages.join('\n'));
+		this._messages = null;
+	}
+};
 
-var targetElement;
-var wasaviFrame;
-var wasaviFrameInternalId;
-var widthOwn;
-var heightOwn;
-var isFullscreen;
-var isSyncSize;
-var removeListener;
-var resizeListener;
-var wasaviFrameTimeoutTimer;
-var getValueCallback;
-var stateClearTimer;
-var diagMessages;
-
+// utility functions <<<1
 function log () {
 	logMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
 }
@@ -102,516 +113,130 @@ function getUniqueClass () {
 	return result;
 }
 
-function notifyToChild (id, payload) {
-	if (!id) return;
-	extension.postMessage({
-		type: 'transfer',
-		to: id,
-		payload: payload
-	});
-}
-
-function locate (iframe, target, opts) {
-	function isFixedPosition (element) {
-		if (element == document.body) return true;
-		var isFixed = false;
-		for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
-			var s = document.defaultView.getComputedStyle(tmp, '');
-			if (s && s.position == 'fixed') {
-				isFixed = true;
-				break;
-			}
-		}
-		return isFixed;
-	}
-
-	function assign () {
-		for (var i = 0, goal = arguments.length; i < goal; i += 2) {
-			var styleName = arguments[i];
-			var value = arguments[i + 1];
-			if (iframe.style[styleName] != value) {
-				iframe.style[styleName] = value;
-			}
-		}
-	}
-
-	opts || (opts = {});
-	var isFullscreen = !!opts.isFullscreen;
-
-	if (isFullscreen) {
-		var rect = getFullscreenRect();
-		assign(
-			'position', 'fixed',
-			'left', FULLSCREEN_MARGIN + 'px',
-			'top', FULLSCREEN_MARGIN + 'px',
-			'width', rect.width + 'px',
-			'height', rect.height + 'px');
-
-		return rect;
-	}
-	else {
-		var rect = target.getBoundingClientRect();
-		rect = {
-			left:   rect.left,
-			top:    rect.top,
-			width:  Math.max(MIN_WIDTH_PIXELS, rect.width),
-			height: Math.max(MIN_HEIGHT_PIXELS, rect.height + statusLineHeight)
-		};
-		rect.right = rect.left + rect.width;
-		rect.bottom = rect.top + rect.height;
-
-		var position = 'fixed';
-		var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
-
-		if (!isFixedPosition(target)) {
-			position = 'absolute';
-			offsetLeft = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
-			offsetTop = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
-		}
-		centerLeft = rect.left + offsetLeft + rect.width / 2;
-		centerTop = rect.top + offsetTop + rect.height / 2;
-
-		var result = {
-			left: Math.max(0, Math.floor(centerLeft - rect.width / 2)),
-			top: Math.max(0, Math.floor(centerTop - rect.height / 2)),
-			width: rect.width,
-			height: rect.height
-		};
-
-		var crect = getFullscreenRect();
-		crect = {
-			left:   crect.left   + offsetLeft,
-			top:    crect.top    + offsetTop,
-			right:  crect.right  + offsetLeft,
-			bottom: crect.bottom + offsetTop,
-			width:  crect.width,
-			height: crect.height
-		}
-
-		if (result.width > crect.width) result.width = crect.width;
-		if (result.height > crect.height) result.height = crect.height;
-
-		if (result.left < crect.left) result.left = crect.left;
-		if (result.top  < crect.top ) result.top  = crect.top;
-		if (result.left + result.width > crect.right) result.left = crect.right - result.width;
-		if (result.top + result.height > crect.bottom) result.top = crect.bottom - result.height;
-
-		assign(
-			'position', position,
-			'left', result.left + 'px',
-			'top', result.top + 'px',
-			'width', result.width + 'px',
-			'height', result.height + 'px');
-
-		return result;
-	}
-}
-
-function run (element) {
-	fireCustomEvent('WasaviStarting', 0);
-
-	diagMessages = [];
-	diagMessages._lastPush = Date.now();
-	diagMessages._p = function (s) {
-		var now = Date.now();
-		this.push(((now - this._lastPush) / 1000).toFixed(3) + 's\t' + s);
-		this._lastPush = now;
-	};
-	diagMessages._p('agent: entering run()');
-
-	window.addEventListener('message', handlePostMessage, false);
-
-	var isPseudoTextarea = false;
-	for (var e = element; e; e = e.parentNode) {
-		if (!e.classList) continue;
-		if (e.classList.contains('CodeMirror')
-		||  e.classList.contains('ace_editor')) {
-			element = e;
-			isPseudoTextarea = true;
-			break;
-		}
-	}
-
-	if (isPseudoTextarea) {
-		if (getValueCallback) {
-			runCore(element);
-			return;
-		}
-
-		getValueCallback = function (value) {
-			runCore(element, {value:value});
-		};
-
-		var className = getUniqueClass();
-		element.classList.add(className);
-		setTimeout(function () {
-			getValueCallback = null;
-			element.classList.remove(className);
-		}, BOOT_WAIT_TIMEOUT_MSECS);
-		fireCustomEvent('WasaviRequestGetContent', className);
-	}
-	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		runCore(element, {
-			value:element.value,
-			readOnly:element.readOnly || element.disabled
-		});
-	}
-	else if (element.isContentEditable) {
-		runCore(element, {value:toPlainText(element)});
-	}
-	else if (element.nodeName == 'BODY') {
-		var content = [], el, s;
-		// title
-		if ((el = document.querySelector('title, h1')) && (s = el.textContent) != '') {
-			content.push(el.textContent);
-		}
-		// url
-		if ((el = document.querySelector('link[rel="canonical"]')) && (s = el.getAttribute('href')) != '') {
-			content.push(s);
-		}
-		else {
-			content.push(window.location.href);
-		}
-		// description
-		if ((el = document.querySelector('meta[name="description"]')) && (s = el.getAttribute('content')) != '') {
-			content.push('', s);
-		}
-		// selection
-		if ((s = window.getSelection().toString()
-			.replace(/(?:\r\n|\r|\n)/g, '\n')
-			.replace(/\n{2,}/g, '\n')) != '') {
-			content.push('', s);
-		}
-		// run
-		runCore(element, {value:content.join('\n')});
-	}
-
-	diagMessages._p('agent: leaving run()');
-}
-
-function runCore (element, overrides) {
-	diagMessages._p('agent: entering runCore()');
-
-	/*
-	 * boot sequence:
-	 *
-	 * background		agent		wasavi
-	 *     |              |           |
-	 *     |              |..........>|
-	 *     |              |(create iframe)
-	 *     |              |           |
-	 *     |<.........................|
-	 *     |(background recoginizes the iframe)
-	 *     |              |           |
-	 *     |<-------------|           |
-	 *     |"push-payload"            |
-	 *     |              |           |
-	 *     |<-------------------------|
-	 *     |           "init"         |
-	 *     |              |           |
-	 *     |------------------------->|
-	 *     |       "init-response"    |
-	 *     |              |           |
-	 *     |              |<----------|
-	 *     |              |"initialized"
-	 *     |              |           |
-	 *
-	 */
-
-	function getFontStyle (s, fontFamilyOverride) {
-		return [
-			s.fontStyle, s.fontVariant, s.fontWeight,
-			s.fontSize + '/' + s.lineHeight,
-			(fontFamilyOverride || s.fontFamily)
-		].join(' ');
-	}
-
-	function getNodePath (element) {
-		var result = [];
-		for (var node = element; node && node.parentNode; node = node.parentNode) {
-			var nodeName = node.nodeName.toLowerCase();
-			var index = Array.prototype.indexOf.call(
-				node.parentNode.getElementsByTagName(node.nodeName), node);
-			result.unshift(nodeName + '[' + index + ']');
-		}
-		return result.join(' ');
-	}
-
-	//
-	targetElement = element;
-	targetElement.setAttribute(EXTENSION_CURRENT, extension.name);
-	wasaviFrame = document.createElement('iframe');
-	wasaviFrame.style.border = 'none';
-	wasaviFrame.style.overflow = 'hidden';
-	wasaviFrame.style.visibility = 'hidden';
-	wasaviFrame.style.zIndex = 0x7fffffff;
-	wasaviFrame.src = extension.urlInfo.frameSource;
-
-	document.body.appendChild(wasaviFrame);
-
-	//
-	widthOwn = heightOwn = null;
-	isFullscreen = false;
-	isSyncSize = true;
-	removeListener = createElementRemoveListener(wasaviFrame, function () {
-		wasaviFrame = null;
-		cleanup();
-		error('wasavi terminated abnormally.');
-		if (diagMessages) {
-			error(diagMessages.join('\n'));
-			diagMessages = undefined;
-		}
-	});
-	wasaviFrameTimeoutTimer = setTimeout(function () {
-		wasaviFrame.parentNode.removeChild(wasaviFrame);
-		wasaviFrameTimeoutTimer = null;
-	}, BOOT_WAIT_TIMEOUT_MSECS);
-
-	//
-	var rect = locate(wasaviFrame, element);
-	var payload = {
-		type:'push-payload',
-		parentTabId:extension.tabId,
-		parentInternalId:extension.internalId,
-		url:window.location.href,
-		title:document.title,
-		testMode:isTestFrame,
-		id:element.id,
-		nodeName:element.nodeName,
-		nodePath:getNodePath(element),
-		isContentEditable:element.isContentEditable,
-		elementType:element.type,
-		selectionStart:element.selectionStart || 0,
-		selectionEnd:element.selectionEnd || 0,
-		scrollTop:element.scrollTop || 0,
-		scrollLeft:element.scrollLeft || 0,
-		readOnly:false,
-		value:'',
-		rect:{width:rect.width, height:rect.height},
-		fontStyle:getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
-		marks:element.getAttribute(MARKS_ID)
-	}
-	if (overrides) {
-		for (var i in overrides) {
-			payload[i] = overrides[i];
-		}
-	}
-	extension.postMessage(payload);
-
-	diagMessages._p('agent: leaving runCore()');
-}
-
-function cleanup (value, isImplicit) {
-	if (targetElement) {
-		if (value !== null) {
-			setValue(targetElement, value);
-		}
-		!isImplicit && targetElement.focus();
-		targetElement.removeAttribute(EXTENSION_CURRENT);
-		targetElement = null;
-	}
-	if (removeListener) {
-		removeListener = removeListener.disconnect();
-	}
-	if (wasaviFrame) {
-		wasaviFrame.parentNode.removeChild(wasaviFrame);
-		wasaviFrame = null;
-	}
-	if (stateClearTimer) {
-		clearTimeout(stateClearTimer);
-		stateClearTimer = null;
-	}
-	if (resizeListener) {
-		resizeListener = resizeListener.disconnect();
-	}
-	window.removeEventListener('beforeunload', handleBeforeUnload, false);
-	isFullscreen = isSyncSize = null;
-	getValueCallback = null;
-}
-
-function focusToFrame (req) {
-	if (!wasaviFrame) return;
-	try {
-		wasaviFrame.focus && wasaviFrame.focus();
-	} catch (e) {}
-	try {
-		wasaviFrame.contentWindow
-		&& wasaviFrame.contentWindow.focus
-		&& wasaviFrame.contentWindow.focus();
-	} catch (e) {}
-
-	notifyToChild(wasaviFrameInternalId, {type:'focus-me-response'});
-}
-
-function blurFromFrame () {
-	if (!wasaviFrame) return;
-	try {
-		wasaviFrame.contentWindow
-		&& wasaviFrame.contentWindow.blur
-		&& wasaviFrame.contentWindow.blur();
-	} catch (e) {}
-	try {
-		wasaviFrame.blur && wasaviFrame.blur();
-	} catch (e) {}
-}
-
-function getFocusables () {
-	var ordered = [];
-	var unordered = [];
-	var nodes = document.evaluate([
-		'//a[@href]',
-		'//link[@href]',
-		'//button[not(@disabled)]',
-		'//input[not(@disabled)][@type!="hidden"]',
-		'//select[not(@disabled)]',
-		'//textarea[not(@disabled)]',
-		'//command[not(disalbed)]',
-		'//*[@tabIndex>=0]'
-	].join('|'), document.body, null, window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-
-	for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
-		var node = nodes.snapshotItem(i);
-		var s = document.defaultView.getComputedStyle(node, '');
-		if (s.visibility != 'visible') continue;
-		if (node == wasaviFrame) continue;
-
-		var ti = parseInt(node.getAttribute('tabIndex'));
-		(!isNaN(ti) && ti > 0 ? ordered : unordered).push(node);
-	}
-
-	return ordered.concat(unordered);
-}
-
-function keylog () {
-	var t = document.getElementById('test-log');
-	if (!t) return;
-	t.value += '\n' + Array.prototype.slice.call(arguments).join('\t');
-	t.scrollTop = t.scrollHeight - t.clientHeight;
-}
-
 function fireCustomEvent (name, detail, target) {
 	var ev = document.createEvent('CustomEvent');
 	ev.initCustomEvent(name, false, false, detail);
 	(target || document).dispatchEvent(ev);
 }
 
-function setValue (element, value, isForce) {
-	value || (value = '');
+var setValue = (function () {
+	function toDivs (f, value) {
+		var length = 0;
+		value = value.split('\n');
 
-	if (element.classList.contains('CodeMirror')) {
-		if (typeof value != 'string') {
-			return _('Invalid text format.');
+		for (var i = 0, goal = value.length; i < goal; i++) {
+			f.appendChild(document.createElement('div'))
+				.appendChild(document.createTextNode(value[i]));
+			length += value[i].length + 1;
 		}
-		var className = getUniqueClass();
-		element.classList.add(className);
-		setTimeout(function () {
-			element.classList.remove(className);
-		}, 1000 * 5);
-		fireCustomEvent('WasaviRequestSetContent', className + '\t' + value);
+
+		return length;
+	}
+
+	function toTextAndBreaks (f, value) {
+		var length = 0;
+		value = value.split('\n');
+
+		for (var i = 0, goal = value.length - 1; i < goal; i++) {
+			f.appendChild(document.createTextNode(value[i]));
+			f.appendChild(document.createElement('br'));
+			length += value[i].length + 1;
+		}
+
+		if (value.length >= 1) {
+			f.appendChild(document.createTextNode(value[value.length - 1]));
+			length += value[i].length;
+		}
+
+		return length;
+	}
+
+	function toPlainText (f, value) {
+		f.appendChild(document.createTextNode(value));
 		return value.length;
 	}
-	else if (element.nodeName == 'INPUT' || element.nodeName == 'TEXTAREA') {
-		if (element.readOnly) {
-			if (isForce) {
-				element.readOnly = false;
+
+	return function setValue (element, value, isForce) {
+		value || (value = '');
+
+		if (element.classList.contains('CodeMirror')
+		 || element.classList.contains('ace_editor')) {
+			if (typeof value != 'string') {
+				return _('Invalid text format.');
 			}
-			else {
-				return _('Element to be written has readonly attribute (use "!" to override).');
-			}
-		}
-		if (element.disabled) {
-			if (isForce) {
-				element.disabled = false;
-			}
-			else {
-				return _('Element to be written has disabled attribute (use "!" to override).');
-			}
-		}
-		if (typeof value != 'string') {
-			return _('Invalid text format.');
-		}
-		try {
-			element.value = value;
+			var className = getUniqueClass();
+			element.classList.add(className);
+			fireCustomEvent('WasaviRequestSetContent', className + '\t' + value);
+			element.classList.remove(className);
 			return value.length;
 		}
-		catch (e) {
-			return _('Exception while saving: {0}', e.message);
-		}
-	}
-	else if (element.nodeName == 'BODY') {
-		return _('Cannot rewrite the page itself.');
-	}
-	else {
-		function toDivs (f, value) {
-			var length = 0;
-			value = value.split('\n');
-
-			for (var i = 0, goal = value.length; i < goal; i++) {
-				f.appendChild(document.createElement('div'))
-					.appendChild(document.createTextNode(value[i]));
-				length += value[i].length + 1;
+		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
+			if (element.readOnly) {
+				if (isForce) {
+					element.readOnly = false;
+				}
+				else {
+					return _('Element to be written has readonly attribute (use "!" to override).');
+				}
 			}
-
-			return length;
-		}
-
-		function toTextAndBreaks (f, value) {
-			var length = 0;
-			value = value.split('\n');
-
-			for (var i = 0, goal = value.length - 1; i < goal; i++) {
-				f.appendChild(document.createTextNode(value[i]));
-				f.appendChild(document.createElement('br'));
-				length += value[i].length + 1;
+			if (element.disabled) {
+				if (isForce) {
+					element.disabled = false;
+				}
+				else {
+					return _('Element to be written has disabled attribute (use "!" to override).');
+				}
 			}
-
-			if (value.length >= 1) {
-				f.appendChild(document.createTextNode(value[value.length - 1]));
-				length += value[i].length;
+			if (typeof value != 'string') {
+				return _('Invalid text format.');
 			}
-
-			return length;
+			try {
+				element.value = value;
+				return value.length;
+			}
+			catch (e) {
+				return _('Exception while saving: {0}', e.message);
+			}
 		}
-
-		function toPlainText (f, value) {
-			f.appendChild(document.createTextNode(value));
-			return value.length;
-		}
-
-		/*
-		 * There are various newline formats in content editable element:
-		 *
-		 *   - DIV elements: <div></div><div></div> ...
-		 *   - Text and BR elements: #text <br> #text ...
-		 *   - Plain texts: #text (newline is '\n')
-		 *
-		 * These are different depending on sites, so we have to choice
-		 * the correct format by list...
-		 */
-
-		var r = document.createRange();
-		r.selectNodeContents(element);
-		r.deleteContents();
-
-		var f = document.createDocumentFragment();
-		var length;
-
-		if (/\bworkflowy\.com$/.test(window.location.hostname)) {
-			length = toPlainText(f, value);
+		else if (element.nodeName == 'BODY') {
+			return _('Cannot rewrite the page itself.');
 		}
 		else {
-			length = toTextAndBreaks(f, value);
-		}
+			/*
+			 * There are various newline formats in content editable element:
+			 *
+			 *   - DIV elements: <div></div><div></div> ...
+			 *   - Text and BR elements: #text <br> #text ...
+			 *   - Plain texts: #text (newline is '\n')
+			 *
+			 * These are different depending on sites, so we have to choice
+			 * the correct format by list...
+			 */
 
-		try {
-			element.appendChild(f)
-			return length;
+			var r = document.createRange();
+			r.selectNodeContents(element);
+			r.deleteContents();
+
+			var f = document.createDocumentFragment();
+			var length;
+
+			if (/\bworkflowy\.com$/.test(window.location.hostname)) {
+				length = toPlainText(f, value);
+			}
+			else {
+				length = toTextAndBreaks(f, value);
+			}
+
+			try {
+				element.appendChild(f)
+				return length;
+			}
+			catch (e) {
+				return _('Exception while saving: {0}', e.message);
+			}
 		}
-		catch (e) {
-			return _('Exception while saving: {0}', e.message);
-		}
-	}
-}
+	};
+})();
 
 function toPlainText (input) {
 	function hr2rule (node) {
@@ -644,7 +269,7 @@ function toPlainText (input) {
 		if (t.length && !/\n$/.test(t[t.length - 1].text)) {
 			text = '\n';
 		}
-		t.push({text:text, display:'', nodeName:nodeName || ''});
+		t.push({text: text, display: '', nodeName: nodeName || ''});
 	}
 
 	function loop (node) {
@@ -728,65 +353,6 @@ function toPlainText (input) {
 	}
 }
 
-function parseBlacklist (blacklist) {
-	var result = {
-		fullBlocked: false,
-		selectors: [],
-		includes: function (element) {
-			return this.fullBlocked || this.selectors.some(function (s) {
-				try {
-					return Array.prototype.indexOf.call(
-						document.querySelectorAll(s), element) >= 0;
-				}
-				catch (e) {}
-			});
-		}
-	};
-	(blacklist || '').split('\n').some(function (line) {
-		line = line.replace(/^\s+|\s+$/g, '');
-		if (line == '' || /^[#;]/.test(url)) return;
-
-		var delimiter = /\s+/.exec(line);
-		if (delimiter) {
-			line = [
-				line.substring(0, delimiter.index),
-				line.substring(delimiter.index + delimiter[0].length)
-			];
-		}
-		else {
-			line = [line, ''];
-		}
-		try {
-			var url = new RegExp('^' + line[0]
-				.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
-				.replace(/\?/g, '.')
-				.replace(/\*/g, '.+?'), 'i');
-
-			if (url.test(window.location.href)) {
-				if (line[1] == '') {
-					result.fullBlocked = true;
-					return true;
-				}
-				else {
-					result.selectors.push(line[1]);
-				}
-			}
-		}
-		catch (e) {}
-	});
-	return result;
-}
-
-function matchWithShortcut (e) {
-	return shortcutCode && shortcutCode.some(function (code) {
-		for (var i in code) {
-			if (!(i in e)) return false;
-			if (e[i] !== code[i]) return false;
-		}
-		return true;
-	});
-}
-
 function getMutationObserver (type, mediator) {
 	return window.MutationObserver
 	|| window.WebKitMutationObserver
@@ -810,6 +376,44 @@ function getMutationObserver (type, mediator) {
 			}
 		};
 	};
+}
+
+function getFocusables (sentinel) {
+	var ordered = [];
+	var unordered = [];
+	var nodes = document.evaluate([
+		'//a[@href]',
+		'//link[@href]',
+		'//button[not(@disabled)]',
+		'//input[not(@disabled)][@type!="hidden"]',
+		'//select[not(@disabled)]',
+		'//textarea[not(@disabled)]',
+		'//command[not(disalbed)]',
+		'//*[@tabIndex>=0]'
+	].join('|'), document.body, null, window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+	for (var i = 0, goal = nodes.snapshotLength; i < goal; i++) {
+		var node = nodes.snapshotItem(i);
+		var s = document.defaultView.getComputedStyle(node, '');
+		if (s.visibility != 'visible') continue;
+		if (node == sentinel) continue;
+
+		var ti = parseInt(node.getAttribute('tabIndex'));
+		(!isNaN(ti) && ti > 0 ? ordered : unordered).push(node);
+	}
+
+	return ordered.concat(unordered);
+}
+
+function assign () {
+	var args = Array.prototype.slice.call(arguments);
+	var element = args.shift();
+	for (var i = 0, goal = args.length; i < goal; i += 2) {
+		var styleName = args[i];
+		var value = args[i + 1];
+		if (element.style[styleName] == value) continue;
+		element.style[styleName] = value;
+	}
 }
 
 function createElementRemoveListener (element, callback) {
@@ -887,6 +491,794 @@ function createElementResizeListener (element, callback) {
 	return {connect: connect, disconnect: disconnect, fire: fireIfResized};
 }
 
+//
+
+function isAcceptable (key) {
+	return key in ACCEPTABLE_TYPES && allowedElements[ACCEPTABLE_TYPES[key]];
+}
+
+function isLaunchableElement (target) {
+	return target.isContentEditable && allowedElements.enableContentEditable
+		|| target.nodeName == 'BODY' && allowedElements.enablePage
+		|| /^(?:TEXTAREA|INPUT)$/.test(target.nodeName) && isAcceptable(target.type);
+}
+
+function doesTargetAllowLaunch (target) {
+	/*
+	 * <textarea>
+	 * <textarea data-texteditor-extension="auto">
+	 *     one of extensions installed into browser is executed.
+	 *
+	 * <textarea data-texteditor-extension="none">
+	 *     no extension is executed.
+	 *
+	 * <textarea data-texteditor-extension="wasavi">
+	 *     wasavi extension is executed.
+	 */
+
+	var current = target.getAttribute(EXTENSION_CURRENT);
+	var spec = target.getAttribute(EXTENSION_SPECIFIER);
+	if (current !== null) return false;
+	if (spec !== null && spec !== 'auto' && spec !== extension.name) return false;
+	return true;
+}
+
+function matchWithShortcut (e) {
+	return shortcutCode && shortcutCode.some(function (code) {
+		for (var i in code) {
+			if (!(i in e)) return false;
+			if (e[i] !== code[i]) return false;
+		}
+		return true;
+	});
+}
+
+function getFullscreenRect () {
+	var cover = document.body.appendChild(document.createElement('div'));
+	cover.style.position = 'fixed';
+	cover.style.left = cover.style.top =
+	cover.style.right = cover.style.bottom = FULLSCREEN_MARGIN + 'px';
+	var result = cover.getBoundingClientRect();
+	cover.parentNode.removeChild(cover);
+	return result;
+}
+
+// classes <<<1
+var Agent = (function () {
+
+	// private functions
+	function isFixedPosition (element) {
+		if (element == document.body) return true;
+		var isFixed = false;
+		for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
+			var s = document.defaultView.getComputedStyle(tmp, '');
+			if (s && s.position == 'fixed') {
+				isFixed = true;
+				break;
+			}
+		}
+		return isFixed;
+	}
+
+	function findPseudoTextAreaContainer (element) {
+		var result = null;
+		for (var e = element; e; e = e.parentNode) {
+			if (!e.classList) continue;
+			if (e.classList.contains('CodeMirror')
+			||  e.classList.contains('ace_editor')) {
+				result = e;
+				break;
+			}
+		}
+		return result;
+	}
+
+	function getFontStyle (s, fontFamilyOverride) {
+		return [
+			s.fontStyle, s.fontVariant, s.fontWeight,
+			s.fontSize + '/' + s.lineHeight,
+			(fontFamilyOverride || s.fontFamily)
+		].join(' ');
+	}
+
+	function getNodePath (element) {
+		var result = [];
+		for (var node = element; node && node.parentNode; node = node.parentNode) {
+			var nodeName = node.nodeName.toLowerCase();
+			var index = Array.prototype.indexOf.call(
+				node.parentNode.getElementsByTagName(node.nodeName), node);
+			result.unshift(nodeName + '[' + index + ']');
+		}
+		return result.join(' ');
+	}
+
+	function getBodyContent () {
+		var content = [], el, s;
+
+		// title
+		if ((el = document.querySelector('title, h1')) && (s = el.textContent) != '') {
+			content.push(el.textContent);
+		}
+
+		// url
+		if ((el = document.querySelector('link[rel="canonical"]')) && (s = el.getAttribute('href')) != '') {
+			content.push(s);
+		}
+		else {
+			content.push(window.location.href);
+		}
+
+		// description
+		if ((el = document.querySelector('meta[name="description"]')) && (s = el.getAttribute('content')) != '') {
+			content.push('', s);
+		}
+
+		// selection
+		if ((s = window.getSelection().toString()
+			.replace(/(?:\r\n|\r|\n)/g, '\n')
+			.replace(/\n{2,}/g, '\n')) != '') {
+			content.push('', s);
+		}
+
+		return content.join('\n');
+	}
+
+	function locate (iframe, target, opts) {
+		opts || (opts = {});
+		var isFullscreen = !!opts.isFullscreen;
+
+		if (isFullscreen) {
+			var rect = getFullscreenRect();
+			assign(
+				iframe,
+				'position', 'fixed',
+				'left', FULLSCREEN_MARGIN + 'px',
+				'top', FULLSCREEN_MARGIN + 'px',
+				'width', rect.width + 'px',
+				'height', rect.height + 'px');
+
+			return rect;
+		}
+		else {
+			var rect = target.getBoundingClientRect();
+			rect = {
+				left:   rect.left,
+				top:    rect.top,
+				width:  Math.max(MIN_WIDTH_PIXELS, rect.width),
+				height: Math.max(MIN_HEIGHT_PIXELS, rect.height + statusLineHeight)
+			};
+			rect.right = rect.left + rect.width;
+			rect.bottom = rect.top + rect.height;
+
+			var position = 'fixed';
+			var centerLeft, centerTop, offsetLeft = 0, offsetTop = 0;
+
+			if (!isFixedPosition(target)) {
+				position = 'absolute';
+				offsetLeft = Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
+				offsetTop = Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+			}
+			centerLeft = rect.left + offsetLeft + rect.width / 2;
+			centerTop = rect.top + offsetTop + rect.height / 2;
+
+			var result = {
+				left:   Math.max(0, Math.floor(centerLeft - rect.width / 2)),
+				top:    Math.max(0, Math.floor(centerTop - rect.height / 2)),
+				width:  rect.width,
+				height: rect.height
+			};
+
+			var crect = getFullscreenRect();
+			crect = {
+				left:   crect.left   + offsetLeft,
+				top:    crect.top    + offsetTop,
+				right:  crect.right  + offsetLeft,
+				bottom: crect.bottom + offsetTop,
+				width:  crect.width,
+				height: crect.height
+			}
+
+			if (result.width > crect.width) result.width = crect.width;
+			if (result.height > crect.height) result.height = crect.height;
+
+			if (result.left < crect.left) result.left = crect.left;
+			if (result.top  < crect.top ) result.top  = crect.top;
+			if (result.left + result.width > crect.right) result.left = crect.right - result.width;
+			if (result.top + result.height > crect.bottom) result.top = crect.bottom - result.height;
+
+			assign(
+				iframe,
+				'position', position,
+				'left', result.left + 'px',
+				'top', result.top + 'px',
+				'width', result.width + 'px',
+				'height', result.height + 'px');
+
+			return result;
+		}
+	}
+
+	// private methods
+	function prepare () {
+		var element = this.targetElement;
+		var pseudoTextArea = findPseudoTextAreaContainer(element);
+
+		fireCustomEvent('WasaviStarting', 0);
+		diag.init().push('agent: entering prepare()');
+		window.addEventListener('message', handlePostMessage, false);
+
+		if (pseudoTextArea) {
+			element = this.targetElement = pseudoTextArea;
+
+			var className = getUniqueClass();
+			element.classList.add(className);
+
+			this.getContentCallback = function (content) {
+				if (this.wasaviFrameTimeoutTimer) {
+					clearTimeout(this.wasaviFrameTimeoutTimer);
+					this.wasaviFrameTimeoutTimer = null;
+				}
+				this.getContentCallback = null;
+				run.call(this, {value: content});
+			};
+
+			this.wasaviFrameTimeoutTimer = setTimeout(function (that) {
+				that.wasaviFrameTimeoutTimer = null;
+				element.classList.remove(className);
+				cleanup.call(that);
+				error('retrieving the content of pseudo textarea timed out.');
+				diag.out();
+			}, BOOT_WAIT_TIMEOUT_MSECS, this);
+
+			setTimeout(function () {
+				fireCustomEvent('WasaviRequestGetContent', className);
+			}, 1);
+		}
+
+		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
+			run.call(this, {
+				value: element.value,
+				readOnly: element.readOnly || element.disabled
+			});
+		}
+
+		else if (element.isContentEditable) {
+			run.call(this, {
+				value: toPlainText(element)
+			});
+		}
+
+		else if (element.nodeName == 'BODY') {
+			run.call(this, {
+				value: getBodyContent()
+			});
+		}
+
+		diag.push('agent: leaving prepare()');
+	}
+
+	function run (overrides) {
+		diag.push('agent: entering run()');
+
+		/*
+		 * boot sequence:
+		 *
+		 * background		agent		wasavi
+		 *     |              |           |
+		 *     |              |..........>|
+		 *     |              |(create iframe)
+		 *     |              |           |
+		 *     |<.........................|
+		 *     |(background recoginizes the iframe)
+		 *     |              |           |
+		 *     |<-------------|           |
+		 *     |"push-payload"            |
+		 *     |              |           |
+		 *     |<-------------------------|
+		 *     |           "init"         |
+		 *     |              |           |
+		 *     |------------------------->|
+		 *     |       "init-response"    |
+		 *     |              |           |
+		 *     |              |<----------|
+		 *     |              |"initialized"
+		 *     |              |           |
+		 *
+		 */
+
+		var element = this.targetElement;
+
+		// create iframe
+		this.targetElement.setAttribute(EXTENSION_CURRENT, extension.name);
+		this.wasaviFrame = document.createElement('iframe');
+		assign(
+			this.wasaviFrame,
+			'border', 'none',
+			'overflow', 'hidden',
+			'visibility', 'hidden',
+			'zIndex', 0x7fffffff);
+		this.wasaviFrame.src = extension.urlInfo.frameSource;
+		document.body.appendChild(this.wasaviFrame);
+
+		// set up some properties
+		this.widthOwn = this.heightOwn = null;
+		this.isFullscreen = false;
+		this.isSyncSize = true;
+
+		// register some event listeners
+		this.targetElementRemoveListener = createElementRemoveListener(
+			this.wasaviFrame,
+			(function () {
+				cleanup.call(this);
+				error('wasavi terminated abnormally.');
+				diag.out();
+			}).bind(this)
+		);
+		this.wasaviFrameTimeoutTimer = setTimeout(function (that) {
+			cleanup.call(that);
+			that.wasaviFrameTimeoutTimer = null;
+		}, BOOT_WAIT_TIMEOUT_MSECS, this);
+
+		// build boot data payload and post it
+		var rect = locate(this.wasaviFrame, element);
+		var payload = {
+			type: 'push-payload',
+			parentTabId: extension.tabId,
+			parentInternalId: extension.internalId,
+			frameId: this.frameId,
+			url: window.location.href,
+			title: document.title,
+			testMode: isTestFrame,
+			id: element.id,
+			nodeName: element.nodeName,
+			nodePath: getNodePath(element),
+			isContentEditable: element.isContentEditable,
+			elementType: element.type,
+			selectionStart: element.selectionStart || 0,
+			selectionEnd: element.selectionEnd || 0,
+			scrollTop: element.scrollTop || 0,
+			scrollLeft: element.scrollLeft || 0,
+			readOnly: false,
+			value: '',
+			rect: {width: rect.width, height: rect.height},
+			fontStyle: getFontStyle(document.defaultView.getComputedStyle(element, ''), fontFamily),
+			marks: element.getAttribute(MARKS_ID)
+		}
+		if (overrides) {
+			for (var i in overrides) {
+				payload[i] = overrides[i];
+			}
+		}
+		extension.postMessage(payload);
+
+		diag.push('agent: leaving runCore()');
+	}
+
+	function blurFromFrame () {
+		try {
+			this.wasaviFrame.contentWindow
+			&& this.wasaviFrame.contentWindow.blur
+			&& this.wasaviFrame.contentWindow.blur();
+		} catch (e) {}
+
+		try {
+			this.wasaviFrame.blur && this.wasaviFrame.blur();
+		} catch (e) {}
+	}
+
+	function cleanup (value, isImplicit) {
+		if (this.targetElement) {
+			if (typeof value == 'string') {
+				setValue(this.targetElement, value);
+			}
+			!isImplicit && this.targetElement.focus();
+			this.targetElement.removeAttribute(EXTENSION_CURRENT);
+			this.targetElement = null;
+		}
+		if (this.targetElementRemoveListener) {
+			this.targetElementRemoveListener = this.targetElementRemoveListener.disconnect();
+		}
+		if (this.wasaviFrame) {
+			if (this.wasaviFrame.parentNode) {
+				this.wasaviFrame.parentNode.removeChild(this.wasaviFrame);
+			}
+			this.wasaviFrame = null;
+		}
+		if (this.stateClearTimer) {
+			clearTimeout(this.stateClearTimer);
+			this.stateClearTimer = null;
+		}
+		if (this.targetElementResizeListener) {
+			this.targetElementResizeListener = this.targetElementResizeListener.disconnect();
+		}
+
+		if (Object.keys(wasaviAgentsHash).length == 1) {
+			window.removeEventListener('beforeunload', handleBeforeUnload, false);
+		}
+
+		this.isFullscreen = this.isSyncSize = null;
+		this.getContentCallback = null;
+
+		delete wasaviAgentsHash[this.frameId];
+	}
+	
+	function handleTargetResize (e) {
+		if (!this.wasaviFrame || !this.targetElement) return;
+		locate(this.wasaviFrame, this.targetElement, {
+			isFullscreen: this.isFullscreen,
+			width: this.widthOwn,
+			height: this.heightOwn
+		});
+	}
+
+	// public methods
+	function notifyToChild (payload) {
+		if (!this.wasaviFrameInternalId) return;
+		extension.postMessage({
+			type: 'transfer',
+			to: this.wasaviFrameInternalId,
+			payload: payload
+		});
+	}
+
+	function setStateClearTimer (callback, msec) {
+		if (this.stateClearTimer) {
+			clearTimeout(this.stateClearTimer);
+			this.stateClearTimer = null;
+		}
+		if (typeof callback == 'function') {
+			this.stateClearTimer = setTimeout(function (that) {
+				that.stateClearTimer = null;
+				try {
+					callback(that);
+				}
+				catch (e) {
+				}
+			}, msec || 500, this);
+		}
+	}
+
+	function initialized (req) {
+		if (!this.wasaviFrame) return;
+		this.wasaviFrameInternalId = req.childInternalId;
+		this.wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
+		this.wasaviFrame.setAttribute('data-wasavi-state', 'running');
+		this.targetElementResizeListener = createElementResizeListener(
+			this.targetElement,
+			handleTargetResize.bind(this));
+
+		if (Object.keys(wasaviAgentsHash).length == 1) {
+			window.addEventListener('beforeunload', handleBeforeUnload, false);
+		}
+
+		if (isTestFrame) {
+			if (!document.getElementById('wasavi_frame')) {
+				this.wasaviFrame.id = 'wasavi_frame';
+			}
+			document.getElementById('test-log').value = '';
+		}
+
+		this.notifyToChild({type: 'got-initialized'});
+	}
+
+	function ready (req) {
+		this.wasaviFrame.style.visibility = 'visible';
+		document.activeElement != this.wasaviFrame && this.focusMe(req);
+		info('wasavi started');
+		fireCustomEvent('WasaviStarted', 0);
+
+		clearTimeout(this.wasaviFrameTimeoutTimer);
+		this.wasaviFrameTimeoutTimer = null;
+
+		window.removeEventListener('message', handlePostMessage, false);
+
+		diag.out();
+	}
+
+	function windowState (req) {
+		switch (req.state) {
+		case 'maximized':
+		case 'normal':
+			this.isFullscreen = req.state == 'maximized';
+			locate(this.wasaviFrame, this.targetElement, {
+				isFullscreen: this.isFullscreen
+			});
+			this.notifyToChild({
+				type: 'relocate',
+				state: req.state
+			});
+			break;
+		}
+	}
+
+	function focusMe (req) {
+		try {
+			this.wasaviFrame.focus && this.wasaviFrame.focus();
+		} catch (e) {}
+
+		try {
+			this.wasaviFrame.contentWindow
+			&& this.wasaviFrame.contentWindow.focus
+			&& this.wasaviFrame.contentWindow.focus();
+		} catch (e) {}
+
+		this.notifyToChild({type: 'focus-me-response'});
+	}
+
+	function focusChanged (req) {
+		var focusables = getFocusables(this.wasaviFrame);
+		var index = focusables.indexOf(this.targetElement);
+		try {
+			if (index >= 0) {
+				var next = req.direction == 1 ?
+					(index + 1) % focusables.length :
+					(index + focusables.length - 1) % focusables.length;
+
+				blurFromFrame.call(this);
+
+				if (next == this.targetElement) {
+					document.body.focus();
+				}
+				else {
+					focusables[next].focus();
+				}
+			}
+			else {
+				document.body.focus();
+			}
+		}
+		catch (e) {}
+	}
+
+	function blinkMe (req) {
+		this.wasaviFrame.style.visibility = 'hidden';
+		setTimeout(function (frame) {
+			frame.style.visibility = '';
+		}, 500, this.wasaviFrame);
+	}
+
+	function setSize (req) {
+		if ('isSyncSize' in req) {
+			this.isSyncSize = req.isSyncSize;
+			if (this.isSyncSize) {
+				this.widthOwn = this.heightOwn = null;
+			}
+			else {
+				this.widthOwn = this.targetElement.offsetWidth;
+				this.heightOwn = this.targetElement.offsetHeight;
+			}
+		}
+		if ('width' in req) {
+			if (this.isSyncSize) {
+				this.targetElement.style.width = req.width + 'px';
+				this.widthOwn = null;
+			}
+			else {
+				this.widthOwn = req.width;
+			}
+		}
+		if ('height' in req) {
+			if (this.isSyncSize) {
+				this.targetElement.style.height = req.height + 'px';
+				this.heightOwn = null;
+			}
+			else {
+				this.heightOwn = req.height;
+			}
+		}
+		this.targetElementResizeListener.fire();
+		this.notifyToChild({
+			type: 'relocate',
+			isSyncSize: req.isSyncSize
+		});
+	}
+
+	function terminated (req) {
+		if (isTestFrame) {
+			this.setStateClearTimer(null);
+			document.querySelector('h1').style.color = '';
+		}
+		if (req.marks) {
+			this.targetElement.setAttribute(MARKS_ID, req.marks);
+		}
+		if (req.isSubmitRequested
+		&& this.targetElement
+		&& this.targetElement.form
+		&& this.targetElement.form.action != '') {
+			setTimeout(function (form) {
+				var submitter = form.querySelector(
+					'input[type="submit"],button[type="submit"]');
+				if (submitter) {
+					submitter.click();
+				}
+				else {
+					form.submit();
+				}
+			}, 1, this.targetElement.form);
+		}
+		cleanup.call(this, req.value, req.isImplicit);
+		info('wasavi terminated');
+		fireCustomEvent('WasaviTerminated', Object.keys(wasaviAgentsHash).length);
+	}
+
+	function read (req) {
+		var value = this.targetElement.isContentEditable ?
+			toPlainText(this.targetElement) : this.targetElement.value;
+
+		this.notifyToChild({
+			type: 'read-response',
+			state: 'complete',
+			meta: {
+				path: '',
+				bytes: value.length
+			},
+			content: value
+		});
+	}
+
+	function write (req) {
+		var payload = {type: 'write-response'};
+		try {
+			var result = setValue(this.targetElement, req.value, req.isForce);
+			if (typeof result == 'number') {
+				var ev;
+
+				if (/^(?:INPUT|TEXTAREA)$/.test(this.targetElement.nodeName)) {
+					// input event
+					// NOTE: input event constructor is fluid.
+					ev = document.createEvent('Event');
+					ev.initEvent('input', true, false);
+					this.targetElement.dispatchEvent(ev);
+
+					// change event
+					ev = document.createEvent('Event');
+					ev.initEvent('change', true, false);
+					this.targetElement.dispatchEvent(ev);
+				}
+
+				payload.state = 'complete';
+				payload.meta = {
+					path: req.path,
+					bytes: result
+				};
+			}
+			else if (result instanceof Array) {
+				payload.error = result;
+			}
+			else {
+				payload.error = _('Internal state error.');
+			}
+		}
+		catch (ex) {
+			payload.error = _('Internal exception: ' + ex.message);
+		}
+		finally {
+			payload.exstate = {
+				isBuffered: req.isBuffered
+			};
+
+			this.notifyToChild(payload);
+		}
+	}
+
+	function requestBlur (req) {
+		this.wasaviFrame.blur();
+		document.body.focus();
+	}
+
+	// constructor
+	function Agent (element, frameId) {
+		this.targetElement = element;
+		this.frameId = frameId;
+		this.targetElementRemoveListener = null;
+		this.targetElementResizeListener = null;
+		this.wasaviFrame = null;
+		this.wasaviFrameInternalId = null;
+		this.wasaviFrameTimeoutTimer = null;
+		this.widthOwn = null;
+		this.heightOwn = null;
+		this.isFullscreen = false;
+		this.isSyncSize = false;
+		this.getContentCallback = null;
+		this.stateClearTimer = null;
+		prepare.call(this);
+	}
+
+	Agent.prototype = {
+		notifyToChild:      notifyToChild,
+		setStateClearTimer: setStateClearTimer,
+
+		initialized:  initialized,
+		ready:        ready,
+		windowState:  windowState,
+		focusMe:      focusMe,
+		focusChanged: focusChanged,
+		blinkMe:      blinkMe,
+		setSize:      setSize,
+		terminated:   terminated,
+		read:         read,
+		write:        write,
+		requestBlur:  requestBlur
+	};
+
+	return Agent;
+})();
+
+// agent manager functions <<<1
+function startAgent (targetElement) {
+	for (var i = 0; i < INSTANCE_MAX; i++) {
+		if (i in wasaviAgentsHash) continue;
+		wasaviAgentsHash[i] = new Agent(targetElement, i);
+		break;
+	}
+}
+
+function findAgent (target, property) {
+	property || (property = 'targetElement');
+	for (var i in wasaviAgentsHash) {
+		if (wasaviAgentsHash[i][property] == target) {
+			return wasaviAgentsHash[i];
+		}
+	}
+	return null;
+}
+
+function keylog () {
+	var t = document.getElementById('test-log');
+	if (!t) return;
+	t.value += '\n' + Array.prototype.slice.call(arguments).join('\t');
+	t.scrollTop = t.scrollHeight - t.clientHeight;
+}
+
+function parseBlacklist (blacklist) {
+	var result = {
+		fullBlocked: false,
+		selectors: [],
+		includes: function (element) {
+			return this.fullBlocked || this.selectors.some(function (s) {
+				try {
+					return Array.prototype.indexOf.call(
+						document.querySelectorAll(s), element) >= 0;
+				}
+				catch (e) {}
+			});
+		}
+	};
+	(blacklist || '').split('\n').some(function (line) {
+		line = line.replace(/^\s+|\s+$/g, '');
+		if (line == '' || /^[#;]/.test(url)) return;
+
+		var delimiter = /\s+/.exec(line);
+		if (delimiter) {
+			line = [
+				line.substring(0, delimiter.index),
+				line.substring(delimiter.index + delimiter[0].length)
+			];
+		}
+		else {
+			line = [line, ''];
+		}
+		try {
+			var url = new RegExp('^' + line[0]
+				.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
+				.replace(/\?/g, '.')
+				.replace(/\*/g, '.+?'), 'i');
+
+			if (url.test(window.location.href)) {
+				if (line[1] == '') {
+					result.fullBlocked = true;
+					return true;
+				}
+				else {
+					result.selectors.push(line[1]);
+				}
+			}
+		}
+		catch (e) {}
+	});
+	return result;
+}
+
 function connect (callback) {
 	var connected = false;
 	var retryRest = 5;
@@ -907,25 +1299,6 @@ function connect (callback) {
 
 	checkIfConnectedOrRetry();
 }
-
-function isAcceptable (key) {
-	return key in ACCEPTABLE_TYPES && allowedElements[ACCEPTABLE_TYPES[key]];
-}
-
-function getFullscreenRect () {
-	var cover = document.body.appendChild(document.createElement('div'));
-	cover.style.position = 'fixed';
-	cover.style.left = cover.style.top =
-	cover.style.right = cover.style.bottom = FULLSCREEN_MARGIN + 'px';
-	var result = cover.getBoundingClientRect();
-	cover.parentNode.removeChild(cover);
-	return result;
-}
-
-/**
- * page agent creator
- * ----------------
- */
 
 function createPageAgent (listenKeydown, usePageContextScript) {
 	var parent = document.head || document.body || document.documentElement;
@@ -949,95 +1322,54 @@ function createPageAgent (listenKeydown, usePageContextScript) {
 	}
 }
 
-/**
- * keydown handler
- * ----------------
- */
-
+// event listeners <<<1
 function handleKeydown (e) {
-	if (targetElement || !e || !e.target || !allowedElements) return;
+	if (!e || !e.target || !allowedElements) return;
 	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
-	if (blacklist.includes(e.target)) return;
 
-	if (e.target.isContentEditable && allowedElements.enableContentEditable
-	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
-	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
-		/*
-		 * <textarea>
-		 * <textarea data-texteditor-extension="auto">
-		 *     one of extensions installed into browser is executed.
-		 *
-		 * <textarea data-texteditor-extension="none">
-		 *     no extension is executed.
-		 *
-		 * <textarea data-texteditor-extension="wasavi">
-		 *     wasavi extension is executed.
-		 */
+	var target = e.target;
+	if (blacklist.includes(target)) return;
+	if (!isLaunchableElement(target)) return;
+	if (!doesTargetAllowLaunch(target)) return;
+	if (!matchWithShortcut(e)) return;
+	if (findAgent(target)) return;
 
-		var current = e.target.getAttribute(EXTENSION_CURRENT);
-		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
-		if (current !== null) return;
-		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
-
-		if (matchWithShortcut(e)) {
-			e.preventDefault();
-			e.stopPropagation();
-			run(e.target);
-		}
-	}
+	e.preventDefault();
+	e.stopPropagation();
+	startAgent(target);
 }
-
-/**
- * focus handler
- * ----------------
- */
 
 function handleTargetFocus (e) {
-	if (!quickActivation || targetElement || !e || !e.target || !allowedElements) return;
-	if (blacklist.includes(e.target)) return;
-	if (e.target.isContentEditable && allowedElements.enableContentEditable
-	||  e.target.nodeName == 'BODY' && allowedElements.enablePage
-	||  /^(?:TEXTAREA|INPUT)$/.test(e.target.nodeName) && isAcceptable(e.target.type)) {
-		var current = e.target.getAttribute(EXTENSION_CURRENT);
-		var spec = e.target.getAttribute(EXTENSION_SPECIFIER);
-		if (current !== null) return;
-		if (spec !== null && spec !== 'auto' && spec !== extension.name) return;
+	if (!quickActivation || !e || !e.target || !allowedElements) return;
 
-		e.preventDefault();
-		run(e.target);
-	}
+	var target = e.target;
+	if (blacklist.includes(target)) return;
+	if (!isLaunchableElement(target)) return;
+	if (!doesTargetAllowLaunch(target)) return;
+	if (findAgent(target)) return;
+
+	e.preventDefault();
+	startAgent(target);
 }
 
-/**
- * resize handler for target element
- * ----------------
- */
+function handleRequestLaunch () {
+	if (!allowedElements) return;
+	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
-function handleTargetResize (e) {
-	if (!wasaviFrame || !targetElement) return;
-	locate(wasaviFrame, targetElement, {
-		isFullscreen: isFullscreen,
-		width: widthOwn,
-		height: heightOwn
-	});
+	var target = document.activeElement;
+	if (blacklist.includes(target)) return;
+	if (!isLaunchableElement(target)) return;
+	if (!doesTargetAllowLaunch(target)) return;
+	if (findAgent(target)) return;
+
+	startAgent(target);
 }
-
-/**
- * beforeunload handler
- * ----------------
- *
- */
 
 function handleBeforeUnload (e) {
-	if (targetElement && wasaviFrame) {
+	if (Object.keys(wasaviAgentsHash).length) {
 		return e.returnValue = 'wasavi: Unexpected closing. Are you sure?';
 	}
 }
-
-/**
- * agent initializer
- * ----------------
- */
 
 function handleAgentInitialized (req) {
 	if (isOptionsPage) {
@@ -1045,286 +1377,27 @@ function handleAgentInitialized (req) {
 		window.WasaviOptions.initPage(req);
 	}
 
-	extension.isTopFrame()
-	&& document.querySelector('textarea')
-	&& info('running on ', window.location.href.replace(/[#?].*$/, ''));
-}
-
-/**
- * handler for launch request event
- * ----------------
- */
-
-function handleRequestLaunch () {
-	if (wasaviFrame || targetElement || !allowedElements) return;
-	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
-
-	var target = document.activeElement;
-	if (blacklist.includes(target)) return;
-	if (target.isContentEditable && allowedElements.enableContentEditable
-	||  (target.nodeName == 'TEXTAREA' || target.nodeName == 'INPUT')
-		&& target.type in ACCEPTABLE_TYPES
-		&& allowedElements[ACCEPTABLE_TYPES[target.type]]) {
-
-		run(target);
+	if (extension.isTopFrame() && document.querySelector('textarea')) {
+		info('running on ', window.location.href.replace(/[#?].*$/, ''));
 	}
 }
-
-/**
- * handler for response from element content retriever
- * ----------------
- */
 
 function handleResponseGetContent (e) {
-	if (getValueCallback) {
-		getValueCallback(e.detail);
-		getValueCallback = null;
-	}
+	var index = e.detail.indexOf('\t');
+	if (index < 0) return;
+
+	var className = e.detail.substring(0, index);
+	var target = document.getElementsByClassName(className)[0];
+	if (!target) return;
+
+	var agent = findAgent(target);
+	if (!agent || !agent.getContentCallback) return;
+
+	agent.getContentCallback(e.detail.substring(index + 1));
 }
 
-/*
- * handler for messages comes from backend
- * ----------------
- */
-
-function handleBackendMessage (req) {
-	if (!req || !req.type) return;
-
-	logMode && log('got a message from backend:', JSON.stringify(req).substring(0, 200));
-
-	switch (req.type) {
-	/*
-	 * messages transferred from wasavi
-	 */
-	case 'initialized':
-		if (!wasaviFrame) break;
-		wasaviFrameInternalId = req.childInternalId;
-		wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
-		wasaviFrame.setAttribute('data-wasavi-state', 'running');
-		resizeListener = createElementResizeListener(targetElement, handleTargetResize);
-		window.addEventListener('beforeunload', handleBeforeUnload, false);
-
-		if (isTestFrame) {
-			wasaviFrame.id = 'wasavi_frame';
-			document.getElementById('test-log').value = '';
-		}
-
-		notifyToChild(wasaviFrameInternalId, {type:'got-initialized'});
-		break;
-
-	case 'ready':
-		if (!wasaviFrame) break;
-		wasaviFrame.style.visibility = 'visible';
-		document.activeElement != wasaviFrame && focusToFrame(req);
-		info('wasavi started');
-		fireCustomEvent('WasaviStarted', 0);
-
-		clearTimeout(wasaviFrameTimeoutTimer);
-		wasaviFrameTimeoutTimer = null;
-
-		window.removeEventListener('message', handlePostMessage, false);
-		if (diagMessages) {
-			error(diagMessages.join('\n'));
-			diagMessages = undefined;
-		}
-		break;
-
-	case 'window-state':
-		if (!wasaviFrame) break;
-		switch (req.state) {
-		case 'maximized':
-		case 'normal':
-			isFullscreen = req.state == 'maximized';
-			locate(wasaviFrame, targetElement, {
-				isFullscreen: isFullscreen
-			});
-			notifyToChild(wasaviFrameInternalId, {
-				type: 'relocate',
-				state: req.state
-			});
-			break;
-		}
-		break;
-
-	case 'focus-me':
-		if (!wasaviFrame) break;
-		focusToFrame(req);
-		break;
-
-	case 'focus-changed':
-		if (!wasaviFrame || !targetElement) break;
-		var focusables = getFocusables();
-		var index = focusables.indexOf(targetElement);
-		try {
-			if (index >= 0) {
-				var next = req.direction == 1 ?
-					(index + 1) % focusables.length :
-					(index + focusables.length - 1) % focusables.length;
-
-				blurFromFrame();
-
-				if (next == targetElement) {
-					document.body.focus();
-				}
-				else {
-					focusables[next].focus();
-				}
-			}
-			else {
-				document.body.focus();
-			}
-		}
-		catch (e) {}
-		break;
-
-	case 'blink-me':
-		if (!wasaviFrame) break;
-		wasaviFrame.style.visibility = 'hidden';
-		wasaviFrame && setTimeout(function () {
-			if (!wasaviFrame) return;
-			wasaviFrame.style.visibility = '';
-		}, 500);
-		break;
-
-	case 'set-size':
-		if ('isSyncSize' in req) {
-			isSyncSize = req.isSyncSize;
-			if (isSyncSize) {
-				widthOwn = heightOwn = null;
-			}
-			else {
-				widthOwn = targetElement.offsetWidth;
-				heightOwn = targetElement.offsetHeight;
-			}
-		}
-		if ('width' in req) {
-			if (isSyncSize) {
-				targetElement.style.width = req.width + 'px';
-				widthOwn = null;
-			}
-			else {
-				widthOwn = req.width;
-			}
-		}
-		if ('height' in req) {
-			if (isSyncSize) {
-				targetElement.style.height = req.height + 'px';
-				heightOwn = null;
-			}
-			else {
-				heightOwn = req.height;
-			}
-		}
-		resizeListener.fire();
-		notifyToChild(wasaviFrameInternalId, {
-			type: 'relocate',
-			isSyncSize: req.isSyncSize
-		});
-		break;
-
-	case 'terminated':
-		if (!wasaviFrame) break;
-		if (isTestFrame) {
-			if (stateClearTimer) {
-				clearTimeout(stateClearTimer);
-				stateClearTimer = null;
-			}
-			document.querySelector('h1').style.color = '';
-		}
-		if (req.marks) {
-			targetElement.setAttribute(MARKS_ID, req.marks);
-		}
-		if (req.isSubmitRequested
-		&& targetElement
-		&& targetElement.form
-		&& targetElement.form.action != '') {
-			setTimeout(function (form) {
-				var submitter = form.querySelector(
-					'input[type="submit"],button[type="submit"]');
-				if (submitter) {
-					submitter.click();
-				}
-				else {
-					form.submit();
-				}
-			}, 1, targetElement.form);
-		}
-		cleanup(req.value, req.isImplicit);
-		info('wasavi terminated');
-		fireCustomEvent('WasaviTerminated', 0);
-		break;
-
-	case 'read':
-		if (!wasaviFrame) break;
-		var value = targetElement.isContentEditable ?
-			toPlainText(targetElement) : targetElement.value;
-		notifyToChild(wasaviFrameInternalId, {
-			type:'read-response',
-			state:'complete',
-			meta:{
-				path:'',
-				bytes:value.length
-			},
-			content:value
-		});
-		break;
-
-	case 'write':
-		if (!wasaviFrame) break;
-		var payload = {type:'write-response'};
-		try {
-			var result = setValue(targetElement, req.value, req.isForce);
-			if (typeof result == 'number') {
-				var ev;
-
-				if (targetElement.nodeName == 'INPUT'
-				|| targetElement.nodeName == 'TEXTAREA') {
-					// input event
-					// NOTE: input event constructor is fluid.
-					ev = document.createEvent('Event');
-					ev.initEvent('input', true, false);
-					targetElement.dispatchEvent(ev);
-
-					// change event
-					ev = document.createEvent('Event');
-					ev.initEvent('change', true, false);
-					targetElement.dispatchEvent(ev);
-				}
-
-				payload.state = 'complete';
-				payload.meta = {
-					path:req.path,
-					bytes:result
-				};
-			}
-			else if (Object.prototype.toString.call(result) == '[object Array]') {
-				payload.error = result;
-			}
-			else {
-				payload.error = _('Internal state error.');
-			}
-		}
-		catch (ex) {
-			payload.error = _('Internal exception: ' + ex.message);
-		}
-		finally {
-			payload.exstate = {
-				isBuffered:req.isBuffered
-			};
-
-			notifyToChild(wasaviFrameInternalId, payload);
-		}
-		break;
-
-	case 'request-blur':
-		wasaviFrame.blur();
-		document.body.focus();
-		break;
-
-	/*
-	 * messages from backend
-	 */
-	case 'update-storage':
+var handleBackendMessage = (function () {
+	function updateStorage (agent, req) {
 		var logbuf = [];
 		var qaBlacklist;
 		for (var i in req.items) {
@@ -1359,70 +1432,54 @@ function handleBackendMessage (req) {
 		blacklist = parseBlacklist(qaBlacklist);
 		logbuf.length && log(
 			'update-storage: consumed ', logbuf.join(', '));
-		break;
+	}
 
-	case 'request-run':
+	function requestRun (agent, req) {
 		handleRequestLaunch();
-		break;
+	}
 
-	case 'ping':
-		break;
+	function ping (agent, req) {
+	}
 
-	/*
-	 * following cases are for functionality test.
-	 * available only on http://wasavi.appsweets.net/test_frame.html
-	 */
-	case 'notify-keydown':
-		if (!isTestFrame) break;
-		if (stateClearTimer) {
-			clearTimeout(stateClearTimer);
-			stateClearTimer = null;
-		}
-		if (wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
-			wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
+	function notifyKeydown (agent, req) {
+		if (!isTestFrame) return;
+		agent.setStateClearTimer(null);
+		if (agent.wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
+			agent.wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
 			document.querySelector('h1').style.color = 'red';
-			keylog('', '', 'command start');
+			keylog('', '', 'command start, frame #' + req.frameId);
 		}
 		keylog.apply(null, ['key', 'keyCode', 'eventType'].map(function (a) {
 			return (a in req) ? req[a] : '';
 		}));
-		break;
+	}
 
-	case 'notify-error':
-		if (!isTestFrame) break;
+	function notifyError (agent, req) {
+		if (!isTestFrame) return;
 		keylog(
 			'error on ' + document.querySelector('h1').textContent,
 			req.fileName + '(' + req.lineNumber + ')',
 			req.message);
-		break;
+	}
 
-	case 'notify-state':
-		if (!isTestFrame) break;
-		if (stateClearTimer) {
-			clearTimeout(stateClearTimer);
-		}
-		stateClearTimer = setTimeout(function () {
-			stateClearTimer = null;
-
-			wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
-			wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
-			wasaviFrame.removeAttribute('data-wasavi-command-state');
+	function notifyState (agent, req) {
+		if (!isTestFrame) return;
+		agent.setStateClearTimer(function (agent) {
+			agent.wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
+			agent.wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
+			agent.wasaviFrame.removeAttribute('data-wasavi-command-state');
 
 			keylog('notify-state');
-		}, 500);
-		break;
+		});
+	}
 
-	case 'command-completed':
-		if (!isTestFrame) break;
-		if (stateClearTimer) {
-			clearTimeout(stateClearTimer);
-		}
-		stateClearTimer = setTimeout(function () {
-			stateClearTimer = null;
+	function commandCompleted (agent, req) {
+		if (!isTestFrame) return;
+		agent.setStateClearTimer(function (agent) {
 			try {
-				wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
-				wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
-				wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
+				agent.wasaviFrame.setAttribute('data-wasavi-state', JSON.stringify(req.state));
+				agent.wasaviFrame.setAttribute('data-wasavi-input-mode', req.state.inputMode);
+				agent.wasaviFrame.setAttribute('data-wasavi-line-input', req.state.lineInput);
 
 				document.querySelector('h1').style.color = '';
 
@@ -1434,19 +1491,67 @@ function handleBackendMessage (req) {
 				});
 			}
 			finally {
-				wasaviFrame.removeAttribute('data-wasavi-command-state');
+				agent.wasaviFrame.removeAttribute('data-wasavi-command-state');
 				keylog('*** sequence point (' + req.state.inputMode + ') ***');
 
 			}
-		}, 500);
-		break;
+		});
 	}
-}
 
-/*
- * handler for cross messaging, for debug
- * ----------------
- */
+	var handlerMap = {
+		/*
+		 * messages transferred from wasavi
+		 */
+
+		'initialized':       function initialized (agent, req)  { agent.initialized(req) },
+		'ready':             function ready (agent, req)        { agent.ready(req) },
+		'window-state':      function windowState (agent, req)  { agent.windowState(req) },
+		'focus-me':          function focusMe (agent, req)      { agent.focusMe(req) },
+		'focus-changed':     function focusChanged (agent, req) { agent.focusChanged(req) },
+		'blink-me':          function blinkMe (agent, req)      { agent.blinkMe(req) },
+		'set-size':          function setSize (agent, req)      { agent.setSize(req) },
+		'terminated':        function terminated (agent, req)   { agent.terminated(req) },
+		'read':              function read (agent, req)         { agent.read(req) },
+		'write':             function write (agent, req)        { agent.write(req) },
+		'request-blur':      function requestBlur (agent, req)  { agent.requestBlur(req) },
+
+		/*
+		 * messages from backend
+		 */
+
+		'update-storage':    updateStorage,
+		'request-run':       requestRun,
+		'ping':              ping,
+
+		/*
+		 * following cases are for functionality test.
+		 * available only on http://127.0.0.1/test_frame.html
+		 */
+
+		'notify-keydown':    notifyKeydown,
+		'notify-error':      notifyError,
+		'notify-state':      notifyState,
+		'command-completed': commandCompleted,
+	};
+
+	return function (req) {
+		if (!req || !req.type) return;
+
+		logMode && log(
+			'got "' + req.type + '" message from backend:',
+			JSON.stringify(req).substring(0, 200));
+
+		if (!(req.type in handlerMap)) return;
+
+		if ('frameId' in req) {
+			if (!(req.frameId in wasaviAgentsHash)) return;
+			handlerMap[req.type](wasaviAgentsHash[req.frameId], req);
+		}
+		else {
+			handlerMap[req.type](null, req);
+		}
+	};
+})();
 
 function handlePostMessage (e) {
 	if (window.chrome) {
@@ -1459,13 +1564,8 @@ function handlePostMessage (e) {
 	else if (WasaviExtensionWrapper.IS_GECKO) {
 		// on Firefox, e.origin is always null. maybe a bug?
 	}
-	diagMessages._p('wasavi: ' + e.data);
+	diag.push('wasavi: ' + e.data);
 }
-
-/*
- * handler for connection to extension
- * ----------------
- */
 
 function handleConnect (req) {
 	if (!req || !('tabId' in req) || !req.tabId) {
@@ -1497,22 +1597,13 @@ function handleConnect (req) {
 	extension.ensureRun(handleAgentInitialized, req);
 }
 
-/**
- * bootstrap
- * ----------------
- */
-
-extension = WasaviExtensionWrapper.create();
-isTestFrame = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/.test(window.location.href);
-isOptionsPage = window.location.href == extension.urlInfo.optionsUrl;
-
+// bootstrap <<<1
 createPageAgent(true, true);
 extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
 document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
-
 connect(handleConnect);
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker :
+// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker fmr=<<<,>>> :

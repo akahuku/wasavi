@@ -1048,6 +1048,7 @@ function notifyToParent (eventName, payload) {
 	if (!extensionChannel || extensionChannel.isTopFrame()) return false;
 	payload || (payload = {});
 	payload.type = eventName;
+	payload.frameId = targetElement.frameId;
 	extensionChannel.postMessage({
 		type: 'transfer',
 		to: targetElement.parentInternalId,
@@ -4926,7 +4927,7 @@ function handleCoverMousewheel (e) {
 function handleBackendMessage (req) {
 	if (!req || !req.type) return;
 
-	logMode && log('got a message from backend:', JSON.stringify(req).substring(0, 200));
+	logMode && log('got "' + req.type + '" message from backend:', JSON.stringify(req).substring(0, 200));
 
 	switch (req.type) {
 	/*
@@ -8535,6 +8536,7 @@ if (global.WasaviExtensionWrapper
 				!targetElement && install({
 					// parentTabId
 					// parentInternalId
+					// frameId
 					// url
 					// testMode
 					id:extensionChannel.name,
