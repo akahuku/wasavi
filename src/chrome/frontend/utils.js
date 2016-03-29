@@ -106,7 +106,7 @@ function multiply (letter, times) {
 	while (result.length < times) {
 		result += result;
 	}
-	return result.length == times ? result : result.substring(0, times);
+	return result.length == times ? result : result.substring(0, letter.length * times);
 }
 function toVisibleString (s) {
 	return (s || '')
