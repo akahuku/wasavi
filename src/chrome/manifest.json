@@ -37,7 +37,8 @@
         "frontend/agent.js"
       ],
       "run_at": "document_start",
-      "all_frames": true
+      "all_frames": true,
+	  "match_about_blank": true
     },
     {
       "matches": [
