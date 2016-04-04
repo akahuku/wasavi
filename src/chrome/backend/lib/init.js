@@ -26,5 +26,6 @@ loadScripts(
 	'Memorandum.js',
 	'SyncStorage.js',
 	typeof window.Promise == 'undefined' ? 'es6-promise.min.js' : null,
+	'marked.js',
 	'main.js'
 );

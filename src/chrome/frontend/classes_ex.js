@@ -517,7 +517,7 @@ function writeCore (app, t, a, pa) {
 	if (a.range[1] == t.rowLength - 1) {
 		content = trimTerm(content);
 	}
-	if (!app.targetElement.isContentEditable) {
+	if (!app.targetElement.elementType != 'contentEditable') {
 		content = content.replace(/\n/g, app.preferredNewline);
 	}
 
@@ -528,21 +528,32 @@ function writeCore (app, t, a, pa) {
 		isBuffered:pa.isBuffered,
 		value:content
 	};
-	if (payload.path == '' && app.targetElement.nodeName != 'BODY') {
-		app.low.notifyToParent('write', payload);
-		requestId = app.extensionChannel.getNewRequestNumber();
+
+	// write into the element on a page
+	if (payload.path == '') {
+		switch (app.targetElement.elementType) {
+		case 'body':
+			payload.type = 'set-memorandum';
+			payload.url = app.targetElement.url;
+			requestId = app.extensionChannel.postMessage(payload);
+			break;
+
+		default:
+			payload.writeAs = app.targetElement.writeAs;
+			app.low.notifyToParent('write', payload);
+			requestId = app.extensionChannel.getNewRequestNumber();
+			break;
+		}
 	}
-	else if (payload.path == '' && app.targetElement.nodeName == 'BODY') {
-		payload.type = 'set-memorandum';
-		payload.url = app.targetElement.url;
-		requestId = app.extensionChannel.postMessage(payload);
-	}
+
+	// write into the online storage
 	else {
 		payload.type = 'fsctl';
 		payload.subtype = 'write';
 		payload.encoding = 'UTF-8';
 		requestId = app.extensionChannel.postMessage(payload, true, true);
 	}
+
 	app.low.registerMultiplexCallback(requestId, 'write');
 
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
@@ -1436,21 +1447,31 @@ var cache = {};
 		var payload = {
 			path:app.low.regalizeFilePath(path, true) || app.fileName
 		};
-		if (payload.path == '' && app.targetElement.nodeName != 'BODY') {
-			app.low.notifyToParent('read', payload);
-			requestId = app.extensionChannel.getNewRequestNumber();
+
+		// read from the element on a page
+		if (payload.path == '') {
+			switch (app.targetElement.elementType) {
+			case 'body':
+				payload.type = 'get-memorandum';
+				payload.url = app.targetElement.url;
+				requestId = app.extensionChannel.postMessage(payload);
+				break;
+
+			default:
+				app.low.notifyToParent('read', payload);
+				requestId = app.extensionChannel.getNewRequestNumber();
+				break;
+			}
 		}
-		else if (payload.path == '' && app.targetElement.nodeName == 'BODY') {
-			payload.type = 'get-memorandum';
-			payload.url = app.targetElement.url;
-			requestId = app.extensionChannel.postMessage(payload);
-		}
+
+		// read from the online storage
 		else {
 			payload.type = 'fsctl';
 			payload.subtype = 'read';
 			payload.encoding = 'UTF-8';
 			requestId = app.extensionChannel.postMessage(payload, true, true);
 		}
+
 		app.low.registerMultiplexCallback(requestId, 'edit');
 
 		return app.exvm.EX_ASYNC;

@@ -7,3 +7,6 @@
 [submodule "src/lib/unistring"]
 	path = src/lib/unistring
 	url = git@github.com:akahuku/unistring.git
+[submodule "src/lib/marked"]
+	path = src/lib/marked
+	url = git@github.com:akahuku/marked.git

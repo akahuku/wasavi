@@ -130,6 +130,7 @@
 	var hotkey = require('./kosian/Hotkey').Hotkey(true);
 	var contextMenu = require('./ContextMenu').ContextMenu();
 	var memorandum = require('./Memorandum').Memorandum();
+	var marked = require('./marked');
 
 	var configInfo = {
 		sync: {
@@ -754,7 +755,38 @@
 		respond(o);
 	}
 
+	function rendererHeading (text, level) {
+		return '<h' + level + '>' +
+			text +
+			'</h' + level + '>\n';
+	}
+	function rendererParagraph (text) {
+		return '<div>' + text + '</div>\n';
+	}
+	function rendererStrong (text) {
+		return '<b>' + text + '</b>';
+	}
+	function rendererEm (text) {
+		return '<i>' + text + '</i>';
+	}
 	function handleTransfer (command, data, sender, respond) {
+		if (data.payload.type == 'write'
+		&&  'writeAs' in data.payload
+		&&  data.payload.writeAs == 'html') {
+			var renderer = new marked.Renderer;
+			renderer.heading = rendererHeading;
+			renderer.paragraph = rendererParagraph;
+			renderer.strong = rendererStrong;
+			renderer.em = rendererEm;
+
+			var markupOpts = {
+				renderer: renderer,
+				gfm: true, tables: true, breaks: true
+			};
+
+			data.payload.value = marked(data.payload.value, markupOpts);
+		}
+
 		ext.postMessage(data.to, data.payload);
 	}
 

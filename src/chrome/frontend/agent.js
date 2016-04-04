@@ -90,6 +90,37 @@ var diag = {
 	}
 };
 
+/*
+ * There are various newline formats in content editable element.
+ * These formats are different depending on sites, so we have to choice
+ * the correct format by list.  So `writeAs` property can be assigned
+ * following values:
+ *
+ *   - 'html': treat a text as markdown, and build DOM tree (default)
+ *   - 'div': create div element from each line
+ *
+ *       <div>line1</div><div>line2</div> ...
+ *
+ *   - 'p': create p element from each line
+ *
+ *       <p>line1</p><p>line2</p> ...
+ *
+ *   - 'textAndBreak': create text node from each line, and each line is
+ *     divided by a BR element.
+ *
+ *       #text <br> #text ...
+ *
+ *   - 'plaintext': create a text node. newline is '\n'
+ *
+ *       line1 \n line2 ...
+ */
+
+var contentEditableProfile = [
+	{
+		pattern: /\bworkflowy\.com$/, writeAs: 'plaintext'
+	}
+];
+
 // utility functions <<<1
 function log () {
 	logMode && console.log('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
@@ -99,6 +130,10 @@ function info () {
 }
 function error () {
 	logMode && console.error('wasavi agent: ' + Array.prototype.slice.call(arguments).join(' '));
+}
+
+function $ (id) {
+	return typeof id == 'string' ? document.getElementById(id) : id;
 }
 
 function _ () {
@@ -119,141 +154,34 @@ function fireCustomEvent (name, detail, target) {
 	(target || document).dispatchEvent(ev);
 }
 
-var setValue = (function () {
-	function toDivs (f, value) {
-		var length = 0;
-		value = value.split('\n');
-
-		for (var i = 0, goal = value.length; i < goal; i++) {
-			f.appendChild(document.createElement('div'))
-				.appendChild(document.createTextNode(value[i]));
-			length += value[i].length + 1;
-		}
-
-		return length;
+function multiply (letter, times) {
+	if (letter == '' || times <= 0) return '';
+	var result = letter;
+	while (result.length < times) {
+		result += result;
 	}
+	return result.length == times ? result : result.substring(0, letter.length * times);
+}
 
-	function toTextAndBreaks (f, value) {
-		var length = 0;
-		value = value.split('\n');
-
-		for (var i = 0, goal = value.length - 1; i < goal; i++) {
-			f.appendChild(document.createTextNode(value[i]));
-			f.appendChild(document.createElement('br'));
-			length += value[i].length + 1;
-		}
-
-		if (value.length >= 1) {
-			f.appendChild(document.createTextNode(value[value.length - 1]));
-			length += value[i].length;
-		}
-
-		return length;
-	}
-
-	function toPlainText (f, value) {
-		f.appendChild(document.createTextNode(value));
-		return value.length;
-	}
-
-	return function setValue (element, value, isForce) {
-		value || (value = '');
-
-		if (element.classList.contains('CodeMirror')
-		 || element.classList.contains('ace_editor')) {
-			if (typeof value != 'string') {
-				return _('Invalid text format.');
-			}
-			var className = getUniqueClass();
-			element.classList.add(className);
-			fireCustomEvent('WasaviRequestSetContent', className + '\t' + value);
-			element.classList.remove(className);
-			return value.length;
-		}
-		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
-			if (element.readOnly) {
-				if (isForce) {
-					element.readOnly = false;
-				}
-				else {
-					return _('Element to be written has readonly attribute (use "!" to override).');
-				}
-			}
-			if (element.disabled) {
-				if (isForce) {
-					element.disabled = false;
-				}
-				else {
-					return _('Element to be written has disabled attribute (use "!" to override).');
-				}
-			}
-			if (typeof value != 'string') {
-				return _('Invalid text format.');
-			}
-			try {
-				element.value = value;
-				return value.length;
-			}
-			catch (e) {
-				return _('Exception while saving: {0}', e.message);
-			}
-		}
-		else if (element.nodeName == 'BODY') {
-			return _('Cannot rewrite the page itself.');
-		}
-		else {
-			/*
-			 * There are various newline formats in content editable element:
-			 *
-			 *   - DIV elements: <div></div><div></div> ...
-			 *   - Text and BR elements: #text <br> #text ...
-			 *   - Plain texts: #text (newline is '\n')
-			 *
-			 * These are different depending on sites, so we have to choice
-			 * the correct format by list...
-			 */
-
-			var r = document.createRange();
-			r.selectNodeContents(element);
-			r.deleteContents();
-
-			var f = document.createDocumentFragment();
-			var length;
-
-			if (/\bworkflowy\.com$/.test(window.location.hostname)) {
-				length = toPlainText(f, value);
-			}
-			else {
-				length = toTextAndBreaks(f, value);
-			}
-
-			try {
-				element.appendChild(f)
-				return length;
-			}
-			catch (e) {
-				return _('Exception while saving: {0}', e.message);
-			}
-		}
-	};
-})();
-
-function toPlainText (input) {
-	function hr2rule (node) {
-		var nodes = node.getElementsByTagName('hr');
-		var rule = '--------------------------------------------------------------------------------';
-		while (nodes.length) {
-			var newNode = document.createElement('div');
-			nodes[0].parentNode.replaceChild(newNode, nodes[0]);
-			newNode.textContent = rule;
-		}
-	}
-
+var markDown = (function () {
 	function getStyle (node, prop) {
 		if (node.style[prop]) return node.style[prop];
 		if (node.nodeName == 'SCRIPT') return 'none';
 		var style = node.ownerDocument.defaultView.getComputedStyle(node, '');
 		return style[prop];
+	}
+
+	function getQuotedCount (node, rootNode) {
+		var result = 0;
+		for (; node; node = node.parentNode) {
+			if (node.nodeName == 'BLOCKQUOTE') {
+				result++;
+			}
+			if (node == rootNode) {
+				break;
+			}
+		}
+		return result;
 	}
 
 	function isBlock (display) {
@@ -264,94 +192,276 @@ function toPlainText (input) {
 		return 'table-row'.indexOf(display) >= 0;
 	}
 
-	function newBlock (nodeName) {
-		var text = '';
-		if (t.length && !/\n$/.test(t[t.length - 1].text)) {
-			text = '\n';
-		}
-		t.push({text: text, display: '', nodeName: nodeName || ''});
+	function Unit (text, nodeName, display, whiteSpace, quotedCount) {
+		this.text = [text];
+		this.nodeName = nodeName || '';
+		this.display = display || '';
+		this.whiteSpace = whiteSpace || '';
+		this.quotedCount = quotedCount || 0;
 	}
 
-	function loop (node) {
-		var display = getStyle(node, 'display');
-		if (display == 'none') {
-			return '';
-		}
-
-		var block = isBlock(display);
-		var forceInline = isForceInline(display);
-
-		if (block) {
-			newBlock(node.nodeName);
-			t[t.length - 1].display = display;
-			t[t.length - 1].whiteSpace = getStyle(node, 'whiteSpace');
-		}
-
-		var c, last = -1;
-		for (var i = 0, goal = node.childNodes.length; i < goal; i++) {
-			c = node.childNodes[i];
-			if (c.nodeType == 3) {
-				if (last >= 0 && last != t.length - 1) {
-					newBlock();
-					t[t.length - 1].display = getStyle(c.parentNode, 'display');
-					t[t.length - 1].whiteSpace = getStyle(c.parentNode, 'whiteSpace');
-					t[t.length - 1].nodeName = c.parentNode.nodeName;
-				}
-				var nodeValue = c.nodeValue;
-				if (forceInline) {
-					nodeValue = ' ' + nodeValue.replace(/\n/g, ' ');
-				}
-				last = t.length - 1;
-				t[last].text += nodeValue;
-			}
-			else if (c.nodeName == 'BR') {
-				if (!/\n$/.test(t[t.length - 1])) {
-					t[t.length - 1].text += '\n';
-				}
-			}
-			else if (c.childNodes.length) {
-				loop(c);
-			}
-		}
-		return t;
-	}
-
-	function normalize () {
-		t.forEach(function (b, i) {
-			if (/pre/.test(b.whiteSpace)) {
-				b.text = b.text
-					.replace(/^\s+|\s+$/g, '');
+	Unit.prototype = {
+		append: function (text) {
+			var last = this.text.length - 1;
+			if (this.text[last] == '') {
+				this.text[last] = text.replace(/^\s+/, '');
 			}
 			else {
-				b.text = b.text
-					.replace(/^[\t ]+|[\t ]+$/g, '')
-					.replace(/[\t ]+/g, ' ');
+				var re1 = /^(.*?)(\s*)$/.exec(this.text[last]);
+				var re2 = /^(\s*)([\s\S]*)$/.exec(text);
+				this.text[last] =
+					(re1[1] || '') +
+					((re1[2] && re1[2].length || re2[1] && re2[1].length) ? ' ' : '') +
+					(re2[2] || '').replace(/[\n\t ]+/g, ' ');
 			}
+		},
+		appendNewline: function () {
+			this.text.push('');
+		}
+	};
+
+	function ToPlainText (opts) {
+		this.opts = opts || {};
+		this.buffer = null;
+	};
+
+	ToPlainText.prototype = {
+		preunits: {
+			a: function () { this.append('[') },
+			b: function () { this.append('**') },
+			br: function () { this.appendNewline() },
+			code: function () { this.append('`') },
+			h1: function (node, nodeName) { this.append(multiply('#', nodeName.substring(1) - 0) + ' ') },
+			h2: function () { this.preunits.h1.apply(this, arguments) },
+			h3: function () { this.preunits.h1.apply(this, arguments) },
+			h4: function () { this.preunits.h1.apply(this, arguments) },
+			h5: function () { this.preunits.h1.apply(this, arguments) },
+			h6: function () { this.preunits.h1.apply(this, arguments) },
+			hr: function () { this.append('* * *') },
+			i: function () { this.append('_') },
+			img: function (node, nodeName) {
+				this.append(
+					'![' + (node.getAttribute('alt') || '') + ']' +
+					'(' + (node.getAttribute('src') || '') + ')'
+				);
+			},
+			li: function (node) {
+				var prefix = '* ';
+				var listIndex = Array.prototype.indexOf.call(node.parentNode.children, node);
+				if (node.parentNode.nodeName == 'OL') {
+					prefix = (listIndex + 1) + '. ';
+				}
+				this.append(prefix);
+				this.prop('isFirstListItem', listIndex == 0);
+				this.prop('isLastListItem', listIndex == node.parentNode.children.length - 1);
+
+				var depth = -1;
+				for (var p = node.parentNode; p; p = p.parentNode) {
+					if (p.nodeName == 'OL' || p.nodeName == 'UL') {
+						depth++;
+					}
+				}
+				this.prop('listDepth', depth);
+			}
+		},
+		postunits: {
+			a: function (node) { this.append('](' + node.getAttribute('href') + ')') },
+			b: function () { this.append('**') },
+			code: function () { this.append('`') },
+			i: function () { this.append('_') }
+		},
+		dump: function () {
+			var buffer = ['*** dump ***'];
+			this.buffer.forEach(function (b, i) {
+				var tmp = [
+					'--- #' + i + ' ---',
+					'    text: "' + b.text.replace(/\n/g, '\\n')
+										  .replace(/\t/g, '\\t') + '"',
+					' display: ' + b.display +
+						', nodeName: ' + b.nodeName +
+						', quotedCount: ' + b.quotedCount
+				];
+				if ('listDepth' in b) {
+					tmp.push('listDepth: ' + b.listDepth);
+				}
+				if ('isFirstListItem' in b) {
+					tmp.push('isFirstListItem: ' + b.isFirstListItem);
+				}
+				if ('isLastListItem' in b) {
+					tmp.push('isLastListItem: ' + b.isLastListItem);
+				}
+				buffer.push.apply(buffer, tmp);
+			});
+			return buffer.join('\n');
+		},
+		newUnit: function (nodeName, display, whiteSpace, quotedCount) {
+			this.buffer.push(new Unit('', nodeName, display, whiteSpace, quotedCount));
+		},
+		getResult: function () {
+			return this.buffer.map(function (b) {return b.text}).join('');
+		},
+		append: function () {
+			var i = this.buffer.length - 1;
+			if (i < 0) return;
+			return this.buffer[i].append.apply(this.buffer[i], arguments);
+		},
+		appendNewline: function () {
+			var i = this.buffer.length - 1;
+			if (i < 0) return;
+			this.buffer[i].appendNewline.apply(this.buffer[i], arguments);
+		},
+		prop: function (propName, value) {
+			var i = this.buffer.length - 1;
+			if (i < 0) return;
+			this.buffer[i][propName] = value;
+		},
+		emit: function () {
+			var args = Array.prototype.slice.call(arguments);
+			var eventName = args.shift();
+			if (typeof this.opts[eventName] != 'function') return;
+			try {
+				this.opts[eventName].apply(this, args);
+			}
+			catch (e) {}
+		},
+		mainloop: function (node, rootNode) {
+			var display = getStyle(node, 'display');
+			if (display == 'none') return;
+
+			var block = isBlock(display);
+			if (block) {
+				this.newUnit(
+					node.nodeName,
+					display,
+					getStyle(node, 'whiteSpace'),
+					getQuotedCount(node, rootNode)
+				);
+			}
+
+			var nodeName = node.nodeName.toLowerCase();
+			if (this.opts.preunits && nodeName in this.opts.preunits) {
+				this.opts.preunits[nodeName].call(this, node, nodeName);
+			}
+			else if (nodeName in this.preunits) {
+				this.preunits[nodeName].call(this, node, nodeName);
+			}
+
+			var lastUnitIndex = -1;
+			for (var i = 0, goal = node.childNodes.length; i < goal; i++) {
+				var c = node.childNodes[i];
+
+				if (c.nodeType == 3) {
+					if (lastUnitIndex >= 0 && lastUnitIndex != this.buffer.length - 1) {
+						this.newUnit(
+							c.parentNode.nodeName,
+							getStyle(c.parentNode, 'display'),
+							getStyle(c.parentNode, 'whiteSpace'),
+							getQuotedCount(node, rootNode)
+						);
+					}
+					this.append(c.nodeValue);
+					lastUnitIndex = this.buffer.length - 1;
+				}
+				else {
+					this.mainloop(c, rootNode);
+				}
+			}
+
+			var nodeName = node.nodeName.toLowerCase();
+			if (this.opts.postunits && nodeName in this.opts.postunits) {
+				this.opts.postunits[nodeName].call(this, node, nodeName);
+			}
+			else if (nodeName in this.postunits) {
+				this.postunits[nodeName].call(this, node, nodeName);
+			}
+		},
+		normalize: function () {
+			for (var i = 0, buffer = this.buffer; i < buffer.length; i++) {
+				var u = buffer[i];
+
+				u.text = u.text.join('\n');
+				if (u.text.length == 0) {
+					buffer.splice(i, 1);
+					i--;
+				}
+			}
+
+			for (var i = 0, buffer = this.buffer; i < buffer.length; i++) {
+				var u = buffer[i];
+
+				if (u.display == 'list-item') {
+					u.text = multiply(' ', u.listDepth * 2) + u.text;
+				}
+
+				if (u.quotedCount) {
+					u.text = multiply('> ', u.quotedCount) + u.text;
+				}
+
+				if (i < buffer.length - 1) {
+					var v = buffer[i + 1];
+					var isLastListItem = u.display == 'list-item' && u.isLastListItem;
+					var isFirstListItem = v.display == 'list-item' && v.isFirstListItem;
+					if (u.display == 'block' || isLastListItem
+					||  v.display == 'block' || isFirstListItem) {
+						u.text = u.text +
+							multiply('\n', isLastListItem && isFirstListItem ? 2 : 1) +
+							multiply('> ', Math.min(u.quotedCount, v.quotedCount)) + '\n';
+					}
+					else {
+						u.text += '\n';
+					}
+				}
+			}
+		},
+		exec: function (input) {
+			input = $(input);
+			this.buffer = [];
+			this.emit('onbeforeprocess', this);
+			this.mainloop(input, input);
+			this.normalize();
+			this.emit('onafterprocess', this);
+			return this.getResult();
+		}
+	};
+
+	function identify (node) {
+		var tmpIds = [];
+		Array.prototype.forEach.call(
+			$(node).querySelectorAll('a, img, object, embed'),
+			function (node) {
+				if (node.hasAttribute('id')) return;
+
+				var tmpId;
+				do {
+					tmpId = 'tmpid_' +
+						('0000' + Math.floor(Math.random() * 0x10000)).substr(-4);
+				} while ($(tmpId));
+
+				node.setAttribute('id', tmpId);
+				tmpIds.push(tmpId);
+			}
+		);
+		return tmpIds;
+	}
+
+	function unidentify (tmpIds) {
+		if (!(tmpIds instanceof Array)) return;
+		tmpIds.forEach(function (id) {
+			var node = $(id);
+			node && node.removeAttribute('id');
 		});
 	}
 
-	function getResult () {
-		var result = t
-			.map(function (b) {return b.text})
-			.join('')
-			.replace(/^\s+|\s+$/g, '');
-		return result;
+	function run (input, opts) {
+		return (new ToPlainText(opts)).exec(input);
 	}
 
-	var t = [];
-	var inputTmp = input.cloneNode(true);
-	input.parentNode.insertBefore(inputTmp, input.nextSibling);
-	try {
-		hr2rule(inputTmp);
-		newBlock();
-		loop(inputTmp);
-		normalize();
-		return getResult();
-	}
-	finally {
-		inputTmp.parentNode.removeChild(inputTmp);
-	}
-}
+	return {
+		identify: identify,
+		unidentify: unidentify,
+		run: run
+	};
+})();
 
 function getMutationObserver (type, mediator) {
 	return window.MutationObserver
@@ -560,19 +670,6 @@ var Agent = (function () {
 		return isFixed;
 	}
 
-	function findPseudoTextAreaContainer (element) {
-		var result = null;
-		for (var e = element; e; e = e.parentNode) {
-			if (!e.classList) continue;
-			if (e.classList.contains('CodeMirror')
-			||  e.classList.contains('ace_editor')) {
-				result = e;
-				break;
-			}
-		}
-		return result;
-	}
-
 	function getFontStyle (s, fontFamilyOverride) {
 		return [
 			s.fontStyle, s.fontVariant, s.fontWeight,
@@ -590,37 +687,6 @@ var Agent = (function () {
 			result.unshift(nodeName + '[' + index + ']');
 		}
 		return result.join(' ');
-	}
-
-	function getBodyContent () {
-		var content = [], el, s;
-
-		// title
-		if ((el = document.querySelector('title, h1')) && (s = el.textContent) != '') {
-			content.push(el.textContent);
-		}
-
-		// url
-		if ((el = document.querySelector('link[rel="canonical"]')) && (s = el.getAttribute('href')) != '') {
-			content.push(s);
-		}
-		else {
-			content.push(window.location.href);
-		}
-
-		// description
-		if ((el = document.querySelector('meta[name="description"]')) && (s = el.getAttribute('content')) != '') {
-			content.push('', s);
-		}
-
-		// selection
-		if ((s = window.getSelection().toString()
-			.replace(/(?:\r\n|\r|\n)/g, '\n')
-			.replace(/\n{2,}/g, '\n')) != '') {
-			content.push('', s);
-		}
-
-		return content.join('\n');
 	}
 
 	function locate (iframe, target, opts) {
@@ -700,61 +766,30 @@ var Agent = (function () {
 
 	// private methods
 	function prepare () {
-		var element = this.targetElement;
-		var pseudoTextArea = findPseudoTextAreaContainer(element);
-
 		fireCustomEvent('WasaviStarting', 0);
 		diag.init().push('agent: entering prepare()');
 		window.addEventListener('message', handlePostMessage, false);
 
-		if (pseudoTextArea) {
-			element = this.targetElement = pseudoTextArea;
-
-			var className = getUniqueClass();
-			element.classList.add(className);
-
-			this.getContentCallback = function (content) {
-				if (this.wasaviFrameTimeoutTimer) {
-					clearTimeout(this.wasaviFrameTimeoutTimer);
-					this.wasaviFrameTimeoutTimer = null;
-				}
-				this.getContentCallback = null;
-				run.call(this, {value: content});
-			};
-
-			this.wasaviFrameTimeoutTimer = setTimeout(function (that) {
-				that.wasaviFrameTimeoutTimer = null;
-				element.classList.remove(className);
-				cleanup.call(that);
-				error('retrieving the content of pseudo textarea timed out.');
+		readContentFromElement(this.targetElement, (function (element, content, type, writeAs) {
+			if (typeof content != 'string') {
+				cleanup.call(this);
+				error('retrieving the content of element timed out.');
 				diag.out();
-			}, BOOT_WAIT_TIMEOUT_MSECS, this);
+				return;
+			}
 
-			setTimeout(function () {
-				fireCustomEvent('WasaviRequestGetContent', className);
-			}, 1);
-		}
+			var payload = {
+				value: content,
+				elementType: type,
+				writeAs: writeAs || ''
+			};
+			if (type == 'textarea') {
+				payload.readOnly = element.readOnly || element.disabled;
+			}
 
-		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
-			run.call(this, {
-				value: element.value,
-				readOnly: element.readOnly || element.disabled
-			});
-		}
-
-		else if (element.isContentEditable) {
-			run.call(this, {
-				value: toPlainText(element)
-			});
-		}
-
-		else if (element.nodeName == 'BODY') {
-			run.call(this, {
-				value: getBodyContent()
-			});
-		}
-
-		diag.push('agent: leaving prepare()');
+			this.targetElement = element;
+			run.call(this, payload);
+		}).bind(this));
 	}
 
 	function run (overrides) {
@@ -832,8 +867,8 @@ var Agent = (function () {
 			id: element.id,
 			nodeName: element.nodeName,
 			nodePath: getNodePath(element),
-			isContentEditable: element.isContentEditable,
 			elementType: element.type,
+			writeAs: '',
 			selectionStart: element.selectionStart || 0,
 			selectionEnd: element.selectionEnd || 0,
 			scrollTop: element.scrollTop || 0,
@@ -851,7 +886,7 @@ var Agent = (function () {
 		}
 		extension.postMessage(payload);
 
-		diag.push('agent: leaving runCore()');
+		diag.push('agent: leaving run()');
 	}
 
 	function blurFromFrame () {
@@ -869,7 +904,9 @@ var Agent = (function () {
 	function cleanup (value, isImplicit) {
 		if (this.targetElement) {
 			if (typeof value == 'string') {
-				setValue(this.targetElement, value);
+				writeContentToElement(this.targetElement, value, {
+					writeAs: this.targetElement.writeAs
+				});
 			}
 			!isImplicit && this.targetElement.focus();
 			this.targetElement.removeAttribute(EXTENSION_CURRENT);
@@ -897,7 +934,6 @@ var Agent = (function () {
 		}
 
 		this.isFullscreen = this.isSyncSize = null;
-		this.getContentCallback = null;
 
 		delete wasaviAgentsHash[this.frameId];
 	}
@@ -909,6 +945,20 @@ var Agent = (function () {
 			width: this.widthOwn,
 			height: this.heightOwn
 		});
+	}
+
+	function handlePostMessage (e) {
+		if (window.chrome) {
+			if (e.origin != 'chrome-extension://' + chrome.runtime.id) return;
+		}
+		else if (window.opera) {
+			if (e.origin != 'http://wasavi.appsweets.net'
+			&&  e.origin != 'https://ss1.xrea.com') return;
+		}
+		else if (WasaviExtensionWrapper.IS_GECKO) {
+			// on Firefox, e.origin is always null. maybe a bug?
+		}
+		diag.push('wasavi: ' + e.data);
 	}
 
 	// public methods
@@ -1034,7 +1084,7 @@ var Agent = (function () {
 		this.wasaviFrame.style.visibility = 'hidden';
 		setTimeout(function (frame) {
 			frame.style.visibility = '';
-		}, 500, this.wasaviFrame);
+		}, 1000, this.wasaviFrame);
 	}
 
 	function setSize (req) {
@@ -1102,24 +1152,34 @@ var Agent = (function () {
 	}
 
 	function read (req) {
-		var value = this.targetElement.isContentEditable ?
-			toPlainText(this.targetElement) : this.targetElement.value;
+		readContentFromElement(this.targetElement, (function (element, content, type) {
+			var payload = {
+				type: 'read-response',
+			};
 
-		this.notifyToChild({
-			type: 'read-response',
-			state: 'complete',
-			meta: {
-				path: '',
-				bytes: value.length
-			},
-			content: value
-		});
+			if (typeof content != 'string') {
+				payload.error = _('Cannot read the content of element.');
+			}
+			else {
+				payload.state = 'complete';
+				payload.meta = {
+					path: '',
+					bytes: content.length
+				};
+				payload.content = content;
+			}
+
+			this.notifyToChild(payload);
+		}).bind(this));
 	}
 
 	function write (req) {
 		var payload = {type: 'write-response'};
 		try {
-			var result = setValue(this.targetElement, req.value, req.isForce);
+			var result = writeContentToElement(this.targetElement, req.value, {
+				isForce: req.isForce,
+				writeAs: req.writeAs
+			});
 			if (typeof result == 'number') {
 				var ev;
 
@@ -1179,7 +1239,6 @@ var Agent = (function () {
 		this.heightOwn = null;
 		this.isFullscreen = false;
 		this.isSyncSize = false;
-		this.getContentCallback = null;
 		this.stateClearTimer = null;
 		prepare.call(this);
 	}
@@ -1322,6 +1381,342 @@ function createPageAgent (listenKeydown, usePageContextScript) {
 	}
 }
 
+var readContentFromElement = (function () {
+	function pre (n, name) {this.append('<wasavi:' + name + ' id="' + n.id + '">')}
+	function post (n, name) {this.append('</wasavi:' + name + '>')}
+
+	function findPseudoTextAreaContainer (element) {
+		var result = null;
+		for (var e = element; e; e = e.parentNode) {
+			if (!e.classList) continue;
+			if (e.classList.contains('CodeMirror')
+			||  e.classList.contains('ace_editor')) {
+				result = e;
+				break;
+			}
+		}
+		return result;
+	}
+
+	function handleResponseGetContent (e) {
+		var index = e.detail.indexOf('\t');
+		if (index < 0) return;
+
+		var className = e.detail.substring(0, index);
+		if (!(className in callbackQueue)) return;
+
+		var slot = callbackQueue[className];
+		if (slot.timeoutTimer) {
+			clearTimeout(slot.timeoutTimer);
+			slot.timeoutTimer = null;
+		}
+
+		slot.element.classList.remove(className);
+		delete callbackQueue[className];
+		slot.callback(
+			slot.element, e.detail.substring(index + 1),
+			'pseudoTextArea', writeAs);
+	}
+
+	function getMarkdown (element) {
+		element = $(element);
+		markDown.identify(element);
+		return markDown.run(element, markdownOpts);
+	}
+
+	function getBodyContent () {
+		var content = [], el, s;
+
+		// title
+		if ((el = document.querySelector('title, h1')) && (s = el.textContent) != '') {
+			content.push(el.textContent);
+		}
+
+		// url
+		if ((el = document.querySelector('link[rel="canonical"]')) && (s = el.getAttribute('href')) != '') {
+			content.push(s);
+		}
+		else {
+			content.push(window.location.href);
+		}
+
+		// description
+		if ((el = document.querySelector('meta[name="description"]')) && (s = el.getAttribute('content')) != '') {
+			content.push('', s);
+		}
+
+		// selection
+		if ((s = window.getSelection().toString()
+			.replace(/(?:\r\n|\r|\n)/g, '\n')
+			.replace(/\n{2,}/g, '\n')) != '') {
+			content.push('', s);
+		}
+
+		return content.join('\n');
+	}
+
+	var callbackQueue = {};
+	var markdownOpts = {
+		preunits: {
+			img: function (node, nodeName) { this.append('<wasavi:img id="' + node.id + '"></wasavi:img>') },
+			a: pre, embed: pre, object: pre
+		},
+		postunits: {
+			a: post, embed: post, object: post
+		}
+	};
+
+	document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
+
+	return function readContentFromElement (element, callback) {
+		var pseudoTextArea = findPseudoTextAreaContainer(element);
+
+		if (pseudoTextArea) {
+			var className = getUniqueClass();
+			pseudoTextArea.classList.add(className);
+			callbackQueue[className] = {
+				element: pseudoTextArea,
+				callback: callback,
+				timeoutTimer: setTimeout(
+					function (className) {
+						var slot = callbackQueue[className];
+						if (!slot) return;
+
+						slot.element.classList.remove(className);
+						delete callbackQueue[className];
+						slot.timeoutTimer = null;
+						slot.callback(slot.element, null);
+					},
+					BOOT_WAIT_TIMEOUT_MSECS, className
+				)
+			};
+			setTimeout(
+				function (className) {
+					fireCustomEvent('WasaviRequestGetContent', className);
+				},
+				1, className
+			);
+		}
+
+		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
+			callback(element, element.value, element.nodeName.toLowerCase());
+		}
+
+		else if (element.isContentEditable) {
+			var writeAs = 'html';
+
+			contentEditableProfile.some(function (p) {
+				if (p.pattern.test(window.location.hostname)) {
+					writeAs = p.writeAs;
+					return true;
+				}
+			});
+
+			callback(element, getMarkdown(element), 'contentEditable', writeAs);
+		}
+
+		else if (element.nodeName == 'BODY') {
+			callback(element, getBodyContent(), 'body');
+		}
+
+		else {
+			callback(element, null, null, null);
+		}
+	};
+})();
+
+var writeContentToElement = (function () {
+	function toDiv (f, content) {
+		var length = 0;
+		content = content.split('\n');
+
+		for (var i = 0, goal = content.length; i < goal; i++) {
+			f.appendChild(document.createElement('div'))
+				.appendChild(document.createTextNode(content[i]));
+			length += content[i].length + 1;
+		}
+
+		return length;
+	}
+
+	function toParagraph (f, content) {
+		var length = 0;
+		content = content.split('\n');
+
+		for (var i = 0, goal = content.length; i < goal; i++) {
+			f.appendChild(document.createElement('p'))
+				.appendChild(document.createTextNode(content[i]));
+			length += content[i].length + 1;
+		}
+
+		return length;
+	}
+
+	function toTextAndBreak (f, content) {
+		var length = 0;
+		content = content.split('\n');
+
+		for (var i = 0, goal = content.length - 1; i < goal; i++) {
+			f.appendChild(document.createTextNode(content[i]));
+			f.appendChild(document.createElement('br'));
+			length += content[i].length + 1;
+		}
+
+		if (content.length >= 1) {
+			f.appendChild(document.createTextNode(content[content.length - 1]));
+			length += content[i].length;
+		}
+
+		return length;
+	}
+
+	function toPlaintext (f, content) {
+		f.appendChild(document.createTextNode(content));
+		return content.length;
+	}
+
+	function elementsOf (root, children) {
+		var result = [];
+		for (var i = 0, goal = children.length; i < goal; i++) {
+			result.push.apply(
+				result,
+				root.getElementsByTagName('wasavi:' + children[i]));
+		}
+		return result;
+	}
+
+	function toHTMLImage (element) {
+		var id = element.getAttribute('id');
+		if (!id) return;
+
+		var linked = $(id);
+		if (!linked) return;
+
+		element.parentNode.replaceChild(linked, element);
+	}
+
+	function toHTMLAnchor (element) {
+		var id = element.getAttribute('id');
+		if (!id) return;
+
+		var linked = $(id);
+		if (!linked) return;
+
+		var r = document.createRange();
+		r.selectNodeContents(element);
+		var contents = r.extractContents();
+
+		element.parentNode.replaceChild(linked, element);
+		r.selectNodeContents(linked);
+		r.deleteContents();
+		linked.appendChild(contents);
+	}
+
+	function overwrite (element, content, job) {
+		var f = document.createDocumentFragment();
+		var length = job(f, content);
+
+		try {
+			var r = document.createRange();
+			r.selectNodeContents(element);
+			r.deleteContents();
+
+			element.appendChild(f)
+			return length;
+		}
+		catch (e) {
+			return _('Exception while saving: {0}', e.message);
+		}
+	}
+
+	function buildHTML (element, content) {
+		var r = document.createRange();
+		r.selectNodeContents(element);
+
+		element.insertAdjacentHTML('beforeend', content);
+
+		elementsOf(element, ['img']).forEach(toHTMLImage);
+		elementsOf(element, ['a', 'object', 'embed']).forEach(toHTMLAnchor);
+
+		r.deleteContents();
+
+		return element.textContent.length;
+	}
+
+	return function writeContentToElement (element, content, opts) {
+		content || (content = '');
+		opts || (opts = {});
+
+		if (element.classList.contains('CodeMirror')
+		 || element.classList.contains('ace_editor')) {
+			if (typeof content != 'string') {
+				return _('Invalid text format.');
+			}
+			var className = getUniqueClass();
+			element.classList.add(className);
+			fireCustomEvent('WasaviRequestSetContent', className + '\t' + content);
+			element.classList.remove(className);
+			return content.length;
+		}
+
+		else if (/^(?:INPUT|TEXTAREA)$/.test(element.nodeName)) {
+			if (element.readOnly) {
+				if (opts.isForce) {
+					element.readOnly = false;
+				}
+				else {
+					return _('Element to be written has readonly attribute (use "!" to override).');
+				}
+			}
+			if (element.disabled) {
+				if (opts.isForce) {
+					element.disabled = false;
+				}
+				else {
+					return _('Element to be written has disabled attribute (use "!" to override).');
+				}
+			}
+			if (typeof content != 'string') {
+				return _('Invalid text format.');
+			}
+			try {
+				element.value = content;
+				return content.length;
+			}
+			catch (e) {
+				return _('Exception while saving: {0}', e.message);
+			}
+		}
+
+		else if (element.isContentEditable) {
+			switch (opts.writeAs) {
+			case 'div':
+				return overwrite(element, content, toDiv);
+
+			case 'p':
+				return overwrite(element, content, toParagraph);
+
+			case 'textAndBreak':
+				return overwrite(element, content, toTextAndBreak);
+
+			case 'plantext':
+				return overwrite(element, content, toPlaintext);
+
+			case 'html': default:
+				return buildHTML(element, content);
+			}
+		}
+
+		else if (element.nodeName == 'BODY') {
+			return _('Cannot rewrite the page itself.');
+		}
+
+		else {
+			return _('Unknown node name: {0}', element.nodeName);
+		}
+	};
+})();
+
 // event listeners <<<1
 function handleKeydown (e) {
 	if (!e || !e.target || !allowedElements) return;
@@ -1380,20 +1775,6 @@ function handleAgentInitialized (req) {
 	if (extension.isTopFrame() && document.querySelector('textarea')) {
 		info('running on ', window.location.href.replace(/[#?].*$/, ''));
 	}
-}
-
-function handleResponseGetContent (e) {
-	var index = e.detail.indexOf('\t');
-	if (index < 0) return;
-
-	var className = e.detail.substring(0, index);
-	var target = document.getElementsByClassName(className)[0];
-	if (!target) return;
-
-	var agent = findAgent(target);
-	if (!agent || !agent.getContentCallback) return;
-
-	agent.getContentCallback(e.detail.substring(index + 1));
 }
 
 var handleBackendMessage = (function () {
@@ -1553,20 +1934,6 @@ var handleBackendMessage = (function () {
 	};
 })();
 
-function handlePostMessage (e) {
-	if (window.chrome) {
-		if (e.origin != 'chrome-extension://' + chrome.runtime.id) return;
-	}
-	else if (window.opera) {
-		if (e.origin != 'http://wasavi.appsweets.net'
-		&&  e.origin != 'https://ss1.xrea.com') return;
-	}
-	else if (WasaviExtensionWrapper.IS_GECKO) {
-		// on Firefox, e.origin is always null. maybe a bug?
-	}
-	diag.push('wasavi: ' + e.data);
-}
-
 function handleConnect (req) {
 	if (!req || !('tabId' in req) || !req.tabId) {
 		if (logMode) {
@@ -1601,7 +1968,6 @@ function handleConnect (req) {
 createPageAgent(true, true);
 extension.setMessageListener(handleBackendMessage);
 document.addEventListener('WasaviRequestLaunch', handleRequestLaunch, false);
-document.addEventListener('WasaviResponseGetContent', handleResponseGetContent, false);
 connect(handleConnect);
 
 })(this);

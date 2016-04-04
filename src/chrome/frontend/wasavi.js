@@ -1372,6 +1372,7 @@ function install (x, req) {
 	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
 	surrounding = new Wasavi.Surrounding(appProxy);
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
+	config.setData('writeas', x.writeAs);
 
 	refreshIdealWidthPixels();
 	var initialMessage = getFileIoResultInfo('', x.value.length, true);
@@ -5270,6 +5271,18 @@ var config = new Wasavi.Configurator(appProxy,
 		['datetime', 's', '%c'],
 		['cursorblink', 'b', true],
 		['esctoblur', 'b', false],
+		['writeas', 's', '', function (v) {
+			switch (v) {
+			case 'html': case 'div': case 'p':
+			case 'textAndBreak': case 'plaintext':
+				targetElement.writeAs = v;
+				break;
+			default:
+				v = targetElement.writeAs;
+				break;
+			}
+			return v;
+		}],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
@@ -8542,8 +8555,8 @@ if (global.WasaviExtensionWrapper
 					id:extensionChannel.name,
 					nodeName:'textarea',
 					// nodePath
-					isContentEditable:false,
 					elementType:'textarea',
+					writeAs: '',
 					selectionStart:0, selectionEnd:0,
 					scrollTop:0, scrollLeft:0,
 					readOnly:false,

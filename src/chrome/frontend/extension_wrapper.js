@@ -35,7 +35,7 @@
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
 	var IS_FX_JETPACK =
 		typeof global.self == 'object' && typeof global.self.on == 'function'
-		&& /^\s*function\s+on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
+		&& /^\s*function(?: bound)? on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
 			global.self.on.toString().replace(/[\s\r\n\t]+/g, ' '));
 	/* >>> */
 
