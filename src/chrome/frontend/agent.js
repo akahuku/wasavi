@@ -163,6 +163,21 @@ function multiply (letter, times) {
 	return result.length == times ? result : result.substring(0, letter.length * times);
 }
 
+function getShadowActiveElement (node) {
+	// @see https://github.com/akahuku/wasavi/issues/124
+	// @see http://jsbin.com/fizeger/edit?html,output
+	if (!node) return null;
+	for (;;) {
+		var root = node.shadowRoot;
+		if (!root) return node;
+
+		var inner = root.activeElement;
+		if (!inner) return node;
+
+		node = inner;
+	}
+}
+
 var markDown = (function () {
 	function getStyle (node, prop) {
 		if (node.style[prop]) return node.style[prop];
@@ -660,7 +675,9 @@ var Agent = (function () {
 	function isFixedPosition (element) {
 		if (element == document.body) return true;
 		var isFixed = false;
-		for (var tmp = element; tmp && tmp != document.documentElement; tmp = tmp.parentNode) {
+		for (var tmp = element; tmp; tmp = tmp.parentNode) {
+			if (tmp.nodeType == window.Node.DOCUMENT_NODE) break;
+			if (tmp.nodeType == window.Node.DOCUMENT_FRAGMENT_NODE) break;
 			var s = document.defaultView.getComputedStyle(tmp, '');
 			if (s && s.position == 'fixed') {
 				isFixed = true;
@@ -682,9 +699,14 @@ var Agent = (function () {
 		var result = [];
 		for (var node = element; node && node.parentNode; node = node.parentNode) {
 			var nodeName = node.nodeName.toLowerCase();
-			var index = Array.prototype.indexOf.call(
-				node.parentNode.getElementsByTagName(node.nodeName), node);
-			result.unshift(nodeName + '[' + index + ']');
+			if (node.parentNode.getElementsByTagName) {
+				var index = Array.prototype.indexOf.call(
+					node.parentNode.getElementsByTagName(node.nodeName), node);
+				result.unshift(nodeName + '[' + index + ']');
+			}
+			else {
+				result.unshift(nodeName);
+			}
 		}
 		return result.join(' ');
 	}
@@ -1722,7 +1744,7 @@ function handleKeydown (e) {
 	if (!e || !e.target || !allowedElements) return;
 	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
 
-	var target = e.target;
+	var target = getShadowActiveElement(e.target);
 	if (blacklist.includes(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
@@ -1737,7 +1759,7 @@ function handleKeydown (e) {
 function handleTargetFocus (e) {
 	if (!quickActivation || !e || !e.target || !allowedElements) return;
 
-	var target = e.target;
+	var target = getShadowActiveElement(e.target);
 	if (blacklist.includes(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
@@ -1751,7 +1773,7 @@ function handleRequestLaunch () {
 	if (!allowedElements) return;
 	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
-	var target = document.activeElement;
+	var target = getShadowActiveElement(document.activeElement);
 	if (blacklist.includes(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
