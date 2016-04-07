@@ -1,6 +1,21 @@
+0.6.635
+
+	* run the agent only if the mime type is text (#128)
+	* use shadowRoot property if available (#124)
+	* allow agent run even iframe without src (#123)
+	* treat content of a rich input field as markdown (#120)
+
+	* mime タイプがテキストである場合にのみエージェントを動作させるようにし
+	た (#128)
+	* 可能なら shadowRoot プロパティを参照するようにした (#124)
+	* src のない iframe に対してもエージェントが動作するようにした (#123)
+	* リッチテキストフィールドをの内容 markdown とみなすようにした (#120)
+
 0.6.628
 
 	* allow simultaneous multiple instances (#118)
+
+	* 複数の起動を許可した (#118)
 
 0.6.626
 
