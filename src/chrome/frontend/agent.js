@@ -33,7 +33,7 @@
 
 typeof WasaviExtensionWrapper != 'undefined'
 && !WasaviExtensionWrapper.urlInfo.isExternal
-&& /^text\//.test(document.contentType)
+&& /^text\/|\bxml\b/.test(document.contentType)
 && (function (global) {
 
 // consts <<<1
