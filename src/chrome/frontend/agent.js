@@ -1438,7 +1438,7 @@ var readContentFromElement = (function () {
 		delete callbackQueue[className];
 		slot.callback(
 			slot.element, e.detail.substring(index + 1),
-			'pseudoTextArea', writeAs);
+			'pseudoTextArea');
 	}
 
 	function getMarkdown (element) {
