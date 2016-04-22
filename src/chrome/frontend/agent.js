@@ -3,7 +3,7 @@
 // @include https://*/*
 // @exclude http://wasavi.appsweets.net/
 // @exclude http://wasavi.appsweets.net/?testmode
-// @exclude https://ss1.xrea.com/wasavi.appsweets.net/
+// @exclude https://wasavi.appsweets.net/
 // ==/UserScript==
 //
 /**
@@ -976,7 +976,7 @@ var Agent = (function () {
 		}
 		else if (window.opera) {
 			if (e.origin != 'http://wasavi.appsweets.net'
-			&&  e.origin != 'https://ss1.xrea.com') return;
+			&&  e.origin != 'https://wasavi.appsweets.net') return;
 		}
 		else if (WasaviExtensionWrapper.IS_GECKO) {
 			// on Firefox, e.origin is always null. maybe a bug?

@@ -26,7 +26,7 @@
 
 	var TEST_MODE_URL = /^http:\/\/127\.0\.0\.1(:\d+)?\/test_frame\.html/;
 	var APP_MODE_URL = 'http://wasavi.appsweets.net/';
-	var APP_MODE_URL_SECURE = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	var APP_MODE_URL_SECURE = 'https://wasavi.appsweets.net/';
 	var HOME_URL = 'http://appsweets.net/wasavi/';
 	var TEST_VERSION = '0.0.1';
 	var STORAGE_UPDATE_BROADCAST_DELAY_SECS = 1000 * 3;
@@ -41,7 +41,7 @@
 	 *
 	 * chrome:  literal "chrome-extension://.../wasavi_frame.html"
 	 * opera:   literal "http://wasavi.appsweets.net/" or
-	 *          literal "https://ss1.xrea.com/wasavi.appsweets.net"
+	 *          literal "https://wasavi.appsweets.net"
 	 */
 	var wasaviFrameSource = 'about:blank?wasavi-frame-source';
 

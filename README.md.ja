@@ -32,7 +32,7 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
   ![インクリメンタルサーチ](http://appsweets.net/wasavi/isearch.png)
 
-* [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive/OneDrive アカウント上のファイル、を読み書きできます。
+* [オンラインアプリとしての wasavi](https://wasavi.appsweets.net)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive/OneDrive アカウント上のファイル、を読み書きできます。
 
   ![stand alone](http://appsweets.net/wasavi/web-app.png)
 
@@ -116,7 +116,7 @@ wasavi の動作中に VimFx のキーバインドを使用するには、ペー
 
 ## 単体のテキストエディタとしての利用
 
-wasavi をインストールし、リンク [オンラインアプリとしての wasavi](http://wasavi.appsweets.net/) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive/OneDrive またはローカルのファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive/OneDrive へのアクセスのために OAuth による承認が必要です。
+wasavi をインストールし、リンク [オンラインアプリとしての wasavi](https://wasavi.appsweets.net) を開いてください。wasavi が自動的に起動します。この状態では、Dropbox/Google Drive/OneDrive またはローカルのファイルに対して ex コマンド `:read`、`:write`、`:edit`、`:file` が使用できます。Dropbox/Google Drive/OneDrive へのアクセスのために OAuth による承認が必要です。
 
 ## 自動的な設定の上書き
 

@@ -32,7 +32,7 @@ Salient Features
 
   ![incremental search](http://appsweets.net/wasavi/isearch.png)
 
-* [wasavi online app](http://wasavi.appsweets.net/). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive/OneDrive account or local files.
+* [wasavi online app](https://wasavi.appsweets.net). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive/OneDrive account or local files.
 
   ![stand alone](http://appsweets.net/wasavi/web-app.png)
 
@@ -116,7 +116,7 @@ To use VimFx's key binding while wasavi is running, click outside area of wasavi
 
 ## How to use wasavi as an independent text editor
 
-Install the wasavi extension and open the link to [wasavi online app](http://wasavi.appsweets.net/). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive/OneDrive files or local files. You will have to authorize wasavi via OAuth to access these storages.
+Install the wasavi extension and open the link to [wasavi online app](https://wasavi.appsweets.net). wasavi will start automatically. You can use ex commands `:read`, `:write`, `:edit` or `:file` to access your Dropbox/Google Drive/OneDrive files or local files. You will have to authorize wasavi via OAuth to access these storages.
 
 ## About automatic setting override
 

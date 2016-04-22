@@ -42,7 +42,7 @@
 	/* <<<1 vars */
 	var extensionName = 'wasavi';
 	var externalFrameURL = 'http://wasavi.appsweets.net/';
-	var externalSecureFrameURL = 'https://ss1.xrea.com/wasavi.appsweets.net/';
+	var externalSecureFrameURL = 'https://wasavi.appsweets.net/';
 	/* >>> */
 
 	/**
