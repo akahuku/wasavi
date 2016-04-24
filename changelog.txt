@@ -1,3 +1,15 @@
+0.6.641
+
+	* fix that ',' can not be used in a shortcut descriptor (#131)
+	* use https://wasavi.appsweets.net/ (#78)
+	* fix the bug that cannot retrieve the content from CodeMirror
+	* fix content type that allow execution agent (#129)
+
+	* ショートカット記述子内で ',' を使えないのを修正 (#131)
+	* https://wasavi.appsweets.net/ を参照するようにした (#78)
+	* CodeMirror から内容を取得できないのを修正
+	* エージェントの実行を許可する内容タイプを修正 (#129)
+
 0.6.635
 
 	* run the agent only if the mime type is text (#128)
