@@ -1731,27 +1731,31 @@ var cache = {};
 		return find('mark').handler.apply(this, arguments);
 	}),
 	new ExCommand('map', 'map', '!W', 0, function (app, t, a) {
-		var mapName = a.flags.force ? 'edit' : 'command';
-		var map = app.mapManager.getMap(mapName);
+		var internalMapName = a.flags.force ? 'edit' : 'command';
+		var displayMapName = a.flags.force ? 'INPUT' : 'NORMAL';
+		var map = app.mapManager.getMap(internalMapName);
 
 		function dispMap (map) {
-			var maxWidth = 0;
 			if (map.length) {
+				var maxWidth = 0;
+				var list = [_('*** {0} mode maps ***', displayMapName)];
 				map.map(function (o) {
-					if (o[0].length > maxWidth) {
-						maxWidth = o[0].length;
+					var lhs = toVisibleString(o[0]);
+					var rhs = toVisibleString(o[1]);
+					if (lhs.length > maxWidth) {
+						maxWidth = lhs.length;
 					}
-				});
-				var list = [_('*** {0} mode maps ***', mapName)];
-				map.map(function (o) {
+					return [lhs, rhs];
+				})
+				.forEach(function (o) {
 					list.push(
 						o[0] + multiply(' ', maxWidth - o[0].length) +
-						'\t' + toVisibleString(o[1]));
+						'\t' + o[1]);
 				});
 				app.backlog.push(list);
 			}
 			else {
-				app.backlog.push(_('No mappings for {0} mode are defined.', mapName));
+				app.backlog.push(_('No mappings for {0} mode are defined.', displayMapName));
 			}
 			app.low.requestConsoleState();
 		}

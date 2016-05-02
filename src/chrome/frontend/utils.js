@@ -113,7 +113,7 @@ function toVisibleString (s) {
 		.replace(/[\u0000-\u001f\u007f]/g, function (a) {
 			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
 		})
-		.replace(/\ue000/g, 'Fn:');
+		.replace(/\ue000/g, '');
 }
 function toVisibleControl (s) {
 	return typeof s == 'number' ?

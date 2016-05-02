@@ -831,28 +831,28 @@ public class ExCommandsTest extends WasaviTest {
 	public void testMap () {
 		Wasavi.send(":map\n");
 		assertEquals("#1-1", join("\n",
-			"No mappings for command mode are defined."
+			"No mappings for NORMAL mode are defined."
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":map Q 1G\n");
 		Wasavi.send(":map XQ G\n");
 		Wasavi.send(":map\n");
 		assertEquals("#2-1", join("\n",
-			"*** command mode maps ***",
+			"*** NORMAL mode maps ***",
 			"Q \t1G",
 			"XQ\tG"
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":map X\n");
 		assertEquals("#3-1", join("\n",
-			"*** command mode maps ***",
+			"*** NORMAL mode maps ***",
 			"XQ\tG"
 		), Wasavi.getLastMessage());
 
 		Wasavi.send(":map [clear]\n");
 		Wasavi.send(":map\n");
 		assertEquals("#4-1", join("\n",
-			"No mappings for command mode are defined."
+			"No mappings for NORMAL mode are defined."
 		), Wasavi.getLastMessage());
 	}
 
@@ -1972,7 +1972,7 @@ public class ExCommandsTest extends WasaviTest {
 		Wasavi.send(":map H ^\n");
 		Wasavi.send(":map\n");
 		assertEquals("#1-1", join("\n",
-			"*** command mode maps ***",
+			"*** NORMAL mode maps ***",
 			"H\t^"
 		), Wasavi.getLastMessage());
 
@@ -1981,7 +1981,7 @@ public class ExCommandsTest extends WasaviTest {
 
 		Wasavi.send(":unm H\n");
 		Wasavi.send(":map\n");
-		assertEquals("#3-1", "No mappings for command mode are defined.", Wasavi.getLastMessage());
+		assertEquals("#3-1", "No mappings for NORMAL mode are defined.", Wasavi.getLastMessage());
 	}
 
 	@Test
