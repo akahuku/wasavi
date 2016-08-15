@@ -149,7 +149,7 @@ Wasavi.Theme = function (app) {
 			highlightFg:'highlight', highlightBg:'highlighttext',
 			lineInputFg:'#0f0', lineInputBg:'rgba(0,0,0,0.9)',
 			consoleFg:'#0f0', consoleBg:'#111',
-			boundFg:'#0f0', boundBg:'#011'
+			boundFg:'#0f0', boundBg:'#233'
 		}
 	};
 
