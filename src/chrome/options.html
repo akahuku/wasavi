@@ -90,12 +90,21 @@
 				font-size:large;
 				font-weight:bold;
 			}
+			h3 {
+				margin:0 0 8px 0;
+				line-height:1;
+				font-size:medium;
+				font-weight:bold;
+			}
 			div.opt-unit {
 				margin:0 0 0 300px;
 				padding:0;
 			}
 			div.opt-unit-inner {
 				margin:0.5em 0 0 2em;
+			}
+			div.opt-unit > div:not(:first-child) {
+				margin-top:1em;
 			}
 			div.opt-unit label {
 				display:block;
@@ -233,9 +242,12 @@
 			<div class="tips">__MSG_option_qa_blacklist_tips__</div>
 		</div>
 		<hr>
-		<h2>__MSG_option_font_family_head__</h2>
+		<h2>__MSG_option_styles_head__</h2>
 		<div class="opt-unit">
-			<label><input type="text" id="font-family" class="monospace"></label>
+			<div>
+				<h3>__MSG_option_font_family_head__</h3>
+				<label><input type="text" id="font-family" class="monospace"></label>
+			</div>
 		</div>
 		<hr>
 		<h2>__MSG_option_sounds_head__</h2>

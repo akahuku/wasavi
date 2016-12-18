@@ -372,6 +372,10 @@
     "message": "ディレクトリの内容を読むことはできません。",
     "description": "Cannot read a directory content."
   },
+  "cannot_read_the_content_of_element": {
+    "message": "要素の内容を読み込めません。",
+    "description": "Cannot read the content of element."
+  },
   "cannot_retrieve_path_metadata": {
     "message": "パスのメタ情報を取得できません",
     "description": "Cannot retrieve path metadata"
@@ -983,6 +987,10 @@
   "unknown_mime_type_@0": {
     "message": "未知の MIME タイプ: {0}",
     "description": "Unknown MIME type: {0}"
+  },
+  "unknown_node_name_@0": {
+    "message": "未知のノード名: {0}",
+    "description": "Unknown node name: {0}"
   },
   "unknown_option_@0": {
     "message": "未知のオプション: {0}",

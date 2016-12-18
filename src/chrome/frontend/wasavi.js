@@ -1239,7 +1239,7 @@ function install (x, req) {
 			}
 			return result.join('\n');
 		})
-		.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, req.fontFamily)
+		.replace(/\/\*<(FONT_FAMILY)>\*\/.*?<\/\1>\*\//g, req.fontFamily);
 
 	styleElement.appendChild(document.createTextNode(styleSource));
 

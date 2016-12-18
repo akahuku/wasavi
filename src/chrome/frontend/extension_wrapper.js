@@ -222,6 +222,7 @@
 		'externalSecureUrl' in opts && (externalSecureUrl = opts.externalSecureUrl);
 		
 		if (window.chrome) return new ChromeExtensionWrapper;
+		if (global.chrome) return new ChromeExtensionWrapper;
 		if (window.opera)  return new OperaExtensionWrapper;
 		if (IS_FX_JETPACK) return new FirefoxJetpackExtensionWrapper;
 		return new ExtensionWrapper;
@@ -281,11 +282,11 @@
 				name: this.internalId
 			});
 			port.onMessage.addListener(handleMessage);
-			chrome.extension.onRequest.addListener(handleMessage);
+			chrome.runtime.onMessage.addListener(handleMessage);
 		};
 		this.doDisconnect = function () {
 			onMessageHandler = null;
-			chrome.extension.onRequest.removeListener(handleMessage);
+			chrome.runtime.onMessage.removeListener(handleMessage);
 			port.onMessage.removeListener(handleMessage);
 			port.disconnect();
 			port = null;

@@ -1,1 +1,0 @@
-../../../chrome/scripts/options-core.js

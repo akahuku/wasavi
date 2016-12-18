@@ -1,4 +1,5 @@
 // ==UserScript==
+// @name    qeema: integrated keybord manager
 // @include http://wasavi.appsweets.net/
 // @include http://wasavi.appsweets.net/?testmode
 // @include https://wasavi.appsweets.net/
@@ -429,9 +430,22 @@
 	}
 
 	function getModifiers (result, e) {
-		e.shiftKey && result.push('S');
-		e.ctrlKey  && result.push('C');
-		e.altKey   && result.push('A');
+		var gms = 'getModifierState' in e;
+		(e.shiftKey || gms && e.getModifierState('Shift'))   && result.push('S');
+		(e.ctrlKey  || gms && e.getModifierState('Control')) && result.push('C');
+		(e.altKey   || gms && e.getModifierState('Alt'))     && result.push('A');
+	}
+
+	function isShift (e) {
+		return e.shiftKey || 'getModifierState' in e && e.getModifierState('Shift');
+	}
+
+	function isCtrl (e) {
+		return e.ctrlKey || 'getModifierState' in e && e.getModifierState('Control');
+	}
+
+	function isAlt (e) {
+		return e.altKey || 'getModifierState' in e && e.getModifierState('Alt');
 	}
 
 	function getIncreasePosition (before, current) {
@@ -522,7 +536,7 @@
 	}
 
 	function isPasteKeyStroke (code, e) {
-		return code == -45 && e.shiftKey && !e.ctrlKey && !e.altKey;
+		return code == -45 && isShift(e) && !isCtrl(e) && !isAlt(e);
 	}
 
 	function insertCompositionedChar (e) {
@@ -680,9 +694,7 @@
 	}
 
 	function keydown (e) {
-		if (e.shiftKey && e.keyCode == 16
-		||  e.ctrlKey && e.keyCode == 17
-		||  e.altKey && e.keyCode == 18) {
+		if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) {
 			return;
 		}
 
@@ -699,9 +711,9 @@
 			' keyCode:', e.keyCode,
 			', which:', e.which,
 			', charCode:', e.charCode,
-			', shift:', e.shiftKey,
-			', ctrl:', e.ctrlKey,
-			', alt:', e.altKey
+			', shift:', isShift(e),
+			', ctrl:', isCtrl(e),
+			', alt:', isAlt(e)
 		);
 
 		var charCode = 0;
@@ -709,12 +721,12 @@
 
 		if (!(e.keyCode in functionKeyCodes)) {
 			if (ctrlMap && e.keyCode in ctrlMap) {
-				if (e.ctrlKey && !e.altKey) {
+				if (isCtrl(e) && !isAlt(e)) {
 					charCode = ctrlMap[e.keyCode];
 					keyCode = 0;
 					enableLog && logs.basic && logit(etype, ' found ctrl-shortcut');
 				}
-				else if (!e.ctrlKey && e.altKey) {
+				else if (!isCtrl(e) && isAlt(e)) {
 					charCode = keyCode = -keyCode;
 					enableLog && logs.basic && logit(etype, ' found alt + alphabet key');
 				}
@@ -729,9 +741,9 @@
 
 		keypress({
 			type: e.type,
-			shiftKey: e.shiftKey,
-			ctrlKey: e.ctrlKey,
-			altKey: e.altKey,
+			shiftKey: isShift(e),
+			ctrlKey: isCtrl(e),
+			altKey: isAlt(e),
 			charCode: charCode,
 			which: e.which,
 			keyCode: keyCode,
@@ -771,9 +783,9 @@
 			' keyCode:', e.keyCode,
 			', which:', e.which,
 			', charCode:', e.charCode,
-			', shift:', e.shiftKey,
-			', ctrl:', e.ctrlKey,
-			', alt:', e.altKey
+			', shift:', isShift(e),
+			', ctrl:', isCtrl(e),
+			', alt:', isAlt(e)
 		);
 
 		var c = [];
@@ -781,9 +793,9 @@
 		var char;
 		var stroke;
 		var isSpecial = false;
-		var shiftKey = e.shiftKey;
-		var ctrlKey = e.ctrlKey;
-		var altKey = e.altKey;
+		var shiftKey = isShift(e);
+		var ctrlKey = isCtrl(e);
+		var altKey = isAlt(e);
 
 		// special keys which processed by keydown listener (for Webkit, Presto)
 		if (e.keyCode < 0) {
@@ -885,9 +897,7 @@
 	}
 
 	function keyup (e) {
-		if (e.shiftKey && e.keyCode == 16
-		||  e.ctrlKey && e.keyCode == 17
-		||  e.altKey && e.keyCode == 18) {
+		if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) {
 			return;
 		}
 
@@ -896,13 +906,15 @@
 			' keyCode:', e.keyCode,
 			', which:', e.which,
 			', charCode:', e.charCode,
-			', shift:', e.shiftKey,
-			', ctrl:', e.ctrlKey,
-			', alt:', e.altKey
+			', shift:', isShift(e),
+			', ctrl:', isCtrl(e),
+			', alt:', isAlt(e)
 		);
 	}
 
 	function inputWebkit (e) {
+		if (!isEditable(e.target)) return;
+
 		var etype = '[   input]';
 		var current = editable.value(e.target);
 

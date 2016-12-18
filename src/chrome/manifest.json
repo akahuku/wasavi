@@ -5,6 +5,13 @@
   "version": "0.0.1",
   "description": "__MSG_wasavi_desc__",
   "default_locale": "en_US",
+  "applications": {
+    "gecko": {
+      "id": "jid1-bmMwuNrx3u5hqQ@jetpack",
+      "strict_min_version": "42.0",
+      "update_url": "https://github.com/akahuku/wasavi/raw/master/dist/firefox.json"
+    }
+  },
   "icons": {
      "16": "images/icon016.png",
      "48": "images/icon048.png",
@@ -38,7 +45,7 @@
       ],
       "run_at": "document_start",
       "all_frames": true,
-	  "match_about_blank": true
+      "match_about_blank": true
     },
     {
       "matches": [

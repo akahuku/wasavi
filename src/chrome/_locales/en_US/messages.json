@@ -372,6 +372,10 @@
     "message": "Cannot read a directory content.",
     "description": "Cannot read a directory content."
   },
+  "cannot_read_the_content_of_element": {
+    "message": "Cannot read the content of element.",
+    "description": "Cannot read the content of element."
+  },
   "cannot_retrieve_path_metadata": {
     "message": "Cannot retrieve path metadata",
     "description": "Cannot retrieve path metadata"
@@ -983,6 +987,10 @@
   "unknown_mime_type_@0": {
     "message": "Unknown MIME type: {0}",
     "description": "Unknown MIME type: {0}"
+  },
+  "unknown_node_name_@0": {
+    "message": "Unknown node name: {0}",
+    "description": "Unknown node name: {0}"
   },
   "unknown_option_@0": {
     "message": "Unknown option: {0}",
