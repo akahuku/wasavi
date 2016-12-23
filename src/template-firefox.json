@@ -1,0 +1,12 @@
+{
+	"addons": {
+		"@appid@": {
+			"updates": [
+				{
+					"version": "@version@",
+					"update_link": "@location@"
+				}
+			]
+		}
+	}
+}

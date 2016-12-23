@@ -25,7 +25,7 @@ DIST_DIR = dist
 SRC_DIR = src
 EMBRYO_DIR = .embryo
 
-RSYNC_OPT = -rptLv --delete \
+RSYNC_OPT = -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
 	--exclude 'banner*.xcf' --exclude 'banner*.png' \
 	--exclude '.*' \
