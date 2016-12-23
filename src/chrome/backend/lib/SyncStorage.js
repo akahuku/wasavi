@@ -61,7 +61,7 @@
 	ChromeSyncStorage.prototype.constructor = SyncStorage;
 
 	exports.SyncStorage = function (options) {
-		if (global.chrome) {
+		if (global.chrome && 'identity' in chrome) {
 			return new ChromeSyncStorage(options);
 		}
 		return new SyncStorage(options);

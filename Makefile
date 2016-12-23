@@ -4,11 +4,13 @@
 VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g' -e 's/^\([0-9]\+\.[0-9]\+\).*/\1/g'`.`git rev-list --count HEAD`)
 
 SHELL := /bin/sh
+PATH_SEPARATOR := /
 
-CHROME := chromium-browser
+CHROME := google-chrome
 OPERA := opera
 FIREFOX := firefox
 CYGPATH := echo
+REALPATH := realpath
 
 ZIP := zip -qr9
 UNZIP := unzip
@@ -36,26 +38,26 @@ CRYPT_DST_FILE = consumer_keys.bin
 CHROME_SUFFIX = crx
 CHROME_SRC_DIR = chrome
 CHROME_EXT_ID = dgogifpkoilgiofhhhodbodcfgomelhe
-CHROME_EXT_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/wasavi.crx
-CHROME_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/chrome.xml
+CHROME_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).crx
+CHROME_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/chrome.xml
 
 OPERA_SUFFIX = oex
 OPERA_SRC_DIR = opera
 OPERA_EXT_ID =
-OPERA_EXT_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/wasavi.oex
-OPERA_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/opera.xml
+OPERA_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).oex
+OPERA_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/opera.xml
 
 BLINKOPERA_SUFFIX = nex
-BLINKOPERA_SRC_DIR = chrome
+BLINKOPERA_SRC_DIR = opera-blink
 BLINKOPERA_EXT_ID = dgogifpkoilgiofhhhodbodcfgomelhe
-BLINKOPERA_EXT_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/wasavi.nex
-BLINKOPERA_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/opera-blink.xml
+BLINKOPERA_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).nex
+BLINKOPERA_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/opera-blink.xml
 
 FIREFOX_SUFFIX = xpi
 FIREFOX_SRC_DIR = firefox
-FIREFOX_EXT_ID =
-FIREFOX_EXT_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi
-FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/wasavi/raw/master/dist/firefox.rdf
+FIREFOX_EXT_ID = jid1-bmMwuNrx3u5hqQ@jetpack
+FIREFOX_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).xpi
+FIREFOX_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/firefox.json
 
 # derived macros
 # ========================================
@@ -77,7 +79,7 @@ OPERA_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/opera)
 BLINKOPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(BLINKOPERA_SUFFIX)
 BLINKOPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(BLINKOPERA_SUFFIX)
 BLINKOPERA_SRC_PATH = $(SRC_DIR)/$(BLINKOPERA_SRC_DIR)
-BLINKOPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/operablink
+BLINKOPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(BLINKOPERA_SRC_DIR)
 
 FIREFOX_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX)
 FIREFOX_MTIME_PATH = $(EMBRYO_DIR)/.$(FIREFOX_SUFFIX)
@@ -95,9 +97,15 @@ FIREFOX_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/firef
 # basic rules
 # ========================================
 
-all: $(CHROME_TARGET_PATH) \
-	$(OPERA_TARGET_PATH) $(BLINKOPERA_TARGET_PATH) \
-	$(FIREFOX_TARGET_PATH)
+all: crx oex nex xpi
+
+crx: $(CHROME_TARGET_PATH)
+
+oex: $(OPERA_TARGET_PATH)
+
+nex: $(BLINKOPERA_TARGET_PATH)
+
+xpi: $(FIREFOX_TARGET_PATH)
 
 clean:
 	rm -rf ./$(EMBRYO_DIR)
@@ -110,7 +118,8 @@ $(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT
 
 FORCE:
 
-.PHONY: all clean message \
+.PHONY: all crx oex nex xpi \
+	clean message \
 	test-chrome test-opera test-firefox \
 	run-chrome run-opera run-firefox \
 	dbgfx version \
@@ -139,7 +148,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 	$(CHROME) \
 		--lang=en \
 		--pack-extension=$(CHROME_EMBRYO_SRC_PATH) \
-		--pack-extension-key=wasavi.pem
+		--pack-extension-key=$(PRODUCT).pem
 
 	mv $(EMBRYO_DIR)/$(CHROME_SRC_DIR).$(CHROME_SUFFIX) $@
 
@@ -148,12 +157,14 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
-		--strip-update-url
+		--strip-update-url \
+		--strip-applications
 
 #	build zip archive for google web store
-	rm -f $(DIST_DIR)/wasavi_chrome_web_store.zip
+	rm -f $(DIST_DIR)/$(PRODUCT)_chrome_web_store.zip
 	cd $(CHROME_EMBRYO_SRC_PATH) \
-		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$(DIST_DIR)/wasavi_chrome_web_store.zip
+		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) \
+		../../$(DIST_DIR)/$(PRODUCT)_chrome_web_store.zip
 
 #	create update description file
 	sed -e 's/@appid@/$(CHROME_EXT_ID)/g' \
@@ -199,7 +210,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 #	zip it
 	rm -f $@
 	cd $(OPERA_EMBRYO_SRC_PATH) \
-		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$@ 
+		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$@
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
@@ -228,15 +239,16 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 		--indir $(BLINKOPERA_SRC_PATH) \
 		--outdir $(BLINKOPERA_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
-		--update-url $(BLINKOPERA_UPDATE_LOCATION)
+		--update-url $(BLINKOPERA_UPDATE_LOCATION) \
+		--strip-applications
 
 #	build nex
 	$(CHROME) \
 		--lang=en \
 		--pack-extension=$(BLINKOPERA_EMBRYO_SRC_PATH) \
-		--pack-extension-key=wasavi.pem
+		--pack-extension-key=$(PRODUCT).pem
 
-	mv $(EMBRYO_DIR)/operablink.crx $@
+	mv $(EMBRYO_DIR)/$(BLINKOPERA_SRC_DIR).$(CHROME_SUFFIX) $@
 
 #	create update description file
 	sed -e 's/@appid@/$(BLINKOPERA_EXT_ID)/g' \
@@ -264,47 +276,25 @@ $(BLINKOPERA_MTIME_PATH): FORCE
 $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 #	copy all of sources to embryo dir
 	$(RSYNC) $(RSYNC_OPT) \
-		--exclude 'lib/init.js' \
-		--exclude 'lib/es6-promise.min.js' \
-		--exclude 'lib/kosian/init.js' \
-		--exclude 'lib/kosian/OperaImpl.js' \
-		--exclude 'lib/kosian/ChromeImpl.js' \
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
-#	strip script tag from options.html
-	sed -e 's/<script[^>]*><\/script>//g' \
-		$(FIREFOX_SRC_PATH)/data/options.html \
-		> $(FIREFOX_EMBRYO_SRC_PATH)/data/options.html
-
-#	replace the variables which be assigned to innerHTML with a string literal
-	localtool/inscontent
-
-#	update package
-	tool/update-firefox-package.rb \
+#	update manifest
+	tool/update-chrome-manifest.rb \
 		--indir $(FIREFOX_SRC_PATH) \
 		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--ver $(VERSION)
+		--ver $(VERSION) \
+		--strip-update-url
 
-#	build xpi using jpm
-	cd $(FIREFOX_EMBRYO_SRC_PATH) && jpm xpi
-	mv $(FIREFOX_EMBRYO_SRC_PATH)/*.$(FIREFOX_SUFFIX) $@
-	mv $(FIREFOX_EMBRYO_SRC_PATH)/*.update.rdf $(DIST_DIR)/firefox.rdf
+#	build and sign xpi
+	./signxpi \
+		-s $(FIREFOX_EMBRYO_SRC_PATH) \
+		-d $(DIST_DIR)
 
-#	extract install.rdf
-	$(UNZIP) -p $@ install.rdf > $(FIREFOX_EMBRYO_SRC_PATH)/install.rdf
-
-#	update install.rdf
-	tool/update-firefox-manifest.rb \
-		--indir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
-		--localedir $(SRC_DIR)/chrome/_locales \
-		--ver $(VERSION)
-
-#	delete old install.rdf in xpi
-	$(ZIP) -d $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX) install.rdf
-
-#	re-zip new install.rdf
-	cd $(FIREFOX_EMBRYO_SRC_PATH) && $(ZIP) -u ../../$(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX) install.rdf
+#	create update description file
+	sed -e 's/@appid@/$(FIREFOX_EXT_ID)/g' \
+		-e 's!@location@!$(FIREFOX_EXT_LOCATION)!g' \
+		-e 's/@version@/$(VERSION)/g' \
+		$(SRC_DIR)/template-firefox.json > $(DIST_DIR)/$(notdir $(FIREFOX_UPDATE_LOCATION))
 
 	@echo ///
 	@echo /// created: $@, version $(VERSION)
@@ -357,26 +347,46 @@ message: FORCE
 #
 
 test-chrome: FORCE
+	./server &
 	cd $(SRC_DIR)/wd-tests && ant test-chrome
 
 test-opera: FORCE
+	./server &
 	cd $(SRC_DIR)/wd-tests && ant test-opera
 
 test-firefox: FORCE
+	./server &
+	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
+	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
+	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
 	cd $(SRC_DIR)/wd-tests && ant test-firefox
 
 run-chrome: FORCE
+	./server &
+	-mkdir -p $(CHROME_TEST_PROFILE_PATH)
 	$(CHROME) --start-maximized --lang=en \
-		--user-data-dir=$(CHROME_TEST_PROFILE_PATH)
+		--user-data-dir=$(CHROME_TEST_PROFILE_PATH) \
+		http://127.0.0.1:8888/test_frame.html
+	wget -q -O - http://127.0.0.1:8888/shutdown
 
 run-opera: FORCE
-	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH)
+	./server &
+	-mkdir -p $(OPERA_TEST_PROFILE_PATH)
+	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH) \
+		http://127.0.0.1:8888/test_frame.html
+	wget -q -O - http://127.0.0.1:8888/shutdown
 
 run-firefox: FORCE
-	$(FIREFOX) -profile $(FIREFOX_TEST_PROFILE_PATH)
+	./server &
+	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
+	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
+	$(FIREFOX) -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH))
+	wget -q -O - http://127.0.0.1:8888/shutdown
 
-dbgfx: FORCE
-	cd $(FIREFOX_SRC_PATH) && LANG=C jpm run -b `which firefox` -p $(abspath $(FIREFOX_TEST_PROFILE_PATH)) --no-copy --binary-args http://127.0.0.1:8888/test_frame.html
+debug-firefox: FORCE
+	./server &
+	cd $(FIREFOX_SRC_PATH) && web-ext run --firefox=$(FIREFOX)
+	wget -q -O - http://127.0.0.1:8888/shutdown
 
 version: FORCE
 	@echo $(VERSION)

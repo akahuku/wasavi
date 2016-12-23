@@ -13,18 +13,19 @@
 	<!-- paths to test library -->
 	<property name="JSON_JAR"          value="${TEST_LIB_DIR}/json/json-20140107.jar" />
 	<property name="CHROMEDRIVER_EXE"  value="${TEST_LIB_DIR}/chromedriver.exe" />
-	<property name="SELENIUM_DIR"      value="${TEST_LIB_DIR}/selenium-2.37.0" />
-	<property name="SELENIUM_JAR"      value="${SELENIUM_DIR}/selenium-java-2.37.0.jar" />
+	<property name="GECKODRIVER_EXE"   value="${TEST_LIB_DIR}/geckodriver.exe" />
+	<property name="SELENIUM_DIR"      value="${TEST_LIB_DIR}/selenium-3.0.1" />
+	<property name="SELENIUM_JAR"      value="${SELENIUM_DIR}/client-combined-3.0.1-nodeps.jar" />
 
 	<!-- test url (probably no need to change these) -->
 	<property
 		name="TEST_FRAME_URL"
-		value="http://127.0.0.1/test_frame.html" />
+		value="http://127.0.0.1:8888/test_frame.html" />
 
 	<!-- parameters for test on chrome -->
 	<property
 		name="TEST_CHROME_PROFILE_PATH"
-		value="./profile/chrome" />
+		value="./src/wd-tests/profile/chrome" />
 
 	<!-- parameters for test on opera -->
 	<property
@@ -32,10 +33,10 @@
 		value="/usr/bin/opera" />
 	<property
 		name="TEST_OPERA_PROFILE_PATH"
-		value="./profile/opera" />
+		value="./src/wd-tests/profile/opera" />
 
 	<!-- test parameters for test on firefox -->
 	<property
 		name="TEST_FIREFOX_PROFILE_PATH"
-		value="./profile/firefox" />
+		value="./src/wd-tests/profile/firefox" />
 </project>

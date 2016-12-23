@@ -301,10 +301,9 @@
 			return chrome.runtime.getURL('scripts/page_context.js');
 		};
 		this.urlInfo = new function () {
-			var extensionId = chrome.runtime.id;
 			return new UrlInfo(
-				'chrome-extension://' + extensionId + '/options.html',
-				'chrome-extension://' + extensionId + '/wasavi.html'
+				chrome.runtime.getURL('options.html'),
+				chrome.runtime.getURL('wasavi.html')
 			);
 		};
 	}

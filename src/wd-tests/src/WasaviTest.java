@@ -924,6 +924,7 @@ public class WasaviTest {
 	@AfterClass
 	public static void afterClass () {
 		if (driver != null) {
+			driver.navigate().to("http://127.0.0.1:8888/shutdown");
 			driver.quit();
 			driver = null;
 		}

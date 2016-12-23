@@ -13,11 +13,11 @@
 		<!-- json -->
 		<pathelement location="${JSON_JAR}" />
 
-		<!-- selenium core -->
+		<!-- selenium java client core -->
 		<pathelement location="${SELENIUM_JAR}" />
 
 		<!-- libs for which selenium java client depends -->
-		<fileset dir="${SELENIUM_DIR}/libs">
+		<fileset dir="${SELENIUM_DIR}/lib">
 			<include name="*.jar" />
 		</fileset>
 
@@ -51,6 +51,7 @@
 				key="wasavi.tests.frame_url"
 				value="${TEST_FRAME_URL}" />
 
+			<!-- chrome properties -->
 			<sysproperty
 				key="webdriver.chrome.driver"
 				value="${CHROMEDRIVER_EXE}" />
@@ -58,16 +59,21 @@
 				key="wasavi.tests.chrome.profile_path"
 				value="${TEST_CHROME_PROFILE_PATH}" />
 
-			<sysproperty
-				key="wasavi.tests.firefox.profile_path"
-				value="${TEST_FIREFOX_PROFILE_PATH}" />
-
+			<!-- opera properties -->
 			<sysproperty
 				key="wasavi.tests.opera.executable"
 				value="${OPERA_EXECUTABLE}" />
 			<sysproperty
 				key="wasavi.tests.opera.profile_path"
 				value="${TEST_OPERA_PROFILE_PATH}" />
+
+			<!-- firefox properties -->
+			<sysproperty
+				key="webdriver.gecko.driver"
+				value="${GECKODRIVER_EXE}" />
+			<sysproperty
+				key="wasavi.tests.firefox.profile_path"
+				value="${TEST_FIREFOX_PROFILE_PATH}" />
 
 			<formatter type="brief" usefile="true" />
 			<test
