@@ -111,7 +111,7 @@ clean:
 	rm -rf ./$(EMBRYO_DIR)
 
 $(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
-	tool/make-binkey.rb \
+	tool/make-binkey.js \
 		--key $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
 		--src $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
 		--dst $@
@@ -139,7 +139,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.rb \
+	tool/update-chrome-manifest.js \
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
 		--ver $(VERSION)
@@ -153,7 +153,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 	mv $(EMBRYO_DIR)/$(CHROME_SRC_DIR).$(CHROME_SUFFIX) $@
 
 #	update manifest for google web store
-	tool/update-chrome-manifest.rb \
+	tool/update-chrome-manifest.js \
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -179,7 +179,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(CHROME_MTIME_PATH): FORCE
 	@mkdir -p $(CHROME_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.rb --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
+	tool/mtime.js --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
 
 
 
@@ -194,11 +194,11 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
 #	update the manifest file
-	tool/update-opera-config.rb \
-		--product $(PRODUCT) \
+	tool/update-opera-config.js \
 		--indir $(OPERA_SRC_PATH) \
-		--outdir $(OPERA_EMBRYO_SRC_PATH) \
+		--product $(PRODUCT) \
 		--ver $(VERSION) \
+		--outdir $(OPERA_EMBRYO_SRC_PATH) \
 		--update-url $(OPERA_UPDATE_LOCATION)
 
 #	create update description file
@@ -219,7 +219,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(OPERA_MTIME_PATH): FORCE
 	@mkdir -p $(OPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.rb --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
+	tool/mtime.js --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
 
 
 
@@ -235,7 +235,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.rb \
+	tool/update-chrome-manifest.js \
 		--indir $(BLINKOPERA_SRC_PATH) \
 		--outdir $(BLINKOPERA_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -263,7 +263,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(BLINKOPERA_MTIME_PATH): FORCE
 	@mkdir -p $(BLINKOPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.rb --dir $(BLINKOPERA_SRC_PATH) --base $(BLINKOPERA_TARGET_PATH) --out $@
+	tool/mtime.js --dir $(BLINKOPERA_SRC_PATH) --base $(BLINKOPERA_TARGET_PATH) --out $@
 
 
 
@@ -279,7 +279,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.rb \
+	tool/update-chrome-manifest.js \
 		--indir $(FIREFOX_SRC_PATH) \
 		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -303,7 +303,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(FIREFOX_MTIME_PATH): FORCE
 	@mkdir -p $(FIREFOX_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.rb --dir $(FIREFOX_SRC_PATH) --base $(FIREFOX_TARGET_PATH) --out $@
+	tool/mtime.js --dir $(FIREFOX_SRC_PATH) --base $(FIREFOX_TARGET_PATH) --out $@
 
 
 
@@ -323,21 +323,15 @@ binkeys: $(BINKEYS_PATH)
 
 message: FORCE
 #	update locales.json
-	tool/update-locales.rb \
+	tool/update-locales.js \
 		--indir $(CHROME_SRC_PATH)/_locales
 
 #	get diff of messages other than en-US
-	tool/make-messages.rb \
+	tool/make-messages.js \
 		--indir=$(CHROME_SRC_PATH) \
 		$(CHROME_SRC_PATH)/frontend/*.js \
 		$(CHROME_SRC_PATH)/backend/*.js \
 		$(CHROME_SRC_PATH)/backend/lib/kosian/*.js
-
-#	update firefox native localized messages
-	tool/update-firefox-locales.rb \
-		--product $(PRODUCT) \
-		--indir $(FIREFOX_SRC_PATH) \
-		--localedir $(CHROME_SRC_PATH)/_locales
 
 
 
@@ -356,9 +350,9 @@ test-opera: FORCE
 
 test-firefox: FORCE
 	./server &
-	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
-	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
-	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
+#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
+#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
+#	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
 	cd $(SRC_DIR)/wd-tests && ant test-firefox
 
 run-chrome: FORCE
@@ -378,8 +372,8 @@ run-opera: FORCE
 
 run-firefox: FORCE
 	./server &
-	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
-	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
+#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
+#	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
 	$(FIREFOX) -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH))
 	wget -q -O - http://127.0.0.1:8888/shutdown
 
