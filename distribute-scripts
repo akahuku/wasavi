@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# qeema
+cat <<EOT > src/chrome/frontend/qeema.js
+// ==UserScript==
+// @name    qeema: integrated keybord manager
+// @include http://wasavi.appsweets.net/
+// @include http://wasavi.appsweets.net/?testmode
+// @include https://wasavi.appsweets.net/
+// ==/UserScript==
+
+EOT
+cat node_modules/qeema/qeema.js >> src/chrome/frontend/qeema.js
+
+# unistring
+cp node_modules/unistring/unistring.js src/chrome/frontend/unistring.js
+
+# marked
+cp node_modules/marked/marked.min.js src/chrome/backend/lib/marked.js

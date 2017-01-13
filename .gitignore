@@ -34,3 +34,4 @@ dist/wasavi_amo.xpi
 dist/wasavi_amo_beta.xpi
 dist/wasavi_chrome_web_store.zip
 src/unit-tests/result.txt
+node_modules

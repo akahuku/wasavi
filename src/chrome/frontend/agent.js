@@ -1007,7 +1007,7 @@ var Agent = (function () {
 				}
 				catch (e) {
 				}
-			}, msec || 500, this);
+			}, msec || 100, this);
 		}
 	}
 

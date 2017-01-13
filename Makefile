@@ -24,6 +24,14 @@ PRODUCT = wasavi
 DIST_DIR = dist
 SRC_DIR = src
 EMBRYO_DIR = .embryo
+TOOL_DIR = node_modules/brisket
+
+TEST_WWW_SERVER = $(SRC_DIR)/wd-tests/server
+TEST_FRAME_URL = http://127.0.0.1:8888/test_frame.html
+TEST_SHUTDOWN_URL = http://127.0.0.1:8888/shutdown
+TEST_MOCHA_OPTS = --timeout=10000 \
+	--reporter=$(SRC_DIR)/wd-tests/almost-min.js \
+	$(SRC_DIR)/wd-tests/index.js
 
 RSYNC_OPT = -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
@@ -111,7 +119,7 @@ clean:
 	rm -rf ./$(EMBRYO_DIR)
 
 $(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE)
-	tool/make-binkey.js \
+	$(TOOL_DIR)/make-binkey.js \
 		--key $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) \
 		--src $(CHROME_SRC_PATH)/$(CRYPT_SRC_FILE) \
 		--dst $@
@@ -139,7 +147,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 		$(CHROME_SRC_PATH)/ $(CHROME_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.js \
+	$(TOOL_DIR)/update-chrome-manifest.js \
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
 		--ver $(VERSION)
@@ -153,7 +161,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 	mv $(EMBRYO_DIR)/$(CHROME_SRC_DIR).$(CHROME_SUFFIX) $@
 
 #	update manifest for google web store
-	tool/update-chrome-manifest.js \
+	$(TOOL_DIR)/update-chrome-manifest.js \
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -179,7 +187,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(CHROME_MTIME_PATH): FORCE
 	@mkdir -p $(CHROME_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.js --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
+	$(TOOL_DIR)/mtime.js --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
 
 
 
@@ -194,7 +202,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
 
 #	update the manifest file
-	tool/update-opera-config.js \
+	$(TOOL_DIR)/update-opera-config.js \
 		--indir $(OPERA_SRC_PATH) \
 		--product $(PRODUCT) \
 		--ver $(VERSION) \
@@ -219,7 +227,7 @@ $(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(OPERA_MTIME_PATH): FORCE
 	@mkdir -p $(OPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.js --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
+	$(TOOL_DIR)/mtime.js --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
 
 
 
@@ -235,7 +243,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 		$(BLINKOPERA_SRC_PATH)/ $(BLINKOPERA_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.js \
+	$(TOOL_DIR)/update-chrome-manifest.js \
 		--indir $(BLINKOPERA_SRC_PATH) \
 		--outdir $(BLINKOPERA_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -263,7 +271,7 @@ $(BLINKOPERA_TARGET_PATH): $(BLINKOPERA_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(BLINKOPERA_MTIME_PATH): FORCE
 	@mkdir -p $(BLINKOPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.js --dir $(BLINKOPERA_SRC_PATH) --base $(BLINKOPERA_TARGET_PATH) --out $@
+	$(TOOL_DIR)/mtime.js --dir $(BLINKOPERA_SRC_PATH) --base $(BLINKOPERA_TARGET_PATH) --out $@
 
 
 
@@ -279,7 +287,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 		$(FIREFOX_SRC_PATH)/ $(FIREFOX_EMBRYO_SRC_PATH)
 
 #	update manifest
-	tool/update-chrome-manifest.js \
+	$(TOOL_DIR)/update-chrome-manifest.js \
 		--indir $(FIREFOX_SRC_PATH) \
 		--outdir $(FIREFOX_EMBRYO_SRC_PATH) \
 		--ver $(VERSION) \
@@ -303,7 +311,7 @@ $(FIREFOX_TARGET_PATH): $(FIREFOX_MTIME_PATH) $(BINKEYS_PATH)
 # last mtime holder
 $(FIREFOX_MTIME_PATH): FORCE
 	@mkdir -p $(FIREFOX_EMBRYO_SRC_PATH) $(DIST_DIR)
-	tool/mtime.js --dir $(FIREFOX_SRC_PATH) --base $(FIREFOX_TARGET_PATH) --out $@
+	$(TOOL_DIR)/mtime.js --dir $(FIREFOX_SRC_PATH) --base $(FIREFOX_TARGET_PATH) --out $@
 
 
 
@@ -323,11 +331,11 @@ binkeys: $(BINKEYS_PATH)
 
 message: FORCE
 #	update locales.json
-	tool/update-locales.js \
+	$(TOOL_DIR)/update-locales.js \
 		--indir $(CHROME_SRC_PATH)/_locales
 
 #	get diff of messages other than en-US
-	tool/make-messages.js \
+	$(TOOL_DIR)/make-messages.js \
 		--indir=$(CHROME_SRC_PATH) \
 		$(CHROME_SRC_PATH)/frontend/*.js \
 		$(CHROME_SRC_PATH)/backend/*.js \
@@ -341,46 +349,48 @@ message: FORCE
 #
 
 test-chrome: FORCE
-	./server &
-	cd $(SRC_DIR)/wd-tests && ant test-chrome
+	NODE_TARGET_BROWSER=chrome \
+	LANGUAGE=en \
+	mocha $(TEST_MOCHA_OPTS)
+# | sed -e '/^\\s*at\\s*/d' -e '/^\\s*From:\\s*Task:/d'
 
 test-opera: FORCE
-	./server &
+	node $(TEST_WWW_SERVER) &
 	cd $(SRC_DIR)/wd-tests && ant test-opera
 
 test-firefox: FORCE
-	./server &
-#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
-#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
-#	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
-	cd $(SRC_DIR)/wd-tests && ant test-firefox
+	NODE_TARGET_BROWSER=firefox \
+	LANG=en \
+	mocha $(TEST_MOCHA_OPTS)
 
 run-chrome: FORCE
-	./server &
+	node $(TEST_WWW_SERVER) &
 	-mkdir -p $(CHROME_TEST_PROFILE_PATH)
-	$(CHROME) --start-maximized --lang=en \
+	LANGUAGE=en $(CHROME) \
+		--start-maximized \
+		--lang=en \
 		--user-data-dir=$(CHROME_TEST_PROFILE_PATH) \
-		http://127.0.0.1:8888/test_frame.html
-	wget -q -O - http://127.0.0.1:8888/shutdown
+		$(TEST_FRAME_URL)
+	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 run-opera: FORCE
-	./server &
+	node $(TEST_WWW_SERVER) &
 	-mkdir -p $(OPERA_TEST_PROFILE_PATH)
 	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH) \
-		http://127.0.0.1:8888/test_frame.html
-	wget -q -O - http://127.0.0.1:8888/shutdown
+		$(TEST_FRAME_URL)
+	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 run-firefox: FORCE
-	./server &
+	node $(TEST_WWW_SERVER) &
 #	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
 #	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
 	$(FIREFOX) -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH))
-	wget -q -O - http://127.0.0.1:8888/shutdown
+	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 debug-firefox: FORCE
-	./server &
+	node $(TEST_WWW_SERVER) &
 	cd $(FIREFOX_SRC_PATH) && web-ext run --firefox=$(FIREFOX)
-	wget -q -O - http://127.0.0.1:8888/shutdown
+	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 version: FORCE
 	@echo $(VERSION)
