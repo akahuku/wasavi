@@ -13,11 +13,11 @@ mkmain
 mkqeema
 push
 resetbins
-server
 signxpi
 syncsrc
 syncwww
-.embryo/
+.embryo
+node_modules
 src/chrome/backend/oldlib/
 src/wd-tests/dst/
 src/wd-tests/lib/
@@ -30,8 +30,7 @@ src/unicode-tools/unihan/
 src/unit-tests/LineBreakTest.txt
 src/unit-tests/qunit.css
 src/unit-tests/qunit.js
+src/unit-tests/result.txt
 dist/wasavi_amo.xpi
 dist/wasavi_amo_beta.xpi
 dist/wasavi_chrome_web_store.zip
-src/unit-tests/result.txt
-node_modules
