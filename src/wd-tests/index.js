@@ -16,14 +16,14 @@ const assert = require('assert');
 const fs = require('fs');
 
 const server = require('./server');
-const reporter = require('almost-min');
+const reporter = require('./almost-min');
 
 /*
  * consts
  */
 
 const tests = [
-	{name: 'launch-and-quit'},
+	{name: 'launch-and-quit', only:true},
 	{name: 'filesystem'},
 	{name: 'app-mode'},
 	{name: 'editing'},
@@ -91,7 +91,15 @@ function createDriver (name) {
 		break;
 
 	case 'opera':
-		// TBD
+		var options = new opera.Options();
+		options.addArguments(
+			'--start-maximized',
+			'--lang=en',
+			'--user-data-dir=' + profilePath);
+		result = new webdriver.Builder()
+			.withCapabilities(webdriver.Capabilities.opera())
+			.setOperaOptions(options)
+			.build()
 		break;
 
 	default:
@@ -186,7 +194,7 @@ function invokeWasavi (currentTest) {
 				'last yield: ' +
 				Object.prototype.toString.call(wasaviFrame));
 
-			return wasaviFrame;
+			return currentTest.wasaviFrame = wasaviFrame;
 		}
 		catch (ex) {
 			console.error('invokeWasavi: exception: ' + ex.stack);
@@ -624,7 +632,7 @@ function WasaviController (driver, currentTest) {
 
 	function sendNoWait (stroke) {
 		// return Promise
-		return currentTest.wasaviFrame.sendKeys(s);
+		return currentTest.wasaviFrame.sendKeys(stroke);
 	}
 
 	function sendTestInfo () {
@@ -876,31 +884,12 @@ function WasaviTest (suiteName, options) {
 				currentTest.isAppMode = /\bapp\s*mode\b/i.test(s);
 				currentTest.isReadonlyElement = /\breadonly\s*element\b/i.test(s);
 				currentTest.wasaviTargetID = /\bcontent\s*editable\b/i.test(s) ? 't3' : 't2';
+				currentTest.wasaviController = new WasaviController(driver, currentTest);
 
-				var url, invoker;
-				if (currentTest.isAppMode) {
-					url = appModeTestFrameUrl;
-					invoker = invokeAppModeWasavi;
-				}
-				else {
-					url = testFrameUrl;
-					invoker = invokeWasavi;
-				}
+				yield currentTest.wasaviController.invoke();
+				yield currentTest.wasaviController.sendTestInfo();
 
-				var wf = yield invoker(currentTest);
-				if (wf) {
-					currentTest.wasaviFrame = wf;
-
-					currentTest.wasaviController = new WasaviController(driver, currentTest);
-					yield currentTest.wasaviController.sendTestInfo();
-
-					debug && console.log('got wasaviFrame');
-					done();
-				}
-				else {
-					debug && console.log('failed to get wasaviFrame');
-					done(new Error('wasavi frame not found.'));
-				}
+				done();
 			}
 			catch (ex) {
 				console.error(`${suiteName}.beforeEach: exception: ${ex}\n${ex.stack}`);

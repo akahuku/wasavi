@@ -7,7 +7,7 @@ SHELL := /bin/sh
 PATH_SEPARATOR := /
 
 CHROME := google-chrome
-OPERA := opera
+BLINKOPERA := opera
 FIREFOX := firefox
 CYGPATH := echo
 REALPATH := realpath
@@ -49,12 +49,6 @@ CHROME_EXT_ID = dgogifpkoilgiofhhhodbodcfgomelhe
 CHROME_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).crx
 CHROME_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/chrome.xml
 
-OPERA_SUFFIX = oex
-OPERA_SRC_DIR = opera
-OPERA_EXT_ID =
-OPERA_EXT_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/$(PRODUCT).oex
-OPERA_UPDATE_LOCATION = https://github.com/akahuku/$(PRODUCT)/raw/master/dist/opera.xml
-
 BLINKOPERA_SUFFIX = nex
 BLINKOPERA_SRC_DIR = opera-blink
 BLINKOPERA_EXT_ID = dgogifpkoilgiofhhhodbodcfgomelhe
@@ -78,16 +72,11 @@ CHROME_SRC_PATH = $(SRC_DIR)/$(CHROME_SRC_DIR)
 CHROME_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(CHROME_SRC_DIR)
 CHROME_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/chrome)
 
-OPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(OPERA_SUFFIX)
-OPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(OPERA_SUFFIX)
-OPERA_SRC_PATH = $(SRC_DIR)/$(OPERA_SRC_DIR)
-OPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(OPERA_SRC_DIR)
-OPERA_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/opera)
-
 BLINKOPERA_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(BLINKOPERA_SUFFIX)
 BLINKOPERA_MTIME_PATH = $(EMBRYO_DIR)/.$(BLINKOPERA_SUFFIX)
 BLINKOPERA_SRC_PATH = $(SRC_DIR)/$(BLINKOPERA_SRC_DIR)
 BLINKOPERA_EMBRYO_SRC_PATH = $(EMBRYO_DIR)/$(BLINKOPERA_SRC_DIR)
+BLINKOPERA_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/opera)
 
 FIREFOX_TARGET_PATH = $(DIST_DIR)/$(PRODUCT).$(FIREFOX_SUFFIX)
 FIREFOX_MTIME_PATH = $(EMBRYO_DIR)/.$(FIREFOX_SUFFIX)
@@ -109,8 +98,6 @@ all: crx oex nex xpi
 
 crx: $(CHROME_TARGET_PATH)
 
-oex: $(OPERA_TARGET_PATH)
-
 nex: $(BLINKOPERA_TARGET_PATH)
 
 xpi: $(FIREFOX_TARGET_PATH)
@@ -126,7 +113,7 @@ $(BINKEYS_PATH): $(CHROME_SRC_PATH)/$(CRYPT_KEY_FILE) $(CHROME_SRC_PATH)/$(CRYPT
 
 FORCE:
 
-.PHONY: all crx oex nex xpi \
+.PHONY: all crx nex xpi \
 	clean message \
 	test-chrome test-opera test-firefox \
 	run-chrome run-opera run-firefox \
@@ -188,46 +175,6 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 $(CHROME_MTIME_PATH): FORCE
 	@mkdir -p $(CHROME_EMBRYO_SRC_PATH) $(DIST_DIR)
 	$(TOOL_DIR)/mtime.js --dir $(CHROME_SRC_PATH) --base $(CHROME_TARGET_PATH) --out $@
-
-
-
-#
-# rules to make wasavi.oex
-# ========================================
-#
-
-# wasavi.oex
-$(OPERA_TARGET_PATH): $(OPERA_MTIME_PATH) $(BINKEYS_PATH)
-#	copy all of sources to embryo dir
-	$(RSYNC) $(RSYNC_OPT) $(OPERA_SRC_PATH)/ $(OPERA_EMBRYO_SRC_PATH)
-
-#	update the manifest file
-	$(TOOL_DIR)/update-opera-config.js \
-		--indir $(OPERA_SRC_PATH) \
-		--product $(PRODUCT) \
-		--ver $(VERSION) \
-		--outdir $(OPERA_EMBRYO_SRC_PATH) \
-		--update-url $(OPERA_UPDATE_LOCATION)
-
-#	create update description file
-	sed -e 's/@appid@/$(OPERA_EXT_ID)/g' \
-		-e 's!@location@!$(OPERA_EXT_LOCATION)!g' \
-		-e 's/@version@/$(VERSION)/g' \
-		$(SRC_DIR)/template-opera.xml > $(DIST_DIR)/$(notdir $(OPERA_UPDATE_LOCATION))
-
-#	zip it
-	rm -f $@
-	cd $(OPERA_EMBRYO_SRC_PATH) \
-		&& find . -type f -print0 | sort -z | xargs -0 $(ZIP) ../../$@
-
-	@echo ///
-	@echo /// created: $@, version $(VERSION)
-	@echo ///
-
-# last mtime holder
-$(OPERA_MTIME_PATH): FORCE
-	@mkdir -p $(OPERA_EMBRYO_SRC_PATH) $(DIST_DIR)
-	$(TOOL_DIR)/mtime.js --dir $(OPERA_SRC_PATH) --base $(OPERA_TARGET_PATH) --out $@
 
 
 
@@ -349,19 +296,19 @@ message: FORCE
 #
 
 test-chrome: FORCE
-	NODE_TARGET_BROWSER=chrome \
-	LANGUAGE=en \
-	mocha $(TEST_MOCHA_OPTS)
-# | sed -e '/^\\s*at\\s*/d' -e '/^\\s*From:\\s*Task:/d'
+	@NODE_TARGET_BROWSER=chrome \
+		LANGUAGE=en \
+		mocha $(TEST_MOCHA_OPTS)
 
 test-opera: FORCE
-	node $(TEST_WWW_SERVER) &
-	cd $(SRC_DIR)/wd-tests && ant test-opera
+	@NODE_TARGET_BROWSER=opera \
+		LANGUAGE=en \
+		mocha $(TEST_MOCHA_OPTS)
 
 test-firefox: FORCE
-	NODE_TARGET_BROWSER=firefox \
-	LANG=en \
-	mocha $(TEST_MOCHA_OPTS)
+	@NODE_TARGET_BROWSER=firefox \
+		LANG=en \
+		mocha $(TEST_MOCHA_OPTS)
 
 run-chrome: FORCE
 	node $(TEST_WWW_SERVER) &
@@ -375,16 +322,20 @@ run-chrome: FORCE
 
 run-opera: FORCE
 	node $(TEST_WWW_SERVER) &
-	-mkdir -p $(OPERA_TEST_PROFILE_PATH)
-	$(OPERA) -pd $(OPERA_TEST_PROFILE_PATH) \
+	-mkdir -p $(BLINKOPERA_TEST_PROFILE_PATH)
+	LANGUAGE=en $(BLINKOPERA) \
+		--start-maximized \
+		--lang=en \
+		--user-data-dir=$(BLINKOPERA_TEST_PROFILE_PATH) \
 		$(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 run-firefox: FORCE
 	node $(TEST_WWW_SERVER) &
-#	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)/extensions
-#	echo -n "$(shell $(REALPATH) $(FIREFOX_SRC_PATH))$(PATH_SEPARATOR)" > $(FIREFOX_TEST_PROFILE_PATH)/extensions/$(FIREFOX_EXT_ID)
-	$(FIREFOX) -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH))
+	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
+	LANG=en $(FIREFOX) \
+		 -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH)) \
+		 $(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 debug-firefox: FORCE
