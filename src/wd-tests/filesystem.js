@@ -107,6 +107,7 @@ exports.suite = (assert, wasavi, driver) => {
 	}
 
 	it('file system command_default', function* () {
+		this.timeout(1000 * 60);
 		yield wasavi.send(':files default\n');
 		assert.t('#1-1', /^default file system: .+$/.test(wasavi.getLastMessage()));
 	});
@@ -114,6 +115,7 @@ exports.suite = (assert, wasavi, driver) => {
 	// dropbox
 	
 	it('complete root path dropbox', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(completeRootPath, null,
 			// drive name ommited, no-prefix
 			'#1-1', 'dropbox', '', true,
@@ -132,6 +134,7 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('complete sub path dropbox', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(completeSubPath, null,
 			'#1', 'dropbox', true,
 			'#2', 'dropbox', false
@@ -139,6 +142,7 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('read dropbox', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(read, null, 'dropbox');
 	});
 
@@ -150,6 +154,7 @@ exports.suite = (assert, wasavi, driver) => {
 	// google drive
 
 	it('complete root path gDrive', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(completeRootPath, null,
 			'#1-1', 'gdrive', '', true,
 			'#1-2', 'gdrive', 'hello', true,
@@ -162,6 +167,7 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('complete sub path gDrive', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(completeSubPath, null,
 			'#1', 'gdrive', true,
 			'#2', 'gdrive', false
@@ -169,6 +175,7 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('read gDrive', function* () {
+		this.timeout(1000 * 60);
 		promise.consume(read, null, 'gdrive');
 	});
 

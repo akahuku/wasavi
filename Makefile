@@ -31,7 +31,7 @@ TEST_FRAME_URL = http://127.0.0.1:8888/test_frame.html
 TEST_SHUTDOWN_URL = http://127.0.0.1:8888/shutdown
 TEST_MOCHA_OPTS = --timeout=10000 \
 	--reporter=$(SRC_DIR)/wd-tests/almost-min.js \
-	$(SRC_DIR)/wd-tests/index.js
+	$(SRC_DIR)/wd-tests/index.js 2>&1 | tee test.log
 
 RSYNC_OPT = -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
@@ -94,7 +94,7 @@ FIREFOX_TEST_PROFILE_PATH = $(shell $(CYGPATH) $(SRC_DIR)/wd-tests/profile/firef
 # basic rules
 # ========================================
 
-all: crx oex nex xpi
+all: crx nex xpi
 
 crx: $(CHROME_TARGET_PATH)
 
@@ -316,7 +316,7 @@ run-chrome: FORCE
 	LANGUAGE=en $(CHROME) \
 		--start-maximized \
 		--lang=en \
-		--user-data-dir=$(CHROME_TEST_PROFILE_PATH) \
+		--user-data-dir="$(CHROME_TEST_PROFILE_PATH)" \
 		$(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
@@ -326,7 +326,7 @@ run-opera: FORCE
 	LANGUAGE=en $(BLINKOPERA) \
 		--start-maximized \
 		--lang=en \
-		--user-data-dir=$(BLINKOPERA_TEST_PROFILE_PATH) \
+		--user-data-dir="$(BLINKOPERA_TEST_PROFILE_PATH)" \
 		$(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
@@ -334,13 +334,14 @@ run-firefox: FORCE
 	node $(TEST_WWW_SERVER) &
 	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)
 	LANG=en $(FIREFOX) \
-		 -profile $(shell $(REALPATH) $(FIREFOX_TEST_PROFILE_PATH)) \
+		 -profile "$(FIREFOX_TEST_PROFILE_PATH)" \
 		 $(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 debug-firefox: FORCE
 	node $(TEST_WWW_SERVER) &
-	cd $(FIREFOX_SRC_PATH) && web-ext run --firefox=$(FIREFOX)
+#	web-ext run -s $(FIREFOX_SRC_PATH) --no-reload
+	cd $(FIREFOX_SRC_PATH) && web-ext run
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 version: FORCE

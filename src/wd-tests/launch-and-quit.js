@@ -4,7 +4,7 @@ const {By, Key, until} = require('selenium-webdriver');
 const {it} = require('selenium-webdriver/testing');
 
 exports.suite = (assert, wasavi, driver) => {
-	it('exsitence', function* () {
+	it('existence', function* () {
 		var wasaviFrame = yield driver.findElement(By.id('wasavi_frame'));
 		assert.t(wasaviFrame);
 	});

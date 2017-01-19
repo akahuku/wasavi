@@ -23,7 +23,7 @@ const reporter = require('./almost-min');
  */
 
 const tests = [
-	{name: 'launch-and-quit', only:true},
+	{name: 'launch-and-quit'},
 	{name: 'filesystem'},
 	{name: 'app-mode'},
 	{name: 'editing'},
@@ -83,7 +83,8 @@ function createDriver (name) {
 
 	case 'firefox':
 		var options = new firefox.Options();
-		options.setProfile(profilePath);
+		var profile = new firefox.Profile(profilePath);
+		options.setProfile(profile);
 		result = new webdriver.Builder()
 			.withCapabilities(webdriver.Capabilities.firefox())
 			.setFirefoxOptions(options)
@@ -491,9 +492,9 @@ function WasaviAsserts () {
 		t, f, eq, ne, pos, value,
 
 		shortcuts: {
-			ctrln: Key.chord(Key.ALT, 'n'),
-			ctrlt: Key.chord(Key.ALT, 't'),
-			ctrlw: Key.chord(Key.ALT, 'w')
+			ctrln: Key.chord(Key.CONTROL, 'n'),		// 0x000e
+			ctrlt: Key.chord(Key.CONTROL, 't'),		// 0x0014
+			ctrlw: Key.chord(Key.CONTROL, 'w')		// 0x0017
 		}
 	};
 }

@@ -30,7 +30,9 @@
 'use strict';
 (function (global) {
 
-function diag (s) {try {window.parent.postMessage(s, '*')} catch (e) {}}
+function diag (s) {
+	try {window.parent.postMessage(s, '*')} catch (e) {}
+}
 diag('starting wasavi.js');
 
 diag('defining classes');

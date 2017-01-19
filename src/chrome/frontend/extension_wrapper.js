@@ -33,10 +33,8 @@
 	var IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	var IS_FX_JETPACK =
-		typeof global.self == 'object' && typeof global.self.on == 'function'
-		&& /^\s*function(?: bound)? on\s*\([^)]*\)\s*\{\s*\[native\s+code\]\s*\}\s*$/.test(
-			global.self.on.toString().replace(/[\s\r\n\t]+/g, ' '));
+	var IS_FX_WEBEXT = Object.prototype.toString.call(global) == '[object Sandbox]'
+		&& global.chrome && global.chrome.extension;
 	/* >>> */
 
 	/* <<<1 vars */
@@ -224,16 +222,15 @@
 		if (window.chrome) return new ChromeExtensionWrapper;
 		if (global.chrome) return new ChromeExtensionWrapper;
 		if (window.opera)  return new OperaExtensionWrapper;
-		if (IS_FX_JETPACK) return new FirefoxJetpackExtensionWrapper;
 		return new ExtensionWrapper;
 	};
 	ExtensionWrapper.IS_GECKO = IS_GECKO;
-	ExtensionWrapper.IS_FX_JETPACK = IS_FX_JETPACK;
+	ExtensionWrapper.IS_FX_WEBEXT = IS_FX_WEBEXT;
 	ExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION =
 		window.chrome && chrome.extension
 		|| global.opera && global.opera.extension
-		|| IS_GECKO && IS_FX_JETPACK;
-	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_JETPACK;
+		|| IS_GECKO && IS_FX_WEBEXT;
+	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_WEBEXT;
 	ExtensionWrapper.urlInfo = new UrlInfo;
 	/* >>> */
 

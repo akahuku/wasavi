@@ -738,8 +738,8 @@ exports.suite = (assert, wasavi, driver) => {
 	it('deleteWord', function* () {
 		yield wasavi.send('ifoo bar', ctrlw, 'o\u001b');
 		assert.value('#1-1', 'foo o');
-		assert.eq('#1-2', 'foo bar\ue000<A-W>o', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'ifoo bar\ue000<A-W>o\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', 'foo bar\u0017o', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'ifoo bar\u0017o\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');
@@ -749,8 +749,8 @@ exports.suite = (assert, wasavi, driver) => {
 	it('deleteWordOverwrite', function* () {
 		yield wasavi.send('Rfoo bar', ctrlw, 'o\u001b');
 		assert.value('#1-1', 'foo o');
-		assert.eq('#1-2', 'foo bar\ue000<A-W>o', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'Rfoo bar\ue000<A-W>o\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', 'foo bar\u0017o', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'Rfoo bar\u0017o\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');
@@ -775,8 +775,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('ifoo bar\n\u001b');
 		yield wasavi.send('a\tbaz', ctrlw, ctrlw, ctrlw, '\u001b');
 		assert.value('#1-1', 'foo bar');
-		assert.eq('#1-2', '\tbaz\ue000<A-W>\ue000<A-W>\ue000<A-W>', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'a\tbaz\ue000<A-W>\ue000<A-W>\ue000<A-W>\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\tbaz\u0017\u0017\u0017', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'a\tbaz\u0017\u0017\u0017\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', 'foo bar\n');
 		yield wasavi.send('\u0012');
@@ -787,8 +787,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('ifoo\n\u001b');
 		yield wasavi.send('R', ctrlw, ctrlw, '\u001b');
 		assert.value('#1-1', 'foo\n');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'R\ue000<A-W>\ue000<A-W>\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'R\u0017\u0017\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');
@@ -821,8 +821,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('ifoo bar baz\u001b');
 		yield wasavi.send('a', ctrlw, ctrlw, '\u001b');
 		assert.value('#1-1', 'foo ');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'a\ue000<A-W>\ue000<A-W>\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'a\u0017\u0017\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', 'foo bar baz');
 		yield wasavi.send('\u0012');
@@ -833,8 +833,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('ifoo bar baz\u001b');
 		yield wasavi.send('R', ctrlw, ctrlw, '\u001b');
 		assert.value('#1-1', 'foo bar baz');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'R\ue000<A-W>\ue000<A-W>\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'R\u0017\u0017\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');
@@ -913,8 +913,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('i\tfirst\n\tsecond\n\tthird\u001b');
 		yield wasavi.send('a', ctrlw, ctrlw, ctrlw, '\u0015\u001b');
 		assert.value('#1-1', '\tfirst\n');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'a\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017\u0017\u0015', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'a\u0017\u0017\u0017\u0015\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '\tfirst\n\tsecond\n\tthird');
 		yield wasavi.send('\u0012');
@@ -926,8 +926,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('i\tfirst\nsecond\nthird\u001b');
 		yield wasavi.send('a', ctrlw, ctrlw, ctrlw, '\u0015\u001b');
 		assert.value('#1-1', '\tfirst\n\t');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'a\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017\u0017\u0015', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'a\u0017\u0017\u0017\u0015\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '\tfirst\n\tsecond\n\tthird');
 		yield wasavi.send('\u0012');
@@ -939,8 +939,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('i\tfirst\n\tsecond\n\tthird\u001b');
 		yield wasavi.send('R', ctrlw, ctrlw, ctrlw, '\u0015\u001b');
 		assert.value('#1-1', '\tfirst\n\tsecond\n\tthird');
-		assert.eq('#1-2', '\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'R\ue000<A-W>\ue000<A-W>\ue000<A-W>\u0015\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', '\u0017\u0017\u0017\u0015', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'R\u0017\u0017\u0017\u0015\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');
@@ -971,8 +971,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send(':set sw=4 ts=8 ai\n');
 		yield wasavi.send('iFOO\nfoobar', ctrlt, 'baz\u001b');
 		assert.value('#1-1', 'FOO\n    foobarbaz');
-		assert.eq('#1-2', 'FOO\nfoobar\ue000<A-T>baz', wasavi.getRegister('.'));
-		assert.eq('#1-3', 'iFOO\nfoobar\ue000<A-T>baz\u001b', wasavi.getLastSimpleCommand());
+		assert.eq('#1-2', 'FOO\nfoobar\u0014baz', wasavi.getRegister('.'));
+		assert.eq('#1-3', 'iFOO\nfoobar\u0014baz\u001b', wasavi.getLastSimpleCommand());
 		yield wasavi.send('u');
 		assert.value('#1-4', '');
 		yield wasavi.send('\u0012');

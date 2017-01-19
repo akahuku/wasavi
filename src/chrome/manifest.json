@@ -50,7 +50,6 @@
     {
       "matches": [
         "http://wasavi.appsweets.net/",
-        "http://wasavi.appsweets.net/?testmode",
         "https://wasavi.appsweets.net/"
       ],
       "js": [

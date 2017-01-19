@@ -536,7 +536,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('insert multiline tag', function* () {
 		var keys = [
-			[ctrlt, '\ue000<A-T>'],
+			[ctrlt, '\u0014'],
 			[',', ',']
 		];
 		for (var i = 0; i < keys.length; i++) {
@@ -567,7 +567,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('insert multiline tag via operator', function* () {
 		var keys = [
-			[ctrlt, '\ue000<A-T>'],
+			[ctrlt, '\u0014'],
 			[',', ','],
 			['<', '<'],
 			['T', 'T'],
@@ -601,7 +601,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('insert tag linewise', function* () {
 		var keys = [
-			[ctrlt, '\ue000<A-T>'],
+			[ctrlt, '\u0014'],
 			[',', ','],
 			['<', '<'],
 			['T', 'T'],
