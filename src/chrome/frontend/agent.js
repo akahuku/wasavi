@@ -1,11 +1,3 @@
-// ==UserScript==
-// @include http://*/*
-// @include https://*/*
-// @exclude http://wasavi.appsweets.net/
-// @exclude http://wasavi.appsweets.net/?testmode
-// @exclude https://wasavi.appsweets.net/
-// ==/UserScript==
-//
 /**
  * wasavi: vi clone implemented in javascript
  * =============================================================================

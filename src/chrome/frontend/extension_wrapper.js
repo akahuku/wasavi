@@ -1,8 +1,3 @@
-// ==UserScript==
-// @include http://*/*
-// @include https://*/*
-// ==/UserScript==
-//
 /**
  * wasavi: vi clone implemented in javascript
  * =============================================================================
