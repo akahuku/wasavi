@@ -52,15 +52,9 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
 * [Chrome 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.crx)
 
-* [Presto Opera 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.oex)
-
 * [Blink Opera 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.nex)
 
 * [Firefox 用の最新/非安定バージョン](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi)
-
-### Opera ユーザへの注意
-
-Presto ベースの Opera は DOM3 Composition Event をサポートしていないので、IME を通した入力は保証されません。Presto ベースの Opera は拡張に対してシステムクリップボード操作を許していません。したがって Opera ではレジスタ `*` は使用できません。
 
 ### Chrome ユーザへの注意
 

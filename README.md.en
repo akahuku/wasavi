@@ -52,15 +52,9 @@ Source code and latest development releases are hosted at [Github](https://githu
 
 * [Latest and unstable version of wasavi for Chrome](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.crx)
 
-* [Latest and unstable version of wasavi for Presto Opera](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.oex)
-
 * [Latest and unstable version of wasavi for Blink Opera](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.nex)
 
 * [Latest and unstable version of wasavi for Firefox](https://github.com/akahuku/wasavi/raw/master/dist/wasavi.xpi)
-
-### A note for Opera users
-
-Presto based Opera does not support DOM3 Composition Event therefore input via IME is not guaranteed. Presto based Opera does not allow extension to manipulate system clipboard, so the register `*` is unavailable on Opera.
 
 ### A note for Chrome users
 
