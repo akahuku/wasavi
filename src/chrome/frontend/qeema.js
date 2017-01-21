@@ -6,7 +6,7 @@
  * @author akahuku@gmail.com
  */
 /**
- * Copyright 2012-2017 akahuku, akahuku@gmail.com
+ * Copyright 2012-2015 akahuku, akahuku@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -686,7 +686,12 @@
 		var etype = '[ keydown]';
 
 		if (window.chrome) {
-			lastValue = editable.value(e.target);
+			if (e.keyCode == 229) {
+				lastValue = editable.value(e.target);
+			}
+			else {
+				lastValue = null;
+			}
 		}
 
 		enableLog && logs.basic && logit(
@@ -904,6 +909,23 @@
 		enableLog && logs.input && logit(
 			etype, ' value:"', editable.value(e.target), '"'
 		);
+
+		if (lastValue !== null && !isInComposition && lastReceivedEvent == 'keydown') {
+			var current = editable.value(e.target);
+			var pos = getIncreasePosition(lastValue, current);
+			var s = current.substr(pos, current.length - lastValue.length);
+			if (pos >= 0 && s != '') {
+				fireCompositionStart('');
+				fireCompositionUpdate(s);
+				fireCompositionEnd(s);
+
+				var cr = new CompositionResult(e);
+				cr.composition = s;
+				cr.before = lastValue;
+				cr.position = pos;
+				cr.run(e);
+			}
+		}
 
 		lastReceivedEvent = e.type;
 	}
