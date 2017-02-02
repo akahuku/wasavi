@@ -990,8 +990,8 @@ Buffer.prototype = Object.create(Wasavi.Editor.prototype, {
 
 			var r = document.createRange();
 			var f = document.createDocumentFragment();
-			var snode = this.elm.childNodes[s.row];
-			var enode = this.elm.childNodes[e.row];
+			var snode = this.rowNodes(s);
+			var enode = this.rowNodes(e);
 			r.setStart(snode.firstChild, s.col);
 			r.setEnd(enode.firstChild, e.col);
 			f.appendChild(r.extractContents());
@@ -1082,7 +1082,7 @@ function notifyCommandComplete (eventName, modeOverridden) {
 		col:        buffer.selectionStartCol,
 		topRow:     pt.row,
 		topCol:     pt.col,
-		rowLength:  buffer.elm.childNodes.length,
+		rowLength:  buffer.rowLength,
 		registers:  registers.dumpData(),
 		marks:      marks.dumpData(),
 		lines:      config.vars.lines,
@@ -2833,11 +2833,11 @@ function getMap (mode) {
 function getCurrentViewPositionIndices () {
 	function findTopLineIndex (line) {
 		var low = 0;
-		var high = buffer.elm.childNodes.length - 1;
+		var high = buffer.rowLength - 1;
 		var result = -1;
 		while (low <= high) {
 			var middle = parseInt((low + high) / 2);
-			var node = buffer.elm.childNodes[middle];
+			var node = buffer.rowNodes(middle);
 			var top = node.offsetTop;
 			var bottom = node.offsetTop + node.offsetHeight
 			if (top == line && line < bottom) {
@@ -2859,11 +2859,11 @@ function getCurrentViewPositionIndices () {
 	}
 	function findBottomLineIndex (line) {
 		var low = 0;
-		var high = buffer.elm.childNodes.length - 1;
+		var high = buffer.rowLength - 1;
 		var result = -1;
 		while (low <= high) {
 			var middle = parseInt((low + high) / 2);
-			var node = buffer.elm.childNodes[middle];
+			var node = buffer.rowNodes(middle);
 			var top = node.offsetTop;
 			var bottom = node.offsetTop + node.offsetHeight
 			if (top < line && line == bottom) {
@@ -3607,7 +3607,7 @@ function motionFindByRegexForward (c, count, opts) {
 				re = regex.exec(text);
 				if (re) {
 					var newn = regex.lastIndex - re[0].length;
-					if (text.charAt(newn) == '\n' && newn - 1 == startn) {
+					if (text.charAt(newn) == buffer.TERM_CHAR && newn - 1 == startn) {
 						loop = true;
 					}
 					else {
@@ -4051,7 +4051,7 @@ function insert (s, opts) {
 		&& s.length >= 2
 		&& s.substr(-1) == '\n'
 		&& buffer.selectionStartRow == buffer.rowLength - 1
-		&& buffer.rowTextNodes(buffer.selectionStartRow).nodeValue.substring(buffer.selectionStartCol) == '\n') {
+		&& buffer.charAt(buffer.selectionStart) == '\n') {
 			s = s.substr(0, s.length - 1);
 		}
 		var re = s.match(/\u0008|\u007f|\n|[^\u0008\u007f\n]+/g);

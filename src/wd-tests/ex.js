@@ -1889,7 +1889,14 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('inverted global', function* () {
-		yield wasavi.send('i1 x\n2\n3 z\n4 x\n5 y\n6 z\u001b');
+		yield wasavi.send('i' + [
+			'1 x',
+			'2',
+			'3 z',
+			'4 x',
+			'5 y',
+			'6 z'
+		].join('\n') + '\u001b');
 
 		// if range does not specified, all of text should be processed.
 		yield wasavi.send(':v/x/p\n');

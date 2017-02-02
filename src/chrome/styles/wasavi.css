@@ -90,11 +90,21 @@
 	counter-increment:na nr -1;
 }
 
+#wasavi_editor > div:not([contenteditable])::after {
+	content:"\21b2";
+	font-size:50%;
+	color:#888;
+}
+
+#wasavi_editor > span.newline {
+	display:none;
+}
+
 #wasavi_editor > div.current ~ div {
 	counter-increment:na nr 1;
 }
 
-#wasavi_editor > div:nth-child(odd) {
+#wasavi_editor > div:nth-child(4n+3) {
 }
 
 #wasavi_editor > div.current {

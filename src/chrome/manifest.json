@@ -36,8 +36,8 @@
         "https://*/*"
       ],
       "exclude_matches": [
-        "http://wasavi.appsweets.net/",
-        "https://wasavi.appsweets.net/"
+        "http://wasavi.appsweets.net/*",
+        "https://wasavi.appsweets.net/*"
       ],
       "js": [
         "frontend/extension_wrapper.js",
@@ -49,8 +49,8 @@
     },
     {
       "matches": [
-        "http://wasavi.appsweets.net/",
-        "https://wasavi.appsweets.net/"
+        "http://wasavi.appsweets.net/*",
+        "https://wasavi.appsweets.net/*"
       ],
       "js": [
         "frontend/extension_wrapper.js",

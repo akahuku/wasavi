@@ -40,8 +40,10 @@ exports.suite = (assert, wasavi, driver) => {
 			var line = wasavi.getLineInput();
 			yield wasavi.send('\u001b');
 
+			/*
 			console.log(
 				`completeRootPath: label:${testLabel} fs:${fs} prefix:${prefix} makeDefault:${makeDefault} line:${line}`);
+			*/
 
 			if (makeDefault) {
 				assert.t(testLabel, (new RegExp(`^r ${prefix}.+$`)).test(line));

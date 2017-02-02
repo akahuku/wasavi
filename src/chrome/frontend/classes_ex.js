@@ -503,17 +503,9 @@ function writeCore (app, t, a, pa) {
 		}
 	}
 
-	var rg = document.createRange();
-	rg.setStartBefore(t.rowNodes(a.range[0]));
-	rg.setEndAfter(t.rowNodes(a.range[1]));
-	var content = toNativeControl(rg.toString());
-
-	if (a.range[1] == t.rowLength - 1) {
-		content = trimTerm(content);
-	}
-	if (!app.targetElement.elementType != 'contentEditable') {
-		content = content.replace(/\n/g, app.preferredNewline);
-	}
+	var newline = app.targetElement.elementType == 'contentEditable' ?
+		'\n' : app.preferredNewline;
+	var content = t.getValue(a.range[0], a.range[1], newline);
 
 	var requestId;
 	var payload = {
@@ -884,10 +876,7 @@ SortWorker.prototype = {
 	},
 	buildContent: function (content) {
 		if (!content) {
-			var rg = document.createRange();
-			rg.setStartBefore(this.t.rowNodes(this.a.range[0]));
-			rg.setEndAfter(this.t.rowNodes(this.a.range[1]));
-			content = toNativeControl(rg.toString());
+			content = this.t.getValue(this.a.range[0], this.a.range[1], '\n');
 		}
 
 		content = trimTerm(content);
@@ -1363,10 +1352,7 @@ var cache = {};
 		return find('cd').handler.apply(this, arguments);
 	}),
 	new ExCommand('copy', 'co', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
-		var rg = document.createRange();
-		rg.setStartBefore(t.rowNodes(a.range[0]));
-		rg.setEndAfter(t.rowNodes(a.range[1]));
-		var content = rg.toString();
+		var content = t.getValue(a.range[0], a.range[1], '\n');
 		t.setSelectionRange(new Wasavi.Position(a.lineNumber, 0));
 		app.edit.paste(1, {
 			isForward:true,
@@ -1602,7 +1588,8 @@ var cache = {};
 					}
 					var tmp = [], container = t.elm;
 					for (var i = r[0]; i <= r[1]; i++) {
-						tmp.push(container.childNodes[i]);
+						//tmp.push(container.childNodes[i]);
+						tmp.push(t.rowNodes(i));
 					}
 					for (var i = items.length - 1; i >= 0; i--) {
 						tmp.splice(items[i], 1);
@@ -1666,16 +1653,16 @@ var cache = {};
 		pattern = app.low.getFindRegex(pattern);
 
 		var textPreLength;
-		var text;
 		var rg = document.createRange();
 		rg.setStartBefore(t.rowNodes(0));
 		rg.setEndBefore(t.rowNodes(r[0]));
 		textPreLength = rg.toString().length;
-
-		rg.setStartBefore(t.rowNodes(r[0]));
-		rg.setEndAfter(t.rowNodes(r[1]));
-		text = r[1] == t.rowLength - 1 ? trimTerm(rg.toString()) : rg.toString();
 		rg = null;
+
+		var text = t.getValue(r[0], r[1], '\n');
+		if (r[1] == t.rowLength - 1) {
+			text = trimTerm(text);
+		}
 
 		/*
 		 * build up nested ex commands

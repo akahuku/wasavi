@@ -572,5 +572,8 @@ var strftime = (function (global) {
 function minmax (min, value, max) {
 	return Math.max(min, Math.min(value, max));
 }
+function getLiteralRegexp (s) {
+	return s.replace(/[.+*?(){}]/g, '\\$&');
+}
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

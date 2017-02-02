@@ -1732,9 +1732,10 @@ Wasavi.Marks = function (app, value) {
 					usedMarks[i] = true;
 
 					var iter = document.createNodeIterator(
-						buffer.elm.childNodes[m.row],
+						buffer.rowNodes(m),
 						window.NodeFilter.SHOW_TEXT, null, false);
 					var totalLength = 0;
+					var done = false;
 					var node;
 
 					while ((node = iter.nextNode())) {
@@ -1746,9 +1747,17 @@ Wasavi.Marks = function (app, value) {
 							span.className = MARK_CLASS;
 							dataset(span, 'index', i);
 							r.insertNode(span);
+							done = true;
 							break;
 						}
 						totalLength = next;
+					}
+
+					if (!done) {
+						var span = document.createElement('span');
+						span.className = MARK_CLASS;
+						dataset(span, 'index', i);
+						buffer.rowNodes(m).appendChild(span);
 					}
 				}
 			}
@@ -1879,8 +1888,9 @@ Wasavi.Editor.prototype = new function () {
 	}
 	function setRange (r, pos, isEnd) {
 		var iter = document.createNodeIterator(
-			this.elm.childNodes[pos.row], window.NodeFilter.SHOW_TEXT, null, false);
+			this.elm.childNodes[pos.row * 2], window.NodeFilter.SHOW_TEXT, null, false);
 		var totalLength = 0;
+		var done = false;
 		var node, prevNode;
 		while ((node = iter.nextNode())) {
 			var next = totalLength + node.nodeValue.length;
@@ -1888,10 +1898,28 @@ Wasavi.Editor.prototype = new function () {
 				isEnd ? r.setEnd(node, pos.col - totalLength) :
 						r.setStart(node, pos.col - totalLength);
 				prevNode = null;
+				done = true;
 				break;
 			}
 			totalLength = next;
 			prevNode = node;
+		}
+
+		if (!done) {
+			if (isEnd) {
+				var rowNode = this.elm.childNodes[pos.row * 2];
+				var node = rowNode.lastChild;
+				if (!node) {
+					node = rowNode.appendChild(document.createTextNode(''));
+				}
+				node.nodeType == 1 ?
+					r.setEndAfter(node) :
+					r.setEnd(node, node.nodeValue.length);
+			}
+			else {
+				var node = this.elm.childNodes[pos.row * 2 + 1];
+				r.setStartBefore(node);
+			}
 		}
 	}
 	function select (s, e) {
@@ -1931,59 +1959,84 @@ Wasavi.Editor.prototype = new function () {
 
 		s.col = 0;
 		e.col = this.isLineOrientSelection ?
-			0 : this.elm.childNodes[e.row].textContent.length;
+			0 : this.elm.childNodes[e.row * 2].textContent.length;
 
 		var r = document.createRange();
-		r.setStartBefore(this.elm.childNodes[s.row]);
-		r.setEndAfter(this.elm.childNodes[e.row]);
+		r.setStartBefore(this.elm.childNodes[s.row * 2]);
+		r.setEndAfter(this.elm.childNodes[e.row * 2 + 1]);
 		return {r:r, s:s, e:e};
 	}
-	function fixLineTail (rowNode, trim) {
-		for (var node = rowNode.lastChild; node; node = node.previousSibling) {
-			if (node.nodeType == 3) {
-				if (trim) {
-					node.nodeValue = node.nodeValue.replace(/\n$/, '');
-				}
-				else if (node.nodeValue.substr(-1) != '\n') {
-					node.nodeValue += '\n';
-				}
-				return node;
-			}
-		}
-		if (!trim) {
-			return rowNode.appendChild(document.createTextNode('\n'));
-		}
-		return null;
+	function appendText (text, sentinel) {
+		var row = this.elm.insertBefore(document.createElement('div'), sentinel);
+		row.textContent = text || '';
+		return row;
+	}
+	function appendNewline (sentinel) {
+		var newline = this.elm.insertBefore(document.createElement('span'), sentinel);
+		newline.className = 'newline';
+		newline.textContent = '\n';
+		return newline;
+	}
+	function appendRow (text, sentinel) {
+		var row = appendText.call(this, text, sentinel);
+		var newline = appendNewline.call(this, sentinel);
+		return row;
 	}
 	return {
 		// condition
 		isEndOfText: function () {
 			var a = arg2pos(arguments);
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+			var rowLength = this.rowLength;
+			if (a.row < 0 || a.row >= rowLength) {
 				throw new Error('isEndOfText: argument row (' + a.row + ') out of range.');
 			}
-			if (a.row < this.elm.childNodes.length - 1) {
+			if (a.row < rowLength - 1) {
 				return false;
 			}
-			if (a.row == this.elm.childNodes.length - 1
-			&& a.col < this.elm.lastChild.textContent.length - 1) {
+			if (a.row == rowLength - 1
+			&& a.col < this.elm.childNodes[(rowLength - 1) * 2].textContent.length) {
 				return false;
 			}
 			return true;
 		},
 		isNewline: function () {
 			var a = arg2pos(arguments);
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+			var rowLength = this.rowLength;
+			if (a.row < 0 || a.row >= rowLength) {
 				throw new Error('isNewline: argument row (' + a.row + ') out of range.');
 			}
-			var node = this.elm.childNodes[a.row].textContent;
-			if (a.col < node.length - 1 || a.row == this.elm.childNodes.length - 1) {
+			if (a.row == rowLength - 1
+			|| a.col < this.elm.childNodes[a.row * 2].textContent.length) {
 				return false;
 			}
 			return true;
 		},
 
 		// getter
+		getValue: function (from, to, newline) {
+			var result, rg;
+			var rowLength = this.rowLength;
+
+			if (typeof from != 'number' || from < 0) {
+				from = 0;
+			}
+			if (typeof to != 'number' || to >= rowLength) {
+				to = rowLength - 1;
+			}
+
+			rg = document.createRange();
+			rg.setStartBefore(this.elm.childNodes[from * 2]);
+			rg.setEndAfter(this.elm.childNodes[to * 2]);
+
+			result = rg.toString();
+			result = toNativeControl(result);
+
+			if (isString(newline)) {
+				result = result.replace(/\n/g, newline);
+			}
+
+			return result;
+		},
 		rows: function (arg, context) {
 			var row3 = arg;
 			if (arg instanceof Wasavi.Position) {
@@ -1992,11 +2045,11 @@ Wasavi.Editor.prototype = new function () {
 			if (typeof row3 != 'number' || isNaN(row3)) {
 				throw new Error('rows: argument row is not a number: ' + (context || ''));
 			}
-			if (row3 < 0 || row3 >= this.elm.childNodes.length) {
+			if (row3 < 0 || row3 >= this.rowLength) {
 				throw new Error('rows: argument row (' + row3 + ') out of range: ' + (context || ''));
 			}
 
-			return trimTerm(this.elm.childNodes[row3].textContent);
+			return this.elm.childNodes[row3 * 2].textContent;
 		},
 		rowNodes: function (arg, context) {
 			var row1 = arg;
@@ -2006,10 +2059,10 @@ Wasavi.Editor.prototype = new function () {
 			if (typeof row1 != 'number' || isNaN(row1)) {
 				throw new Error('rowsNodes: argument row is not a number: ' + (context || ''));
 			}
-			if (row1 < 0 || row1 >= this.elm.childNodes.length) {
+			if (row1 < 0 || row1 >= this.rowLength) {
 				throw new Error('rowNodes: argument row (' + row1 + ') out of range: ' + (context || ''));
 			}
-			return this.elm.childNodes[row1];
+			return this.elm.childNodes[row1 * 2];
 		},
 		rowTextNodes: function (arg, context) {
 			var row2 = arg;
@@ -2019,10 +2072,10 @@ Wasavi.Editor.prototype = new function () {
 			if (typeof row2 != 'number' || isNaN(row2)) {
 				throw new Error('rowTextNodes: argument row is not a number: ' + (context || ''));
 			}
-			if (row2 < 0 || row2 >= this.elm.childNodes.length) {
+			if (row2 < 0 || row2 >= this.rowLength) {
 				throw new Error('rowTextNodes: argument row (' + row2 + ') out of range: ' + (context || ''));
 			}
-			var node = this.elm.childNodes[row2];
+			var node = this.elm.childNodes[row2 * 2];
 			if (!node.firstChild) {
 				node.appendChild(document.createTextNode(''));
 			}
@@ -2030,49 +2083,50 @@ Wasavi.Editor.prototype = new function () {
 		},
 		charAt: function () {
 			var a = arg2pos(arguments);
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+			if (a.row < 0 || a.row >= this.rowLength) {
 				return undefined;
 			}
-			return this.elm.childNodes[a.row].textContent.charAt(a.col);
+			var content = this.elm.childNodes[a.row * 2].textContent;
+			return a.col >= content.length ? '\n' : content.charAt(a.col);
 		},
 		charCodeAt: function () {
-			var a = argspos(arguments);
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
-				return undefined;
-			}
-			return this.elm.childNodes[a.row].textContent.charCodeAt(a.col);
+			return this.charAt.apply(this, arguments).charCodeAt(0);
 		},
 		charClassAt: function (a, treatNewlineAsSpace, extraWordRegex) {
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+			var ch = this.charAt.call(this, a);
+			if (ch == undefined) {
 				return undefined;
 			}
-			var ch = this.elm.childNodes[a.row].textContent.charAt(a.col);
 			var cp = ch.charCodeAt(0);
 			if (treatNewlineAsSpace && cp == 0x0a) {
 				return 0;
 			}
 			if (extraWordRegex instanceof RegExp && extraWordRegex.test(ch)) {
-				return 0x100 + 1; // treat as latin1 word component
+				// treat as latin1 word component
+				return 0x100 + 1;
 			}
 			return unicodeUtils.getScriptClass(cp);
 		},
-		charRectAt: function (a, length) {
-			var className = 'char-rect-at';
-			var result = this
-				.emphasis(a, length || 1, className)[0]
-				.getBoundingClientRect();
-			this.unEmphasis(className);
-			return result;
+		charRectAt: function (position, length) {
+			const CLASS_NAME = 'char-rect-at';
+			try {
+				var span = this.emphasis(position, length || 1, CLASS_NAME)[0];
+				return span ?
+					span.getBoundingClientRect() :
+					this.elm.childNodes[position.row * 2].getBoundingClientRect();
+			}
+			finally {
+				this.unEmphasis(CLASS_NAME);
+			}
 		},
 		ensureNewline: function () {
 			var a = arg2pos(arguments);
-			if (a.row < 0 || a.row >= this.elm.childNodes.length) {
+			if (a.row < 0 || a.row >= Math.ceil(this.elm.childNodes.length / 2)) {
 				return;
 			}
-			var row = this.elm.childNodes[a.row];
-			if (row.textContent.substr(-1) != '\n') {
-				row.appendChild(document.createTextNode('\n'));
-				row.normalize();
+			var newline = this.elm.childNodes[a.row * 2 + 1];
+			if (!newline || newline.className != 'newline') {
+				appendNewline.call(this, newline);
 			}
 		},
 		getSelection: function () {
@@ -2098,7 +2152,7 @@ Wasavi.Editor.prototype = new function () {
 			if (a.col == 0) {
 				if (a.row > 0) {
 					a.row--;
-					a.col = this.elm.childNodes[a.row].textContent.length - 1;
+					a.col = this.elm.childNodes[a.row * 2].textContent.length;
 				}
 			}
 			else {
@@ -2111,7 +2165,7 @@ Wasavi.Editor.prototype = new function () {
 			if (a.col == 0) {
 				if (a.row > 0) {
 					a.row--;
-					a.col = this.elm.childNodes[a.row].textContent.length - 1;
+					a.col = this.elm.childNodes[a.row * 2].textContent.length;
 				}
 			}
 			else {
@@ -2123,10 +2177,9 @@ Wasavi.Editor.prototype = new function () {
 		},
 		rightPos: function () {
 			var a = arg2pos(arguments);
-			var node = this.elm.childNodes[a.row].textContent;
-			if (a.col >= node.length
-			||  a.col == node.length - 1 && node.charAt(a.col) == '\n') {
-				if (a.row < this.elm.childNodes.length - 1) {
+			var node = this.elm.childNodes[a.row * 2].textContent;
+			if (a.col >= node.length) {
+				if (a.row < this.rowLength - 1) {
 					a.row++;
 					a.col = 0;
 				}
@@ -2138,10 +2191,9 @@ Wasavi.Editor.prototype = new function () {
 		},
 		rightClusterPos: function () {
 			var a = arg2pos(arguments);
-			var node = this.elm.childNodes[a.row].textContent;
-			if (a.col >= node.length
-			||  a.col == node.length - 1 && node.charAt(a.col) == '\n') {
-				if (a.row < this.elm.childNodes.length - 1) {
+			var node = this.elm.childNodes[a.row * 2].textContent;
+			if (a.col >= node.length) {
+				if (a.row < this.rowLength - 1) {
 					a.row++;
 					a.col = 0;
 				}
@@ -2154,7 +2206,8 @@ Wasavi.Editor.prototype = new function () {
 			return a;
 		},
 		indexOf: function (node) {
-			return Array.prototype.indexOf.call(this.elm.children, node);
+			var result = Array.prototype.indexOf.call(this.elm.children, node);
+			return result >= 0 ? result >> 1 : result;
 		},
 		getLineTopOffset: function () {
 			var a = arg2pos(arguments);
@@ -2163,12 +2216,12 @@ Wasavi.Editor.prototype = new function () {
 		},
 		getLineTailOffset: function () {
 			var a = arg2pos(arguments);
-			a.col = Math.max(0, this.elm.childNodes[a.row].textContent.length - 1);
+			a.col = this.elm.childNodes[a.row * 2].textContent.length;
 			return a;
 		},
 		getLineTopOffset2: function () {
 			var a = arg2pos(arguments);
-			var re = spc('^(S*).*\\n$').exec(this.elm.childNodes[a.row].textContent);
+			var re = spc('^(S*).*$').exec(this.elm.childNodes[a.row * 2].textContent);
 			a.col = re ? re[1].length : 0;
 			return a;
 		},
@@ -2198,13 +2251,13 @@ Wasavi.Editor.prototype = new function () {
 			var q = ['#wasavi_editor>div'];
 			if (typeof start == 'number') {
 				if (start < 0) {
-					start = this.elm.childNodes.length + start;
+					start = this.rowLength + start;
 					end = false;
 				}
 				q.push(':nth-child(n+' + (start + 1) + ')');
 			}
 			if (typeof end == 'number') {
-				end = Math.min(end, this.elm.childNodes.length - 1);
+				end = Math.min(end, this.rowLength - 1);
 				q.push(':nth-child(-n+' + (end + 1) + ')');
 			}
 			if (q.length == 3 && start == end) {
@@ -2284,9 +2337,9 @@ Wasavi.Editor.prototype = new function () {
 			}
 
 			var node = this.elm.appendChild(
-				this.elm.childNodes[n.row].cloneNode(false));
-			var row = this.elm.childNodes.length - 1;
-			node.textContent = this.elm.childNodes[n.row].textContent;
+				this.elm.childNodes[n.row * 2].cloneNode(false));
+			var row = this.rowLength - 1;
+			node.textContent = this.elm.childNodes[n.row * 2].textContent;
 
 			var right = this.emphasis(
 				new Wasavi.Position(row, n.col),
@@ -2368,7 +2421,7 @@ Wasavi.Editor.prototype = new function () {
 			if (arg instanceof Wasavi.Position) {
 				row4 = arg.row;
 			}
-			this.elm.childNodes[row4].textContent = text.replace(/\n$/, '') + '\n';
+			this.elm.childNodes[row4 * 2].textContent = trimTerm(text);
 		},
 		setSelectionRange: function () {
 			if (arguments.length == 1) {
@@ -2399,8 +2452,8 @@ Wasavi.Editor.prototype = new function () {
 		// method
 		adjustBackgroundImage: function () {
 			var y = 0;
-			if (this.elm.childNodes.length) {
-				var last = this.elm.childNodes[this.elm.childNodes.length - 1];
+			if (this.rowLength) {
+				var last = this.elm.childNodes[(this.rowLength - 1) * 2];
 				y = last.offsetTop + last.offsetHeight;
 			}
 			var desc = '0 ' + y + 'px';
@@ -2414,7 +2467,7 @@ Wasavi.Editor.prototype = new function () {
 				newClass = (isRelative ? 'nar' : 'na') +
 					' n' + Math.min(
 						LINE_NUMBER_MAX_WIDTH,
-						(this.elm.childNodes.length + '').length);
+						(this.rowLength + '').length);
 			}
 			else if (isRelative) {
 				newClass = 'nr n' + LINE_NUMBER_RELATIVE_WIDTH;
@@ -2453,22 +2506,21 @@ Wasavi.Editor.prototype = new function () {
 				document.querySelectorAll('#wasavi_editor>div.current'),
 				function (node) {node.removeAttribute('class');}
 			);
-			this.elm.childNodes[this.selectionStartRow].className = 'current';
+			this.elm.childNodes[this.selectionStartRow * 2].className = 'current';
 		},
-		insertChars: function (arg, text) {
-			fixLineTail(this.elm.childNodes[arg.row]);
-
+		insertChars: function (pos, text) {
+			var rowNode = this.elm.childNodes[pos.row * 2];
 			var iter = document.createNodeIterator(
-				this.elm.childNodes[arg.row],
-				window.NodeFilter.SHOW_TEXT, null, false);
+				rowNode, window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
+			var done = false;
 			var node;
 
 			while ((node = iter.nextNode())) {
 				var next = totalLength + node.nodeValue.length;
-				if (totalLength <= arg.col && arg.col < next) {
+				if (totalLength <= pos.col && pos.col < next) {
 					var pnode = node.previousSibling;
-					var index = arg.col - totalLength;
+					var index = pos.col - totalLength;
 
 					if (index == 0
 					&&  pnode
@@ -2480,36 +2532,49 @@ Wasavi.Editor.prototype = new function () {
 						node.insertData(index, text);
 					}
 
-					arg.col += text.length;
+					pos.col += text.length;
+					done = true;
 					break;
 				}
 				totalLength = next;
 			}
 
+			if (!done) {
+				if (rowNode.lastChild && rowNode.lastChild.nodeType == 3) {
+					rowNode.lastChild.nodeValue += text;
+				}
+				else {
+					rowNode.appendChild(document.createTextNode(text));
+					rowNode.normalize();
+				}
+				pos.col += text.length;
+			}
+
 			this.invalidateUnicodeCache();
 
-			return arg;
+			return pos;
 		},
-		overwriteChars: function (arg, text) {
-			fixLineTail(this.elm.childNodes[arg.row]);
+		overwriteChars: function (pos, text) {
 			text = Unistring(text);
 
+			var rowNode = this.elm.childNodes[pos.row * 2];
 			var iter = document.createNodeIterator(
-				this.elm.childNodes[arg.row], window.NodeFilter.SHOW_TEXT, null, false);
+				rowNode, window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
+			var done = false;
 			var node;
 
 			while (text.length && (node = iter.nextNode())) {
 				var next = totalLength + node.length;
-				if (!(totalLength <= arg.col && arg.col < next)) {
+				if (!(totalLength <= pos.col && pos.col < next)) {
 					totalLength = next;
 					continue;
 				}
 
 				var nodeText = Unistring(node.nodeValue);
-				var nodeUTF16Offset = Math.max(arg.col - totalLength, 0);
+				var nodeUTF16Offset = Math.max(pos.col - totalLength, 0);
 				var nodeClusterOffset = nodeText.getClusterIndexFromUTF16Index(nodeUTF16Offset);
-				var overwriteClusterCount = next >= this.rows(arg).length ?
+				var overwriteClusterCount = next >= this.rows(pos).length ?
 					text.length :
 					Math.min(nodeText.length - nodeClusterOffset, text.length);
 				var overwriting = text.substr(0, overwriteClusterCount);
@@ -2519,15 +2584,26 @@ Wasavi.Editor.prototype = new function () {
 					.append(overwriting)
 					.append(nodeText.substring(nodeClusterOffset + overwriteClusterCount))
 					.toString();
-				arg.col += overwriting.toString().length;
+				pos.col += overwriting.toString().length;
 				text = text.substr(overwriteClusterCount);
 				totalLength += node.length;
+				done = true;
+			}
+
+			if (!done) {
+				if (rowNode.lastChild && rowNode.lastChild.nodeType == 3) {
+					rowNode.lastChild.nodeValue += text;
+				}
+				else {
+					rowNode.appendChild(document.createTextNode(text));
+					rowNode.normalize();
+				}
+				pos.col += text.length;
 			}
 
 			this.invalidateUnicodeCache();
-			fixLineTail(this.elm.childNodes[arg.row]);
 
-			return arg;
+			return pos;
 		},
 		shift: function (row, rowCount, shiftCount, shiftWidth, tabWidth, isExpandTab, indents) {
 			if (rowCount < 1) return null;
@@ -2694,12 +2770,12 @@ loop:			while (node) {
 
 			function nop () {}
 
-			var goal = Math.min(row + rowCount, this.elm.childNodes.length);
+			var goal = Math.min(row + rowCount, this.rowLength);
 			var doShift, doCollectTabs;
 			if (indents) {
 				doCollectTabs = isExpandTab ? nop : collectTabs;
 				for (var i = row, j = 0; i < goal; i++) {
-					var node = this.elm.childNodes[i];
+					var node = this.elm.childNodes[i * 2];
 					var marks = expandTab(node);
 					shiftByOriginalIndent(node, marks, indents[j++]);
 					doCollectTabs(node, marks);
@@ -2710,7 +2786,7 @@ loop:			while (node) {
 				doShift = shiftCount == 0 ? nop : shiftCount < 0 ? shiftLeft : shiftRight;
 				doCollectTabs = isExpandTab ? nop : collectTabs;
 				for (var i = row; i < goal; i++) {
-					var node = this.elm.childNodes[i];
+					var node = this.elm.childNodes[i * 2];
 					var marks = expandTab(node);
 					doShift(node, marks);
 					doCollectTabs(node, marks);
@@ -2735,22 +2811,27 @@ loop:			while (node) {
 				}
 				if (r.s.row == r.e.row) {
 					r.r.deleteContents();
-					this.elm.childNodes[r.s.row].normalize();
+					this.elm.childNodes[r.s.row * 2].normalize();
 				}
 				else {
+					// multiple rows
+
+					// top line
 					var r2 = document.createRange();
 					setRange.call(this, r2, r.s);
-					r2.setEndAfter(this.elm.childNodes[r.s.row].lastChild);
+					setRange.call(this, r2, new Wasavi.Position(r.s.row, this.rows(r.s).length), true);
 					r2.deleteContents();
 
+					// bottom line
 					setRange.call(this, r2, r.e);
-					r2.setEndAfter(this.elm.childNodes[r.e.row].lastChild);
-					this.elm.childNodes[r.s.row].appendChild(r2.extractContents());
-					this.elm.childNodes[r.s.row].normalize();
+					setRange.call(this, r2, new Wasavi.Position(r.e.row, this.rows(r.e).length), true);
+					this.rowNodes(r.s).appendChild(r2.extractContents());
+					this.rowNodes(r.s).normalize();
 
+					// middle lines
 					if (r.e.row - r.s.row >= 1) {
-						r2.setStartBefore(this.elm.childNodes[r.s.row + 1]);
-						r2.setEndAfter(this.elm.childNodes[r.e.row]);
+						r2.setStartBefore(this.rowNodes(r.s.row + 1));
+						r2.setEndAfter(this.rowNodes(r.e.row).nextSibling);
 						r2.deleteContents();
 					}
 				}
@@ -2764,13 +2845,11 @@ loop:			while (node) {
 					func(content, r.r.cloneContents());
 				}
 				r.r.deleteContents();
-				if (this.elm.childNodes.length == 0) {
-					this.elm
-						.appendChild(document.createElement('div'))
-						.appendChild(document.createTextNode('\n'));
+				if (this.rowLength == 0) {
+					appendRow.call(this);
 				}
-				if (r.s.row >= this.elm.childNodes.length) {
-					r.s.row = this.elm.childNodes.length - 1;
+				if (r.s.row >= this.rowLength) {
+					r.s.row = this.rowLength - 1;
 				}
 				return result;
 			}
@@ -2800,7 +2879,7 @@ loop:			while (node) {
 			var e = new Wasavi.Position(
 				Math.min(
 					this.selectionEndRow + count - 1,
-					this.elm.childNodes.length - 1),
+					this.rowLength - 1),
 				0);
 			this.isLineOrientSelection = true;
 			var r = selectRows.call(this, s, e);
@@ -2810,31 +2889,40 @@ loop:			while (node) {
 		},
 		divideLine: function (n) {
 			n || (n = this.selectionStart);
-			var div1 = this.elm.childNodes[n.row];
-			var div2 = this.elm.insertBefore(document.createElement('div'), div1.nextSibling);
+			var div1 = this.elm.childNodes[n.row * 2];
+			var div2 = appendRow.call(this, '', div1.nextSibling.nextSibling);
 			var r = document.createRange();
 			var iter = document.createNodeIterator(
 				div1, window.NodeFilter.SHOW_TEXT, null, false);
 			var totalLength = 0;
+			var done = false;
+
 			var node;
 			while ((node = iter.nextNode())) {
 				var next = totalLength + node.nodeValue.length;
 				if (totalLength <= n.col && n.col < next) {
 					r.setStart(node, n.col - totalLength);
+					done = true;
 					break;
 				}
 				else if (n.col == next) {
 					r.setStartAfter(node);
+					done = true;
 					break;
 				}
 				totalLength = next;
 			}
-			r.setEndAfter(div1.lastChild);
-			div2.appendChild(r.extractContents());
-			fixLineTail(div1);
-			fixLineTail(div2);
-			n.row++;
+
+			div1.removeAttribute('contenteditable');
+
+			if (done) {
+				r.setEndAfter(div1.lastChild);
+				div2.appendChild(r.extractContents());
+			}
+
 			n.col = 0;
+			n.row++;
+
 			this.selectionStart = n;
 			this.selectionEnd = n;
 			this.invalidateUnicodeCache();
@@ -2869,7 +2957,7 @@ loop:			while (node) {
 					result = new Wasavi.Position(row, n - rowTopLength);
 					break;
 				}
-				if (node.nodeValue.substr(-1) == '\n') {
+				if (node.nodeValue == '\n') {
 					row++;
 					rowTopLength = next;
 				}
@@ -2885,12 +2973,12 @@ loop:			while (node) {
 			var result = r.toString().length;
 			return result;
 		},
-		emphasis: function (s, length, className) {
-			if (typeof s == 'number') {
-				s = this.linearPositionToBinaryPosition(s);
+		emphasis: function (pos, length, className) {
+			if (pos instanceof Wasavi.Position) {
+				pos = pos.clone();
 			}
 			else {
-				s || (s = this.selectionStart);
+				pos = this.selectionStart;
 			}
 			if (typeof length != 'number') {
 				throw new Error('emphasis: length is not a number');
@@ -2917,16 +3005,17 @@ loop:			while (node) {
 			}
 
 whole:
-			for (; length >= 0 && s.row >= 0 && s.row < this.elm.childNodes.length; s.row++) {
+			for (; length >= 0 && pos.row >= 0 && pos.row < this.rowLength; pos.row++) {
 				var iter = document.createNodeIterator(
-					this.elm.childNodes[s.row], window.NodeFilter.SHOW_TEXT, null, false);
+					this.elm.childNodes[pos.row * 2],
+					window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var node;
 				while ((node = iter.nextNode())) {
 					if (!isInRange) {
 						var next = totalLength + node.nodeValue.length;
-						if (totalLength <= s.col && s.col < next) {
-							offset = s.col - totalLength;
+						if (totalLength <= pos.col && pos.col < next) {
+							offset = pos.col - totalLength;
 							isInRange = true;
 						}
 						totalLength = next;
@@ -2974,18 +3063,18 @@ whole:
 		offsetBy: function (s, offset, treatLastLineAsNormal) {
 			var row5 = s.row;
 			var col = s.col;
-			var last = this.elm.childNodes.length - 1;
+			var last = this.rowLength - 1;
 			while (offset > 0) {
-				var node = this.elm.childNodes[row5].textContent;
-				if (!treatLastLineAsNormal && row5 == last) {
-					node = trimTerm(node);
+				var text = this.elm.childNodes[row5 * 2].textContent;
+				if (treatLastLineAsNormal || row5 != last) {
+					text += '\n';
 				}
-				var rest = node.length - col;
+				var rest = text.length - col;
 				col += offset;
 				offset -= rest;
-				if (col >= node.length) {
+				if (col >= text.length) {
 					if (row5 == last) {
-						col = node.length;
+						col = text.length;
 						offset = 0;
 					}
 					else {
@@ -3020,7 +3109,7 @@ whole:
 					s.col = 0;
 					clipped = true;
 				}
-				else if (s.col > (n = this.elm.childNodes[s.row].textContent.length)) {
+				else if (s.col > (n = this.elm.childNodes[s.row * 2].textContent.length)) {
 					s.col = n;
 					clipped = true;
 				}
@@ -3045,10 +3134,11 @@ whole:
 
 		// getter properties
 		get rowLength () {
-			return this.elm.childNodes.length;
+			var length = this.elm.childNodes.length;
+			return (length >> 1) + (length & 1);
 		},
 		get value () {
-			return trimTerm(toNativeControl(this.elm.textContent));
+			return this.getValue(null, null, '\n');
 		},
 		get selected () {
 			return this.selectionStart.ne(this.selectionEnd);
@@ -3082,15 +3172,24 @@ whole:
 		set value (v) {
 			emptyNodeContents(this.elm);
 			v = v
-				.replace(/\r\n/g, '\n')
+				//.replace(/\r?\n$/, '')
+				.replace(/\r?\n/g, '\n')
 				.replace(/[\u0000-\u0008\u000b-\u001f]/g, function (a) {
 					return String.fromCharCode(0x2400 + a.charCodeAt(0));
-				})
-				.split('\n');
-			for (var i = 0, goal = v.length; i < goal; i++) {
-				var div = this.elm.appendChild(document.createElement('div'));
-				div.textContent = v[i] + '\n';
+				});
+
+			var from = 0, to = 0;
+			var limit = 65536;
+			while ((to = v.indexOf('\n', from)) >= 0) {
+				appendRow.call(this, v.substring(from, to));
+				from = to + 1;
+				limit--;
+				if (limit <= 0) {
+					throw new Error('Editor#value(set): exceeded the limit');
+				}
 			}
+
+			appendRow.call(this, v.substring(from));
 		},
 		set selectionStart (v) {
 			if (typeof v == 'number') {

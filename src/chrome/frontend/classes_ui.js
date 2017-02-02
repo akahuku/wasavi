@@ -37,7 +37,7 @@ Wasavi.Theme = function (app) {
 		invertFg:'', invertBg:'',
 		blurFg:'', blurBg:'',
 
-		rowBgOdd:['#wasavi_editor>div:nth-child(odd)', ''],
+		rowBgOdd:['#wasavi_editor>div:nth-child(4n+3)', ''],
 		editCursorFg:['#wasavi_edit_cursor', ''],
 		statusFg:['#wasavi_footer', ''],
 		lineNumberFg:['#wasavi_editor>div:before', ''],
