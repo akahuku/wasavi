@@ -67,7 +67,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 		/*
 		 * foo                    foo
-		 * br   -->  "':foo  -->  foo  -->  "':br
+		 * br   -->  '":foo  -->  foo  -->  '":br
 		 * baz                    baz
 		 * bax                    bax
 		 */
@@ -272,19 +272,19 @@ exports.suite = (assert, wasavi, driver) => {
 		testMark('>', 0, 0);
 	});
 
-	it('paste into bound', function* () {
+	it('paste into bound by p', function* () {
 		promise.consume(_pasteIntoBound, null, 'p');
 	});
 
-	it('paste into bound p', function* () {
+	it('paste into bound by P', function* () {
 		promise.consume(_pasteIntoBound, null, 'P');
 	});
 
-	it('paste into bound linewise', function* () {
+	it('paste into bound linewise by p', function* () {
 		promise.consume(_pasteLinewiseDataIntoBound, null, 'p');
 	});
 
-	it('paste into bound linewise p', function* () {
+	it('paste into bound linewise by P', function* () {
 		promise.consume(_pasteLinewiseDataIntoBound, null, 'P');
 	});
 
@@ -484,7 +484,17 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('range symbol all para', function* () {
-		yield wasavi.send('ione\ntwo\nthree\nfour\n\none\ntwo\nthree\nfour\u001b');
+		yield wasavi.send('i' + [
+			'one',
+			'two',
+			'three',
+			'four',
+			'',
+			'one',
+			'two',
+			'three',
+			'four'
+		].join('\n') + '\u001b');
 
 		yield wasavi.send('2G2|vapy\u001b');
 		assert.pos('#1-1', 0, 0);

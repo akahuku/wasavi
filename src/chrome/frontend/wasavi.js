@@ -2994,6 +2994,17 @@ function setTabStop (ts) {
 		return true;
 	});
 }
+function setList (state) {
+	var editor = $('wasavi_editor');
+	if (!editor) return;
+
+	if (state) {
+		editor.classList.add('list');
+	}
+	else {
+		editor.classList.remove('list');
+	}
+}
 
 /*
  * low-level functions for cursor motion <<<1
@@ -5198,7 +5209,10 @@ var config = new Wasavi.Configurator(appProxy,
 		['errorbells', 'b', false],
 		['exrc', 'b', false],         // not used
 		['ignorecase', 'b', true],
-		['list', 'b', false],         // not used
+		['list', 'b', false, function (v) {
+			setList(v);
+			return v;
+		}],
 		['magic', 'b', true],         // not used
 		['mesg', 'b', true],          // not used
 		['number', 'b', false, function (v) {
@@ -7755,24 +7769,26 @@ var boundMap = {
 			}
 
 			// main job
-			deleteSelection();
-			buffer.isLineOrientSelection = false;
-			if (p1.row >= buffer.rowLength) {
-				buffer.setSelectionRange(new Position(buffer.rowLength - 1, 0));
-				paste(prefixInput.count, {
-					isForward:true,
-					lineOrientOverride:true,
-					register:prefixInput.register
-				});
-			}
-			else {
-				paste(prefixInput.count, {
-					isForward:false,
-					lineOrientOverride:false,
-					register:prefixInput.register
-				});
-			}
-			registers.set('', content, isLineOrient, true);
+			editLogger.open('deleteBound', function () {
+				deleteSelection();
+				buffer.isLineOrientSelection = false;
+				if (p1.row >= buffer.rowLength) {
+					buffer.setSelectionRange(new Position(buffer.rowLength - 1, 0));
+					paste(prefixInput.count, {
+						isForward:true,
+						lineOrientOverride:true,
+						register:prefixInput.register
+					});
+				}
+				else {
+					paste(prefixInput.count, {
+						isForward:false,
+						lineOrientOverride:false,
+						register:prefixInput.register
+					});
+				}
+				registers.set('', content, isLineOrient, true);
+			});
 		});
 	},
 	P:function () {return this.p.apply(this, arguments)},

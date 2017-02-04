@@ -218,7 +218,7 @@ function invokeAppModeWasavi (currentTest) {
 				yield wasaviFrame.click();
 			}
 
-			return wasaviFrame;
+			return currentTest.wasaviFrame = wasaviFrame;
 		}
 		catch (ex) {
 			console.error('invokeAppModeWasavi: exception: ' + ex.stack);

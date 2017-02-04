@@ -90,7 +90,7 @@
 	counter-increment:na nr -1;
 }
 
-#wasavi_editor > div:not([contenteditable])::after {
+#wasavi_editor.list > div:not([contenteditable])::after {
 	content:"\21b2";
 	font-size:50%;
 	color:#888;
