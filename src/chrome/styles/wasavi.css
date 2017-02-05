@@ -129,6 +129,7 @@
 	margin:0;
 	padding:1px /*<CHAR_WIDTH>*/1px/*</CHAR_WIDTH>*/ 0 0;
 	text-align:right;
+	white-space:nowrap;
 	/*<FONT_STYLE/>*/
 }
 
