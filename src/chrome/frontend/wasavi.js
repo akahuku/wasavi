@@ -448,7 +448,7 @@ function ExCommandExecutor (app) {
 			return true;
 		}
 		function paragraph12 () {
-			if (/^(?:map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
+			if (/^(?:set|map|unmap|abbreviate|unabbreviate)$/.test(commandName)) {
 				// do not include double quote for compatibility with vim.
 				skipto(/[\n|]/g, {escapeChars:'\u0016'});
 			}
@@ -470,6 +470,8 @@ function ExCommandExecutor (app) {
 		/*
 		 *
 		 */
+
+		source = source.replace(/\\\n/g, '');
 
 		if (/[\\\u0016]$/.test(source)) {
 			source = source.substring(0, source.length - 1);
@@ -5288,7 +5290,13 @@ var config = new Wasavi.Configurator(appProxy,
 				targetElement.writeAs = v;
 				break;
 			default:
-				v = targetElement.writeAs;
+				var asjson = parseJson(v);
+				if (asjson) {
+					targetElement.writeAs = v;
+				}
+				else {
+					v = targetElement.writeAs;
+				}
 				break;
 			}
 			return v;

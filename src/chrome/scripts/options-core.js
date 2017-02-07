@@ -34,8 +34,17 @@ function $ (arg) {
  * ----------------
  */
 
-function setMarkup (node, text) {
+function markup (node, text) {
+	var debug = /\* /.test(text);
+
+	text = text.replace(/(?:\*\s+(?:\*\S|[^*])+(?:\n|$))+/g, function ($0) {
+		return '[ul]' +
+			$0.replace(/\*\s+((?:\*\S|[^*])+(?:\n|$))/g, '[li]$1[/li]') +
+			'[/ul]';
+	});
+
 	text = text.replace(/\n/g, '[br]');
+	text = text.replace(/\[br\](\[\/\w+\])/g, '$1');
 
 	var pattern = /((?:\\.|[^\[])+)|(\[\/?(\w+)[^\]]*\])/g;
 	var stack = [{name:'#root', node: node}];
@@ -59,11 +68,10 @@ function setMarkup (node, text) {
 					break;
 
 				case 'i':
-					newNode = document.createElement('i');
-					break;
-
 				case 'b':
-					newNode = document.createElement('b');
+				case 'ul':
+				case 'li':
+					newNode = document.createElement(re[3]);
 					break;
 
 				case 'br':
@@ -184,27 +192,6 @@ function initPage (req) {
 	 * replace all message ids to translated one
 	 */
 
-	function defaultConverter (node, message) {
-		node.nodeValue = '';
-		setMarkup(node.parentNode, message);
-	}
-	function extractList (node, message) {
-		node = node.parentNode;
-		node.textContent = '';
-		var ul = node.appendChild(document.createElement('ul'));
-		message
-		.replace(/^\s*\*\s*/, '')
-		.split(/\n\*\s*/)
-		.forEach(function (line) {
-			var li = ul.appendChild(document.createElement('li'));
-			setMarkup(li, line);
-		});
-	}
-
-	var converter = {
-		option_target_elements_desc: extractList,
-		option_qa_blacklist_tips: extractList
-	};
 	var iter = document.createNodeIterator(
 		document, window.NodeFilter.SHOW_TEXT, null, false);
 
@@ -231,7 +218,8 @@ function initPage (req) {
 			message = extension.getMessage(id) || id;
 		}
 
-		(converter[id] || defaultConverter)(node, message);
+		node.nodeValue = '';
+		markup(node.parentNode, message);
 	});
 
 	/*

@@ -1304,6 +1304,13 @@ function keylog () {
 	t.scrollTop = t.scrollHeight - t.clientHeight;
 }
 
+function getGlobRegex (s) {
+	return new RegExp('^' + s
+		.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
+		.replace(/\?/g, '.')
+		.replace(/\*/g, '.+?'), 'i');
+}
+
 function parseBlacklist (blacklist) {
 	var result = {
 		fullBlocked: false,
@@ -1333,10 +1340,7 @@ function parseBlacklist (blacklist) {
 			line = [line, ''];
 		}
 		try {
-			var url = new RegExp('^' + line[0]
-				.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
-				.replace(/\?/g, '.')
-				.replace(/\*/g, '.+?'), 'i');
+			var url = getGlobRegex(line[0]);
 
 			if (url.test(window.location.href)) {
 				if (line[1] == '') {
@@ -1704,7 +1708,34 @@ var writeContentToElement = (function () {
 		}
 
 		else if (element.isContentEditable) {
-			switch (opts.writeAs) {
+			var writeAs = opts.writeAs;
+			try {
+				var data = JSON.parse(writeAs);
+				for (var pattern in data) {
+					if (!getGlobRegex(pattern).test(window.location.href)) continue;
+
+					// simple string
+					if (typeof data[pattern] == 'string') {
+						writeAs = data[pattern];
+					}
+
+					// array...
+					else if (data[pattern] instanceof Array) {
+						data[pattern].some(function (pair) {
+							if (!('selector' in pair)) return;
+							if (document.querySelector(pair.selector)) {
+								writeAs = pair.writeas;
+								return true;
+							}
+						});
+					}
+					break;
+				}
+			}
+			catch (e) {
+			}
+
+			switch (writeAs) {
 			case 'div':
 				return overwrite(element, content, toDiv);
 
