@@ -30,8 +30,8 @@ Wasavi.SearchUtils = function (app) {
 	 */
 
 	/*constructor*/function PairBracketsIndicator (targetChar, buffer, initialPos) {
-		var BLINK_FREQ_SECS = 0.1;
-		var BLINK_COUNT_MAX = 10;
+		const BLINK_FREQ_SECS = 0.1;
+		const BLINK_COUNT_MAX = 10;
 
 		var timer1, timer2;
 

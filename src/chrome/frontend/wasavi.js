@@ -192,8 +192,8 @@ Collection.prototype = Object.create({}, {
 });
 
 function ExCommandExecutor (app) {
-	var EX_SYNC = 1;
-	var EX_ASYNC = 2;
+	const EX_SYNC = 1;
+	const EX_ASYNC = 2;
 
 	var self = this;
 	var running = false;

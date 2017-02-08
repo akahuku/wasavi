@@ -23,23 +23,23 @@
 
 'use strict';
 
-/*const*/var IS_GECKO =
+const IS_GECKO =
 	window.navigator.product == 'Gecko' && window.navigator.userAgent.indexOf('Gecko/') != -1;
-/*const*/var CSS_PREFIX = window.chrome ? '-webkit-' :
+const CSS_PREFIX = window.chrome ? '-webkit-' :
 	window.opera ? '-o-' : IS_GECKO ? '-moz-' : '';
 
-/*const*/var BRACKETS = '[{(<"\'``\'">)}]';
-/*const*/var CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
+const BRACKETS = '[{(<"\'``\'">)}]';
+const CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 
-/*const*/var LINE_NUMBER_MAX_WIDTH = 6;
-/*const*/var LINE_NUMBER_RELATIVE_WIDTH = 2;
+const LINE_NUMBER_MAX_WIDTH = 6;
+const LINE_NUMBER_RELATIVE_WIDTH = 2;
 
-/*const*/var COMPOSITION_CLASS = 'wasavi_composition';
-/*const*/var LEADING_CLASS = 'wasavi_leading';
-/*const*/var MARK_CLASS = 'wasavi_mark';
-/*const*/var EMPHASIS_CLASS = 'wasavi_em';
-/*const*/var CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
-/*const*/var BOUND_CLASS = 'wasavi_bound';
+const COMPOSITION_CLASS = 'wasavi_composition';
+const LEADING_CLASS = 'wasavi_leading';
+const MARK_CLASS = 'wasavi_mark';
+const EMPHASIS_CLASS = 'wasavi_em';
+const CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
+const BOUND_CLASS = 'wasavi_bound';
 
 var Wasavi = {};
 

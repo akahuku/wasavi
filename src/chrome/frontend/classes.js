@@ -131,7 +131,7 @@ Wasavi.L10n = function (app, catalog) {
 		};
 	}
 	function init () {
-		var PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
+		const PLURAL_FUNCTION_SIGNATURE = '_plural_rule@function';
 		var expressionString;
 
 		if (catalog && PLURAL_FUNCTION_SIGNATURE in catalog) {
@@ -498,9 +498,9 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 };
 
 Wasavi.RegexConverter = function (app) {
-	var SPECIAL_SPACE = '[\u0009\u000b\u000c\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]';
-	var SPECIAL_NONSPACE = '[\u0000-\u0008\u000a\u000d-\u001f\u0021-\u009f\u00a1-\u1fff\u200c-\u2027\u202a-\u2fff\u3001-\uffff]';
-	var META_MAP = {
+	const SPECIAL_SPACE = '[\u0009\u000b\u000c\u0020\u00a0\u2000-\u200b\u2028\u2029\u3000]';
+	const SPECIAL_NONSPACE = '[\u0000-\u0008\u000a\u000d-\u001f\u0021-\u009f\u00a1-\u1fff\u200c-\u2027\u202a-\u2fff\u3001-\uffff]';
+	const META_MAP = {
 		backslashed:{
 			// index 0: vi regex -> js regex mapping (outside of character class)
 			// index 1: vi regex -> invalidated vi regex mapping
@@ -1123,9 +1123,9 @@ Wasavi.MapManager = function (app) {
 			{name:function () {return name}});
 	}
 
-	/*const*/var NEST_MAX = 100;
-	/*const*/var DELAY_TIMEOUT = 1000;
-	/*const*/var MAP_INDICES = {
+	const NEST_MAX = 100;
+	const DELAY_TIMEOUT = 1000;
+	const MAP_INDICES = {
 		 'command':0,
 		 'edit':1,
 		 'overwrite':1
@@ -1568,7 +1568,7 @@ Wasavi.Registers = function (app, value) {
 	}
 	function dump () {
 		function dumpItem (item) {
-			var MAX_LENGTH = 32;
+			const MAX_LENGTH = 32;
 			var orientString = item.isLineOrient ? 'L' : 'C';
 			var data = item.data;
 			if (data.length > MAX_LENGTH) {
@@ -3705,9 +3705,9 @@ Wasavi.Completer = function (appProxy, alist) {
 		}
 	};
 
-	var COMPLETION_NOTIFY_TTL_SECS = 60;
-	var COMPLETION_NOTIFY_DELAY_SECS = 0.1;
-	var TIMEOUT_SECS = 30;
+	const COMPLETION_NOTIFY_TTL_SECS = 60;
+	const COMPLETION_NOTIFY_DELAY_SECS = 0.1;
+	const TIMEOUT_SECS = 30;
 
 	var list;
 	var running = false;

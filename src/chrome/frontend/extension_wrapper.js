@@ -25,10 +25,10 @@
 
 !this.WasaviExtensionWrapper && (function (global) {
 	/* <<<1 consts */
-	var IS_GECKO =
+	const IS_GECKO =
 		window.navigator.product == 'Gecko'
 		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	var IS_FX_WEBEXT = Object.prototype.toString.call(global) == '[object Sandbox]'
+	const IS_FX_WEBEXT = Object.prototype.toString.call(global) == '[object Sandbox]'
 		&& global.chrome && global.chrome.extension;
 	/* >>> */
 
@@ -397,8 +397,8 @@
 	function FirefoxJetpackExtensionWrapper () {
 		ExtensionWrapper.apply(this, arguments);
 
-		var CALLBACK_SWEEP_MSECS = 1000 * 60 * 2;
-		var CALLBACK_TIMEOUT_MSECS = 1000 * 60;
+		const CALLBACK_SWEEP_MSECS = 1000 * 60 * 2;
+		const CALLBACK_TIMEOUT_MSECS = 1000 * 60;
 
 		var that = this;
 		var callbacks = {};

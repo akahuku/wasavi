@@ -29,15 +29,15 @@ typeof WasaviExtensionWrapper != 'undefined'
 && (function (global) {
 
 // consts <<<1
-var EXTENSION_SPECIFIER = 'data-texteditor-extension';
-var EXTENSION_CURRENT = 'data-texteditor-extension-current';
-var MARKS_ID = 'data-wasavi-marks';
-var FULLSCREEN_MARGIN = 8;
-var MIN_WIDTH_PIXELS = 320;
-var MIN_HEIGHT_PIXELS = 240;
-var BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
-var INSTANCE_MAX = 0x10000;
-var ACCEPTABLE_TYPES = {
+const EXTENSION_SPECIFIER = 'data-texteditor-extension';
+const EXTENSION_CURRENT = 'data-texteditor-extension-current';
+const MARKS_ID = 'data-wasavi-marks';
+const FULLSCREEN_MARGIN = 8;
+const MIN_WIDTH_PIXELS = 320;
+const MIN_HEIGHT_PIXELS = 240;
+const BOOT_WAIT_TIMEOUT_MSECS = 1000 * 5;
+const INSTANCE_MAX = 0x10000;
+const ACCEPTABLE_TYPES = {
 	textarea: 'enableTextArea',
 	text:     'enableText',
 	search:   'enableSearch',

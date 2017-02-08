@@ -25,7 +25,7 @@
 
 Wasavi.ExCommand = (function () {
 
-var EXFLAGS = {
+const EXFLAGS = {
 	addr2All: 1<<2,
 	addr2None: 1<<3,
 	addrZero: 1<<4,
@@ -1237,8 +1237,8 @@ var cache = {};
 /*public*/var commands = [
 	new ExCommand('abbreviate', 'ab', 'W', 0, function (app, t, a) {
 		function dispAbbrev (ab) {
-			var MIN_WIDTH = 3;
-			var PAD_WIDTH = 4;
+			const MIN_WIDTH = 3;
+			const PAD_WIDTH = 4;
 
 			var maxWidth = MIN_WIDTH;
 			var list = [];
