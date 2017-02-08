@@ -1126,9 +1126,8 @@ Wasavi.MapManager = function (app) {
 	const NEST_MAX = 100;
 	const DELAY_TIMEOUT = 1000;
 	const MAP_INDICES = {
-		 'command':0,
-		 'edit':1,
-		 'overwrite':1
+		'command': 0, 'bound': 0, 'bound_line': 0,
+		'edit': 1, 'overwrite': 1
 	};
 
 	var rules = [{}, {}];
