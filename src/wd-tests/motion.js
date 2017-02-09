@@ -662,6 +662,23 @@ exports.suite = (assert, wasavi, driver) => {
 		promise.consume(_testDown, null, 'j');
 	});
 
+	it('down newline', function* () {
+		yield wasavi.send('i' + [
+			'foo',
+			'',
+			'bar'
+		].join('\n') + '\u001b');
+
+		yield wasavi.send('gg');
+		assert.pos('#1', 0, 0);
+
+		yield wasavi.send('j');
+		assert.pos('#2', 1, 0);
+
+		yield wasavi.send('j');
+		assert.pos('#3', 2, 0);
+	});
+
 	it('down ctrl n', function* () {
 		promise.consume(_testDown, null, ctrln);
 	});

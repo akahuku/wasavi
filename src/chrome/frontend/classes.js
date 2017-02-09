@@ -1980,6 +1980,34 @@ Wasavi.Editor.prototype = new function () {
 		var newline = appendNewline.call(this, sentinel);
 		return row;
 	}
+	function ensureSentinelNewline (node) {
+		if (node.lastChild && node.lastChild.nodeType == 3) {
+			node.lastChild.appendData('\n');
+		}
+		else {
+			node.appendChild(document.createTextNode('\n'));
+		}
+	}
+	function removeSentinelNewline (node) {
+		if (node.lastChild) {
+			var lastChild = node.lastChild;
+			switch (lastChild.nodeType) {
+			case 1:
+				removeSentinelNewline(lastChild);
+				break;
+			case 3:
+				if (lastChild.nodeValue.length) {
+					while (lastChild.nodeValue.substr(-1) == '\n') {
+						lastChild.deleteData(lastChild.nodeValue.length - 1, 1);
+					}
+				}
+				else {
+					removeSentinelNewline(lastChild.previousSibling);
+				}
+				break;
+			}
+		}
+	}
 	return {
 		// condition
 		isEndOfText: function () {
@@ -2496,13 +2524,7 @@ Wasavi.Editor.prototype = new function () {
 			var totalLength = 0;
 			var node;
 
-			if (rowNode.lastChild && rowNode.lastChild.nodeType == 3) {
-				rowNode.lastChild.appendData('\n');
-			}
-			else {
-				rowNode.appendChild(document.createTextNode('\n'));
-			}
-
+			ensureSentinelNewline(rowNode);
 			try {
 				while ((node = iter.nextNode())) {
 					var next = totalLength + node.nodeValue.length;
@@ -2531,16 +2553,7 @@ Wasavi.Editor.prototype = new function () {
 				return pos;
 			}
 			finally {
-				for (var node = rowNode.lastChild; node; node = node.previousSibling) {
-					if (node.nodeType != 3) continue;
-					if (node.nodeValue == '\n') {
-						node.parentNode.removeChild(node);
-					}
-					else {
-						node.deleteData(node.nodeValue.length - 1, 1);
-					}
-					break;
-				}
+				removeSentinelNewline(rowNode);
 			}
 		},
 		overwriteChars: function (pos, text) {
@@ -2995,38 +3008,45 @@ loop:			while (node) {
 
 whole:
 			for (; length >= 0 && pos.row >= 0 && pos.row < this.rowLength; pos.row++) {
+				var rowNode = this.rowNodes(pos);
 				var iter = document.createNodeIterator(
-					this.rowNodes(pos),
-					window.NodeFilter.SHOW_TEXT, null, false);
+					rowNode, window.NodeFilter.SHOW_TEXT, null, false);
 				var totalLength = 0;
 				var node;
-				while ((node = iter.nextNode())) {
-					if (!isInRange) {
-						var next = totalLength + node.nodeValue.length;
-						if (totalLength <= pos.col && pos.col < next) {
-							offset = pos.col - totalLength;
-							isInRange = true;
+
+				ensureSentinelNewline(rowNode);
+				try {
+					while ((node = iter.nextNode())) {
+						if (!isInRange) {
+							var next = totalLength + node.nodeValue.length;
+							if (totalLength <= pos.col && pos.col < next) {
+								offset = pos.col - totalLength;
+								isInRange = true;
+							}
+							totalLength = next;
 						}
-						totalLength = next;
+						if (isInRange) {
+							var nodeLength = node.nodeValue.length;
+							if (offset + length <= nodeLength) {
+								r.setStart(node, offset);
+								r.setEnd(node, offset + length);
+								surroundWithSpan(r);
+								length = -1;
+								break whole;
+							}
+							else if (nodeLength > 0) {
+								r.setStart(node, offset);
+								r.setEnd(node, nodeLength);
+								surroundWithSpan(r);
+								length -= nodeLength - offset;
+								offset = 0;
+								node = iter.nextNode();
+							}
+						}
 					}
-					if (isInRange) {
-						var nodeLength = node.nodeValue.length;
-						if (offset + length <= nodeLength) {
-							r.setStart(node, offset);
-							r.setEnd(node, offset + length);
-							surroundWithSpan(r);
-							length = -1;
-							break whole;
-						}
-						else if (nodeLength > 0) {
-							r.setStart(node, offset);
-							r.setEnd(node, nodeLength);
-							surroundWithSpan(r);
-							length -= nodeLength - offset;
-							offset = 0;
-							node = iter.nextNode();
-						}
-					}
+				}
+				finally {
+					removeSentinelNewline(rowNode);
 				}
 			}
 
