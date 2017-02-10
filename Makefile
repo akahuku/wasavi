@@ -341,7 +341,7 @@ run-firefox: FORCE
 debug-firefox: FORCE
 	node $(TEST_WWW_SERVER) &
 #	web-ext run -s $(FIREFOX_SRC_PATH) --no-reload
-	cd $(FIREFOX_SRC_PATH) && web-ext run
+	cd $(FIREFOX_SRC_PATH) && web-ext run --start-url $(TEST_FRAME_URL)
 	wget -q -O - $(TEST_SHUTDOWN_URL)
 
 version: FORCE

@@ -34,26 +34,14 @@
 	/* <<<1 variables */
 
 	/*
-	 * wasaviFrameSource is a special url of iframe source,
-	 * which is used on Firefox.
-	 *
-	 * Other platforms, iframe sources are as follows:
-	 *
-	 * chrome:  literal "chrome-extension://.../wasavi_frame.html"
-	 * opera:   literal "http://wasavi.appsweets.net/" or
-	 *          literal "https://wasavi.appsweets.net"
-	 */
-	var wasaviFrameSource = 'about:blank?wasavi-frame-source';
-
-	/*
-	 * wasaviFrameHeader is content of head in wasavi frame.
-	 * Only Presto Opera and Firefox uses this.
+	 * wasaviFrameHeader is content of head in wasavi.html
+	 * used in app mode.
 	 */
 	var wasaviFrameHeader;
 
 	/*
-	 * wasaviFrameContent is content of body in wasavi frame.
-	 * Only Presto Opera and Firefox uses this.
+	 * wasaviFrameContent is content of body in wasavi.html
+	 * used in app mode.
 	 */
 	var wasaviFrameContent;
 
@@ -96,35 +84,7 @@
 			file: {
 				enabled: true
 			}
-		},
-
-		/*
-		 * NOTE: The referencing way of key-hook script is
-		 * different for every browser:
-		 *
-		 *   chrome:  scripts/page_context.js, referenced via
-		 *            chrome.runtime.getURL()
-		 *
-		 *   opera:   scripts/page_context.js, referenced via
-		 *            widget.preferences['pageContextScript']
-		 *
-		 *   firefox: data/scripts/page_context.js,
-		 *            pageContextScript property of following object
-		 */
-		contentScriptOptions: getContentScriptOptions(),
-
-		/*
-		 * NOTE: The place which lists the front-end scripts is
-		 * different for every browser:
-		 *
-		 *   chrome:  manifest.json (app mode),
-		 *            wasavi.html (textarea mode)
-		 *
-		 *   opera:   a meta block in the each front-end script
-		 *
-		 *   firefox: following object
-		 */
-		contentScripts: getContentScriptsSpec()
+		}
 	});
 	var runtimeOverwriteSettings = require('./RuntimeOverwriteSettings').RuntimeOverwriteSettings();
 	var hotkey = require('./kosian/Hotkey').Hotkey(true);
@@ -371,86 +331,6 @@
 		return false;
 	}
 
-	/** <<<2 returns frontend script list for firefox */
-
-	function getContentScriptOptions () {
-		var self = require('sdk/self');
-		if (!self) return null;
-
-		var base64 = require('sdk/base64');
-
-		return {
-			pageContextScript: 'data:text/javascript;base64,' +
-				base64.encode(
-					getShrinkedCode(
-						self.data.load('scripts/page_context.js'))),
-			wasaviFrameSource: wasaviFrameSource,
-			wasaviOptionsUrl: self.data.url('options.html')
-		};
-	}
-
-	function getContentScriptsSpec () {
-		var self = require('sdk/self');
-		if (!self) return null;
-
-		return [
-			{
-				name: 'agent',
-				matches: [
-					'http://*',
-					'https://*'
-				],
-				exclude_matches: [
-					APP_MODE_URL, APP_MODE_URL + '?testmode',
-					APP_MODE_URL_SECURE,
-					self.data.url('options.html') + '*',
-					wasaviFrameSource
-				],
-				js: [
-					'frontend/extension_wrapper.js',
-					'frontend/agent.js'
-				],
-				run_at: 'start'
-			},
-			{
-				name: 'wasavi',
-				matches: [
-					APP_MODE_URL, APP_MODE_URL + '?testmode',
-					APP_MODE_URL_SECURE,
-					wasaviFrameSource
-				],
-				js: [
-					'frontend/extension_wrapper.js',
-					'frontend/init.js',
-					'frontend/utils.js',
-					'frontend/unistring.js',
-					'frontend/unicode_utils.js',
-					'frontend/qeema.js',
-					'frontend/classes.js',
-					'frontend/classes_ex.js',
-					'frontend/classes_undo.js',
-					'frontend/classes_subst.js',
-					'frontend/classes_search.js',
-					'frontend/classes_ui.js',
-					'frontend/wasavi.js'
-				],
-				run_at: 'start'
-			},
-			{
-				name: 'options',
-				matches: [
-					self.data.url('options.html') + '*'
-				],
-				js: [
-					'frontend/extension_wrapper.js',
-					'frontend/agent.js',
-					'scripts/options-core.js'
-				],
-				run_at: 'start'
-			}
-		];
-	}
-
 	/** <<<2 async initializer: init the config object */
 
 	function initConfig (configInfo) {
@@ -517,7 +397,7 @@
 
 	function initWasaviFrame () {
 		return new Promise(function (resolve, reject) {
-			ext.resource('mock.html', function (data) {
+			ext.resource('wasavi.html', function (data) {
 				if (typeof data != 'string' || data == '') {
 					reject(new Error('Invalid content of mock.html.'));
 					return;

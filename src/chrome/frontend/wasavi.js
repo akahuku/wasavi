@@ -8540,7 +8540,7 @@ if (global.WasaviExtensionWrapper
 		function run (callback) {
 			function doRun () {
 				diag('entering doRun()');
-				if (!/^chrome-extension:/.test(window.location.protocol)) {
+				if (!/^(?:chrome|moz)-extension:/.test(window.location.protocol)) {
 					// force doctype to standard mode
 					var doctype = document.implementation.createDocumentType('html', '', '');
 					document.doctype ?
