@@ -15,26 +15,26 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
 * ネイティブな TEXTAREA があったとき
 
-  ![ネイティブな textarea](http://appsweets.net/wasavi/native-textarea.png)
+  ![ネイティブな textarea](http://appsweets.net/wasavi/image/0.6.669/native-textarea.png)
 
 * TEXTAREA にフォーカスし、`Ctrl+Enter` を押すと wasavi が起動します
 
-  ![wasavi が実行中](http://appsweets.net/wasavi/wasavi.png)
+  ![wasavi が実行中](http://appsweets.net/wasavi/image/0.6.669/wasavi.png)
 
 込み入った使い方
 ----------------
 
 * wasavi はいくつかの ex コマンドをサポートします。これは `:set all` したところ
 
-  ![set all](http://appsweets.net/wasavi/set-all.png)
+  ![set all](http://appsweets.net/wasavi/image/0.6.669/set-all.png)
 
 * Vim のインクリメンタルサーチ
 
-  ![インクリメンタルサーチ](http://appsweets.net/wasavi/isearch.png)
+  ![インクリメンタルサーチ](http://appsweets.net/wasavi/image/0.6.669/isearch.png)
 
 * [オンラインアプリとしての wasavi](https://wasavi.appsweets.net)。 このリンクを wasavi をインストールしたブラウザで開くと自動的に wasavi が起動し、dropbox/google drive/OneDrive アカウント上のファイル、を読み書きできます。
 
-  ![stand alone](http://appsweets.net/wasavi/web-app.png)
+  ![stand alone](http://appsweets.net/wasavi/image/0.6.669/web-app.png)
 
 
 インストール

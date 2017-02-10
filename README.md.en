@@ -15,26 +15,26 @@ A Quick Walkthrough
 
 * Here is a native TEXTAREA
 
-  ![native textarea](http://appsweets.net/wasavi/native-textarea.png)
+  ![native textarea](http://appsweets.net/wasavi/image/0.6.669/native-textarea.png)
 
 * Focus the TEXTAREA, and press `Ctrl+Enter` to launch wasavi
 
-  ![wasavi running](http://appsweets.net/wasavi/wasavi.png)
+  ![wasavi running](http://appsweets.net/wasavi/image/0.6.669/wasavi.png)
 
 Salient Features
 ----------------
 
 * wasavi supports some ex commands. This is the output of `:set all`
 
-  ![set all](http://appsweets.net/wasavi/set-all.png)
+  ![set all](http://appsweets.net/wasavi/image/0.6.669/set-all.png)
 
 * Vim's incremental search
 
-  ![incremental search](http://appsweets.net/wasavi/isearch.png)
+  ![incremental search](http://appsweets.net/wasavi/image/0.6.669/isearch.png)
 
 * [wasavi online app](https://wasavi.appsweets.net). Open this link on a browser that has wasavi extension. wasavi will launch automatically. Then you can read and write files at your Dropbox/Google Drive/OneDrive account or local files.
 
-  ![stand alone](http://appsweets.net/wasavi/web-app.png)
+  ![stand alone](http://appsweets.net/wasavi/image/0.6.669/web-app.png)
 
 
 How to install
