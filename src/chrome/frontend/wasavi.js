@@ -329,7 +329,7 @@ function ExCommandExecutor (app) {
 		var literalKey = false;
 		var literalExitKey = '';
 
-		function getRegex (delimiter) {
+		function getDelimiterRegex (delimiter) {
 			delimiter = '\\u' + ('000' + delimiter.charCodeAt(0).toString(16)).substr(-4);
 			return new RegExp('\\n|' + delimiter, 'g');
 		}
@@ -375,25 +375,44 @@ function ExCommandExecutor (app) {
 			}
 			source = '';
 		}
-		function skipto2 (regex, delimiter) {
-			var escapeChars = '\\';
-			var re = regex.exec(source);
+		function skipto2 (delimiter) {
+			const ESCAPE_CHAR = '\\';
 			var found = 0;
 			var fragmentStart = 0;
-			if (re) {
-				do {
-					var index = regex.lastIndex - re[0].length;
-					if (index == 0 || escapeChars.indexOf(source.charAt(index - 1)) < 0) {
-						found++;
-						argv.push(source.substring(fragmentStart, index));
-						fragmentStart = regex.lastIndex;
-						if (re[0] == '\n' || re[0] == delimiter && found == 2) {
-							skipby(index);
-							return;
-						}
+			var isEscaping = false;
+
+			for (var index = 0, goal = source.length; index < goal; index++) {
+				var ch = source.charAt(index);
+
+				if (isEscaping) {
+					isEscaping = false;
+					continue;
+				}
+
+				if (ch == ESCAPE_CHAR) {
+					isEscaping = true;
+					continue;
+				}
+
+				else if (ch == '\n') {
+					argv.push(source.substring(fragmentStart, index));
+					skipby(index);
+					return;
+				}
+
+				else if (ch == delimiter) {
+					argv.push(source.substring(fragmentStart, index));
+					found++;
+					if (found == 2) {
+						skipby(index);
+						return;
 					}
-				} while ((re = regex.exec(source)));
+					else {
+						fragmentStart = index + 1;
+					}
+				}
 			}
+
 			commandNameSupplement = source;
 			source = '';
 		}
@@ -702,10 +721,10 @@ function ExCommandExecutor (app) {
 					skipby(1);
 
 					if (commandName != 's') {
-						skipto(getRegex(delimiter));
+						skipto(getDelimiterRegex(delimiter));
 					}
 					else {
-						skipto2(getRegex(delimiter), delimiter);
+						skipto2(delimiter);
 					}
 					if (source.charAt(0) == delimiter) {
 						skipby(1);

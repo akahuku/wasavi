@@ -1683,6 +1683,17 @@ exports.suite = (assert, wasavi, driver) => {
 				'BBee bee bee ');
 	});
 
+	it('subst backslash', function* () {
+		yield wasavi.send(':sushi\n');
+		yield wasavi.send('ifoo\nbar\nbaz\u001b');
+
+		yield wasavi.send(':%s/$/ \\\\/g\n');
+		assert.value('#1-1',
+			'foo \\\n' +
+			'bar \\\n' +
+			'baz \\');
+	});
+
 	it('set', function* () {
 		yield wasavi.send(':set\n');
 		assert.t('#1-1', wasavi.getLastMessage().indexOf('*** options ***\n') == 0);
