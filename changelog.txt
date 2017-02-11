@@ -1,3 +1,33 @@
+ 0.6.671
+
+	* fix backslashes in :s command are not processed correctly
+	* strictly check if chrome.sync/chrome.identity are supported (#144)
+	* apply normal mappings to bound/bound_line mode (#147)
+	* extend the functionality of writeas option (#156)
+	* fix line number style to be not folded (#142)
+	* add partial functionality of list option
+
+	* :s コマンド中のバックスラッシュが正しく処理されないのを修正
+	* chrome.sync/chrome.identity がサポートされているか厳密にチェックするよう
+	にした (#144)
+	* ノーマルモードのマップが bound/bound_line モードにも適用されるようにした
+	(#147)
+	* writeas オプションの機能を拡張した (#156)
+	* 行番号が折り返されないよう修正 (#142)
+	* list オプションの一部を実装
+
+0.6.657
+
+	* fix the issue cursor position is not updated when entering CJK chars (#153)
+	* drop support of presto opera
+	* remove SDK based source for Firefox
+	* Fix for issue#135, matrix visual mode select
+
+	* CJK の文字を入力する際カーソル一が更新されないのを修正 (#153)
+	* presto opera のサポートを終了
+	* Firefox 向けの SDK ベースのコードを削除
+	* matrix テーマの修正
+
 0.6.641
 
 	* fix that ',' can not be used in a shortcut descriptor (#131)
