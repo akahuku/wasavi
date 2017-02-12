@@ -140,7 +140,7 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 		--ver $(VERSION)
 
 #	build general crx
-	$(CHROME) \
+	[ -f $(PRODUCT).pem ] && $(CHROME) \
 		--lang=en \
 		--pack-extension=$(CHROME_EMBRYO_SRC_PATH) \
 		--pack-extension-key=$(PRODUCT).pem

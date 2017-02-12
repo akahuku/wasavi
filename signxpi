@@ -1,0 +1,82 @@
+#!/bin/sh
+
+# functions
+
+usage () {
+	echo "usage: -s SOURCE-DIRECTORY"
+	echo "       -d DESTINATION-DIRECTORY"
+	exit 1
+}
+
+test_amo_account () {
+	if [ -e "~/.amo-account.ini" ]; then
+		echo "signxpi: error: ~/.amo-account.ini not found."
+		echo "In this file, please describe AMO account information in the following format:"
+		echo "AMO_API_KEY=<API key of your AMO account>"
+		echo "AMO_API_SECRET=<Secret key of your AMO account>"
+		exit 1
+	fi
+}
+
+test_web_ext () {
+	which web-ext > /dev/null
+	local s=$?
+	if [ $s -ne 0 ]; then
+		echo "signxpi: web-ext not found."
+		echo "Please install web-ext via npm."
+		exit 1
+	fi
+}
+
+test_amo_account
+test_web_ext
+
+XPI_FILE=wasavi.xpi
+AMO_API_KEY=`sed -n -e 's/^\s*AMO_API_KEY\s*=\s*//p' ~/.amo-account.ini`
+AMO_API_SECRET=`sed -n -e 's/^\s*AMO_API_SECRET\s*=\s*//p' ~/.amo-account.ini`
+
+# parse arguments
+
+while getopts s:d: OPT
+do
+	case $OPT in
+		s)
+			SRC_DIR=$OPTARG ;;
+		d)
+			DST_DIR=$OPTARG ;;
+		*)
+			usage ;;
+	esac
+done
+
+if [ -z "$SRC_DIR" ]; then
+	echo "signxpi: error: missing source directory"
+	usage
+fi
+if [ -z "$DST_DIR" ]; then
+	echo "signxpi: error: missing destination directory"
+	usage
+fi
+
+# sign
+
+web-ext sign \
+	--api-key=${AMO_API_KEY} \
+	--api-secret=${AMO_API_SECRET} \
+	--source-dir=${SRC_DIR} \
+	--artifacts-dir=${DST_DIR}
+
+# rename
+
+(
+	cd $DST_DIR
+	for f in *.xpi
+	do
+		if [ $f = $XPI_FILE ]; then
+			continue
+		fi
+		mv $f $XPI_FILE
+		echo "$f renamed to $XPI_FILE"
+	done
+)
+
