@@ -1216,4 +1216,26 @@ exports.suite = (assert, wasavi, driver) => {
 			'foo bar baz bax\n' +
 			'foo bar baz bax');
 	});
+
+	it('shift empty row', function* () {
+		yield wasavi.send(':set noai sw=8\n');
+		yield wasavi.send('ifoo\n\nbar\u001b');
+		yield wasavi.send('2Gma');
+		yield wasavi.send('1G3>>');
+		assert.value('#1-1',
+			'\tfoo\n' +
+			'\n' +
+			'\tbar');
+	});
+
+	it('unshift empty row', function* () {
+		yield wasavi.send(':set noai sw=8\n');
+		yield wasavi.send('i\tfoo\n\n\tbar\u001b');
+		yield wasavi.send('2Gma');
+		yield wasavi.send('1G3<<');
+		assert.value('#1-1',
+			'foo\n' +
+			'\n' +
+			'bar');
+	});
 };

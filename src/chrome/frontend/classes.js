@@ -2681,7 +2681,7 @@ loop:			while (node) {
 
 			function shiftRight (row, marks) {
 				var node = row.firstChild;
-				if (node.nodeType != 3) return;
+				if (!node || node.nodeType != 3) return;
 				node.insertData(0, shifted);
 				for (var i = 0, goal = marks.length; i < goal; i++) {
 					marks[i][0] += shifted.length;
@@ -2690,7 +2690,7 @@ loop:			while (node) {
 
 			function shiftLeft (row, marks) {
 				var node = row.firstChild;
-				if (node.nodeType != 3) return;
+				if (!node || node.nodeType != 3) return;
 				if (!shiftLeftRegex) return;
 				var re = shiftLeftRegex.exec(node.nodeValue);
 				if (!re) return;
@@ -2702,7 +2702,7 @@ loop:			while (node) {
 
 			function shiftByOriginalIndent (row, marks, indentInfo) {
 				var node = row.firstChild;
-				if (node.nodeType != 3) return;
+				if (!node || node.nodeType != 3) return;
 				var indent, marksInfo;
 				if (indentInfo instanceof Array) {
 					indent = indentInfo[0];
@@ -2726,7 +2726,7 @@ loop:			while (node) {
 
 			function collectTabs (row, marks) {
 				var node = row.firstChild;
-				if (node.nodeType != 3) return;
+				if (!node || node.nodeType != 3) return;
 				var re = /^ +/.exec(node.nodeValue);
 				if (!re) return;
 				var tabs = '';
@@ -2755,6 +2755,7 @@ loop:			while (node) {
 					var offset = marks[i][0];
 					var mark = marks[i][1];
 					var text = row.firstChild;
+					if (!text) continue;
 					if (!mark) {
 						mark = document.createElement('span');
 						mark.className = MARK_CLASS;
