@@ -20,10 +20,8 @@
   "permissions": [
     "tabs", "clipboardRead", "clipboardWrite", "contextMenus",
     "identity", "storage",
-    "https://*.dropbox.com/*",
-    "https://*.google.com/*",
-    "https://*.googleapis.com/*",
-    "https://*.googleusercontent.com/*",
+    "https://*.dropboxapi.com/*",
+    "https://*.google.com/*", "https://*.googleapis.com/*", "https://*.googleusercontent.com/*",
     "https://apis.live.net/*"
   ],
   "background": {

@@ -477,7 +477,7 @@ function parseWriteArg (app, t, a) {
 	return {
 		isCommand:isCommand,
 		isAppend:isAppend,
-		path:name
+		path:name.replace(/\\(.)/g, '$1')
 	};
 }
 
