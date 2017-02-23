@@ -1093,6 +1093,10 @@ var cache = {};
 				s = s.substring(re[0].length);
 				found = true;
 			}
+			else if (rows.length) {
+				rows.push(t.selectionStartRow);
+				found = true;
+			}
 
 			if (found) {
 				if ((re = /^\s*[\+\-](\d*)/.exec(s))) {

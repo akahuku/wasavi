@@ -473,6 +473,20 @@ exports.suite = (assert, wasavi, driver) => {
 		assert.value('#1-4', '1\n2\n3\n4\n5\n2\n3');
 	});
 
+	it('copy from implicit position', function* () {
+		yield wasavi.send('ifoo\n\tbar\u001b');
+
+		yield wasavi.send(':-,t.\n');
+		assert.value('#1-1', 'foo\n\tbar\nfoo\n\tbar');
+		assert.pos('#1-2', 3, 1);
+
+		yield wasavi.send('u');
+		assert.value('#2-1', 'foo\n\tbar');
+
+		yield wasavi.send('\u0012');
+		assert.value('#3-1', 'foo\n\tbar\nfoo\n\tbar');
+	});
+
 	it('delete', function* () {
 		yield wasavi.send('i1\n2\n3\n4\n5\u001b');
 
