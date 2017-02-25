@@ -52,12 +52,17 @@
 
 			chrome.contextMenus.removeAll(function () {
 				chrome.contextMenus.create({
-					contexts:['page', 'editable'],
-					title:chrome.i18n.getMessage(MENU_EDIT_WITH_WASAVI),
-					onclick:function (info, tab) {
-						if (!info.editable) return;
-						chrome.tabs.sendRequest(
-							tab.id, that.getRequestRunPayload());
+					contexts: ['page', 'editable'],
+					title: chrome.i18n.getMessage(MENU_EDIT_WITH_WASAVI),
+					onclick: function (info, tab) {
+						var options;
+
+						if ('frameId' in info) {
+							options = {frameId: info.frameId};
+						}
+
+						chrome.tabs.sendMessage(
+							tab.id, that.getRequestRunPayload(), options);
 					}
 				});
 			});
@@ -65,75 +70,9 @@
 	});
 	ChromeContextMenu.prototype.constructor = ContextMenu;
 
-	function OperaContextMenu (options) {
-		ContextMenu.apply(this, arguments);
-	}
-	OperaContextMenu.prototype = Object.create(ContextMenu.prototype, {
-		build: {value: function () {
-			if (!opera.contexts || !opera.contexts.menu) return;
-
-			var that = this;
-
-			while (opera.contexts.menu.length) {
-				opera.contexts.menu.removeItem(0);
-			}
-			opera.contexts.menu.addItem(opera.contexts.menu.createItem({
-				contexts:['page', 'editable'],
-				icon:'images/icon016.png',
-				title:this.getMenuLabel(MENU_EDIT_WITH_WASAVI),
-				onclick:function (e) {
-					if (!e.isEditable) return;
-					e.source.postMessage(that.getRequestRunPayload());
-				}
-			}));
-		}}
-	});
-	OperaContextMenu.prototype.constructor = ContextMenu;
-
-	function FirefoxContextMenu (options) {
-		ContextMenu.apply(this, arguments);
-	}
-	FirefoxContextMenu.prototype = Object.create(ContextMenu.prototype, {
-		build: {value: function (force) {
-			if (this._initialized && !force) return;
-			var self = require('sdk/self');
-			var cm = require('sdk/context-menu');
-			var that = this;
-			cm.Item({
-				context:cm.SelectorContext([
-					'body',
-					'textarea',
-					'input[type~="text search tel url email password number"]',
-					'*[contenteditable]'
-				].join(',')),
-				image:self.data.url('images/icon016.png'),
-				label:'#',
-				contentScriptFile:self.data.url('scripts/context_menu.js'),
-				onMessage:function (phase) {
-					switch (phase) {
-					case 1:
-						this.label = that.getMenuLabel(MENU_EDIT_WITH_WASAVI);
-						break;
-					case 2:
-						that.ext.postMessage(that.getRequestRunPayload());
-						break;
-					}
-				}
-			});
-			this._initialized = true;
-		}}
-	});
-	FirefoxContextMenu.prototype.constructor = ContextMenu;
-
 	exports.ContextMenu = function (options) {
 		if (global.chrome) {
 			return new ChromeContextMenu(options);
-		}
-		else if (global.opera) {
-			return new OperaContextMenu(options);
-		}
-		else if (require('sdk/self')) {
-			return new FirefoxContextMenu(options);
 		}
 		return new ContextMenu(options);
 	};
