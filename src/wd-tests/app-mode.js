@@ -34,9 +34,9 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('chdir', function* () {
-		yield wasavi.send(':chdir test|file\n');
+		yield wasavi.send(':chdir wasavi-test|file\n');
 		yield wasavi.send(':pwd\n');
-		assert.eq('#1-1', 'dropbox:/test', yield wasavi.getAppModeStatusLine());
+		assert.eq('#1-1', 'dropbox:/wasavi-test', yield wasavi.getAppModeStatusLine());
 	});
 
 	it('chdir 404', function* () {

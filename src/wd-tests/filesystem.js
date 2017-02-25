@@ -6,15 +6,6 @@ const {it, describe} = require('selenium-webdriver/testing');
 exports.suite = (assert, wasavi, driver) => {
 	const {ctrln, ctrlt, ctrlw} = assert.shortcuts;
 
-	/*
-	 * for testing, each cloud storage must have following files:
-	 *
-	 *    /hello-world.txt
-	 *    /test
-	 *        read test.txt  (content: 'hello,\nworld')
-	 *        write test.txt
-	 */
-
 	function* completeRootPath () {
 		var args = Array.prototype.slice.call(arguments);
 
@@ -69,10 +60,10 @@ exports.suite = (assert, wasavi, driver) => {
 			wasavi.setInputModeOfWatchTarget('line_input');
 
 			if (makeDefault) {
-				yield wasavi.send(':r /test\t');
+				yield wasavi.send(':r /wasavi-test\t');
 			}
 			else {
-				yield wasavi.send(':r ' + fs + ':' + '/test\t');
+				yield wasavi.send(':r ' + fs + ':' + '/wasavi-test\t');
 			}
 
 			var line = wasavi.getLineInput();
@@ -82,16 +73,16 @@ exports.suite = (assert, wasavi, driver) => {
 				`completeRootPath: label:${testLabel} fs:${fs} makeDefault:${makeDefault} line:${line}`);
 
 			if (makeDefault) {
-				assert.t(testLabel, /^r \/test.+$/.test(line));
+				assert.t(testLabel, /^r \/wasavi-test.+$/.test(line));
 			}
 			else {
-				assert.t(testLabel, (new RegExp(`^r ${fs}:/test.+$`)).test(line));
+				assert.t(testLabel, (new RegExp(`^r ${fs}:/wasavi-test.+$`)).test(line));
 			}
 		}
 	}
 
 	function* read (fs) {
-		yield wasavi.send(':0r ' + fs + ':/test/read\\ test.txt\n', 'gg');
+		yield wasavi.send(':0r ' + fs + ':/wasavi-test/read\\ test.txt\n', 'gg');
 		assert.eq('#1-1', 'hello,\nworld', wasavi.getValue());
 	}
 
@@ -100,8 +91,8 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send(':files default ' + fs + '\n');
 		yield wasavi.send(`ggawrite test:${n}\nwrite test\u001b`);
 		wasavi.setInputModeOfWatchTarget('write handler');
-		yield wasavi.send(':w /test/write\\ test.txt\n');
-		yield wasavi.send(':r /test/write\\ test.txt\n');
+		yield wasavi.send(':w /wasavi-test/write\\ test.txt\n');
+		yield wasavi.send(':r /wasavi-test/write\\ test.txt\n');
 		assert.eq(
 			'#1-1',
 			`write test:${n}\nwrite test\nwrite test:${n}\nwrite test`,
@@ -184,6 +175,39 @@ exports.suite = (assert, wasavi, driver) => {
 	it('write gDrive', function* () {
 		this.timeout(1000 * 60);
 		promise.consume(write, null, 'gdrive');
+	});
+
+	// microsoft onedrive
+
+	it('complete root path onedrive', function* () {
+		this.timeout(1000 * 60);
+		promise.consume(completeRootPath, null,
+			'#1-1', 'onedrive', '', true,
+			'#1-2', 'onedrive', 'hello', true,
+			'#1-3', 'onedrive', '/hello', true,
+
+			'#2-1', 'onedrive', '', false,
+			'#2-2', 'onedrive', 'hello', false,
+			'#2-3', 'onedrive', '/hello', false
+		);
+	});
+
+	it('complete sub path onedrive', function* () {
+		this.timeout(1000 * 60);
+		promise.consume(completeSubPath, null,
+			'#1', 'onedrive', true,
+			'#2', 'onedrive', false
+		);
+	});
+
+	it('read onedrive', function* () {
+		this.timeout(1000 * 60);
+		promise.consume(read, null, 'onedrive');
+	});
+
+	it('write onedrive', function* () {
+		this.timeout(1000 * 60);
+		promise.consume(write, null, 'onedrive');
 	});
 };
 

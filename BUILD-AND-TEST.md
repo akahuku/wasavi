@@ -56,6 +56,12 @@ wasavi building and testing guide
 
 6. How to functional test with Selenium
 
+  Copy `src/wd-tests/filesystem-test-files/*` to each root directory of Dropbox, Google Drive, OneDrive.
+
+  * /hello-wasavi.txt (used for testing file name completion, so content is optional)
+  * /wasavi-test/read test.txt (content: 'hello,\nworld')
+  * /wasavi-test/write test.txt (content is dynamically created during testing)
+
   ```
   $ make test-chrome
   ```
