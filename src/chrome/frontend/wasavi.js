@@ -2304,14 +2304,22 @@ function isEditing (mode) {
 	return false;
 }
 function isBound (mode) {
+	var result;
+
 	function o (mode) {
-		return mode == 'bound' || mode == 'bound_line';
+		return mode == 'bound' || mode == 'bound_line' ? mode : false;
 	}
+
 	if (mode) return o(mode);
-	if (o(inputMode)) return true;
+
+	result = o(inputMode);
+	if (result) return result;
+
 	for (var i = inputModeStack.length - 1; i >= 0; i--) {
-		if (o(inputModeStack[i].inputMode)) return true;
+		result = o(inputModeStack[i].inputMode);
+		if (result) return result;
 	}
+
 	return false;
 }
 function isAlias (c, op) {
@@ -5341,6 +5349,7 @@ var config = new Wasavi.Configurator(appProxy,
 		['modified', 'b', false, null, {isDynamic:true}],
 		['cursorline', 'b', false],
 		['cursorcolumn', 'b', false],
+		['nrformats', 's', 'bin,octal,hex'],
 
 		/* defined by nvi */
 		//['altwerase', 'b', false],
@@ -5423,7 +5432,8 @@ var config = new Wasavi.Configurator(appProxy,
 		qe:'quoteescape',		rnu:'relativenumber',
 
 		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab',
-		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink'
+		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink',
+		nf:'nrformats'
 	}
 );
 // >>>
@@ -6700,7 +6710,7 @@ var commandMap = {
 			offset:offset,
 			scrollTop:buffer.scrollTop,
 			scrollLeft:buffer.scrollLeft,
-			updateBound:isBound(inputMode)
+			updateBound:!!isBound(inputMode)
 		});
 		return this.n.apply(this, arguments);
 	},
@@ -7093,7 +7103,7 @@ var commandMap = {
 		// . command repeats the last
 		// !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 		//          a, c, d, i, o, p, r, s,    x, y,
-		//          gq, gu, gU
+		//          gq, gu, gU, ^A, ^X,
 		// or ~ command.
 		if (!prefixInput.isEmptyOperation) {
 			return inputEscape(o.e.key);
@@ -7423,6 +7433,35 @@ var commandMap = {
 			prefixInput.appendOperation(c);
 		}
 	},
+	// incrementor and decrementor
+	'\u0001'/*^A*/:function (c, o) {
+		if (!prefixInput.isEmptyOperation) {
+			return inputEscape(o.e.key);
+		}
+
+		var isDecrement = c == '\u0018';
+		var incdec = new Wasavi.IncDec(
+			appProxy, {formats: config.vars.nrformats, quickReturn: false});
+
+		var matches = incdec.extractTargets(
+			buffer.rows(buffer.selectionStartRow),
+			buffer.selectionStartCol);
+		var rep = incdec.getReplacement(
+			matches,
+			prefixInput.count * (isDecrement ? -1 : 1));
+
+		rep && editLogger.open(isDecrement ? 'decrement' : 'increment', function () {
+			incdec.applyReplacement(rep);
+			buffer.setSelectionRange(new Position(
+				buffer.selectionStartRow,
+				rep.index + rep.replacement.length - 1));
+		});
+
+		prefixInput.operation = c;
+		requestSimpleCommandUpdate();
+		return true;
+	},
+	'\u0018'/*^X*/:function (c, o) {return this['\u0001'].apply(this, arguments)},
 	// ex command, everybody's favorite.
 	':':{
 		command:function (c, o) {
@@ -7852,7 +7891,54 @@ var boundMap = {
 		requestShowPrefixInput();
 	},
 	V:function (c, o) {return this.v.apply(this, arguments)},
-	x:function () {return this.d.apply(this, arguments)}
+	x:function () {return this.d.apply(this, arguments)},
+	'\u0001'/*^A*/:function (c, o) {
+		return operateToBound(c, o, true, function (p1, p2, act) {
+			var isDecrement = c == '\u0018';
+			var count = prefixInput.count * (isDecrement ? -1 : 1);
+			var incdec = new Wasavi.IncDec(appProxy, {formats: config.vars.nrformats});
+
+			editLogger.open(isDecrement ? 'decrement' : 'increment', function () {
+				for (var i = p1.row, goal = p2.row; i <= goal; i++) {
+					var line;
+					var offset;
+
+					// single line
+					if (p1.row == p2.row) {
+						line = buffer.rows(i).substring(p1.col, p2.col);
+						offset = p1.col;
+					}
+					// first line
+					else if (i == p1.row) {
+						line = buffer.rows(i).substring(p1.col);
+						offset = p1.col;
+					}
+					// last line
+					else if (i == p2.row) {
+						line = buffer.rows(i).substring(0, p2.col);
+						offset = 0;
+					}
+					// middle line
+					else {
+						line = buffer.rows(i);
+						offset = 0;
+					}
+
+					buffer.setSelectionRange(new Position(i, 0));
+
+					var matches = incdec.extractTargets(line, 0);
+					var rep = incdec.getAllReplacements(matches, count);
+					for (var j = rep.length - 1; j >= 0; j--) {
+						rep[j].index += offset;
+						incdec.applyReplacement(rep[j]);
+					}
+				}
+
+				buffer.setSelectionRange(p1);
+			});
+		});
+	},
+	'\u0018'/*^X*/:function () {return this['\u0001'].apply(this, arguments)}
 };
 
 /*

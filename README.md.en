@@ -234,7 +234,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `ga` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `ga` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi` `^A` `^X`
 
 ex commands
 -----------
@@ -313,6 +313,8 @@ Bound mode is similar to vim's visual mode.
 * `v`: character wise bound mode
 * `V`: line wise bound mode
 * `x`: same as `d`
+* `^A`: add the counter to all numeric strings within the bound
+* `^X`: subtract the counter to all numeric strings within the bound
 
 Surrounding identifiers
 -----------------------
@@ -336,8 +338,9 @@ Vim features in wasavi
 * register `"`, `:`, `*`, `/` (`*` is used to access system clipboard)
 * auto-reformat in input mode, and reformat operator (gq command) on the state of textwidth > 0
 * bound mode (aka, Vim visual mode)
-* options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`
+* options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`, `nrformats`
 * writing to the register of A to Z
 * `gu` / `gU` + motion: lowerize or upperize a region
 * partial functionality of [Surround.vim](https://github.com/tpope/vim-surround)
 * partial functionality of `:sort` (regex pattern, `r` and `i` options)
+* `^A` to increase a numeric string. `^X` to decrease a numeric string.

@@ -180,7 +180,7 @@ exports.suite = (assert, wasavi, driver) => {
 	// repeat command is affected by the commands below:
 	//   !, <, >, A, C, D, I, J, O, P, R, S, X, Y,
 	//            a, c, d, i,    o, p, r, s, x, y,
-	//            gq,
+	//            gq, gu, gU, ^A, ^X,
 	//   and ~
 
 	it('repetitionShiftLeft', function* () {
@@ -1059,6 +1059,50 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 			'1234\n' +
 			'1234\n' +
 			'1234');
+	});
+
+	it('should increase a numeric number', function* () {
+		yield wasavi.send('iabc99def\u001b');
+		yield wasavi.send('4|ma10\u0001');
+		assert.value('#1-1', 'abc109def');
+		assert.pos('#1-2', 0, 5);
+
+		var m = wasavi.getMark('a');
+		assert.t(m);
+		assert.eq('#2-1', '0,3', m.join(','));
+
+		yield wasavi.send('u');
+		assert.value('#3-1', 'abc99def');
+		yield wasavi.send('\u0012');
+		assert.value('#3-2', 'abc109def');
+	});
+
+	it('should decrease a numeric number', function* () {
+		yield wasavi.send('iabc109def\u001b');
+		yield wasavi.send('5|ma4|20\u0018');
+		assert.value('#1-1', 'abc89def');
+		assert.pos('#1-2', 0, 4);
+
+		var m = wasavi.getMark('a');
+		assert.t(m);
+		assert.eq('#2-1', '0,4', m.join(','));
+
+		yield wasavi.send('u');
+		assert.value('#3-1', 'abc109def');
+		yield wasavi.send('\u0012');
+		assert.value('#3-2', 'abc89def');
+	});
+
+	it('should repeat increment command', function* () {
+		yield wasavi.send('i99\n100\u001b');
+		yield wasavi.send('1G1|\u0001j.');
+		assert.value('#1-1', '100\n101');
+	});
+
+	it('should repeat decrement command', function* () {
+		yield wasavi.send('i99\n100\u001b');
+		yield wasavi.send('1G1|\u0018j.');
+		assert.value('#1-1', '98\n99');
 	});
 };
 

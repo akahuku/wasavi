@@ -2065,10 +2065,10 @@ Wasavi.Editor.prototype = new function () {
 			var row = arg instanceof Wasavi.Position ? arg.row : arg;
 
 			if (typeof row != 'number' || isNaN(row)) {
-				throw new Error(`rowNodes: argument row is not a number: ${context || ''}`);
+				throw new Error(`rowNodes: argument row is not a number`);
 			}
 			if (row < 0 || row >= this.rowLength) {
-				throw new Error(`rowNodes: argument row (${row}) out of range: ${context || ''}`);
+				throw new Error(`rowNodes: argument row (${row}) out of range`);
 			}
 
 			var result = this.elm.childNodes[row * 2 + (newline ? 1 : 0)];
@@ -4408,6 +4408,262 @@ Wasavi.Surrounding = function (app) {
 		insert, remove, replace,
 		isCharwiseTagPrefix, isLinewiseTagPrefix, isTagPrefix,
 		dispose
+	);
+};
+
+Wasavi.IncDec = function IncDec (app, defaultOpts) {
+	/* privates */
+
+	const UPPER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	const LOWER_ALPHABET = 'abcdefghijklmnopqrstuvwxyz';
+
+	const FORMAT_ALPHA = 'alpha';
+	const FORMAT_BIN = 'bin';
+	const FORMAT_HEX = 'hex';
+	const FORMAT_OCTAL = 'octal';
+	const FORMAT_DECIMAL = 'decimal';
+	const FORMAT_DEFAULT = [FORMAT_BIN, FORMAT_OCTAL, FORMAT_HEX].join(',');
+
+	const PATTERN_ALPHA = '(\\b[a-zA-Z]\\b)';
+	const PATTERN_BIN = '(0b[01]+)';
+	const PATTERN_HEX = '(0[xX][0-9a-fA-F]+)';
+	const PATTERN_OCTAL = '(0[0-9]*)';
+	const PATTERN_DECIMAL = '(-?[0-9]+)';
+
+	function getAlphabetReplacement (result, item, count) {
+		const alphabet = /[a-z]/.test(item.text) ? LOWER_ALPHABET : UPPER_ALPHABET;
+		const alphabetIndex = item.text.charCodeAt(0) - alphabet.charCodeAt(0);
+
+		count %= alphabet.length;
+
+		if (count < 0) {
+			result.replacement = alphabet.charAt((alphabetIndex + alphabet.length + count) % alphabet.length);
+		}
+		else {
+			result.replacement = alphabet.charAt((alphabetIndex + count) % alphabet.length);
+		}
+	}
+
+	function getBinaryReplacement (result, item, count) {
+		const radix = 2;
+		const headerLength = 2; // length of '0b'
+		const originalLength = item.text.length - headerLength;
+
+		var value = new Uint32Array([parseInt(item.text.substring(headerLength), radix) + count])[0].toString(radix);
+
+		if (value.length < originalLength) {
+			value = (multiply('0', originalLength) + value).substr(-originalLength);
+		}
+
+		result.replacement = item.text.substring(0, headerLength) + value;
+	}
+
+	function getHexReplacement (result, item, count) {
+		const radix = 16;
+		const headerLength = 2; // length of '0x' or '0X'
+		const originalLength = item.text.length - headerLength;
+
+		var value = new Uint32Array([parseInt(item.text.substring(headerLength), radix) + count])[0].toString(radix);
+
+		if (value.length < originalLength) {
+			value = (multiply('0', originalLength) + value).substr(-originalLength);
+		}
+
+		const reversed = item.text.substring(headerLength).split('').reverse().join('');
+		var re = /[a-fA-F]/.exec(reversed);
+		if (re) {
+			value = /[a-f]/.test(re[0]) ? value.toLowerCase() : value.toUpperCase();
+		}
+		else {
+			value = /^.x/.test(item.text) ? value.toLowerCase() : value.toUpperCase();
+		}
+
+		result.replacement = item.text.substring(0, headerLength) + value;
+	}
+
+	function getOctalReplacement (result, item, count) {
+		const radix = 8;
+		const headerLength = 1; // length of '0'
+		const originalLength = item.text.length - headerLength;
+
+		var value = new Uint32Array([parseInt(item.text.substring(headerLength), radix) + count])[0].toString(radix);
+
+		if (value.length < originalLength) {
+			value = (multiply('0', originalLength) + value).substr(-originalLength);
+		}
+
+		result.replacement = item.text.substring(0, headerLength) + value;
+	}
+
+	function getDecimalReplacement (result, item, count) {
+		const radix = 10;
+
+		var value = new Int32Array([parseInt(item.text, radix) + count])[0].toString(radix);
+
+		result.replacement = value;
+	}
+
+	const replaceMap = {};
+	replaceMap[FORMAT_ALPHA] =   getAlphabetReplacement;
+	replaceMap[FORMAT_BIN] =     getBinaryReplacement;
+	replaceMap[FORMAT_HEX] =     getHexReplacement;
+	replaceMap[FORMAT_OCTAL] =   getOctalReplacement;
+	replaceMap[FORMAT_DECIMAL] = getDecimalReplacement;
+
+	/* publics */
+
+	function extractTargets (s, pos, opts) {
+		var optsHash = {};
+		var patterns = [];
+		var patternIndex = 1;
+		var patternIndices = [];
+		var matches = [];
+		var pattern, re;
+
+		if (opts == undefined) {
+			opts = defaultOpts || {
+				firstReturn: false,
+				formats: FORMAT_DEFAULT
+			};
+		}
+
+		if (opts.formats == undefined) {
+			opts.formats = FORMAT_DEFAULT;
+		}
+
+		opts.formats.split(',').forEach(a => optsHash[a.replace(/^\s+|\s+$/g, '')] = 1);
+
+		if (optsHash.alpha) {
+			patterns.push(PATTERN_ALPHA);
+			patternIndices[patternIndex++] = FORMAT_ALPHA;
+		}
+		if (optsHash.bin) {
+			patterns.push(PATTERN_BIN);
+			patternIndices[patternIndex++] = FORMAT_BIN;
+		}
+		if (optsHash.hex) {
+			patterns.push(PATTERN_HEX);
+			patternIndices[patternIndex++] = FORMAT_HEX;
+		}
+		if (optsHash.octal) {
+			patterns.push(PATTERN_OCTAL);
+			patternIndices[patternIndex++] = FORMAT_OCTAL;
+		}
+
+		patterns.push(PATTERN_DECIMAL);
+		patternIndices[patternIndex++] = FORMAT_DECIMAL;
+
+		pattern = new RegExp(patterns.join('|'), 'g');
+		matches.foundIndex = -1;
+
+		while ((re = pattern.exec(s))) {
+			var item = {
+				text: '',
+				index: -1,
+				match: false
+			};
+
+			for (var i = 1, goal = re.length; i < goal; i++) {
+				if (re[i] != undefined) {
+					item.text = re[i];
+					item.index = re.index;
+					item.type = patternIndices[i];
+					if (item.type == FORMAT_OCTAL && /[89]/.test(item.text)) {
+						item.type = FORMAT_DECIMAL;
+					}
+					break;
+				}
+			}
+
+			if (re.index <= pos && pos < re.index + re[0].length) {
+				item.match = true;
+				matches.foundIndex = matches.length;
+			}
+
+			matches.push(item);
+
+			if (opts.firstReturn && item.match) {
+				break;
+			}
+		}
+
+		return matches;
+	}
+
+	function getReplacement (matches, count) {
+		var foundIndex = matches.foundIndex;
+
+		if (typeof foundIndex != 'number') {
+			throw new Error('incdec#getReplacement: foundIndex is not a number');
+		}
+
+		if (foundIndex < 0 || matches.length <= foundIndex) {
+			return null;
+		}
+
+		var item = matches[foundIndex];
+		var result = {
+			index: item.index,
+			text: item.text,
+			replacement: item.text
+		};
+
+		if (item.type in replaceMap) {
+			if (count) {
+				replaceMap[item.type](result, item, count);
+			}
+		}
+		else {
+			throw new Error(`incdec#getReplacement: unknown type ${item.type}`);
+		}
+
+		return result;
+	}
+
+	function getAllReplacements (matches, count) {
+		var oldFoundIndex = matches.foundIndex;
+		var result = [];
+
+		try {
+			for (var i = 0, goal = matches.length; i < goal; i++) {
+				matches.foundIndex = i;
+				result.push(getReplacement(matches, count));
+			}
+		}
+		finally {
+			matches.foundIndex = oldFoundIndex;
+		}
+
+		return result;
+	}
+
+	function applyReplacement (rep) {
+		var buffer = app.buffer;
+		var editor = app.edit;
+		var n = new Wasavi.Position(buffer.selectionStartRow, rep.index);
+
+		buffer.isLineOrientSelection = false;
+		buffer.setSelectionRange(n);
+
+		if (rep.replacement.length == rep.text.length) {
+			editor.overwrite(rep.replacement);
+		}
+		else if (rep.replacement.length > rep.text.length) {
+			editor.overwrite(rep.replacement.substring(0, rep.text.length));
+			editor.insert(rep.replacement.substring(rep.text.length));
+		}
+		else {
+			editor.overwrite(rep.replacement);
+			buffer.setSelectionRange(
+				buffer.selectionStart,
+				buffer.offsetBy(
+					buffer.selectionStart, rep.text.length - rep.replacement.length));
+			editor.deleteSelection();
+		}
+	}
+
+	publish(this,
+		extractTargets, getReplacement, getAllReplacements, applyReplacement
 	);
 };
 

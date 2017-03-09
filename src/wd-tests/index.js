@@ -48,6 +48,7 @@ const profileDir = 'src/wd-tests/profile';
 const testFrameUrl = 'http://127.0.0.1:8888/test_frame.html';
 const appModeTestFrameUrl = 'http://wasavi.appsweets.net/?testmode';
 const testFrameShutdownUrl = 'http://127.0.0.1:8888/shutdown';
+const waitMsecsForWaitWasaviLaunch = 1000 * 20;
 
 /*
  * variables
@@ -176,16 +177,19 @@ function invokeWasavi (currentTest) {
 					break;
 				}
 
+				// dirty hack!!
+				yield driver.sleep(200);
+
 				// wait until wasavi is launched
 				debug && console.log('waiting wasavi launch');
 				try {
-					wasaviFrame = yield driver.wait(until.elementLocated(By.id('wasavi_frame')), 1000 * 5);
+					wasaviFrame = yield driver.wait(until.elementLocated(By.id('wasavi_frame')), waitMsecsForWaitWasaviLaunch);
 					yield wasaviFrame.click();
 					invokeStates[i].increment();
 					break;
 				}
 				catch (ex) {
-					debug && console.log('timed out. retrying...');
+					debug && console.log(`timed out(${ex.message}). retrying...`);
 				}
 			}
 
@@ -212,7 +216,7 @@ function invokeAppModeWasavi (currentTest) {
 			debug && console.log(appModeTestFrameUrl + ' loaded');
 
 			var wasaviFrame = yield driver.wait(
-				until.elementLocated(By.id('wasavi_cover')), 1000 * 5);
+				until.elementLocated(By.id('wasavi_cover')), waitMsecsForWaitWasaviLaunch);
 
 			if (wasaviFrame) {
 				yield wasaviFrame.click();

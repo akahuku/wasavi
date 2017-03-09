@@ -138,8 +138,7 @@ Tips and Tricks
 	+ `:map` は、登録されている全てのマップを表示します
 	+ `:map [clear]` は、全てのマップを削除します
 	+ `:map lhs rhs` は、lhs を rhs に変換するマップを登録します。この変換は再帰します。`<esc>` のような、lhs と rhs 内のキーストローク記述子の文法については、[このページ](https://github.com/akahuku/wasavi/wiki/Syntax-of-key-stroke-descriptor) を参照してください
-	+ `:map [noremap] lhs rhs` も登録しますが、
-	  こちらは再帰しません
+	+ `:map [noremap] lhs rhs` も登録しますが、こちらは再帰しません
 	+ `:map` はノーマルモード用のマップを対象とします。一方、
 	  `:map!` は挿入モード用です。これは vim の `:imap` に相当します
 * j k ^ $ はカーソルを物理行単位で移動させます。一方、gj gk g^ g$ は
@@ -154,9 +153,9 @@ Tips and Tricks
 	+ `:filesystem status` は、現在使用可能なファイルシステムを表示します
 	+ `:filesystem default` は、デフォルトのファイルシステムを取得します。
 	  設定の際は `:filesystem default dropbox` や `:filesystem default gdrive` や `:filesystem default onedrive` と入力します
-	+ `:filesystem reset` はアクセストークンを破棄します。こちらも、ファイルシステム名を
-	  指定することができます
-	+ ファイル名の先頭にファイルシステム名を明示することができます: `:read dropbox:/hello.txt`
+	+ `:filesystem reset` はアクセストークンを破棄します。こちらも、ファイルシステム名を指定することができます
+	+ ファイル名の先頭にファイルシステム名を明示することができます:
+	  `:read dropbox:/hello.txt`
 * A から Z までのレジスタを読み込む際、いくつかのレジスタは特別な内容を返します:
 	+ `B` register: ユーザーエージェント文字列
 	+ `D` register: 現在の日付時刻文字列（`datetime` オプションを strftime(3) のテンプレートとして使用します）
@@ -235,7 +234,7 @@ Scroll commands
 Edit commands
 -------------
 
-`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `ga` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi`
+`x` `X` `<delete>` `p` `P` `J` `.` `u` `^R` `~` `^L` `^G` `ga` `gv` `m` `@` `q` `r` `R` `a` `A` `i` `I` `o` `O` `&` `s` `S` `v` `V` `ZZ` `gi` `^A` `^X`
 
 ex commands
 -----------
@@ -314,6 +313,8 @@ ex コマンドでのアドレス指定はフルサポートされています:
 * `v`: 文字単位の選択に切り替える
 * `V`: 行単位の選択に切り替える
 * `x`: `d` と同じ
+* `^A`: 選択範囲内の全ての数値文字列をカウンタ分増加させる
+* `^X`: 選択範囲内の全ての数値文字列をカウンタ分減少させる
 
 囲み識別子
 ----------
@@ -337,8 +338,9 @@ Vim 互換の機能
 * レジスタ `"`、`:`、`*`、`/`（特に `*` はクリップボードとのアクセスを行うので重要です）
 * textwidth > 0 の状態における input モードの自動整形、および自動整形オペレータ（gq コマンド）
 * 範囲選択モード（Vim でいうところのビジュアルモード）
-* オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、`relativenumber`、`textwidth`、 `expandtab`、`cursorline`、`cursorcolumn`
+* オプション `iskeyword`、`incsearch`、`smartcase`、`undolevels`、`quoteescape`、`relativenumber`、`textwidth`、 `expandtab`、`cursorline`、`cursorcolumn`、`nrformats`
 * A から Z レジスタへの書き込み
 * `gu` / `gU` + モーションは領域を小文字化または大文字化します
 * [Surround.vim](https://github.com/tpope/vim-surround) の一部の機能
 * `:sort` の一部の機能（正規表現パターン、`r`、`i` オプション）
+* `^A` による数値文字列の増加、`^X` による数値文字列の減少

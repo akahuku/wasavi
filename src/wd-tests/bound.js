@@ -594,4 +594,48 @@ exports.suite = (assert, wasavi, driver) => {
 			'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.');
 		assert.pos('#1-2', 6, 5);
 	});
+
+	it('should increase a numeric number in the bound', function* () {
+		yield wasavi.send('ia123 456b\u001byy3p');
+		yield wasavi.send('1G6|v2j2h\u0001');
+		assert.value(
+			'#1-1',
+			'a123 457b\n' +
+			'a124 457b\n' +
+			'a124 456b\n' +
+			'a123 456b');
+	});
+
+	it('should decrease a numeric number in the bound', function* () {
+		yield wasavi.send('ia123 456b\u001byy3p');
+		yield wasavi.send('1G6|v2j2h\u0018');
+		assert.value(
+			'#1-1',
+			'a123 455b\n' +
+			'a122 455b\n' +
+			'a122 456b\n' +
+			'a123 456b');
+	});
+
+	it('should increase a numeric number in the bound_line', function* () {
+		yield wasavi.send('ia123 456b\u001byy3p');
+		yield wasavi.send('1G6|V2j2h\u0001');
+		assert.value(
+			'#1-1',
+			'a124 457b\n' +
+			'a124 457b\n' +
+			'a124 457b\n' +
+			'a123 456b');
+	});
+
+	it('should decrease a numeric number in the bound_line', function* () {
+		yield wasavi.send('ia123 456b\u001byy3p');
+		yield wasavi.send('1G6|V2j2h\u0018');
+		assert.value(
+			'#1-1',
+			'a122 455b\n' +
+			'a122 455b\n' +
+			'a122 455b\n' +
+			'a123 456b');
+	});
 };
