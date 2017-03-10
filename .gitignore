@@ -27,3 +27,4 @@ src/wd-tests/.stop-server-result
 src/unicode-tools/ucd/
 src/unicode-tools/unihan/
 dist/wasavi_chrome_web_store.zip
+test.log

@@ -605,73 +605,6 @@ Wasavi.RegexConverter = function (app) {
 		}
 		return result.join('');
 	}
-	function doTestParse (title, tests, forceLiteral) {
-		var result = tests.reduce(function (log, item) {
-			var errored = false;
-			try {
-				var pattern = parse(item[0], forceLiteral);
-				if (pattern != item[1]) {
-					errored = 'parse result not match';
-					return;
-				}
-			}
-			catch (e) {
-				if (item[1] == Error) return;
-				log.push('"' + item[0] + '" exception: ' + e);
-			}
-			finally {
-				if (errored) {
-					log.push(
-						'"' + item[0] + '"' +
-						' failed: "' + pattern + '"' +
-						' expected: "' + item[1] + '"' +
-						' (' + errored + ')');
-				}
-				return log;
-			}
-		}, []).join('\n')
-		result != '' && console.log(title + '\n' + result);
-	}
-	function testParse () {
-		doTestParse('#1', [
-			['foo', 'foo'],
-			['^f*o.o$', '^f*o.o$'],
-			['foo\\{1,2\\}bar\\?', 'foo{1,2}bar?'],
-			['\\(foo\\|bar\\)\\+', '(foo|bar)+'],
-			['a\\sb', 'a' + SPECIAL_SPACE + 'b'],
-			['a\\Sb', 'a' + SPECIAL_NONSPACE + 'b'],
-			['[abc\\s]', '[abc' + SPECIAL_SPACE.replace(/^\[|\]$/g, '') + ']'],
-			['[abc\\S]', '[abc' + SPECIAL_NONSPACE.replace(/^\[|\]$/g, '') + ']'],
-			['foo{1}', 'foo\\{1\\}'],
-			['foo(bar)', 'foo\\(bar\\)'],
-			['foo?bar+', 'foo\\?bar\\+'],
-			['foo\\d\\+', 'foo\\d+'],
-			['foo|bar', 'foo\\|bar'],
-			['(?foobar)', '\\(\\?foobar\\)'],
-			['\\(?foobar\\)', '(\\?foobar)'],
-			['\\t\\v\\\\', '\\t\\v\\\\'],
-			['\\t\\v\\', Error]
-		]);
-		doTestParse('#2', [
-			['foo', 'foo'],
-			['^f*o.o$', '\\^f\\*o\\.o\\$'],
-			['foo\\{1,2\\}bar\\?', 'foo\\\\{1,2\\\\}bar\\\\?'],
-			['\\(foo\\|bar\\)\\+', '\\\\(foo\\\\|bar\\\\)\\\\+'],
-			['a\\sb', 'a\\\\sb'],
-			['a\\Sb', 'a\\\\Sb'],
-			['[abc\\s]', '\\[abc\\\\s\\]'],
-			['[abc\\S]', '\\[abc\\\\S\\]'],
-			['foo{1}', 'foo{1}'],
-			['foo(bar)', 'foo(bar)'],
-			['foo?bar+', 'foo?bar+'],
-			['foo\\d\\+', 'foo\\\\d\\\\+'],
-			['foo|bar', 'foo|bar'],
-			['(?foobar)', '(?foobar)'],
-			['\\(?foobar\\)', '\\\\(?foobar\\\\)'],
-			['\\t\\v\\\\', '\\\\t\\\\v\\\\\\\\'],
-			['\\t\\v\\', Error]
-		], true);
-	}
 	function fixup (s) {
 		return s.replace(/\\s/g, SPECIAL_SPACE);
 	}
@@ -705,8 +638,7 @@ Wasavi.RegexConverter = function (app) {
 	}
 	function getDefaultOption () {
 		return {
-			wrapscan: app.config.vars.wrapscan,
-			magic: app.config.vars.magic
+			wrapscan: app.config.vars.wrapscan
 		};
 	}
 
@@ -715,7 +647,11 @@ Wasavi.RegexConverter = function (app) {
 		this,
 		fixup,
 		toJsRegexString, toJsRegex, toLiteralString,
-		getCS, getDefaultOption
+		getCS, getDefaultOption,
+		{
+			SPECIAL_SPACE: () => SPECIAL_SPACE,
+			SPECIAL_NONSPACE: () => SPECIAL_NONSPACE
+		}
 	);
 };
 
@@ -4669,6 +4605,244 @@ Wasavi.IncDec = function IncDec (app, defaultOpts) {
 	publish(this,
 		extractTargets, getReplacement, getAllReplacements, applyReplacement
 	);
+};
+
+Wasavi.SortWorker = function (app, t, a) {
+	this.app = app;
+	this.t = t;
+	this.a = a;
+	this.content = this.opts = null;
+	this.terminalType = 0;
+}
+Wasavi.SortWorker.prototype = {
+	dosort: function (content, key, regex, opts) {
+		var callbacks = {
+			i: function (a, b) {
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+
+			p: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = a.substring(re.index + re[0].length);
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = b.substring(re.index + re[0].length);
+				}
+				return a.localeCompare(b);
+			},
+			pr: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = re[0];
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = re[0];
+				}
+				return a.localeCompare(b);
+			},
+			pi: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = a.substring(re.index + re[0].length);
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = b.substring(re.index + re[0].length);
+				}
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+			pri: function (a, b) {
+				var re = regex.exec(a);
+				if (re) {
+					a = re[0];
+				}
+				var re = regex.exec(b);
+				if (re) {
+					b = re[0];
+				}
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			},
+
+			c: function (a, b) {
+				// TODO: expand tab?
+				a = a.substring(opts.columnNumber);
+				b = b.substring(opts.columnNumber);
+				return a.localeCompare(b);
+			},
+			ci: function (a, b) {
+				a = a.substring(opts.columnNumber);
+				b = b.substring(opts.columnNumber);
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			}
+		};
+		return content.sort(callbacks[key]);
+	},
+	preSort: function (type, content) {
+		switch (type) {
+		case 1:
+			content = content.replace(/\\\n/g, '\n');
+
+			var spaces = {'\t':0, ' ':0};
+			content.replace(spc('(S)\\n', 'g'), function ($0, s) {
+				spaces[s]++;
+			});
+
+			var maxValueKey = Object.keys(spaces).reduce(function (v, key) {
+				return spaces[key] > spaces[v] ? key : v
+			});
+
+			if (spaces[maxValueKey] > 0) {
+				content = content.replace(spc('S$'), '');
+				content += maxValueKey;
+			}
+			break;
+		case 2:
+			content = content.replace(/,\n/g, '\n');
+			break;
+		}
+		return content;
+	},
+	postSort: function (type, content) {
+		switch (type) {
+		case 1:
+			content = content
+				.replace(/\n/g, '\\\n')
+				.replace(/\s*$/, '');
+			break;
+		case 2:
+			content = content.replace(/\n/g, ',\n');
+			break;
+		}
+		return content;
+	},
+
+	parseArgs: function (arg) {
+		var re;
+		var s = arg != undefined ? arg : this.a.argv[0];
+		var opts = {
+			force:!!this.a.flags.force,
+			ignoreCase:false,
+			reuse:false,
+			column:false,
+			columnNumber:-1,
+			pattern:null
+		};
+		while ((s = s.replace(spc('^S+'), '')) != '') {
+			if ((re = /^i/.exec(s))) {
+				opts.ignoreCase = true;
+				s = s.substring(re[0].length);
+			}
+			else if ((re = /^r/.exec(s))) {
+				opts.reuse = true;
+				s = s.substring(re[0].length);
+			}
+			else if ((re = /^c([0-9]+)/.exec(s))) {
+				opts.column = true;
+				opts.columnNumber = parseInt(re[1], 10);
+				s = s.substring(re[0].length);
+			}
+			else if (/^[^a-zA-Z0-9"\n\\|]/.test(s)) {
+				var d = s.charAt(0);
+				s = s.substring(1);
+				re = (new RegExp('(?:\\\\.|[^' + d + '])*')).exec(s);
+				opts.pattern = re[0].replace(new RegExp('\\\\' + d, 'g'), d);
+				s = s.substring(re[0].length + 1);
+				if (opts.pattern == '') {
+					if ((opts.pattern = app.lastRegexFindCommand.pattern || '') == '') {
+						return _('No previous search pattern.');
+					}
+				}
+			}
+			else {
+				return _('Unknown sort argument: {0}', s);
+			}
+		}
+		this.opts = opts;
+		return true;
+	},
+	buildContent: function (content) {
+		if (!content) {
+			content = this.t.getValue(this.a.range[0], this.a.range[1], '\n');
+		}
+
+		content = trimTerm(content);
+		var re = content.match(/\n/g);
+		if (!re) return _('Single line can not be sorted.');
+		this.rows = re.length + 1;
+
+		var trailEscapes = (content.match(/\\\n/g) || []).length;
+		var trailCommas = (content.match(/,\n/g) || []).length;
+		if (trailEscapes == this.rows - 1) {
+			this.terminalType = 1;
+		}
+		else if (trailCommas == this.rows - 1) {
+			this.terminalType = 2;
+		}
+		else {
+			this.terminalType = 0;
+		}
+
+		this.content = this.preSort(this.terminalType, content).split('\n');
+		return true;
+	},
+	sort: function () {
+		var opts = this.opts;
+		var front = [];
+
+		if (opts.pattern || opts.reuse || opts.ignoreCase || opts.column) {
+			var regex, key = '', end = [];
+			if (opts.pattern) {
+				regex = this.app.low.getFindRegex({
+					pattern:opts.pattern,
+					csOverride:opts.ignoreCase ? 'i' : '',
+					globalOverride:'',
+					multilineOverride:''
+				});
+				if (!regex) {
+					return _('Invalid regex pattern.');
+				}
+				key += 'p';
+				if (opts.reuse) {
+					key += 'r';
+				}
+				while (this.content.length) {
+					var line = this.content.shift();
+					(regex.test(line) ? end : front).push(line);
+				}
+				this.content = end;
+			}
+			else if (opts.column) {
+				key += 'c';
+			}
+
+			if (opts.ignoreCase) {
+				key += 'i';
+			}
+
+			this.content = this.dosort(this.content, key, regex, opts);
+		}
+		else {
+			this.content = this.content.sort();
+		}
+
+		if (front.length) {
+			this.content = front.concat(this.content);
+		}
+		if (opts.force) {
+			this.content = this.content.reverse();
+		}
+
+		return true;
+	},
+	getContent: function () {
+		var result = this.content.join('\n');
+		this.content = null;
+		result = this.postSort(this.terminalType, result) + '\n';
+		return result;
+	}
 };
 
 })(typeof global == 'object' ? global : window);

@@ -3,8 +3,9 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const init = require('../chrome/frontend/init.js');
-const utils = require('../chrome/frontend/utils.js');
+require('../chrome/frontend/init.js');
+require('../chrome/frontend/utils.js');
+
 const unicodeUtils = require('../chrome/frontend/unicode_utils.js').unicodeUtils;
 
 function loadDict () {
