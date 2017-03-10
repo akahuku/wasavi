@@ -21,26 +21,30 @@
  * limitations under the License.
  */
 
-'use strict';
+(function (g) {
 
-const IS_GECKO =
-	window.navigator.product == 'Gecko' && window.navigator.userAgent.indexOf('Gecko/') != -1;
-const CSS_PREFIX = window.chrome ? '-webkit-' :
-	window.opera ? '-o-' : IS_GECKO ? '-moz-' : '';
+'use strict';
 
 const BRACKETS = '[{(<"\'``\'">)}]';
 const CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 
-const LINE_NUMBER_MAX_WIDTH = 6;
-const LINE_NUMBER_RELATIVE_WIDTH = 2;
+g.Wasavi = Object.defineProperties({}, {
+	IS_GECKO: {value: 'InstallTrigger' in g},
 
-const COMPOSITION_CLASS = 'wasavi_composition';
-const LEADING_CLASS = 'wasavi_leading';
-const MARK_CLASS = 'wasavi_mark';
-const EMPHASIS_CLASS = 'wasavi_em';
-const CURSOR_SPAN_CLASS = 'wasavi_command_cursor_span';
-const BOUND_CLASS = 'wasavi_bound';
+	BRACKETS: {value: BRACKETS},
+	CLOSE_BRACKETS: {value: CLOSE_BRACKETS},
 
-var Wasavi = {};
+	LINE_NUMBER_MAX_WIDTH: {value: 6},
+	LINE_NUMBER_RELATIVE_WIDTH: {value: 2},
+
+	COMPOSITION_CLASS: {value: 'wasavi_composition'},
+	LEADING_CLASS: {value: 'wasavi_leading'},
+	MARK_CLASS: {value: 'wasavi_mark'},
+	EMPHASIS_CLASS: {value: 'wasavi_em'},
+	CURSOR_SPAN_CLASS: {value: 'wasavi_command_cursor_span'},
+	BOUND_CLASS: {value: 'wasavi_bound'}
+});
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

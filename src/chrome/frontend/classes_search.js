@@ -21,122 +21,135 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
+
+const Wasavi = g.Wasavi;
+
+/*constructor*/function PairBracketsIndicator (targetChar, app, initialPos) {
+	const BLINK_FREQ_SECS = 0.1;
+	const BLINK_COUNT_MAX = 10;
+
+	var buffer = app.buffer;
+	var timer1, timer2;
+
+	function setColor (visible) {
+		var nodes = buffer.getSpans(Wasavi.EMPHASIS_CLASS);
+		var fg, bg;
+		if (visible) {
+			fg = app.theme.colors.highlightFg;
+			bg = app.theme.colors.highlightBg;
+		}
+		else {
+			fg = app.theme.colors.rowFg;
+			bg = 'transparent';
+		}
+		for (var i = 0; i < nodes.length; i++) {
+			nodes[i].style.color = fg;
+			nodes[i].style.backgroundColor = bg;
+		}
+	}
+	function clear () {
+		timer1 && clearTimeout(timer1);
+		timer2 && clearInterval(timer2);
+		timer1 = timer2 = null;
+		buffer.unEmphasis();
+	}
+	function dispose () {
+		clear();
+		app = buffer = null;
+	}
+
+	this.clear = clear;
+	this.dispose = dispose;
+
+	timer1 = setTimeout(function () {
+		timer1 = null;
+		buffer.emphasis(initialPos, 1);
+		var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
+		var visible = true;
+		setColor(visible);
+		timer2 = setInterval(function () {
+			count--;
+			if (count <= 0) {
+				buffer.unEmphasis();
+				clearInterval(timer2);
+				timer2 = null;
+			}
+			else {
+				visible = !visible;
+				setColor(visible);
+			}
+		}, 1000 * BLINK_FREQ_SECS);
+	}, 1);
+}
+
+/*constructor*/function BufferIterator (buffer) {
+	this.buffer = buffer;
+}
+BufferIterator.prototype = {
+	inc: function (pos) {
+		var p = pos || this.buffer.selectionStart;
+		try {
+			var s = this.buffer.rows(p);
+			if (p.col < s.length) {
+				p.col = this.buffer.rightClusterPos(p).col;
+				return p.col < s.length ? 0 : 2;
+			}
+			if (p.row < this.buffer.rowLength - 1) {
+				p.col = 0;
+				p.row++;
+				return 1;
+			}
+			return -1;
+		}
+		finally {
+			!pos && this.buffer.setSelectionRange(p);
+		}
+	},
+	dec: function (pos) {
+		var p = pos || this.buffer.selectionStart;
+		try {
+			if (p.col > 0) {
+				p.col = this.buffer.leftClusterPos(p).col;
+				return 0;
+			}
+			if (p.row > 0) {
+				p.row--;
+				p.col = this.buffer.rows(p).length;
+				return 1;
+			}
+			return -1;
+		}
+		finally {
+			!pos && this.buffer.setSelectionRange(p);
+		}
+	},
+	incl: function (pos) {
+		var r = this.inc(pos);
+		if (r >= 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
+			r = this.inc(pos);
+		}
+		return r;
+	},
+	decl: function (pos) {
+		var r = this.dec(pos);
+		if (r == 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
+			r = this.dec(pos);
+		}
+		return r;
+	}
+};
 
 // almost methods in this class are ported from search.c of vim.
 Wasavi.SearchUtils = function (app) {
 	/*
-	 * classes
+	 * consts
 	 */
 
-	/*constructor*/function PairBracketsIndicator (targetChar, buffer, initialPos) {
-		const BLINK_FREQ_SECS = 0.1;
-		const BLINK_COUNT_MAX = 10;
-
-		var timer1, timer2;
-
-		function setColor (visible) {
-			var nodes = buffer.getSpans(EMPHASIS_CLASS);
-			var fg, bg;
-			if (visible) {
-				fg = app.theme.colors.highlightFg;
-				bg = app.theme.colors.highlightBg;
-			}
-			else {
-				fg = app.theme.colors.rowFg;
-				bg = 'transparent';
-			}
-			for (var i = 0; i < nodes.length; i++) {
-				nodes[i].style.color = fg;
-				nodes[i].style.backgroundColor = bg;
-			}
-		}
-		function clear () {
-			timer1 && clearTimeout(timer1);
-			timer2 && clearInterval(timer2);
-			timer1 = timer2 = null;
-			buffer.unEmphasis();
-		}
-
-		this.clear = clear;
-		this.dispose = clear;
-
-		timer1 = setTimeout(function () {
-			timer1 = null;
-			buffer.emphasis(initialPos, 1);
-			var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
-			var visible = true;
-			setColor(visible);
-			timer2 = setInterval(function () {
-				count--;
-				if (count <= 0) {
-					buffer.unEmphasis();
-					clearInterval(timer2);
-					timer2 = null;
-				}
-				else {
-					visible = !visible;
-					setColor(visible);
-				}
-			}, 1000 * BLINK_FREQ_SECS);
-		}, 1);
-	}
-	/*constructor*/function BufferIterator (buffer) {
-		this.buffer = buffer;
-	}
-	BufferIterator.prototype = {
-		inc: function (pos) {
-			var p = pos || this.buffer.selectionStart;
-			try {
-				var s = this.buffer.rows(p);
-				if (p.col < s.length) {
-					p.col = this.buffer.rightClusterPos(p).col;
-					return p.col < s.length ? 0 : 2;
-				}
-				if (p.row < this.buffer.rowLength - 1) {
-					p.col = 0;
-					p.row++;
-					return 1;
-				}
-				return -1;
-			}
-			finally {
-				!pos && this.buffer.setSelectionRange(p);
-			}
-		},
-		dec: function (pos) {
-			var p = pos || this.buffer.selectionStart;
-			try {
-				if (p.col > 0) {
-					p.col = this.buffer.leftClusterPos(p).col;
-					return 0;
-				}
-				if (p.row > 0) {
-					p.row--;
-					p.col = this.buffer.rows(p).length;
-					return 1;
-				}
-				return -1;
-			}
-			finally {
-				!pos && this.buffer.setSelectionRange(p);
-			}
-		},
-		incl: function (pos) {
-			var r = this.inc(pos);
-			if (r >= 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
-				r = this.inc(pos);
-			}
-			return r;
-		},
-		decl: function (pos) {
-			var r = this.dec(pos);
-			if (r == 1 && (pos && pos.col || !pos && this.buffer.selectionStartCol)) {
-				r = this.dec(pos);
-			}
-			return r;
-		}
-	};
+	const BRACKETS = Wasavi.BRACKETS;
+	const CLOSE_BRACKETS = Wasavi.CLOSE_BRACKETS;
 
 	/*
 	 * variables
@@ -988,7 +1001,7 @@ sequential at:
 
 			//
 			if (app.low.isBound()) {
-				buffer.unEmphasis(BOUND_CLASS);
+				buffer.unEmphasis(Wasavi.BOUND_CLASS);
 				app.marks.setPrivate('<', ss2);
 				app.marks.setPrivate('>', se2);
 			}
@@ -1042,11 +1055,11 @@ sequential at:
 		sections = [];
 		m.replace(/../g, function (a) {sections.push(a)});
 	}
-	function getPairBracketsIndicator (targetChar, buffer, initialPos) {
+	function getPairBracketsIndicator (targetChar, initialPos) {
 		if (targetChar != '' && CLOSE_BRACKETS.indexOf(targetChar) >= 0) {
 			var result = findMatchedBracket(1, targetChar, initialPos);
 			if (result) {
-				return new PairBracketsIndicator(targetChar, buffer, result);
+				return new PairBracketsIndicator(targetChar, app, result);
 			}
 		}
 		return null;
@@ -1064,5 +1077,7 @@ sequential at:
 		dispose
 	);
 };
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

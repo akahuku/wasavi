@@ -21,7 +21,11 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
+
+const Wasavi = g.Wasavi;
 
 Wasavi.Position = function (row, col) {
 	this.row = row;
@@ -1743,7 +1747,7 @@ Wasavi.Marks = function (app, value) {
 							r.setStart(node, m.col - totalLength);
 							r.setEnd(node, m.col - totalLength);
 							var span = document.createElement('span');
-							span.className = MARK_CLASS;
+							span.className = Wasavi.MARK_CLASS;
 							dataset(span, 'index', i);
 							r.insertNode(span);
 							done = true;
@@ -1754,7 +1758,7 @@ Wasavi.Marks = function (app, value) {
 
 					if (!done) {
 						var span = document.createElement('span');
-						span.className = MARK_CLASS;
+						span.className = Wasavi.MARK_CLASS;
 						dataset(span, 'index', i);
 						buffer.rowNodes(m).appendChild(span);
 					}
@@ -1763,7 +1767,7 @@ Wasavi.Marks = function (app, value) {
 			return usedMarks;
 		}
 		function releaseMarks (usedMarks) {
-			var nodes = buffer.getSpans(MARK_CLASS);
+			var nodes = buffer.getSpans(Wasavi.MARK_CLASS);
 			for (var i = 0, goal = nodes.length; i < goal; i++) {
 				var span = nodes[i];
 				var index = dataset(span, 'index');
@@ -1797,7 +1801,7 @@ Wasavi.Marks = function (app, value) {
 			return result;
 		}
 		function registerFoldedMark (fragment) {
-			var marks = fragment.querySelectorAll('span.' + MARK_CLASS);
+			var marks = fragment.querySelectorAll('span.' + Wasavi.MARK_CLASS);
 			for (var i = 0, goal = marks.length; i < goal; i++) {
 				var index = dataset(marks[i], 'index');
 				foldedMarks[index] = true;
@@ -2472,11 +2476,11 @@ Wasavi.Editor.prototype = new function () {
 			if (isAbsolute) {
 				newClass = (isRelative ? 'nar' : 'na') +
 					' n' + Math.min(
-						LINE_NUMBER_MAX_WIDTH,
+						Wasavi.LINE_NUMBER_MAX_WIDTH,
 						(this.rowLength + '').length);
 			}
 			else if (isRelative) {
-				newClass = 'nr n' + LINE_NUMBER_RELATIVE_WIDTH;
+				newClass = 'nr n' + Wasavi.LINE_NUMBER_RELATIVE_WIDTH;
 			}
 			if (this.elm.classList.contains('list')) {
 				newClass += ' list';
@@ -2535,7 +2539,7 @@ Wasavi.Editor.prototype = new function () {
 						if (index == 0
 						&&  pnode
 						&&  pnode.nodeName == 'SPAN'
-						&&  pnode.className == MARK_CLASS) {
+						&&  pnode.className == Wasavi.MARK_CLASS) {
 							pnode.parentNode.insertBefore(document.createTextNode(text), pnode);
 						}
 						else {
@@ -2657,7 +2661,7 @@ loop:			while (node) {
 						break;
 
 					case 1:
-						if (node.nodeName != 'SPAN' || node.className != MARK_CLASS) {
+						if (node.nodeName != 'SPAN' || node.className != Wasavi.MARK_CLASS) {
 							throw new Error('unknown node found');
 						}
 						var next = node.nextSibling;
@@ -2758,7 +2762,7 @@ loop:			while (node) {
 					if (!text) continue;
 					if (!mark) {
 						mark = document.createElement('span');
-						mark.className = MARK_CLASS;
+						mark.className = Wasavi.MARK_CLASS;
 						dataset(mark, 'index', marks[i][2]);
 					}
 					if (offset == text.nodeValue.length) {
@@ -2991,7 +2995,7 @@ loop:			while (node) {
 			var offset = 0;
 			var r = document.createRange();
 			var result = [];
-			className || (className = EMPHASIS_CLASS);
+			className || (className = Wasavi.EMPHASIS_CLASS);
 
 			function surroundWithSpan (r) {
 				var span = document.createElement('span');
@@ -3054,7 +3058,7 @@ whole:
 			return result;
 		},
 		unEmphasis: function (className, start, end) {
-			var nodes = this.getSpans(className || EMPHASIS_CLASS, start, end);
+			var nodes = this.getSpans(className || Wasavi.EMPHASIS_CLASS, start, end);
 			if (nodes.length) {
 				var r = document.createRange();
 				for (var i = 0; i < nodes.length; i++) {
@@ -4666,5 +4670,7 @@ Wasavi.IncDec = function IncDec (app, defaultOpts) {
 		extractTargets, getReplacement, getAllReplacements, applyReplacement
 	);
 };
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

@@ -21,9 +21,11 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
 
-Wasavi.ExCommand = (function () {
+const Wasavi = g.Wasavi;
 
 const EXFLAGS = {
 	addr2All: 1<<2,
@@ -2396,7 +2398,7 @@ var cache = {};
 	})
 ].sort(function (a, b) {return a.name.length - b.name.length;});
 
-return Object.freeze({
+Wasavi.ExCommand = Object.freeze({
 	find: find,
 	create: createExCommand,
 	parseRange: parseRange,
@@ -2405,6 +2407,6 @@ return Object.freeze({
 	commands: commands
 });
 
-})();
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

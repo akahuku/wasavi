@@ -21,6 +21,8 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
 
 /*
@@ -52,21 +54,63 @@ Object.defineProperties(Array.prototype, {
  * ----------------
  */
 
-function $ (arg) {
+// DOM manipulators
+g.$ = function (arg) {
 	return typeof arg == 'string' ? document.getElementById(arg) : arg;
-}
-function $call () {
+};
+g.docScrollLeft = function () {
+	return Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
+};
+g.docScrollTop = function () {
+	return Math.max(document.documentElement.scrollTop, document.body.scrollTop);
+};
+g.docScrollWidth = function () {
+	return Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+};
+g.docScrollHeight = function () {
+	return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+};
+g.docClientWidth = function () {
+	return Math.min(document.documentElement.clientWidth, document.body.clientWidth)
+};
+g.docClientHeight = function () {
+	return Math.min(document.documentElement.clientHeight, document.body.clientHeight)
+};
+g.emptyNodeContents = function (node) {
+	node = $(node);
+	if (!node) return;
+	var r = document.createRange();
+	r.selectNodeContents(node);
+	r.deleteContents();
+};
+g.removeChild = function () {
+	for (var i = 0; i < arguments.length; i++) {
+		var elm = $(arguments[i]);
+		elm && elm.parentNode && elm.parentNode.removeChild(elm);
+	}
+};
+g.isMultilineTextInput = function (target) {
+	return target.nodeName != 'INPUT';
+};
+g.style = function (src, styles) {
+	for (var i in styles) {
+		src.style[i] = styles[i];
+	}
+};
+
+//
+g.$call = function () {
 	for (var i = 0, goal = arguments.length; i < goal; i++) {
 		typeof arguments[i] == 'function' && arguments[i]();
 	}
-}
-function extend (dest, src) {
+};
+g.extend = function (dest, src) {
 	for (var p in src) {
 		dest[p] = src[p];
 	}
 	return dest;
-}
-function parseJson (src) {
+};
+g.parseJson = function (src) {
 	try {
 		src = JSON.parse(src);
 	}
@@ -74,56 +118,42 @@ function parseJson (src) {
 		src = null;
 	}
 	return src;
-}
-function removeChild () {
-	for (var i = 0; i < arguments.length; i++) {
-		var elm = $(arguments[i]);
-		elm && elm.parentNode && elm.parentNode.removeChild(elm);
-	}
-}
-function isMultilineTextInput (target) {
-	return target.nodeName != 'INPUT';
-}
-function reverseObject (o) {
+};
+g.reverseObject = function (o) {
 	var result = {};
 	for (var i in o) {result[o[i]] = i;}
 	return result;
-}
-function style (src, styles) {
-	for (var i in styles) {
-		src.style[i] = styles[i];
-	}
-}
-function multiply (letter, times) {
+};
+g.multiply = function (letter, times) {
 	if (letter == '' || times <= 0) return '';
 	var result = letter;
 	while (result.length < times) {
 		result += result;
 	}
 	return result.length == times ? result : result.substring(0, letter.length * times);
-}
-function toVisibleString (s) {
+};
+g.toVisibleString = function (s) {
 	return (s || '')
 		.replace(/[\u0000-\u001f\u007f]/g, function (a) {
 			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
 		})
 		.replace(/\ue000/g, '');
-}
-function toVisibleControl (s) {
+};
+g.toVisibleControl = function (s) {
 	return typeof s == 'number' ?
 		_toVisibleControl(s) :
 		(s || '').replace(/[\u0000-\u001f\u007f]/g, function (a) {
 			return _toVisibleControl(a.charCodeAt(0));
 		});
-}
-function toNativeControl (s) {
+};
+g.toNativeControl = function (s) {
 	return typeof s == 'number' ?
 		_toNativeControl(s) :
 		(s || '').replace(/[\u2400-\u241f\u2421]/g, function (a) {
 			return _toNativeControl(a.charCodeAt(0));
 		});
-}
-function _toVisibleControl (code) {
+};
+g._toVisibleControl = function (code) {
 	// U+2400 - U+243F: Unicode Control Pictures
 	if (code == 0x7f) {
 		return String.fromCharCode(0x2421);
@@ -132,8 +162,8 @@ function _toVisibleControl (code) {
 		return String.fromCharCode(0x2400 + code);
 	}
 	return String.fromCharCode(code);
-}
-function _toNativeControl (code) {
+};
+g._toNativeControl = function (code) {
 	if (code == 0x2421) {
 		return '\u007f';
 	}
@@ -141,33 +171,15 @@ function _toNativeControl (code) {
 		return String.fromCharCode(code & 0x00ff);
 	}
 	return String.fromCharCode(code);
-}
-function trimTerm (s, ch) {
+};
+g.trimTerm = function (s, ch) {
 	ch || (ch = '\n');
 	if (s.length && s.substr(-1) == ch) {
 		s = s.substring(0, s.length - 1);
 	}
 	return s;
-}
-function docScrollLeft () {
-	return Math.max(document.documentElement.scrollLeft, document.body.scrollLeft);
-}
-function docScrollTop () {
-	return Math.max(document.documentElement.scrollTop, document.body.scrollTop);
-}
-function docScrollWidth () {
-	return Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-}
-function docScrollHeight () {
-	return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-}
-function docClientWidth () {
-	return Math.min(document.documentElement.clientWidth, document.body.clientWidth)
-}
-function docClientHeight () {
-	return Math.min(document.documentElement.clientHeight, document.body.clientHeight)
-}
-var dataset = (function () {
+};
+g.dataset = (function () {
 	var datasetNameCache = {};
 	var nameRegex = /^[a-zA-Z]+$/;
 
@@ -219,14 +231,7 @@ var dataset = (function () {
 		return result;
 	};
 })();
-function emptyNodeContents (node) {
-	node = $(node);
-	if (!node) return;
-	var r = document.createRange();
-	r.selectNodeContents(node);
-	r.deleteContents();
-}
-function _ () {
+g._ = function () {
 	var args = toArray(arguments);
 	var format = args.shift();
 	return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
@@ -245,55 +250,30 @@ function _ () {
 		}
 		return $1 + 's';
 	});
-}
-function stacktrace () {
-	var x = {};
-	var result = '';
-	try {
-		x.y.z += 0;
-	}
-	catch (e) {
-		if (e.stack) {
-			result = e.stack;
-			if (IS_GECKO) {
-				result = result
-					.replace(/\n\+/g, ' -> ')
-					.replace(/(@).+?(:\d+:\d+)/g, '$1$2');
-			}
-			else if (window.opera) {
-				result = result
-					.replace(/^[^\n]+\n/, '')
-					.replace(/@/g, '\t@')
-					.replace(/<anonymous function:\s*([^>]+)>/g, '<$1>')
-					.replace(/\(\[arguments not available\]\)/g, '(?)');
-			}
-		}
-	}
-	return result;
-}
-function getObjectType (a) {
+};
+g.getObjectType = function (a) {
     return Object.prototype.toString.call(a).replace(/^\[object\s+|\]$/g, '');
-}
-function isObject (a) {
+};
+g.isObject = function (a) {
 	return getObjectType(a) == 'Object';
-}
-function isString (a) {
+};
+g.isString = function (a) {
 	return getObjectType(a) == 'String';
-}
-function isNumber (a) {
+};
+g.isNumber = function (a) {
 	return getObjectType(a) == 'Number';
-}
-function isBoolean (a) {
+};
+g.isBoolean = function (a) {
 	return getObjectType(a) == 'Boolean';
-}
-function isArray (a) {
+};
+g.isArray = function (a) {
 	// TODO: accept ducktyping?
 	return getObjectType(a) == 'Array';
-}
-function isFunction (a) {
+};
+g.isFunction = function (a) {
 	return getObjectType(a) == 'Function';
-}
-function publish () {
+};
+g.publish = function () {
 	if (arguments.length < 1) return;
 	var target = arguments[0];
 	for (var i = 1; i < arguments.length; i++) {
@@ -338,11 +318,11 @@ function publish () {
 			break;
 		}
 	}
-}
-function toArray (arg, index) {
+};
+g.toArray = function (arg, index) {
 	return Array.prototype.slice.call(arg, index || 0);
-}
-function expr (source) {
+};
+g.expr = function (source) {
 	var tokens = [];
 	var i = 0;
 
@@ -416,8 +396,8 @@ loop:	while (true) {
 	catch (e) {
 		return {error: e.message};
 	}
-}
-var strftime = (function (global) {
+};
+g.strftime = (function () {
 	var weekdays = {
 		long:'Sunday Monday Tuesday Wednesday Thursday Friday Saturday'.split(' '),
 		short:'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
@@ -555,7 +535,7 @@ var strftime = (function (global) {
 			});
 	}
 	if (typeof Intl == 'undefined') {
-		global.Intl = {
+		g.Intl = {
 			DateTimeFormat:function (locale, opts) {
 				return {
 					format:function (d) {
@@ -568,12 +548,14 @@ var strftime = (function (global) {
 		};
 	}
 	return strftime;
-})(this);
-function minmax (min, value, max) {
+})();
+g.minmax = function (min, value, max) {
 	return Math.max(min, Math.min(value, max));
-}
-function getLiteralRegexp (s) {
+};
+g.getLiteralRegexp = function (s) {
 	return s.replace(/[.+*?(){}]/g, '\\$&');
-}
+};
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

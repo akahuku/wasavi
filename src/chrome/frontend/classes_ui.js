@@ -21,7 +21,11 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
+
+const Wasavi = g.Wasavi;
 
 Wasavi.Theme = function (app) {
 	var container;
@@ -44,14 +48,14 @@ Wasavi.Theme = function (app) {
 		lineNumberBg:['#wasavi_editor>div:before', ''],
 		rowFg:['#wasavi_editor>div', ''],
 		rowBg:['#wasavi_editor>div', ''],
-		highlightFg:['#wasavi_editor>div span.' + EMPHASIS_CLASS, ''],
-		highlightBg:['#wasavi_editor>div span.' + EMPHASIS_CLASS, ''],
+		highlightFg:['#wasavi_editor>div span.' + Wasavi.EMPHASIS_CLASS, ''],
+		highlightBg:['#wasavi_editor>div span.' + Wasavi.EMPHASIS_CLASS, ''],
 		lineInputFg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
 		lineInputBg:['#wasavi_footer_input,#wasavi_footer_input_indicator', ''],
 		consoleFg:['#wasavi_console', ''],
 		consoleBg:['#wasavi_console_container', ''],
-		boundFg:['#wasavi_editor>div span.' + BOUND_CLASS, ''],
-		boundBg:['#wasavi_editor>div span.' + BOUND_CLASS, '']
+		boundFg:['#wasavi_editor>div span.' + Wasavi.BOUND_CLASS, ''],
+		boundBg:['#wasavi_editor>div span.' + Wasavi.BOUND_CLASS, '']
 	};
 	var colorSets = {
 		solarized: {
@@ -213,7 +217,7 @@ Wasavi.Theme = function (app) {
 			key = key < 0 ?
 				Math.floor((n.getHours() * 3600 + n.getMinutes() * 60 + n.getSeconds()) / 240) :
 				key % 360;
-			return CSS_PREFIX + 'linear-gradient(top,hsl(' + key + ',100%,33%) 0%,#000 100%);';
+			return 'linear-gradient(top,hsl(' + key + ',100%,33%) 0%,#000 100%);';
 		case 'string':
 			return key;
 		}
@@ -317,7 +321,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 		var cursorBlinkTimer;
 
 		function getCursorSpan () {
-			var spans = buffer.getSpans(CURSOR_SPAN_CLASS);
+			var spans = buffer.getSpans(Wasavi.CURSOR_SPAN_CLASS);
 			return spans.length ? spans[0] : null;
 		}
 		function startBlink () {
@@ -365,7 +369,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 					span = buffer.emphasis(
 						undefined,
 						clusters.clusterAt(clusters.getClusterIndexFromUTF16Index(buffer.selectionStartCol)).length,
-						CURSOR_SPAN_CLASS)[0];
+						Wasavi.CURSOR_SPAN_CLASS)[0];
 				}
 
 				span.style.color = app.theme.colors.invertFg;
@@ -377,7 +381,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 				cursorColumn = coord.left;
 			}
 			else {
-				buffer.unEmphasis(CURSOR_SPAN_CLASS);
+				buffer.unEmphasis(Wasavi.CURSOR_SPAN_CLASS);
 				comCursor.style.display = 'block';
 				comCursor.style.visibility = 'visible';
 				comCursor.childNodes[0].textContent = ' ';
@@ -420,7 +424,7 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 		};
 		this.hide = function () {
 			stopBlink();
-			buffer.unEmphasis(CURSOR_SPAN_CLASS);
+			buffer.unEmphasis(Wasavi.CURSOR_SPAN_CLASS);
 			comCursor.style.display =
 			comCursorLine.style.display =
 			comCursorColumn.style.display = 'none';
@@ -920,5 +924,7 @@ Wasavi.Notifier = function (app, container) {
 
 	publish(this, register, show, hide, dispose);
 };
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :

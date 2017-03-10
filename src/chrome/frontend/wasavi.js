@@ -976,7 +976,7 @@ Buffer.prototype = Object.create(Wasavi.Editor.prototype, {
 		start && args.push(start);
 		end   && args.push(end);
 		args.push(function (content, fragment) {
-			var deleteMarks = fragment.querySelectorAll('span.' + MARK_CLASS);
+			var deleteMarks = fragment.querySelectorAll('span.' + Wasavi.MARK_CLASS);
 			var deleteMarksDest = {};
 			for (var i = 0; i < deleteMarks.length; i++) {
 				var name = deleteMarks[i].getAttribute('data-index');
@@ -997,7 +997,7 @@ Buffer.prototype = Object.create(Wasavi.Editor.prototype, {
 	emphasisBound: {value: (function () {
 		function createSpan (content) {
 			var span = document.createElement('span');
-			span.className = BOUND_CLASS;
+			span.className = Wasavi.BOUND_CLASS;
 			span.textContent = content || '';
 			return span;
 		}
@@ -1039,7 +1039,7 @@ Buffer.prototype = Object.create(Wasavi.Editor.prototype, {
 		};
 	})()},
 	unEmphasisBound: {value: function (start, end) {
-		return this.unEmphasis(BOUND_CLASS, start, end);
+		return this.unEmphasis(Wasavi.BOUND_CLASS, start, end);
 	}}
 });
 Buffer.prototype.constructor = Wasavi.Editor;
@@ -1239,7 +1239,7 @@ function install (x, req) {
 		.replace(/\/\*<(CHAR_WIDTH)>\*\/.*?<\/\1>\*\//g, charWidth + 'px')
 		.replace(/\/\*<LINE_NUMBERS\/\>\*\//g, function () {
 			var result = [];
-			for (var i = 1; i <= LINE_NUMBER_MAX_WIDTH; i++) {
+			for (var i = 1; i <= Wasavi.LINE_NUMBER_MAX_WIDTH; i++) {
 				result.push(
 					'#wasavi_editor.n' + i + ' > div:before {' +
 					'min-width:' + (charWidth * i) + 'px;' +
@@ -2455,7 +2455,7 @@ function extendBound (p, mode) {
 	if (!anchor || !focus) {
 		return setBound(buffer.selectionStart, p, mode, true);
 	}
-	if (!buffer.elm.querySelector('.' + BOUND_CLASS)) {
+	if (!buffer.elm.querySelector('.' + Wasavi.BOUND_CLASS)) {
 		return setBound(anchor, p, mode);
 	}
 	if (anchor.row == focus.row || anchor.row == p.row) {
@@ -5703,7 +5703,7 @@ var modeHandlers = {
 			}
 			if (config.vars.showmatch && !pairBracketsIndicator) {
 				pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
-					letterActual, buffer, prevPos);
+					letterActual, prevPos);
 			}
 			if (r.needEmitEvent === false) {
 				r.needEmitEvent = 'notify-state';
@@ -5781,7 +5781,7 @@ var modeHandlers = {
 				 * It seems that Firefox has a bug which clears
 				 * the contents of input element by the escape key :-<
 				 */
-				if (IS_GECKO) {
+				if (Wasavi.IS_GECKO) {
 					var processed = dataset(input, 'processed');
 					if (input.value != processed) {
 						input.value = processed;

@@ -21,7 +21,11 @@
  * limitations under the License.
  */
 
+(function (g) {
+
 'use strict';
+
+const Wasavi = g.Wasavi;
 
 Wasavi.SubstituteWorker = function (app) {
 	this.app = app;
@@ -487,5 +491,7 @@ Wasavi.SubstituteWorker.prototype = {
 		return stack;
 	}
 };
+
+})(typeof global == 'object' ? global : window);
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker :
