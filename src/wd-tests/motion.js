@@ -243,6 +243,9 @@ exports.suite = (assert, wasavi, driver) => {
 
 		yield wasavi.send('gg/second/+1\n');
 		assert.pos('#5', 2, 1);
+
+		yield wasavi.send('gg/second/\n');
+		assert.pos('#6', 1, 1);
 	});
 
 	it('search backward', function* () {
@@ -260,6 +263,9 @@ exports.suite = (assert, wasavi, driver) => {
 
 		yield wasavi.send('G?second?-1\n');
 		assert.pos('#4', 0, 0);
+
+		yield wasavi.send('G?second?\n');
+		assert.pos('#5', 1, 1);
 	});
 
 	it('find forward', function* () {

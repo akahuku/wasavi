@@ -895,14 +895,16 @@ Wasavi.RegexFinderInfo = function () {
 		var re;
 		while ((re = regex.exec(s))) {
 			if (re[0] == delimiter) {
+				result.pattern = s.substring(0, re.index);
+
 				var trailer = /^\s*([+\-]?)(\d*)/.exec(s.substring(re.index + re[0].length));
 				if (trailer && (trailer[1] != '' || trailer[2] != '')) {
 					if (trailer[2] == '') {
 						trailer[2] = '1';
 					}
-					result.pattern = s.substring(0, re.index);
 					result.offset = parseInt(trailer[1] + trailer[2], 10);
 				}
+
 				break;
 			}
 		}
