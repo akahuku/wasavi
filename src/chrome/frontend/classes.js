@@ -886,6 +886,28 @@ Wasavi.RegexFinderInfo = function () {
 	var text;
 	var updateBound;
 
+	function parseFindString (s, delimiter) {
+		var result = {
+			pattern: s,
+			offset: undefined
+		};
+		var regex = /\\.|[\S\s]/g;
+		var re;
+		while ((re = regex.exec(s))) {
+			if (re[0] == delimiter) {
+				var trailer = /^\s*([+\-]?)(\d*)/.exec(s.substring(re.index + re[0].length));
+				if (trailer && (trailer[1] != '' || trailer[2] != '')) {
+					if (trailer[2] == '') {
+						trailer[2] = '1';
+					}
+					result.pattern = s.substring(0, re.index);
+					result.offset = parseInt(trailer[1] + trailer[2], 10);
+				}
+				break;
+			}
+		}
+		return result;
+	}
 	function push (o) {
 		head = o.head || '';
 		direction = o.direction || 0;
@@ -899,15 +921,9 @@ Wasavi.RegexFinderInfo = function () {
 		verticalOffset = undefined;
 
 		if (withOffset) {
-			var fragments = p.split(head);
-			if (fragments.length >= 2 && fragments[fragments.length - 2].substr(-1) != '\\') {
-				var re = /\s*([-+]?\d+)\s*$/.exec(fragments.lastItem);
-				if (re) {
-					verticalOffset = parseInt(re[1], 10);
-				}
-				fragments.pop();
-				pattern = fragments.join(head);
-			}
+			var parsed = parseFindString(p, head);
+			pattern = parsed.pattern;
+			verticalOffset = parsed.offset;
 		}
 	}
 
