@@ -883,10 +883,10 @@ Wasavi.Backlog = function (app, container, con) {
 };
 
 Wasavi.Notifier = function (app, container) {
+	const delayIntervalMsecs = 500;
+	const hideIntervalMsecs = 2000;
 	var showTimer;
 	var hideTimer;
-	var delayIntervalMsecs = 1000;
-	var hideIntervalMsecs = 2000;
 	var registeredMessage;
 
 	function register (message, intervalMsecs, delayMsecs) {

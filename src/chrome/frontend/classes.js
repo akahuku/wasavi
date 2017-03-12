@@ -382,9 +382,9 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		return null;
 	}
 	function dump (cols, all) {
+		const phaseThreshold = 20;
+		const gap = 1;
 		var result = [_('*** options ***')];
-		var phaseThreshold = 20;
-		var gap = 1;
 		for (var i = 0; i < 2; i++) {
 			var maxLength = 0;
 			var tmp = [];
@@ -642,7 +642,6 @@ Wasavi.RegexConverter = function (app) {
 		};
 	}
 
-	//testParse();
 	publish(
 		this,
 		fixup,
@@ -946,9 +945,9 @@ Wasavi.RegexFinderInfo = function () {
 };
 
 Wasavi.LineInputHistories = function (app, maxSize, names, value) {
+	const storageKey = 'wasavi_lineinput_histories';
 	var s;
 	var name;
-	var storageKey = 'wasavi_lineinput_histories';
 	var isLatest = false;
 
 	function serialize () {
@@ -1360,11 +1359,11 @@ Wasavi.Registers = function (app, value) {
 		}
 	};
 
+	const storageKey = 'wasavi_registers';
+	const writableRegex = /^[1-9a-zA-Z@]$/;
+	const readableRegex = /^["1-9a-zA-Z@.:*+\/\^=;]$/;
 	var unnamed;
 	var named;
-	var storageKey = 'wasavi_registers';
-	var writableRegex = /^[1-9a-zA-Z@]$/;
-	var readableRegex = /^["1-9a-zA-Z@.:*+\/\^=;]$/;
 	var isLatest = false;
 
 	function serialize () {
@@ -3922,11 +3921,11 @@ Wasavi.StrokeRecorder = function () {
 };
 
 Wasavi.Surrounding = function (app) {
-	var charwiseTagPrefix = /^[<Tt]$/;
-	var linewiseTagPrefix = /^(?:[\u0014,]|<A-T>)$/;
-	var singleCharsTable = '!#$%&*+,\\-.:;=?@^_|~"\'`';
+	const charwiseTagPrefix = /^[<Tt]$/;
+	const linewiseTagPrefix = /^(?:[\u0014,]|<A-T>)$/;
+	const singleCharsTable = '!#$%&*+,\\-.:;=?@^_|~"\'`';
 
-	var basicTable = {
+	const basicTable = {
 		'a':'<>',
 		'b':'()',
 		'B':'{  }',
@@ -3940,7 +3939,7 @@ Wasavi.Surrounding = function (app) {
 		')':'()'
 	};
 
-	var insertionTable = {
+	const insertionTable = {
 		'p':['\n', '\n\n'],
 		's':[' ', ''],
 		':':[':', '']
@@ -4096,10 +4095,10 @@ Wasavi.Surrounding = function (app) {
 	}
 
 	function doInsertAsCharwise (pair) {
+		const mark = 'surround-right';
 		var buffer = app.buffer;
 		var ss = buffer.selectionStart;
 		var se = buffer.selectionEnd;
-		var mark = 'surround-right';
 
 		buffer.isLineOrientSelection = false;
 
@@ -4120,12 +4119,12 @@ Wasavi.Surrounding = function (app) {
 	}
 
 	function doInsertAsLinewise (pair) {
+		const mark = 'surround-left';
 		var buffer = app.buffer;
 		var ss = buffer.selectionStart;
 		var se = buffer.selectionEnd;
 		var indent = app.config.vars.autoindent ?
 			buffer.getIndent(buffer.selectionStart) : '';
-		var mark = 'surround-left';
 
 		buffer.isLineOrientSelection = false;
 
@@ -4260,7 +4259,7 @@ Wasavi.Surrounding = function (app) {
 	function doReplace (pair, outerStart, innerStart, innerEnd, outerEnd) {
 		var buffer = app.buffer;
 		var ss, se;
-		var mark = 'surround-right';
+		const mark = 'surround-right';
 
 		buffer.isLineOrientSelection = false;
 

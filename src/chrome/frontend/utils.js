@@ -180,8 +180,8 @@ g.trimTerm = function (s, ch) {
 	return s;
 };
 g.dataset = (function () {
+	const nameRegex = /^[a-zA-Z]+$/;
 	var datasetNameCache = {};
-	var nameRegex = /^[a-zA-Z]+$/;
 
 	function toHyphen (s) {
 		s = s.replace(/([a-z])([A-Z])/g, function ($0, $1, $2) {
@@ -372,7 +372,7 @@ loop:	while (true) {
 	}
 
 	try {
-		var regex = /^([()+\-*\/%]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
+		const regex = /^([()+\-*\/%]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
 		var re;
 
 		source = source.replace(/^\s+/, '');

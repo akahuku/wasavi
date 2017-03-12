@@ -191,7 +191,7 @@ Collection.prototype = Object.create({}, {
 	}
 });
 
-function ExCommandExecutor (app) {
+/*constructor*/function ExCommandExecutor (app) {
 	const EX_SYNC = 1;
 	const EX_ASYNC = 2;
 
@@ -1506,13 +1506,14 @@ function uninstall (implicit) {
 	cursor = cursor.dispose();
 	scroller = scroller.dispose();
 	editLogger = editLogger.dispose();
-	keyManager = keyManager.dispose();
-	theme = theme.dispose();
 	l10n = l10n.dispose();
-	completer = completer.dispose();
 	recordedStrokes = recordedStrokes.dispose();
 	surrounding = surrounding.dispose();
-	config = config.dispose();
+
+	keyManager.dispose();
+	theme.dispose();
+	completer.dispose();
+	config.dispose();
 
 	extensionChannel.postMessage({
 		type:'terminated',
@@ -3134,7 +3135,7 @@ function motionLineEndDenotative (c) {
 	invalidateIdealWidthPixels();
 	return true;
 }
-var motionNextWord = (function () {
+const motionNextWord = (function () {
 	function doBigWord (n, count) {
 		var words = buffer.getWords(n);
 		var wordIndex = words.wordIndexOf(n.col);
@@ -3330,7 +3331,7 @@ var motionNextWord = (function () {
 		return true;
 	};
 })();
-var motionPrevWord = (function () {
+const motionPrevWord = (function () {
 	function doBigWord (n, count) {
 		var words = buffer.getWords(n);
 		var wordIndex = getWordIndex(words, n);
@@ -3490,7 +3491,7 @@ var motionPrevWord = (function () {
 		return true;
 	};
 })();
-var motionFindForward = (function () {
+const motionFindForward = (function () {
 	function indexOfEx (line, target, start) {
 		var index = start || 0;
 		var goal = line.length;
@@ -3539,7 +3540,7 @@ var motionFindForward = (function () {
 		return true;
 	};
 })();
-var motionFindBackward = (function () {
+const motionFindBackward = (function () {
 	function lastIndexOfEx (line, target, start) {
 		var index = start || 0;
 		while (index >= 0) {
@@ -3790,7 +3791,7 @@ function motionUp (c, count) {
 function motionDown (c, count) {
 	return motionUpDown(c, count, true);
 }
-var motionUpDownDenotative = (function () {
+const motionUpDownDenotative = (function () {
 	function findNextTopOfWrapLine (start) {
 		var n = start.clone();
 		var clusters = buffer.getGraphemeClusters(n).clone();
@@ -5042,15 +5043,15 @@ diag('defining variables');
  * ----------------
  */
 
-var appProxy = new AppProxy;
-var Position = Wasavi.Position;
-var abbrevs = new Collection;
-var keyManager = qeema;
-var regexConverter = new Wasavi.RegexConverter(appProxy);
-var mapManager = new Wasavi.MapManager(appProxy);
-var theme = new Wasavi.Theme(appProxy);
-var bell = new Wasavi.Bell(appProxy);
-var completer = new Wasavi.Completer(appProxy,
+const appProxy = new AppProxy;
+const Position = Wasavi.Position;
+const abbrevs = new Collection;
+const keyManager = qeema;
+const regexConverter = new Wasavi.RegexConverter(appProxy);
+const mapManager = new Wasavi.MapManager(appProxy);
+const theme = new Wasavi.Theme(appProxy);
+const bell = new Wasavi.Bell(appProxy);
+const completer = new Wasavi.Completer(appProxy,
 // completer <<<2
 	[
 		// ex command completion
@@ -5225,7 +5226,7 @@ var completer = new Wasavi.Completer(appProxy,
 	]
 );
 // >>>
-var config = new Wasavi.Configurator(appProxy,
+const config = new Wasavi.Configurator(appProxy,
 // configuration object <<<2
 	[
 		/* defined by POSIX */
@@ -5507,7 +5508,7 @@ var lastBoundMode;
  * ----------------
  */
 
-var mode2stateTable = {
+const mode2stateTable = {
 	command: 'normal', bound: 'normal', bound_line: 'normal', edit: 'normal', overwrite: 'normal',
 	line_input: 'line_input',
 	backlog_prompt: 'console_wait', ex_s_prompt: 'console_wait'
@@ -5518,7 +5519,7 @@ var mode2stateTable = {
  * ----------------
  */
 
-var modeHandlers = {
+const modeHandlers = {
 	command: function (e, r) {
 		cursor.windup();
 		execCommandMap(r, e, commandMap, r.mapkey, r.subkey, r.code);
@@ -5820,7 +5821,7 @@ var modeHandlers = {
  * ----------------
  */
 
-var commandMap = {
+const commandMap = {
 	// internal special
 	'*nop*':function () {return true},
 
@@ -7522,7 +7523,7 @@ var commandMap = {
  * ----------------
  */
 
-var boundMap = {
+const boundMap = {
 	'*nop*':commandMap['*nop*'], '\u0009':commandMap['\u0009'], '\u001b':inputEscape,
 	'1':inputDigit, '2':inputDigit, '3':inputDigit, '4':inputDigit, '5':inputDigit,
 	'6':inputDigit, '7':inputDigit, '8':inputDigit, '9':inputDigit,
@@ -7946,7 +7947,7 @@ var boundMap = {
  * ----------------
  */
 
-var editMap = {
+const editMap = {
 	'<C-space>'/*^@*/:function () {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
@@ -8336,7 +8337,7 @@ var editMap = {
  * ----------------
  */
 
-var lineInputEditMap = {
+const lineInputEditMap = {
 	'*nop*':function () {
 		return true;
 	},

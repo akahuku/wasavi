@@ -282,7 +282,7 @@ LineBreakArray.prototype = {
 			return this.cache[cp];
 		}
 
-		var units = 7;
+		const units = 7;
 		var left = 0, right = ((this.dictData.length / units) >> 0) - 1;
 		var middle, index, startcp, endcp;
 		while (left <= right) {
