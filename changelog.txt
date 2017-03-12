@@ -1,3 +1,27 @@
+0.6.690
+
+	* improve expression parser
+	* improve strftime compatibility with glibc
+	* fix that the delimiter not removed if only delimiter is added as a trailer in :s command
+	* fix that offset specifier in /,? commands not working
+	* port increase (^A) / decrease (^X) feature from vim (#145)
+	* fix font family label
+	* fix an issue that memorandum activation failed from context menu
+	* fixed an issue that failed authentication with OneDrive
+	* fix an issue where subsequent implicit addresses are not recognized in an ex command
+	* fix shift/unshift fails on an empty row
+
+	* 式の解析器の改善
+	* strftime の glibc に対する互換性の改善
+	* :s コマンドの末尾にデリミタだけが付加された場合にデリミタが取り除かれないのを修正
+	* /、? コマンドにオフセットを付加しても認識されないのを修正
+	* vim から増加 (^A) / 減少 (^X) コマンドを移植 (#145)
+	* フォントファミリのラベルを修正
+	* コンテキストメニューからメモランダムを起動できないのを修正
+	* OneDrive に対する認証が失敗するのを修正
+	* ex コマンドで、後続の暗黙的なアドレスが認識されないのを修正
+	* 空行に対するシフト/アンシフトが失敗するのを修正
+
  0.6.671
 
 	* fix backslashes in :s command are not processed correctly

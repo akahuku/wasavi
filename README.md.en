@@ -335,7 +335,12 @@ Vim features in wasavi
 * multiple level undo/redo
 * incremental search
 * range symbols (aka, Vim text objects)
-* register `"`, `:`, `*`, `/` (`*` is used to access system clipboard)
+* following registers
+  - `"`: unnamed register
+  - `:`: last executed ex command
+  - `*`: reading from and writing to the system clipboard
+  - `/`: last searched string
+  - `=`: evaluate math expression. supported operators are: `+` `-` `*` `/` `%`. supported numeric expressions are: integer, float (including exponential form), binary (with leading `0b`), octal (with leading 0), hex (with leading `0x`)
 * auto-reformat in input mode, and reformat operator (gq command) on the state of textwidth > 0
 * bound mode (aka, Vim visual mode)
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`, `nrformats`
