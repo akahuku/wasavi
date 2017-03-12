@@ -359,11 +359,22 @@ loop:	while (true) {
 		}
 		else {
 			var sign = '';
-			if (r == '+' || r == '-') {
-				sign = r;
-				r = tokens[i++];
+			if (/^0x/.test(r)) {
+				r = parseInt(r.substring(2), 16);
 			}
-			r = parseFloat(sign + r);
+			else if (/^0[0-7]+/.test(r)) {
+				r = parseInt(r, 8);
+			}
+			else if (/^0b/.test(r)) {
+				r = parseInt(r.substring(2).replace(/_/g, ''), 2);
+			}
+			else {
+				if (r == '+' || r == '-') {
+					sign = r;
+					r = tokens[i++];
+				}
+				r = parseFloat(sign + r, 10);
+			}
 			if (isNaN(r)) {
 				throw new Error(_('Missing a number.'));
 			}
@@ -372,14 +383,20 @@ loop:	while (true) {
 	}
 
 	try {
-		const regex = /^([()+\-*\/%]|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*|0x[0-9a-f]+)\s*/i;
-		var re;
+		const regex = /[()+\-*\/%]|0x[0-9a-f]+|0b[01_]+|0[0-7]+|(?:0|[1-9][0-9]*)\.[0-9]*(?:e[+-]?[0-9]+)*|\.[0-9]+(?:e[+-]?[0-9]+)*|(?:0|[1-9][0-9]*)(?:e[+-]?[0-9]+)*/gi;
+		var re, restIndex = -1;
+
+		while ((re = regex.exec(source))) {
+			tokens.push(re[0]);
+			restIndex = re.index + re[0].length;
+		}
+
+		if (restIndex >= 0) {
+			source = source.substring(restIndex);
+		}
 
 		source = source.replace(/^\s+/, '');
-		while ((re = regex.exec(source))) {
-			tokens.push(re[1]);
-			source = source.substring(re[0].length);
-		}
+
 		if (source != '') {
 			throw new Error(_('Invalid token: {0}', source.charAt(0)));
 		}
