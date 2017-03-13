@@ -1925,7 +1925,7 @@ var cache = {};
 			);
 			break;
 		case 'dump-options-doc':
-			console.log(app.config.dumpData());
+			app.extensionChannel.setClipboard(app.config.dumpData());
 			break;
 		}
 		app.low.requestShowMessage('Whassup?');
