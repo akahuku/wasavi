@@ -37,7 +37,8 @@ RSYNC_OPT = -rptL --delete \
 	--exclude '*.sw?' --exclude '*.bak' --exclude '*~' --exclude '*.sh' \
 	--exclude 'banner*.xcf' --exclude 'banner*.png' \
 	--exclude '.*' \
-	--exclude '$(CRYPT_SRC_FILE)*'
+	--exclude '$(CRYPT_SRC_FILE)*' \
+	--exclude 'FirefoxImpl.js' --exclude 'OperaImpl.js'
 
 CRYPT_KEY_FILE = LICENSE
 CRYPT_SRC_FILE = consumer_keys.json
