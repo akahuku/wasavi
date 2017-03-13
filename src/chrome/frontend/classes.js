@@ -1701,7 +1701,7 @@ Wasavi.Marks = function (app, value) {
 							r.setEnd(node, m.col - totalLength);
 							var span = document.createElement('span');
 							span.className = Wasavi.MARK_CLASS;
-							dataset(span, 'index', i);
+							span.dataset.index = i;
 							r.insertNode(span);
 							done = true;
 							break;
@@ -1712,7 +1712,7 @@ Wasavi.Marks = function (app, value) {
 					if (!done) {
 						var span = document.createElement('span');
 						span.className = Wasavi.MARK_CLASS;
-						dataset(span, 'index', i);
+						span.dataset.index = i;
 						buffer.rowNodes(m).appendChild(span);
 					}
 				}
@@ -1723,7 +1723,7 @@ Wasavi.Marks = function (app, value) {
 			var nodes = buffer.getSpans(Wasavi.MARK_CLASS);
 			for (var i = 0, goal = nodes.length; i < goal; i++) {
 				var span = nodes[i];
-				var index = dataset(span, 'index');
+				var index = span.dataset.index;
 				marks[index].row = buffer.indexOf(span.parentNode);
 				marks[index].col = calcColumn(span);
 				var pa = span.parentNode;
@@ -1756,7 +1756,7 @@ Wasavi.Marks = function (app, value) {
 		function registerFoldedMark (fragment) {
 			var marks = fragment.querySelectorAll('span.' + Wasavi.MARK_CLASS);
 			for (var i = 0, goal = marks.length; i < goal; i++) {
-				var index = dataset(marks[i], 'index');
+				var index = marks[i].dataset.index;
 				foldedMarks[index] = true;
 			}
 		}
@@ -2618,7 +2618,7 @@ loop:			while (node) {
 							throw new Error('unknown node found');
 						}
 						var next = node.nextSibling;
-						var markName = dataset(node, 'index');
+						var markName = node.dataset.index;
 						marks.push([indentExpanded.length, node, markName]);
 						marksInfo[markName] = indentOriginal.length;
 						node.parentNode.removeChild(node);
@@ -2716,7 +2716,7 @@ loop:			while (node) {
 					if (!mark) {
 						mark = document.createElement('span');
 						mark.className = Wasavi.MARK_CLASS;
-						dataset(mark, 'index', marks[i][2]);
+						mark.dataset.index = marks[i][2];
 					}
 					if (offset == text.nodeValue.length) {
 						text.parentNode.insertBefore(mark, text.nextSibling);

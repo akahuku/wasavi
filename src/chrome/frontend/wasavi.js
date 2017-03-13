@@ -1696,8 +1696,8 @@ function showLineInput (prefix, value, curpos) {
 	else {
 		input.selectionStart = input.selectionEnd = value.length;
 	}
-	dataset(input, 'current', value);
-	dataset(input, 'internalPrefix', null);
+	input.dataset.current = value;
+	delete input.dataset.internalPrefix;
 }
 function invalidateIdealWidthPixels () {
 	idealWidthPixels = -1;
@@ -2529,7 +2529,7 @@ function adjustSurroundingInputForNotify (original) {
 		prefixInput.appendMotion(
 			(/^<.+>$/.test(original) ? '\ue000' : '') + original);
 		showLineInput(indicator.textContent + '<', '', 0);
-		dataset($('wasavi_footer_input'), 'internalPrefix', original);
+		$('wasavi_footer_input').dataset.internalPrefix = original;
 		original = '';
 	}
 
@@ -2540,7 +2540,7 @@ function adjustSurroundingInputForNotify (original) {
 	return adjusted;
 }
 function adjustSurroundingInput (original) {
-	var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
+	var prefix = $('wasavi_footer_input').dataset.internalPrefix;
 	original = original.replace(/\n$/, '');
 	var adjusted = original;
 
@@ -5722,7 +5722,7 @@ const modeHandlers = {
 			|| prefixInput.motion != '';
 		var line = toNativeControl(input.value);
 
-		dataset(input, 'current', input.value);
+		input.dataset.current = input.value;
 		isCompleteResetCanceled = false;
 
 		if (r.subkey == inputMode && canEscape) {
@@ -5751,7 +5751,7 @@ const modeHandlers = {
 				prefixInput.appendRegister(line + e.code2letter(r.code));
 			}
 
-			var internalPrefix = dataset(input, 'internalPrefix');
+			var internalPrefix = input.dataset.internalPrefix;
 			if (isString(internalPrefix)) {
 				line = internalPrefix + line;
 			}
@@ -5783,18 +5783,18 @@ const modeHandlers = {
 				 * the contents of input element by the escape key :-<
 				 */
 				if (Wasavi.IS_GECKO) {
-					var processed = dataset(input, 'processed');
+					var processed = input.dataset.processed;
 					if (input.value != processed) {
 						input.value = processed;
-						var pos = dataset(input, 'pos') - 0;
+						var pos = input.dataset.pos - 0;
 						input.selectionStart = pos;
 						input.selectionEnd = pos;
 					}
 				}
-				dataset(input, 'processed', null);
-				dataset(input, 'pos', null);
+				delete input.dataset.processed;
+				delete input.dataset.pos;
 
-				if (input.value != dataset(input, 'current')) {
+				if (input.value != input.dataset.current) {
 					processInputSupplement(e);
 				}
 			}, 1);
@@ -5811,8 +5811,8 @@ const modeHandlers = {
 			completer.reset();
 		}
 
-		dataset(input, 'processed', input.value);
-		dataset(input, 'pos', input.selectionStart);
+		input.dataset.processed = input.value;
+		input.dataset.pos = input.selectionStart;
 	}
 };
 
@@ -6077,7 +6077,7 @@ const commandMap = {
 		},
 		$line_input_notify:function (c, o) {return this.s[o.subkey].apply(this, arguments)},
 		line_input:function (c, o) {
-			var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
+			var prefix = $('wasavi_footer_input').dataset.internalPrefix;
 			var isMultiline =
 				/S$/.test(prefixInput.operation)
 				|| isVerticalMotion
@@ -7610,7 +7610,7 @@ const boundMap = {
 		$line_input_notify:commandMap.s.$line_input_notify,
 		line_input:function (c, o) {
 			return operateToBound(c, o, true, function (p1, p2, act) {
-				var prefix = dataset($('wasavi_footer_input'), 'internalPrefix');
+				var prefix = $('wasavi_footer_input').dataset.internalPrefix;
 				var isMultiline =
 					inputMode == 'bound_line'
 					|| surrounding.isLinewiseTagPrefix(prefix);
@@ -8416,7 +8416,7 @@ const lineInputEditMap = {
 		else {
 			var line = lineInputHistories.next();
 			if (line == undefined) {
-				line = dataset(o.target, 'wasaviLineInputCurrent');
+				line = o.target.dataset.wasaviLineInputCurrent;
 			}
 			if (line == undefined) {
 				notifier.show(_('Invalid history item.'));
@@ -8433,7 +8433,7 @@ const lineInputEditMap = {
 	'<A-N>':function () {return this['\u000e'].apply(this, arguments)},
 	'\u0010'/*^P*/:function (c, o) {
 		if (lineInputHistories.isInitial) {
-			dataset(o.target, 'wasaviLineInputCurrent', o.target.value);
+			o.target.dataset.wasaviLineInputCurrent = o.target.value;
 		}
 		var line = lineInputHistories.prev();
 		if (line == undefined) {

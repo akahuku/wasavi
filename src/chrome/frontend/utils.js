@@ -179,58 +179,6 @@ g.trimTerm = function (s, ch) {
 	}
 	return s;
 };
-g.dataset = (function () {
-	const nameRegex = /^[a-zA-Z]+$/;
-	var datasetNameCache = {};
-
-	function toHyphen (s) {
-		s = s.replace(/([a-z])([A-Z])/g, function ($0, $1, $2) {
-			return $1 + '-' + $2.toLowerCase();
-		});
-		return s;
-	}
-	function getDatasetKey (s) {
-		if (s in datasetNameCache) {
-			return datasetNameCache[s];
-		}
-		s = toHyphen(s);
-		s = 'data-' + s;
-		s = s.toLowerCase();
-		datasetNameCache[s] = s;
-		return s;
-	}
-
-	return function (elm, name) {
-		if (arguments.length < 2) {
-			throw new Error('dataset: too few arguments.');
-		}
-		if (!elm) {
-			throw new Error('dataset: invalid element.');
-		}
-		if (!nameRegex.test(name)) {
-			throw new Error('dataset: invalid name.');
-		}
-
-		name = getDatasetKey(name);
-
-		var result;
-
-		if (arguments.length == 2) {
-			result = elm.getAttribute(name);
-		}
-		else {
-			if (arguments[2] === null) {
-				elm.removeAttribute(name);
-			}
-			else {
-				result = arguments[2].toString();
-				elm.setAttribute(name, result);
-			}
-		}
-
-		return result;
-	};
-})();
 g._ = function () {
 	var args = toArray(arguments);
 	var format = args.shift();
