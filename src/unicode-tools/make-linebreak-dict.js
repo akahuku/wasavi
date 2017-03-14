@@ -1,0 +1,192 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const exec = require('child_process').exec;
+const OptionParser = require('brisket/lib/optparse');
+const {fgets, getVersion, awk, pad, ensureFileExists} = require('./utils.js');
+
+const file_name = __dirname + '/ucd/LineBreak.txt';
+const out_file = __dirname + '/../chrome/unicode/linebreak.dat';
+
+const data = [];
+const props = {
+	'OP': 0,	// Open Punctuation (XA)
+	'CL': 1,	// Close Punctuation (XB)
+	'CP': 2,	// Closing Parenthesis (XB)
+	'QU': 3,	// Quotation (XB/XA)
+	'GL': 4,	// Non-breaking ('Glue') (XB/XA) (Non-tailorable)
+	'NS': 5,	// Nonstarters (XB)
+	'EX': 6,	// Exclamation/Interrogation (XB)
+	'SY': 7,	// Symbols Allowing Break After (A)
+	'IS': 8,	// Infix Numeric Separator (XB)
+	'PR': 9,	// Prefix Numeric (XA)
+	'PO': 10,	// Postfix Numeric (XB)                         ,
+	'NU': 11,	// Numeric (XP)                                 ,
+	'AL': 12,	// Ordinaty Alphabetic and Symbol characters (XP),
+	'HL': 13,	// Hebrew Letter (XB)                           ,
+	'ID': 14,	// Ideographic (B/A)                            ,
+	'IN': 15,	// Inseparable Characters (XP)                  ,
+	'HY': 16,	// Hyphen (XA)                                  ,
+	'BA': 17,	// Break After (A)                              ,
+	'BB': 18,	// Break Before (B)                             ,
+	'B2': 19,	// Break Oppotunity Before and After (B/A/XP)   ,
+	'ZW': 20,	// Zero Width Space (A) (Non-tailorable)        ,
+	'CM': 21,	// Combining Mark (XB) (Non-tailorable)         ,
+	'WJ': 22,	// Word Joiner (XB/XA) (Non-tailorable)         ,
+	'H2': 23,	// Hangul LV Syllable (B/A)                     ,
+	'H3': 24,	// Hangul LVT syllable (B/A)                    ,
+	'JL': 25,	// Hangul L Jamo (B)                            ,
+	'JV': 26,	// Hangul V Jamo (XA/XB)                        ,
+	'JT': 27,	// Hangul T Jamo (A)                            ,
+	'RI': 28,	// Regional Indicator (B/A/XP)                  ,
+	'EB': 29,	// Emoji Base (B/A)
+	'EM': 30,	// Emoji Modifier (A)
+	'ZWJ': 31,	// Zero Width Joiner (XA/XB) (Non-tailorable)
+
+	'BK': 245,	// Mandatory Break (A) (Non-tailorable)
+	'CR': 246,	// Carriage Return (A) (Non-tailorable)
+	'LF': 247,	// Line Feed (A) (Non-tailorable)
+	'NL': 248,	// Next Line (A) (Non-tailorable)
+	'SG': 249,	// Surrogate (XP) (Non-tailorable)
+	'SP': 250,	// Space (A) (Non-tailorable)
+	'CB': 251,	// Contingent Break Oppotunity (B/A)
+	'AI': 252,	// Ambiguous (Alphabetic or Ideograph)
+	'CJ': 253,	// Conditional Japanese Starter
+	'SA': 254,	// Complex-Context Dependent (South East Asian) (P)
+	'XX': 255	// Unknown (XP)
+};
+var version;
+var runmode;
+
+function setup () {
+	ensureFileExists(file_name);
+
+	console.log('reading...');
+
+	var content = fs.readFileSync(file_name, 'utf8').split('\n');
+	var count = 0;
+	var start_cp = 0;
+	var start_prop = '';
+	var prev_cp = 0;
+
+	for (var i = 0, goal = content.length; i < goal; i++) {
+		var line = content[i];
+		var comment_index = line.indexOf('#');
+		if (comment_index >= 0) {
+			line = line.substring(0, comment_index);
+		}
+
+		line = line.replace(/\s+$/, '');
+		if (line == '') continue;
+
+		line = line.split(';'); line = [line[0], line.slice(1).join(';')];
+		var cp = parseInt(line[0], 16);
+		var prop = line[1].split('#');
+		prop = prop[0].replace(/^\s+|\s+$/g, '');
+
+		if (!(prop in props)) {
+			console.log(`\rUnknown prop: "${prop}" in line ${count + 1}: ${line.join(' ')}`);
+			process.exit(1);
+		}
+		if (prop != start_prop) {
+			if (start_prop != '') {
+				data.push([start_cp, prev_cp, props[start_prop]]);
+			}
+
+			start_cp = cp;
+			start_prop = prop;
+		}
+
+		if (line[0].indexOf('..') >= 0) {
+			var range = line[0].split('..');
+			data.push([parseInt(range[0], 16), parseInt(range[1], 16), props[prop]]);
+			start_cp = 0;
+			start_prop = '';
+		}
+
+		count++;
+		prev_cp = cp;
+		if (count % 100 == 0) {
+			process.stdout.write(`\r${line[0]}`);
+		}
+	}
+
+	if (start_prop != '') {
+		data.push([start_cp, cp, props[start_prop]]);
+	}
+
+	console.log(`\rdone: ${data.length} items.\n`);
+}
+
+function make_dict () {
+	console.log('generating data...');
+	var count = 0;
+	var index = 0;
+	var buffer = '';
+	data.forEach(d => {
+		buffer += String.fromCharCode((d[0]      ) & 0xff);
+		buffer += String.fromCharCode((d[0] >>  8) & 0xff);
+		buffer += String.fromCharCode((d[0] >> 16) & 0xff);
+		buffer += String.fromCharCode((d[1]      ) & 0xff);
+		buffer += String.fromCharCode((d[1] >>  8) & 0xff);
+		buffer += String.fromCharCode((d[1] >> 16) & 0xff);
+		buffer += String.fromCharCode(d[2]);
+
+		count++;
+		if (count % 100 == 0) {
+			process.stdout.write(`\r${Math.floor(count / data.length * 100)}%`);
+		}
+	});
+
+	fs.writeFileSync(out_file, buffer, {encoding:'binary', mode:0o664});
+	console.log(`\rdone: ${count} items.`);
+}
+
+function make_js () {
+	console.log(`// line break property in Unicode ${version}`);
+	console.log(`// generated by "src/unicode-tool/${path.basename(__filename)} --js"`);
+	console.log(`const BREAK_PROP = {`);
+	var delimiter = ',';
+	for (var prop in props) {
+		var offset = props[prop];
+		if (prop == 'XX') {
+			delimiter = '';
+		}
+		console.log(`\t${prop}: ${('   ' + offset).substr(-3)}${delimiter}`);
+	}
+	console.log('};');
+}
+
+function printHelp () {
+	console.log('usage: --dict  Generate line-break data file');
+	console.log('       --js    Generate javascript code of line-break property definition');
+	process.exit(1);
+}
+
+(new OptionParser)
+	.on('--dict  Generate line-break data file', v => {
+		runmode = 'dict';
+	})
+	.on('--js    Generate javascript code of line-break property definition', v => {
+		runmode = 'js';
+	})
+	.parse(process.argv);
+
+getVersion()
+.then(() => {
+	switch (runmode) {
+	case 'dict':
+		setup();
+		make_dict();
+		break;
+	case 'js':
+		setup();
+		make_js();
+		break;
+	default:
+		printHelp();
+		break;
+	}
+})
+.catch(error => console.error(error));
