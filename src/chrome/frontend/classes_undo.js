@@ -510,7 +510,7 @@ Wasavi.EditLogger = function (app, max) {
 	}
 	function write (type) {
 		if (!cluster || !pool[type]) {
-			throw new Error('EditLogger: invalid undo item type');
+			throw new TypeError('EditLogger: invalid undo item type');
 		}
 
 		var item = new pool[type];
@@ -568,7 +568,7 @@ Wasavi.EditLogger = function (app, max) {
 				},
 				function (v) {
 					if (typeof v != 'number' || v < 0) {
-						throw new Error('EditLogger: invalid logMax');
+						throw new TypeError('EditLogger: invalid logMax');
 					}
 					max = v;
 					logs.trim(max);

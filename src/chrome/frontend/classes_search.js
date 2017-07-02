@@ -1043,14 +1043,14 @@ sequential at:
 	}
 	function setParagraphMacros (m) {
 		if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {
-			throw new Error(_('Invalid paragraph format: {0}', m));
+			throw new TypeError(_('Invalid paragraph format: {0}', m));
 		}
 		paragraphs = [];
 		m.replace(/../g, function (a) {paragraphs.push(a)});
 	}
 	function setSectionMacros (m) {
 		if (!/^[a-zA-Z ]+$/.test(m) || m.length % 2) {
-			throw new Error(_('Invalid section format: {0}', m));
+			throw new TypeError(_('Invalid section format: {0}', m));
 		}
 		sections = [];
 		m.replace(/../g, function (a) {sections.push(a)});

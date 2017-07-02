@@ -1365,8 +1365,7 @@ exports.suite = (assert, wasavi, driver) => {
 	it('subst queried', function* () {
 		yield wasavi.send('ifirst\nsecond\nthird\u001b');
 
-		yield wasavi.send('1G', ':%s/i/I/gc\n');
-		yield wasavi.send('n', 'y');
+		yield wasavi.send('1G', ':%s/i/I/gc\n', 'n', 'y');
 		assert.eq('#1-1', '1 substitution on 3 lines.', wasavi.getLastMessage());
 		assert.value('#1-2', 'first\nsecond\nthIrd');
 		assert.pos('#1-3', 2, 0);
@@ -1378,8 +1377,7 @@ exports.suite = (assert, wasavi, driver) => {
 	it('subst queried give up', function* () {
 		yield wasavi.send('ifirst\nsecond\nthird\u001b');
 
-		yield wasavi.send('1G', ':%s/i/I/gc\n');
-		yield wasavi.send('y', 'q');
+		yield wasavi.send('1G', ':%s/i/I/gc\n', 'y', 'q');
 		assert.eq('#1-1', '1 substitution on 3 lines.', wasavi.getLastMessage());
 		assert.value('#1-2', 'fIrst\nsecond\nthird');
 		assert.pos('#1-3', 2, 2);
@@ -1396,8 +1394,7 @@ exports.suite = (assert, wasavi, driver) => {
 			'third' +
 			'\u001b');
 
-		yield wasavi.send('1G:%s/[a-f]/\\U&/gc\n');
-		yield wasavi.send('nna');
+		yield wasavi.send('1G:%s/[a-f]/\\U&/gc\n', 'nna');
 		assert.eq('#1-1', '3 substitutions on 3 lines.', wasavi.getLastMessage());
 		assert.value('#1-2',
 			'first\n' +
@@ -1420,8 +1417,7 @@ exports.suite = (assert, wasavi, driver) => {
 			'third' +
 			'\u001b');
 
-		yield wasavi.send('1G:%s/[a-f]/\\U&/gc\n');
-		yield wasavi.send('yyl');
+		yield wasavi.send('1G:%s/[a-f]/\\U&/gc\n', 'yyl');
 		assert.eq('#1-1', '3 substitutions on 3 lines.', wasavi.getLastMessage());
 		assert.value('#1-2',
 			'First\n' +
@@ -1456,8 +1452,7 @@ exports.suite = (assert, wasavi, driver) => {
 		assert.pos('#1-1', 1, 2);
 
 		yield wasavi.send('1G', '1|');
-		yield wasavi.send(':%s/i/!/gc\n');
-		yield wasavi.send('yn');
+		yield wasavi.send(':%s/i/!/gc\n', 'yn');
 		assert.pos('#2-1', 2, 2);
 	});
 
@@ -2212,9 +2207,11 @@ exports.suite = (assert, wasavi, driver) => {
 		];
 		for (var i = 0; i < tests.length; i++) {
 			var t = tests[i];
-			yield wasavi.send('ggcG' + t[1] + '\u001b');
-			yield wasavi.send(':sort ' + t[0] + '\n');
-			assert.value('#' + i, t[2]);
+			yield wasavi.send(`ggcG${t[1]}\u001b:sort ${t[0]}\n`);
+			assert.value(
+				`#${i}\n` +
+				`**expected**\n${t[2]}\n` +
+				`** actual **\n${wasavi.getValue()}\n`, t[2]);
 		}
 	});
 };

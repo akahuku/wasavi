@@ -32,6 +32,9 @@ exports.suite = (assert, wasavi, driver) => {
 		var quotes = '!#$%&*+,-.:;=?@^_|~"\"`';
 		var len = quotes.length;
 
+		// increase timeout limit
+		this.timeout(1000 * 2 * quotes.length);
+
 		// build test buffer
 		var insertCommands = 'i';
 		for (var i = 0; i < len; i++) {
@@ -164,6 +167,9 @@ exports.suite = (assert, wasavi, driver) => {
 			')': '()'
 		}
 
+		// increase timeout limit
+		this.timeout(1000 * 2 * Object.keys(m).length);
+
 		// build test buffer
 		var insertCommands = 'i';
 		for (var i in m) {
@@ -253,7 +259,7 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('\u0012');
 		assert.value('#3-1', '\'abcdef\'\nabcdef');
 
-		assert.eq('#4-1', 'ysiw\'\n', wasavi.getLastSimpleCommand());
+		assert.eq('#4-1', 'ysiw\'', wasavi.getLastSimpleCommand());
 
 		yield wasavi.send('G1|.');
 		assert.value('#5-1', '\'abcdef\'\n\'abcdef\'');
@@ -271,7 +277,7 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('\u0012');
 		assert.value('#3-1', '\'abcdef\'\nabcdef');
 
-		assert.eq('#4-1', 'viwS\'\n', wasavi.getLastSimpleCommand());
+		assert.eq('#4-1', 'viwS\'', wasavi.getLastSimpleCommand());
 
 		yield wasavi.send('G1|.');
 		assert.value('#5-1', '\'abcdef\'\n\'abcdef\'');
@@ -289,7 +295,7 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('\u0012');
 		assert.value('#3-1', '\'\n    abcdef\n\'\nabcdef');
 
-		assert.eq('#4-1', 'viwgS\'\n', wasavi.getLastSimpleCommand());
+		assert.eq('#4-1', 'viwgS\'', wasavi.getLastSimpleCommand());
 
 		yield wasavi.send('G1|.');
 		assert.value('#5-1', '\'\n    abcdef\n\'\n\'\n    abcdef\n\'');
@@ -307,7 +313,7 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('\u0012');
 		assert.value('#3-1', '\'\n    abcdef\n\'\nabcdef');
 
-		assert.eq('#4-1', 'ys_\'\n', wasavi.getLastSimpleCommand());
+		assert.eq('#4-1', 'ys_\'', wasavi.getLastSimpleCommand());
 
 		yield wasavi.send('G1|.');
 		assert.value('#5-1', '\'\n    abcdef\n\'\n\'\n    abcdef\n\'');
@@ -325,7 +331,7 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send('\u0012');
 		assert.value('#3-1', '\'\n    abcdef\n\'\nabcdef');
 
-		assert.eq('#4-1', 'ySiw\'\n', wasavi.getLastSimpleCommand());
+		assert.eq('#4-1', 'ySiw\'', wasavi.getLastSimpleCommand());
 
 		yield wasavi.send('G1|.');
 		assert.value('#5-1', '\'\n    abcdef\n\'\n\'\n    abcdef\n\'');
@@ -399,8 +405,10 @@ exports.suite = (assert, wasavi, driver) => {
 	}
 
 	it('insert brackets', function* () {
-		this.timeout(1000 * 60);
 		var m = createBracketMap();
+
+		// increase timeout limit
+		this.timeout(1000 * Object.keys(m).length);
 
 		//
 		var index = 1;
@@ -423,8 +431,10 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('insert brackets linewise', function* () {
-		this.timeout(1000 * 60);
 		var m = createBracketMap();
+
+		// increase timeout limit
+		this.timeout(1000 * Object.keys(m).length);
 
 		//
 		var index = 1;
@@ -449,8 +459,10 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('insert brackets with extra spaces', function* () {
-		this.timeout(1000 * 60);
 		var m = createBracketMap();
+
+		// increase timeout limit
+		this.timeout(1000 * Object.keys(m).length);
 
 		//
 		var index = 1;
@@ -480,6 +492,10 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('insert tag', function* () {
 		var tags = '<Tt'.split('');
+
+		// increase timeout limit
+		this.timeout(1000 * 5 * tags.length);
+
 		for (var i = 0; i < tags.length; i++) {
 			var s = tags[i];
 
@@ -496,7 +512,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 			assert.eq(
 				'#4-1',
-				`ysiw${s}head foo="bar">\n`,
+				`ysiw${s}head foo="bar">`,
 				wasavi.getLastSimpleCommand());
 
 			yield wasavi.send('G.');
@@ -508,6 +524,10 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('insert tag via alias', function* () {
 		var tags = '<Tt'.split('');
+
+		// increase timeout limit
+		this.timeout(1000 * 5 * tags.length);
+
 		for (var i = 0; i < tags.length; i++) {
 			var s = tags[i];
 
@@ -524,7 +544,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 			assert.eq(
 				'#4-1',
-				`yss${s}head foo="bar">\n`,
+				`yss${s}head foo="bar">`,
 				wasavi.getLastSimpleCommand());
 
 			yield wasavi.send('G0.');
@@ -539,6 +559,10 @@ exports.suite = (assert, wasavi, driver) => {
 			[ctrlt, '\u0014'],
 			[',', ',']
 		];
+
+		// increase timeout limit
+		this.timeout(1000 * 5 * keys.length);
+
 		for (var i = 0; i < keys.length; i++) {
 			var s = keys[i];
 
@@ -555,7 +579,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 			assert.eq(
 				'#4-1',
-				`ysiw${s[1]}head foo="bar">\n`,
+				`ysiw${s[1]}head foo="bar">`,
 				wasavi.getLastSimpleCommand());
 
 			yield wasavi.send('G.');
@@ -573,6 +597,10 @@ exports.suite = (assert, wasavi, driver) => {
 			['T', 'T'],
 			['t', 't']
 		];
+
+		// increase timeout limit
+		this.timeout(1000 * 5 * keys.length);
+
 		for (var i = 0; i < keys.length; i++) {
 			var s = keys[i];
 
@@ -589,7 +617,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 			assert.eq(
 				'#4-1',
-				`ySiw${s[1]}head foo="bar">\n`,
+				`ySiw${s[1]}head foo="bar">`,
 				wasavi.getLastSimpleCommand());
 
 			yield wasavi.send('G.');
@@ -607,6 +635,10 @@ exports.suite = (assert, wasavi, driver) => {
 			['T', 'T'],
 			['t', 't']
 		];
+
+		// increase timeout limit
+		this.timeout(1000 * 5 * keys.length);
+
 		for (var i = 0; i < keys.length; i++) {
 			var s = keys[i];
 
@@ -623,7 +655,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 			assert.eq(
 				'#4-1',
-				`ys_${s[1]}head foo="bar">\n`,
+				`ys_${s[1]}head foo="bar">`,
 				wasavi.getLastSimpleCommand());
 
 			yield wasavi.send('G.');

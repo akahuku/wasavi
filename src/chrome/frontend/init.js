@@ -28,6 +28,11 @@
 const BRACKETS = '[{(<"\'``\'">)}]';
 const CLOSE_BRACKETS = BRACKETS.substring(BRACKETS.length / 2);
 
+const LOG_PROMISE = false;
+const LOG_EX = false;
+const LOG_MAP_MANAGER = false;
+const LOG_LAST_SIMPLE_COMMAND = false;
+
 g.Wasavi = Object.defineProperties({}, {
 	IS_GECKO: {value: 'InstallTrigger' in g},
 
@@ -42,7 +47,12 @@ g.Wasavi = Object.defineProperties({}, {
 	MARK_CLASS: {value: 'wasavi_mark'},
 	EMPHASIS_CLASS: {value: 'wasavi_em'},
 	CURSOR_SPAN_CLASS: {value: 'wasavi_command_cursor_span'},
-	BOUND_CLASS: {value: 'wasavi_bound'}
+	BOUND_CLASS: {value: 'wasavi_bound'},
+
+	LOG_PROMISE: {value: LOG_PROMISE},
+	LOG_EX: {value: LOG_EX},
+	LOG_MAP_MANAGER: {value: LOG_MAP_MANAGER},
+	LOG_LAST_SIMPLE_COMMAND: {value: LOG_LAST_SIMPLE_COMMAND}
 });
 
 })(typeof global == 'object' ? global : window);

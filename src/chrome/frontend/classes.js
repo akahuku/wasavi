@@ -130,7 +130,7 @@ Wasavi.L10n = function (app, catalog) {
 			var format = getMessage(args.shift());
 			return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
 				return $1 == undefined || $1 == '' ?
-					args[$2] : getPluralNoun($1, args[$2]);
+					toVisibleString(args[$2]) : getPluralNoun($1, args[$2]);
 			});
 		};
 	}
@@ -170,69 +170,12 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		this.assignState = 0;
 	}
 	VariableItem.prototype = {
-		getInfo: function () {
-			var that = this;
-			return {
-				get name () {return that.name},
-				get type () {return that.type},
-				get isLateBind () {return that.isLateBind},
-				get isDynamic () {return that.isDynamic},
-				get isAsync () {return that.assignState ? false : that.isAsync},
-				get defaultValue () {return that.defaultValue}
-			};
-		},
+		ASSIGN_STATE_INITIAL: 0,
+		ASSIGN_STATE_WARNED: 1,
+		ASSIGN_STATE_ERRORED: 2,
+
 		get value () {
 			return this.nativeValue;
-		},
-		set value (v) {
-			try {
-				this.assignState = 0;
-				switch (this.type) {
-				case 'b':
-					v = Boolean(v);
-					if (typeof v != 'boolean') throw new Error(_('Invalid boolean value'));
-					break;
-				case 'i':
-					if (typeof v == 'string' && !/^[0-9]+$/.test(v)) {
-						throw new Error(_('Invalid integer value'));
-					}
-					v = parseInt(v, 10);
-					if (typeof v != 'number' || isNaN(v)) {
-						throw new Error(_('Invalid integer value'));
-					}
-					break;
-				case 'I':
-					if (!/^[-+]?[0-9]+$/.test(v)) {
-						throw new Error(_('Invalid integer value'));
-					}
-					v = parseInt(v, 10);
-					if (typeof v != 'number' || isNaN(v)) {
-						throw new Error(_('Invalid integer value'));
-					}
-					break;
-				case 's':
-					v = String(v);
-					if (typeof v != 'string') throw new Error(_('Invalid string value'));
-					break;
-				case 'r':
-					if (typeof v != 'string') throw new Error(_('Invalid regex source string value'));
-					break;
-				default:
-					throw new Error('*Invalid type for value getter: ' + this.type + ' *');
-				}
-				if (this.subSetter) {
-					v = this.subSetter(v);
-					if (v == undefined) {
-						this.assignState = 1; // 1: warned
-						return;
-					}
-				}
-				this.nativeValue = v;
-			}
-			catch (e) {
-				this.assignState = 2; // 2: errored
-				throw e;
-			}
 		},
 		get visibleString () {
 			switch (this.type) {
@@ -245,7 +188,78 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				}
 				return '  ' + this.name + '=' + value;
 			default:
-				throw new Error('*invalid type for visibleString: ' + this.type + ' *');
+				throw new TypeError('*invalid type for visibleString: ' + this.type + ' *');
+			}
+		},
+		getInfo: function () {
+			var that = this;
+			return {
+				get name () {return that.name},
+				get type () {return that.type},
+				get isLateBind () {return that.isLateBind},
+				get isDynamic () {return that.isDynamic},
+				get isAsync () {return that.assignState ? false : that.isAsync},
+				get defaultValue () {return that.defaultValue}
+			};
+		},
+		setValue: function (v) {
+			try {
+				this.assignState = this.ASSIGN_STATE_INITIAL;
+
+				switch (this.type) {
+				case 'b':
+					v = Boolean(v);
+					if (typeof v != 'boolean') throw new TypeError(_('Invalid boolean value'));
+					break;
+				case 'i':
+					if (typeof v == 'string' && !/^[0-9]+$/.test(v)) {
+						throw new TypeError(_('Invalid integer value'));
+					}
+					v = parseInt(v, 10);
+					if (typeof v != 'number' || isNaN(v)) {
+						throw new TypeError(_('Invalid integer value'));
+					}
+					break;
+				case 'I':
+					if (!/^[-+]?[0-9]+$/.test(v)) {
+						throw new TypeError(_('Invalid integer value'));
+					}
+					v = parseInt(v, 10);
+					if (typeof v != 'number' || isNaN(v)) {
+						throw new TypeError(_('Invalid integer value'));
+					}
+					break;
+				case 's':
+					v = String(v);
+					if (typeof v != 'string') throw new TypeError(_('Invalid string value'));
+					break;
+				case 'r':
+					if (typeof v != 'string') throw new TypeError(_('Invalid regex source string value'));
+					break;
+				default:
+					throw new TypeError('*Invalid type for value getter: ' + this.type + ' *');
+				}
+
+				if (this.subSetter) {
+					v = this.subSetter(v);
+					if (v == undefined) {
+						this.assignState = this.ASSIGN_STATE_WARNED;
+						return v;
+					}
+				}
+
+				if (v instanceof Promise) {
+					return v.then(v => {
+						this.nativeValue = v;
+						return this;
+					});
+				}
+
+				return this.nativeValue = v;
+			}
+			catch (e) {
+				this.assignState = this.ASSIGN_STATE_ERRORED;
+				throw e;
 			}
 		},
 		getBinder: function () {
@@ -262,7 +276,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 					}
 				})(this);
 			default:
-				throw new Error('*invalid type for getBinder: ' + this.type + ' *');
+				throw new TypeError('*invalid type for getBinder: ' + this.type + ' *');
 			}
 		},
 		reset: function () {
@@ -300,7 +314,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			var v = new VariableItem(value[0], value[1], value[2], value[3], value[4]);
 			names[v.name] = i;
 			if (v.isLateBind) {
-				v.value = v.nativeValue;
+				v.setValue(v.nativeValue);
 				Object.defineProperty(vars, v.name, {
 					get:v.getBinder(),
 					configurable:false,
@@ -308,7 +322,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				});
 			}
 			else {
-				try {v.value = v.nativeValue} catch (e) {}
+				try {v.setValue(v.nativeValue)} catch (e) {}
 				vars[v.name] = v.value;
 			}
 			return v;
@@ -332,6 +346,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 		return item ? (reformat ? item.visibleString : item.value) : null;
 	}
 	function setData (name, value, skipSubSetter) {
+		var result;
 		var off = false;
 		var invert = false;
 		if (/^no/.test(name)) {
@@ -351,35 +366,44 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 				return _('An extra value assigned to {0} option.', item.name);
 			}
 			if (invert) {
-				item.value = !item.value;
+				result = item.setValue(!item.value);
 			}
 			else {
-				item.value = !off;
+				result = item.setValue(!off);
 			}
 		}
 		else if (off) {
 			return _('{0} option is not a boolean.', item.name);
 		}
 		else {
+			var subSetter;
+			if (skipSubSetter) {
+				subSetter = item.subSetter;
+				item.subSetter = null;
+			}
+
 			try {
-				var subSetter;
-				if (skipSubSetter) {
-					subSetter = item.subSetter;
-					item.subSetter = null;
-				}
-
-				item.value = value;
-
-				if (subSetter) {
-					item.subSetter = subSetter;
-				}
+				result = item.setValue(value);
 			}
 			catch (e) {
 				return e.message;
 			}
+			finally {
+				if (subSetter) {
+					item.subSetter = subSetter;
+				}
+			}
 		}
-		vars[item.name] = item.value;
-		return null;
+
+		if (result instanceof Promise) {
+			return result.then(item => {
+				return vars[item.name] = item.value;
+			});
+		}
+		else {
+			vars[item.name] = item.value;
+			return null;
+		}
 	}
 	function dump (cols, all) {
 		const phaseThreshold = 20;
@@ -550,7 +574,7 @@ Wasavi.RegexConverter = function (app) {
 			var ch = s.charAt(i);
 			if (ch == '\\') {
 				if (++i >= goal) {
-					throw new Error('a backslash cannot be end');
+					throw new SyntaxError('a backslash cannot be end');
 				}
 			}
 			if (isInClass) {
@@ -601,7 +625,7 @@ Wasavi.RegexConverter = function (app) {
 			}
 		}
 		if (isInClass) {
-			throw new Error('unclosed character class');
+			throw new SyntaxError('unclosed character class');
 		}
 		return result.join('');
 	}
@@ -615,7 +639,7 @@ Wasavi.RegexConverter = function (app) {
 		else if (s instanceof RegExp) {
 			return s.source;
 		}
-		throw new Error('invalid regex source');
+		throw new SyntaxError('invalid regex source');
 	}
 	function toLiteralString (s) {
 		return parse(s, true);
@@ -717,7 +741,7 @@ Wasavi.PrefixInput = function () {
 					break;
 				}
 
-				throw new Error('PrefixInput: invalid initializer: ' + arg);
+				throw new TypeError('PrefixInput: invalid initializer: ' + arg);
 
 			} while (false);
 		}
@@ -1030,7 +1054,7 @@ Wasavi.LineInputHistories = function (app, maxSize, names, value) {
 						s[name].current = s[name].lines.length;
 					}
 					else {
-						throw new Error('LineInputHistories: unregistered name: ' + name);
+						throw new TypeError('LineInputHistories: unregistered name: ' + name);
 					}
 				}
 			],
@@ -1041,137 +1065,79 @@ Wasavi.LineInputHistories = function (app, maxSize, names, value) {
 	value = null;
 };
 
-Wasavi.MapManager = function (app) {
+Wasavi.MapManager = function MapManager (app, opts) {
+	function MapGroup (name) {
+		this.name = name;
+		this.rules = {};
+		this.sequences = {};
+		this.sequencesExpanded = {};
+		this.options = {};
+	}
 
-	function MapItem (name, rules, sequences, sequencesExpanded, options) {
-		function register (lhs, rhs, remap) {
-			rules[lhs] = rhs;
-			sequences[lhs] = app.keyManager.createSequences(lhs);
-			sequencesExpanded[lhs] = app.keyManager.createSequences(rhs);
-			options[lhs] = {remap:!!remap};
-		}
-		function remove () {
-			for (var i = 0; i < arguments.length; i++) {
-				var lhs = arguments[i];
-				delete rules[lhs];
-				delete sequences[lhs];
-				delete sequencesExpanded[lhs];
-				delete options[lhs];
+	MapGroup.prototype = {
+		get length () {
+			return Object.keys(this.rules).length;
+		},
+		register: function (lhs, rhs, remap) {
+			this.rules[lhs] = rhs;
+			this.sequences[lhs] = app.keyManager.createSequences(lhs);
+			this.sequencesExpanded[lhs] = app.keyManager.createSequences(rhs);
+			this.options[lhs] = {remap: !!remap};
+		},
+		remove: function () {
+			for (let i = 0; i < arguments.length; i++) {
+				let lhs = arguments[i];
+				delete this.rules[lhs];
+				delete this.sequences[lhs];
+				delete this.sequencesExpanded[lhs];
+				delete this.options[lhs];
 			}
-		}
-		function removeAll () {
-			for (var i in rules) {
-				remove(i);
+		},
+		removeAll: function () {
+			for (let lhs in this.rules) {
+				this.remove(lhs);
 			}
-		}
-		function isMapped (key) {
-			return key in rules;
-		}
-		function toArray () {
-			var result = [];
-			for (var i in rules) {
-				result.push([i, rules[i]]);
+		},
+		isMapped: function (lhs) {
+			return lhs in this.rules;
+		},
+		toArray: function () {
+			let result = [];
+			for (let lhs in this.rules) {
+				result.push({
+					lhs: lhs,
+					rhs: this.rules[lhs]
+				});
 			}
 			return result;
 		}
-
-		publish(this,
-			register, remove, removeAll, isMapped, toArray,
-			{name:function () {return name}});
-	}
-
-	const NEST_MAX = 100;
-	const DELAY_TIMEOUT = 1000;
-	const MAP_INDICES = {
-		'command': 0, 'bound': 0, 'bound_line': 0,
-		'edit': 1, 'overwrite': 1
 	};
 
-	var rules = [{}, {}];
-	var sequences = [{}, {}];
-	var sequencesExpanded = [{}, {}];
-	var options = [{}, {}];
-	var maps = [
-		new MapItem('command', rules[0], sequences[0], sequencesExpanded[0], options[0]),
-		new MapItem('edit', rules[1], sequences[1], sequencesExpanded[1], options[1])
-	];
-	var depth = 0;
-	var delayedInfo = {
-		timer:null,
-		mapIndex: null,
-		rule:null,
-		handler:null
+	const maps = {
+		command: new MapGroup('command'),
+		edit:    new MapGroup('edit')
 	};
-	var lastMapIndex = null;
-	var currentMap = null;
-	var index = 0;
 
-	function getMap (arg) {
-		if (arg === 'command') {
-			return maps[0];
-		}
-		else if (arg === 'edit') {
-			return maps[1];
-		}
-		return null;
-	}
-	function resetDelayed () {
-		var result;
-		if (delayedInfo.timer) {
-			clearTimeout(delayedInfo.timer);
-			result = {
-				index:delayedInfo.mapIndex,
-				rule:delayedInfo.rule,
-				handler:delayedInfo.handler,
-				suspendedEvent:delayedInfo.suspendedEvent
-			};
-			delayedInfo.timer =
-			delayedInfo.mapIndex = delayedInfo.rule =
-			delayedInfo.handler = delayedInfo.suspendedEvent = null;
-		}
-		return result;
-	}
-	function reset (full) {
-		var result = resetDelayed();
-		currentMap = null;
-		index = 0;
-		if (full) {
-			depth = 0;
-		}
-		return result;
-	}
-	function registerExpandDelayed (mapIndex, lhs, handler, suspendedEvent) {
-		delayedInfo.mapIndex = mapIndex;
-		delayedInfo.rule = lhs;
-		delayedInfo.handler = handler;
-		delayedInfo.suspendedEvent = suspendedEvent;
-		delayedInfo.timer = setTimeout(function () {
-			expandDelayed(reset());
-		}, DELAY_TIMEOUT);
-	}
-	function expandDelayed (delayed, e) {
-		var mapIndex = delayed.index;
-		var lhs = delayed.rule;
-		var handler = delayed.handler;
-		var suspendedEvent = delayed.suspendedEvent;
+	const modeToTypeTable = {
+		command:    'command',
+		bound:      'command',
+		bound_line: 'command',
 
-		if (suspendedEvent) {
-			run(handler, suspendedEvent);
-		}
+		edit:       'edit',
+		overwrite:  'edit'
+	};
 
-		if (e) {
-			app.keyManager.unshift(e);
-			app.keyManager.sweep();
-		}
+	const RECURSE_MAX = 100;
+	const WAIT_TIMEOUT_MSECS = 1000;
 
-		if (lhs) {
-			expand(
-				sequencesExpanded[mapIndex][lhs],
-				options[mapIndex][lhs].remap,
-				handler
-			);
-		}
-	}
+	let currentMapType = undefined;
+	let currentSequence = undefined;
+	let currentIndex = 0;
+	let waitingMapInfo = undefined;
+	let recurseDepth = 0;
+
+	opts || (opts = {});
+
 	function markExpanded (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
 			items[i].mapExpanded =
@@ -1180,6 +1146,7 @@ Wasavi.MapManager = function (app) {
 		items.firstItem.isCompositionedFirst = true;
 		items.lastItem.isCompositionedLast = true;
 	}
+
 	function markExpandedNoremap (items) {
 		for (var i = 0, goal = items.length; i < goal; i++) {
 			items[i].isNoremap =
@@ -1189,117 +1156,271 @@ Wasavi.MapManager = function (app) {
 		items.firstItem.isCompositionedFirst = true;
 		items.lastItem.isCompositionedLast = true;
 	}
-	function expand (rhs, remap, handler) {
-		if (!handler) return;
-		if (depth < NEST_MAX) {
-			depth++;
-			app.keyManager.setDequeue(
-				'unshift', rhs,
-				app.config.vars.remap && remap ?
-					markExpanded : markExpandedNoremap
-			);
-			app.keyManager.sweep();
-		}
-		else {
-			reset(true);
-			app.keyManager.invalidate();
-			app.low.showMessage(_('Map expansion reached maximum recursion limit.'), true);
-		}
+
+	function resetMapping () {
+		currentMapType = currentSequence = undefined;
+		currentIndex = recurseDepth = 0;
+		waitingMapInfo = undefined;
 	}
-	function run () {
-		var args = toArray(arguments);
-		var handler = args.shift();
-		reset(true);
-		handler && handler.apply(null, args);
-	}
-	function process (e, handler) {
-		var delayed = resetDelayed();
-		var mapIndex, keyCode;
 
-		if (app.inputMode in MAP_INDICES) {
-			mapIndex = MAP_INDICES[app.inputMode];
-		}
-		if (!isObject(e)) {
-			e = app.keyManager.nopObject;
-		}
+	function expand (sequencesExpanded, expandOptions) {
+		resetMapping();
 
-		keyCode = e.code;
+		if (recurseDepth < RECURSE_MAX) {
+			recurseDepth++;
+			if (!opts.onexpand) return;
 
-		if (mapIndex == undefined || !keyCode) {
-			if (delayed) {
-				expandDelayed(delayed, e);
-			}
-			else {
-				run(handler, e);
-			}
-			return;
-		}
-		if (app.quickActivation && app.inputMode == 'command' && keyCode == 9) {
-			run(handler, e);
-			return;
-		}
-		if (mapIndex != lastMapIndex) {
-			if (delayed) {
-				expandDelayed(delayed);
-			}
-			reset();
-		}
-		lastMapIndex = mapIndex;
-
-		var srcmap = currentMap || rules[mapIndex];
-		var dstmap = {};
-		var found = 0;
-		var propCompleted;
-
-		for (var i in srcmap) {
-			var seq = sequences[mapIndex][i];
-			if (index < seq.length && seq[index].code == keyCode) {
-				dstmap[i] = srcmap[i];
-				found++;
-				if (index == seq.length - 1 && propCompleted == undefined) {
-					propCompleted = i;
+			let remap = app.config.vars.remap && expandOptions.remap;
+			let sequences = sequencesExpanded.map(seq => {
+				seq = seq.clone();
+				if (expandOptions.overrideMap) {
+					seq.overrideMap = expandOptions.overrideMap;
 				}
-			}
-		}
 
-		if (found) {
-			currentMap = dstmap;
-			index++;
-			if (propCompleted != undefined) {
-				// unique match
-				if (found == 1) {
-					reset();
-					expand(
-						sequencesExpanded[mapIndex][propCompleted],
-						options[mapIndex][propCompleted].remap,
-						handler, 'unique');
+				if (remap) {
+					seq.mapExpanded = seq.isCompositioned = true;
 				}
-				// ambiguous match
 				else {
-					registerExpandDelayed(mapIndex, propCompleted, handler);
+					seq.isNoremap = seq.mapExpanded = seq.isCompositioned = true;
 				}
+
+				return seq;
+			});
+
+			sequences.firstItem.isCompositionedFirst = true;
+			sequences.lastItem.isCompositionedLast = true;
+
+			if (expandOptions.extraEvent) {
+				let seq = expandOptions.extraEvent.clone();
+
+				if (expandOptions.extraOverrideMap) {
+					seq.overrideMap = expandOptions.extraOverrideMap;
+				}
+
+				sequences.push(seq);
 			}
-			else {
-				registerExpandDelayed(mapIndex, null, handler, e);
-			}
+
+			opts.onexpand(sequences);
 		}
 		else {
-			if (delayed) {
-				expandDelayed(delayed, e);
-			}
-			else {
-				run(handler, e);
-			}
+			opts.onrecursemax && opts.onrecursemax();
 		}
 	}
 
-	publish(this,
-		reset, getMap, process, markExpanded, markExpandedNoremap,
-		{
-			commandMap:function () {return maps[0]},
-			editMap:function () {return maps[1]}
-		}
-	);
+	function process (mode, e) {
+		return new Promise(resolve => {
+			if (!e || !('code' in e)) {
+				throw new Error('MapManager: invalid keyboard event argument');
+			}
+
+			let mapType = e.overrideMap || modeToTypeTable[mode];
+
+			if (waitingMapInfo) {
+				clearTimeout(waitingMapInfo.timer);
+				waitingMapInfo.timer = undefined;
+			}
+
+			if (waitingMapInfo && mapType && mapType != currentMapType) {
+				let wmapType = waitingMapInfo.mapType;
+				let wlhs = waitingMapInfo.lhs;
+				expand(
+					maps[wmapType].sequencesExpanded[wlhs],
+					{
+						extraEvent: e,
+						overrideMap: waitingMapInfo.mapType,
+						extraOverrideMap: mapType,
+						remap: maps[wmapType].options[wlhs].remap
+					});
+
+				resolve();
+				return;
+			}
+
+			currentMapType = mapType;
+
+			let dst = {};
+			let fullMatchedLhs;
+			let foundCount = 0;
+
+			/*
+			 * filter the matching sequence from current map
+			 */
+
+			if (mapType) {
+				let code = e.code;
+				let src = currentSequence || maps[mapType].sequences;
+
+				for (let lhs in src) {
+					let sequence = src[lhs];
+					if (currentIndex < sequence.length && sequence[currentIndex].code == code) {
+						dst[lhs] = src[lhs];
+						foundCount++;
+
+						/*
+						 * save that matched the whole sequence
+						 */
+
+						if (currentIndex == sequence.length - 1) {
+							fullMatchedLhs = lhs;
+						}
+					}
+				}
+			}
+
+			/*
+			 * is there a matched sequence?
+			 */
+
+			if (foundCount) {
+				currentSequence = dst;
+				currentIndex++;
+
+				if (fullMatchedLhs != undefined) {
+					// unique match
+					if (foundCount == 1) {
+						/*
+						 * example
+						 *
+						 * input:
+						 *   a
+						 *
+						 * initial map:
+						 *   lhs    rhs
+						 *   ---    ---
+						 *   a      gg
+						 *   b      B
+						 *   bb     ^
+						 *
+						 * filtered map:
+						 *   lhs    rhs
+						 *   ---    ---
+						 *   a      gg   * fullMatchedLhs
+						 */
+
+						expand(
+							maps[mapType].sequencesExpanded[fullMatchedLhs],
+							{
+								overrideMap: currentMapType,
+								remap: maps[mapType].options[fullMatchedLhs].remap
+							});
+					}
+
+					// full matched but ambiguous
+					else {
+						/*
+						 * example
+						 *
+						 * input:
+						 *   b
+						 *
+						 * initial map:
+						 *   lhs    rhs
+						 *   ---    ---
+						 *   a      gg
+						 *   b      B
+						 *   bb     ^
+						 *
+						 * filtered map:
+						 *   lhs    rhs
+						 *   ---    ---
+						 *   b      B    * fullMatchedLhs
+						 *   bb     ^
+						 */
+
+						waitingMapInfo = {
+							mapType: mapType,
+							lhs: fullMatchedLhs,
+							index: currentIndex,
+							timer: setTimeout(() => {
+								let mapType = waitingMapInfo.mapType;
+								let lhs = waitingMapInfo.lhs;
+								expand(
+									maps[mapType].sequencesExpanded[lhs],
+									{
+										remap: maps[mapType].options[lhs].remap
+									});
+							}, WAIT_TIMEOUT_MSECS)
+						};
+					}
+				}
+				else {
+					/*
+					 * example
+					 *
+					 * input:
+					 *   b
+					 *
+					 * initial map:
+					 *   lhs    rhs
+					 *   ---    ---
+					 *   a      gg
+					 *   bb     B
+					 *   bbb    ^
+					 *
+					 * filtered map:
+					 *   lhs    rhs
+					 *   ---    ---
+					 *   bb     B
+					 *   bbb    ^
+					 *
+					 */
+
+					waitingMapInfo = {
+						mapType: mapType,
+						lhs: Object.keys(currentSequence)[0].substring(0, currentIndex),
+						index: currentIndex,
+						timer: setTimeout(() => {
+							let mapType = waitingMapInfo.mapType;
+							let lhs = waitingMapInfo.lhs;
+							let index = waitingMapInfo.index;
+							expand(
+								app.keyManager.createSequences(lhs),
+								{
+									remap: false
+								});
+						}, WAIT_TIMEOUT_MSECS)
+					};
+				}
+
+				resolve();
+			}
+
+			/*
+			 * no matched sequences
+			 */
+
+			else {
+				if (waitingMapInfo) {
+					let wmapType = waitingMapInfo.mapType;
+					let wlhs = waitingMapInfo.lhs;
+					let windex = waitingMapInfo.index;
+					let sequences = wlhs in currentSequence ?
+						maps[wmapType].sequencesExpanded[wlhs] :
+						app.keyManager.createSequences(wlhs);
+					expand(
+						sequences,
+						{
+							extraEvent: e,
+							overrideMap: wmapType,
+							extraOverrideMap: mapType,
+							remap: false
+						});
+
+					resolve();
+				}
+				else {
+					resolve(e);
+				}
+			}
+		});
+	}
+
+	publish(this, markExpanded, markExpandedNoremap, process, {
+		maps: () => maps,
+		onexpand: [() => opts.onexpand, (v) => {opts.onexpand = v}],
+		onrecursemax: [() => opts.onrecursemax, (v) => {opts.onrecursemax = v}],
+		isWaiting: () => currentSequence != undefined
+	});
 };
 
 Wasavi.Registers = function (app, value) {
@@ -1816,7 +1937,7 @@ Wasavi.Marks = function (app, value) {
 Wasavi.Editor = function (element) {
 	this.elm = $(element);
 	if (!this.elm) {
-		throw new Error('*** wasavi: Editor constructor: invalid element: ' + element);
+		throw new TypeError('*** wasavi: Editor constructor: invalid element: ' + element);
 	}
 	this._ssrow = this._sscol = this._serow = this._secol = 0;
 	this.isLineOrientSelection = false;
@@ -1883,7 +2004,7 @@ Wasavi.Editor.prototype = new function () {
 			e = this.selectionEnd;
 		}
 		else if (arguments.length != 2) {
-			throw new Error('select: invalid length of argument');
+			throw new TypeError('select: invalid length of argument');
 		}
 
 		if (s.row > e.row || s.row == e.row && s.col > e.col) {
@@ -1903,7 +2024,7 @@ Wasavi.Editor.prototype = new function () {
 			e = this.selectionEnd;
 		}
 		else if (arguments.length != 2) {
-			throw new Error('selectRows: invalid length of argument');
+			throw new TypeError('selectRows: invalid length of argument');
 		}
 
 		if (s.row > e.row || s.row == e.row && s.col > e.col) {
@@ -1971,7 +2092,7 @@ Wasavi.Editor.prototype = new function () {
 			var a = arg2pos(arguments);
 			var rowLength = this.rowLength;
 			if (a.row < 0 || a.row >= rowLength) {
-				throw new Error(`isEndOfText: argument row (${a.row}) out of range.`);
+				throw new RangeError(`isEndOfText: argument row (${a.row}) out of range.`);
 			}
 			if (a.row < rowLength - 1) {
 				return false;
@@ -1985,7 +2106,7 @@ Wasavi.Editor.prototype = new function () {
 			var a = arg2pos(arguments);
 			var rowLength = this.rowLength;
 			if (a.row < 0 || a.row >= rowLength) {
-				throw new Error(`isNewline: argument row (${a.row}) out of range.`);
+				throw new RangeError(`isNewline: argument row (${a.row}) out of range.`);
 			}
 			if (a.row == rowLength - 1 || a.col < this.rows(a).length) {
 				return false;
@@ -2022,10 +2143,10 @@ Wasavi.Editor.prototype = new function () {
 			var row = arg instanceof Wasavi.Position ? arg.row : arg;
 
 			if (typeof row != 'number' || isNaN(row)) {
-				throw new Error(`rowNodes: argument row is not a number`);
+				throw new TypeError(`rowNodes: argument row is not a number`);
 			}
 			if (row < 0 || row >= this.rowLength) {
-				throw new Error(`rowNodes: argument row (${row}) out of range`);
+				throw new RangeError(`rowNodes: argument row (${row}) out of range`);
 			}
 
 			var result = this.elm.childNodes[row * 2 + (newline ? 1 : 0)];
@@ -2258,7 +2379,7 @@ Wasavi.Editor.prototype = new function () {
 				n = n.row;
 			}
 			if (typeof n != 'number' || isNaN(n)) {
-				throw new Error('Editor#getGraphemeClusters: invalid arg: ' + n);
+				throw new TypeError('Editor#getGraphemeClusters: invalid arg: ' + n);
 			}
 			var uc = this.initUnicodeCache();
 			if (!uc.clusters[n]) {
@@ -2279,7 +2400,7 @@ Wasavi.Editor.prototype = new function () {
 				n = n.row;
 			}
 			if (typeof n != 'number' || isNaN(n)) {
-				throw new Error('Editor#getWords: invalid arg: ' + n);
+				throw new TypeError('Editor#getWords: invalid arg: ' + n);
 			}
 			var uc = this.initUnicodeCache();
 			if (!uc.words[n]) {
@@ -2615,7 +2736,7 @@ loop:			while (node) {
 
 					case 1:
 						if (node.nodeName != 'SPAN' || node.className != Wasavi.MARK_CLASS) {
-							throw new Error('unknown node found');
+							throw new TypeError('unknown node found');
 						}
 						var next = node.nextSibling;
 						var markName = node.dataset.index;
@@ -2941,7 +3062,7 @@ loop:			while (node) {
 				pos = this.selectionStart;
 			}
 			if (typeof length != 'number') {
-				throw new Error('emphasis: length is not a number');
+				throw new TypeError('emphasis: length is not a number');
 			}
 
 			var isInRange = false;
@@ -3152,7 +3273,7 @@ whole:
 				from = to + 1;
 				limit--;
 				if (limit <= 0) {
-					throw new Error('Editor#value(set): exceeded the limit');
+					throw new RangeError('Editor#value(set): exceeded the limit');
 				}
 			}
 
@@ -3305,7 +3426,7 @@ Wasavi.LiteralInput.prototype = {
 Wasavi.InputHandler = function (appProxy) {
 	this.app = appProxy;
 	this.inputHeadPosition = null;
-	this.count = 1
+	this.count = this.countOrig = 1
 	this.suffix = '';
 	this.text = this.textFragment = this.stroke = '';
 	this.overwritten = null;
@@ -3320,7 +3441,7 @@ Wasavi.InputHandler.prototype = {
 	},
 	reset: function (count, suffix, position, initStartPosition) {
 		this.inputHeadPosition = position || null;
-		this.count = count || 1;
+		this.count = this.countOrig = count || 1;
 		this.suffix = suffix || '';
 		this.text = this.textFragment = this.stroke = '';
 		this.overwritten = null;
@@ -3380,7 +3501,7 @@ Wasavi.InputHandler.prototype = {
 		this.prevLengthText[0] = o[2];
 		this.prevLengthText[1] = o[3];
 	},
-	updateText: function (e) {
+	appendText: function (e) {
 		var result;
 		if (isString(e)) {
 			result = e;
@@ -3398,11 +3519,15 @@ Wasavi.InputHandler.prototype = {
 		return result;
 	},
 	ungetText: function () {
+		let t = this.text;
+		let tf = this.textFragment;
 		if (this.prevLengthText[0] !== undefined) {
 			this.text = this.text.substring(0, this.prevLengthText[0]);
+			this.prevLengthText[0] -= t.length - this.prevLengthText[0];
 		}
 		if (this.prevLengthText[1] !== undefined) {
 			this.textFragment = this.textFragment.substring(0, this.prevLengthText[1]);
+			this.prevLengthText[1] -= tf.length - this.prevLengthText[1];
 		}
 	},
 	pushStroke: function () {
@@ -3418,7 +3543,7 @@ Wasavi.InputHandler.prototype = {
 		this.stroke = this.stroke.substring(0, o[0]);
 		this.prevLengthStroke = o[1];
 	},
-	updateStroke: function (e) {
+	appendStroke: function (e) {
 		var result;
 		if (isString(e)) {
 			result = e;
@@ -3861,12 +3986,9 @@ Wasavi.Completer = function (appProxy, alist) {
 		}
 
 		running = true;
-		appProxy.keyManager.lock();
 		startNotifierTimer(callback);
 		ctx.item.requestCandidates(value, function () {
 			stopNotifierTimer();
-			appProxy.keyManager.unlock();
-			appProxy.low.notifyActivity('', '', 'completion done');
 			running = false;
 			if (callback.__timed_out__) {
 				return false;
@@ -3911,12 +4033,16 @@ Wasavi.StrokeRecorder = function () {
 		}
 	}
 
+	function dump () {
+		return JSON.stringify(storage, null, ' ');
+	}
+
 	function dispose () {
 		storage = null;
 	}
 
 	publish(this,
-		add, remove, items, appendStroke, dispose
+		add, remove, items, appendStroke, dump, dispose
 	);
 };
 
@@ -4551,7 +4677,7 @@ Wasavi.IncDec = function IncDec (app, defaultOpts) {
 		var foundIndex = matches.foundIndex;
 
 		if (typeof foundIndex != 'number') {
-			throw new Error('incdec#getReplacement: foundIndex is not a number');
+			throw new TypeError('incdec#getReplacement: foundIndex is not a number');
 		}
 
 		if (foundIndex < 0 || matches.length <= foundIndex) {
@@ -4571,7 +4697,7 @@ Wasavi.IncDec = function IncDec (app, defaultOpts) {
 			}
 		}
 		else {
-			throw new Error(`incdec#getReplacement: unknown type ${item.type}`);
+			throw new TypeError(`incdec#getReplacement: unknown type ${item.type}`);
 		}
 
 		return result;

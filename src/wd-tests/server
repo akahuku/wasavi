@@ -53,54 +53,58 @@ function handleRequest (filename, response) {
 }
 
 function start (basedir, port, options) {
-	try {
-		options || (options = {});
-		var server = http.createServer((request, response) => {
-			try {
-				var uri = url.parse(request.url).pathname,
-					filename = path.join(process.cwd(), basedir, uri);
+	options || (options = {});
+	var server = http.createServer((request, response) => {
+		try {
+			var uri = url.parse(request.url).pathname,
+				filename = path.join(process.cwd(), basedir, uri);
 
-				//console.log(uri + '\t' + filename);
+			//console.log(uri + '\t' + filename);
 
-				if (uri == '/shutdown') {
-					response.writeHead(200, {'Content-Type': 'text/plain'});
-					response.write('Bye!\n');
-					response.end();
-					setTimeout(() => {
-						server.close();
-						server = null;
-						if (!('noexit' in options) || !options.noexit) {
-							process.exit(0);
-						}
-					}, 100);
-					return;
-				}
-
-				handleRequest(filename, response);
+			if (uri == '/shutdown') {
+				response.writeHead(200, {'Content-Type': 'text/plain'});
+				response.write('Bye!\n');
+				response.end();
+				setTimeout(() => {
+					server.close();
+					server = null;
+					if (!('noexit' in options) || !options.noexit) {
+						process.exit(0);
+					}
+				}, 100);
+				return;
 			}
-			catch (ex) {
-				console.log('exception in www server: ' + ex);
-			}
-		});
-		server.listen(parseInt(port, 10));
 
+			handleRequest(filename, response);
+		}
+		catch (ex) {
+			console.log('exception in www server: ' + ex);
+		}
+	});
+	server.on('error', err => {
+		console.log('exception: ' + err);
+		process.exit(1);
+	});
+	server.listen(parseInt(port, 10), () => {
 		if (!('silent' in options) || !options.silent) {
 			console.log('started on http://localhost:' + port + '/');
 			console.log('  - base directory: ' + basedir);
 			console.log('  - Press CTRL+C or access /shutdown to shutdown');
 		}
-	}
-	catch (ex) {
-		console.log('exception in application: ' + ex);
-	}
+	});
 }
 
-console.log(process.argv.join('\n'));
-if (path.basename(process.argv[1]) == path.basename(__filename)) {
-	start(process.argv[3] || 'www', process.argv[2] || 8888);
+try {
+	if (path.basename(process.argv[1]) == path.basename(__filename)) {
+		start(process.argv[3] || 'www', process.argv[2] || 8888);
+	}
+	else {
+		exports.start = start;
+	}
 }
-else {
-	exports.start = start;
+catch (ex) {
+	console.log('exception: ' + ex);
+	process.exit(1);
 }
 
 // vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :

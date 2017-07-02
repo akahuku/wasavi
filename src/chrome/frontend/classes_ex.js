@@ -442,7 +442,9 @@ flag23_loop:
 		var result;
 		try {
 			var t = app.buffer;
-			result = this.handler(app, t, args);
+			result = isGenerator(this.handler) ?
+				execGenerator(this.handler, this, app, t, args) :
+				this.handler(app, t, args);
 		}
 		catch (e) {
 			result = e.toString();
@@ -459,27 +461,33 @@ flag23_loop:
 	// >>>
 };
 
-function parseWriteArg (app, t, a) {
+function parseWriteArg (app, t, a, caller) {
 	var re;
 	var arg = a.argv[0] || '';
 	var isCommand = false;
 	var isAppend = false;
-	var name = false;
-	if ((re = /^\s*(?!\\)!(.+)/.exec(arg))) {
+	var path = '';
+
+	if ((re = /^\s*(?!\\)!(.*)/.exec(arg))) {
 		isCommand = true;
-		name = re[1];
+		path = (re[1] || '').replace(/\\(.)/g, '$1');
 	}
-	else if ((re = /^\s*(>>)?(.*)/.exec(arg))) {
-		isAppend = re[1] == '>>';
-		name = re[2] || '';
+	else if ((re = /^\s*>>(.*)/.exec(arg))) {
+		isAppend = true;
+		path = (re[2] || '').replace(/\\(.)/g, '$1');
 	}
-	if (name === false) {
-		return _('Invalid argument.');
+	else if ((re = /\s*(.+)/.exec(arg))) {
+		path = re[1].replace(/\\(.)/g, '$1');
 	}
+	else if (app.fileName != '') {
+		path = app.fileName;
+	}
+
 	return {
-		isCommand:isCommand,
-		isAppend:isAppend,
-		path:name.replace(/\\(.)/g, '$1')
+		caller: caller,
+		isCommand: isCommand,
+		isAppend: isAppend,
+		path: path
 	};
 }
 
@@ -509,7 +517,7 @@ function writeCore (app, t, a, pa) {
 		'\n' : app.preferredNewline;
 	var content = t.getValue(a.range[0], a.range[1], newline);
 
-	var requestId;
+	var postType;
 	var payload = {
 		path:pathRegalized,
 		isForce:a.flags.force,
@@ -523,27 +531,24 @@ function writeCore (app, t, a, pa) {
 		case 'body':
 			payload.type = 'set-memorandum';
 			payload.url = app.targetElement.url;
-			requestId = app.extensionChannel.postMessage(payload);
+			postType = 'body';
 			break;
 
 		default:
 			payload.writeAs = app.targetElement.writeAs;
-			app.low.notifyToParent('write', payload);
-			requestId = app.extensionChannel.getNewRequestNumber();
+			postType = 'element';
 			break;
 		}
 	}
 
 	// write into the online storage
 	else {
-		payload.type = 'fsctl';
-		payload.subtype = 'write';
+		payload.type = 'write';
 		payload.encoding = 'UTF-8';
-		requestId = app.extensionChannel.postMessage(payload, true, true);
+		postType = 'storage';
 	}
 
-	app.low.registerMultiplexCallback(requestId, 'write');
-
+	// set file name and clear dirty flag, when writing the whole buffer
 	if (a.range[0] == 0 && a.range[1] == t.rowLength - 1) {
 		if (app.fileName == '') {
 			app.fileName = pathRegalized;
@@ -553,6 +558,90 @@ function writeCore (app, t, a, pa) {
 		}
 		app.editLogger.notifySave();
 	}
+
+	// call buffered writing.
+	// response messages will be posted to chrome.runtime.onMessage listener.
+	if (pa.isBuffered && postType == 'storage') {
+		app.extensionChannel.postMessage(payload);
+		return;
+	}
+
+	return new Promise(resolve => {
+		var port;
+
+		function handleResponse (res) {
+			if (res.error) {
+				if (port) {
+					port.disconnect();
+					port = undefined;
+				}
+				resolve(_.apply(null, res.error));
+				return;
+			}
+
+			switch (res.type) {
+			case 'fileio-authorize-response':
+				app.low.showMessage(_('Obtaining access rights ({0})...', res.phase || '-'));
+				break;
+
+			case 'write-response':
+			case 'fileio-write-response':
+				switch (res.state) {
+				case 'buffered':
+					app.low.showMessage(_('Buffered: {0}', res.path));
+					break;
+
+				case 'writing':
+					app.low.showMessage(_('Writing ({0}%)', res.progress.toFixed(2)));
+					break;
+
+				case 'complete':
+					var result;
+
+					app.isTextDirty = false;
+
+					if (port) {
+						port.disconnect();
+						port = undefined;
+					}
+
+					if (/^(?:submit|wqs?|xit)$/.test(pa.caller)) {
+						let quit = find('quit');
+						let caller = find(pa.caller);
+
+						result = quit.handler.call(caller, app, t, a);
+					}
+					else {
+						let path = res.meta.path;
+						let bytes = res.meta.bytes;
+						let message = app.low.getFileIoResultInfo(path, bytes);
+
+						app.low.requestShowMessage(_('Written: {0}', message));
+						app.low.notifyActivity('', '', 'write handler completed');
+					}
+
+					resolve(result);
+					break;
+				}
+			}
+		}
+
+		switch (postType) {
+		case 'body':
+			app.extensionChannel.postMessage(payload, handleResponse);
+			break;
+
+		case 'element':
+			app.low.notifyToParent('write', payload, handleResponse);
+			break;
+
+		case 'storage':
+			port = chrome.runtime.connect({name: 'fsctl'});
+			port.onMessage.addListener(handleResponse);
+			port.postMessage(payload);
+			break;
+		}
+	});
 }
 
 function globalLatterHead (app, t, a) {
@@ -961,7 +1050,7 @@ var cache = {};
 			app.backlog.push(lg(i) + line);
 		}
 	}
-	app.low.requestConsoleState();
+	app.low.requestConsoleOpen();
 }
 
 /*public*/var commands = [
@@ -1003,7 +1092,7 @@ var cache = {};
 			else {
 				app.backlog.push(_('No abbreviations are defined.'));
 			}
-			app.low.requestConsoleState();
+			app.low.requestConsoleOpen();
 		}
 
 		var lhs, rhs, option;
@@ -1054,29 +1143,33 @@ var cache = {};
 		}
 	}),
 	new ExCommand('cd', 'cd', 'f', 0, function (app, t, a) {
-		var opcode = app.exvm.inst.currentOpcode;
-		var worker = opcode.worker;
-		if (worker) {
-			opcode.worker = null;
+		return new Promise(resolve => {
+			var port = chrome.runtime.connect({name: 'fsctl'});
+			port.onMessage.addListener(res => {
+				if (res.error) {
+					port.disconnect();
+					port = null;
+					resolve(_.apply(null, res.error));
+					return;
+				}
 
-			if (worker.error) {
-				return worker.error;
-			}
-			if (worker.req) {
-				return chdirCore(app, t, a, worker.req.data);
-			}
+				switch (res.type) {
+				case 'fileio-authorize-response':
+					app.low.showMessage(_('Obtaining access rights ({0})...', res.phase || '-'));
+					break;
 
-			return _('Invalid chdir response.');
-		}
-
-		var requestId = app.extensionChannel.postMessage({
-			type:'fsctl',
-			subtype:'chdir',
-			path:app.low.regalizeFilePath(a.argv[0], true)
-		}, true, true);
-		app.low.registerMultiplexCallback(requestId, 'chdir');
-
-		return app.exvm.EX_ASYNC;
+				case 'fileio-chdir-response':
+					port.disconnect();
+					port = null;
+					resolve(chdirCore(app, t, a, res.data));
+					break;
+				}
+			});
+			port.postMessage({
+				type: 'chdir',
+				path: app.low.regalizeFilePath(a.argv[0], true)
+			});
+		});
 	}),
 	new ExCommand('chdir', 'chd', 'f', 0, function (app, t, a) {
 		return find('cd').handler.apply(this, arguments);
@@ -1111,28 +1204,13 @@ var cache = {};
 		app.isEditCompleted = true;
 	}),
 	new ExCommand('edit', 'e', '!f', 0, function (app, t, a) {
-		var opcode = app.exvm.inst.currentOpcode;
-		var worker = opcode.worker;
-		if (worker) {
-			opcode.worker = null;
-
-			if (worker.error) {
-				return worker.error;
-			}
-			if (worker.req) {
-				var req = worker.req;
-				return editCore(app, t, a, req.content, req.meta, req.status);
-			}
-
-			return _('Invalid edit response.');
-		}
-
 		if (!a.flags.force && app.isTextDirty) {
 			return _('File is modified; write or use "!" to override.');
 		}
 		if (a.argv.length > 2) {
 			return _('Too much arguments.');
 		}
+
 		var path = a.argv[0] || '';
 		if (path.charAt(0) == '+') {
 			a.initCommand = path.substring(1).replace(/\\(.)/g, '$1');
@@ -1153,38 +1231,71 @@ var cache = {};
 			}
 		}
 
-		var requestId;
-		var payload = {
-			path:app.low.regalizeFilePath(path, true) || app.fileName
-		};
+		return new Promise(resolve => {
+			var port;
+			var payload = {
+				path:app.low.regalizeFilePath(path, true) || app.fileName
+			};
 
-		// read from the element on a page
-		if (payload.path == '') {
-			switch (app.targetElement.elementType) {
-			case 'body':
-				payload.type = 'get-memorandum';
-				payload.url = app.targetElement.url;
-				requestId = app.extensionChannel.postMessage(payload);
-				break;
+			function handleResponse (res) {
+				if (res.error) {
+					if (port) {
+						port.disconnect();
+						port = undefined;
+					}
+					resolve(_.apply(null, res.error));
+					return;
+				}
 
-			default:
-				app.low.notifyToParent('read', payload);
-				requestId = app.extensionChannel.getNewRequestNumber();
-				break;
+				switch (res.type) {
+				case 'fileio-authorize-response':
+					app.low.showMessage(_('Obtaining access rights ({0})...', res.phase || '-'));
+					break;
+
+				case 'read-response':
+				case 'fileio-read-response':
+					switch (res.state) {
+					case 'reading':
+						app.low.showMessage(_('Reading ({0}%)', res.progress.toFixed(2)));
+						break;
+
+					case 'complete':
+						if (port) {
+							port.disconnect();
+							port = undefined;
+						}
+						resolve(editCore(app, t, a, res.content, res.meta, res.status));
+						break;
+					}
+					break;
+				}
 			}
-		}
 
-		// read from the online storage
-		else {
-			payload.type = 'fsctl';
-			payload.subtype = 'read';
-			payload.encoding = 'UTF-8';
-			requestId = app.extensionChannel.postMessage(payload, true, true);
-		}
+			// read from the element on a page
+			if (payload.path == '') {
+				switch (app.targetElement.elementType) {
+				case 'body':
+					payload.type = 'get-memorandum';
+					payload.url = app.targetElement.url;
+					app.extensionChannel.postMessage(payload, handleResponse);
+					break;
 
-		app.low.registerMultiplexCallback(requestId, 'edit');
+				default:
+					app.low.notifyToParent('read', payload, handleResponse);
+					break;
+				}
+			}
 
-		return app.exvm.EX_ASYNC;
+			// read from the online storage
+			else {
+				payload.type = 'read';
+				payload.encoding = 'UTF-8';
+
+				port = chrome.runtime.connect({name: 'fsctl'});
+				port.onMessage.addListener(handleResponse);
+				port.postMessage(payload);
+			}
+		});
 	}),
 	new ExCommand('file', 'f', 'f', 0, function (app, t, a) {
 		if (a.argv.length > 1) {
@@ -1260,7 +1371,7 @@ var cache = {};
 					);
 				})
 				app.backlog.push(list);
-				app.low.requestConsoleState();
+				app.low.requestConsoleOpen();
 			}
 			else {
 				return _('no available file systems.');
@@ -1444,15 +1555,15 @@ var cache = {};
 	new ExCommand('map', 'map', '!W', 0, function (app, t, a) {
 		var internalMapName = a.flags.force ? 'edit' : 'command';
 		var displayMapName = a.flags.force ? 'INPUT' : 'NORMAL';
-		var map = app.mapManager.getMap(internalMapName);
+		var map = app.mapManager.maps[internalMapName];
 
 		function dispMap (map) {
 			if (map.length) {
 				var maxWidth = 0;
 				var list = [_('*** {0} mode maps ***', displayMapName)];
 				map.map(function (o) {
-					var lhs = toVisibleString(o[0]);
-					var rhs = toVisibleString(o[1]);
+					var lhs = toVisibleString(o.lhs);
+					var rhs = toVisibleString(o.rhs);
 					if (lhs.length > maxWidth) {
 						maxWidth = lhs.length;
 					}
@@ -1468,7 +1579,7 @@ var cache = {};
 			else {
 				app.backlog.push(_('No mappings for {0} mode are defined.', displayMapName));
 			}
-			app.low.requestConsoleState();
+			app.low.requestConsoleOpen();
 		}
 
 		var lhs, rhs, option;
@@ -1494,7 +1605,7 @@ var cache = {};
 		// one arg
 		else if (lhs != undefined && rhs == undefined) {
 			dispMap(map.toArray().filter(function (o) {
-				return o[0].indexOf(lhs) >= 0;
+				return o.lhs.indexOf(lhs) >= 0;
 			}));
 		}
 
@@ -1525,7 +1636,7 @@ var cache = {};
 	}),
 	new ExCommand('marks', 'marks', '', 0, function (app, t, a) {
 		app.backlog.push(app.marks.dump());
-		app.low.requestConsoleState();
+		app.low.requestConsoleOpen();
 	}),
 	new ExCommand('move', 'm', 'l', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		var r = a.range;
@@ -1587,6 +1698,13 @@ var cache = {};
 			isForward:true,
 			lineOrientOverride:true
 		};
+
+		function doput () {
+			t.setSelectionRange(new Wasavi.Position(minmax(-1, a.range[0], t.rowLength - 1), 0));
+			app.edit.paste(1, opts);
+			t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
+		}
+
 		if (register.charAt(0) == '=') {
 			var expressionString;
 			if (register.length == 1) {
@@ -1607,16 +1725,35 @@ var cache = {};
 			opts.content = v.result;
 			register = register.charAt(0);
 			app.registers.get('=').set(expressionString);
+
+			return doput();
 		}
-		else {
+
+		else if (!app.registers.isClipboard(register)) {
 			if (!app.registers.exists(register)) {
 				return _('Register {0} is empty.', register);
 			}
+
 			opts.register = register;
+
+			return doput();
 		}
-		t.setSelectionRange(new Wasavi.Position(minmax(-1, a.range[0], t.rowLength - 1), 0));
-		app.edit.paste(1, opts);
-		t.setSelectionRange(t.getLineTopOffset2(Math.max(0, t.selectionStartRow), 0));
+
+		else {
+			return new Promise(resolve => {
+				app.extensionChannel.getClipboard(text => {
+					app.registers.get('*').set(text);
+
+					if (text == '') {
+						resolve(_('Register {0} is empty.', register));
+					}
+					else {
+						opts.register = register;
+						resolve(doput());
+					}
+				});
+			});
+		}
 	}),
 	new ExCommand('quit', 'q', '!', 0, function (app, t, a) {
 		if (/^(?:wqs|submit)$/.test(this.name)) {
@@ -1636,36 +1773,47 @@ var cache = {};
 		}
 	}),
 	new ExCommand('read', 'r', 'f', 1 | EXFLAGS.addrZero | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var opcode = app.exvm.inst.currentOpcode;
-		var worker = opcode.worker;
-		if (worker) {
-			opcode.worker = null;
-
-			if (worker.error) {
-				return worker.error;
-			}
-			if (worker.req) {
-				var req = worker.req;
-				return readCore(app, t, a, req.content, req.meta, req.status);
-			}
-
-			return _('Invalid read response.');
-		}
-
 		var path = a.argv[0] || '';
 		if (path == '' && app.fileName == '') {
 			return _('File name is empty.');
 		}
 
-		var requestId = app.extensionChannel.postMessage({
-			type:'fsctl',
-			subtype:'read',
-			encoding:'UTF-8',
-			path:app.low.regalizeFilePath(path, true) || app.fileName
-		}, true, true);
-		app.low.registerMultiplexCallback(requestId, 'read');
+		return new Promise(resolve => {
+			var port = chrome.runtime.connect({name: 'fsctl'});
+			port.onMessage.addListener(res => {
+				if (res.error) {
+					port.disconnect();
+					port = null;
+					resolve(_.apply(null, res.error));
+					return;
+				}
 
-		return app.exvm.EX_ASYNC;
+				switch (res.type) {
+				case 'fileio-authorize-response':
+					app.low.showMessage(_('Obtaining access rights ({0})...', res.phase || '-'));
+					break;
+
+				case 'fileio-read-response':
+					switch (res.state) {
+					case 'reading':
+						app.low.showMessage(_('Reading ({0}%)', res.progress.toFixed(2)));
+						break;
+
+					case 'complete':
+						port.disconnect();
+						port = null;
+						resolve(readCore(app, t, a, res.content, res.meta, res.status));
+						break;
+					}
+					break;
+				}
+			});
+			port.postMessage({
+				type: 'read',
+				encoding: 'UTF-8',
+				path: app.low.regalizeFilePath(path, true) || app.fileName
+			});
+		});
 	}),
 	new ExCommand('redo', 're', '', 0, function (app, t, a) {
 		app.editLogger.close();
@@ -1687,21 +1835,15 @@ var cache = {};
 				return _('No previous search pattern.');
 			}
 		}
+
 		var argmap = {
 			's': [a.range, a.argv[0], a.argv[1], a.argv[2]],
 			'&': [a.range, '',        '%',       a.argv[0]],
 			'~': [a.range, pattern,   '~',       a.argv[0]]
 		};
-		var opcode = app.exvm.inst.currentOpcode;
-		if (opcode.worker) {
-			if (opcode.worker.kontinue(opcode.letter)) {
-				return app.exvm.EX_ASYNC;
-			}
-		}
-		else {
-			opcode.worker = new Wasavi.SubstituteWorker(app);
-			return opcode.worker.run.apply(opcode.worker, argmap[this.name]);
-		}
+		var worker = new Wasavi.SubstituteWorker(app);
+
+		return worker.run.apply(worker, argmap[this.name]);
 	}),
 	new ExCommand('&', '&', 's', 2, function (app, t, a) {
 		return find('s').handler.apply(this, arguments);
@@ -1712,7 +1854,7 @@ var cache = {};
 	new ExCommand('script', 'sc', 's', 2, function (app, t, a) {
 		return 'Under development!';
 	}),
-	new ExCommand('set', 'se', 'wN', 0, function (app, t, a) {
+	new ExCommand('set', 'se', 'wN', 0, function* (app, t, a) {
 		var messages;
 		var emphasis = false;
 		if (a.argv.length == 0) {
@@ -1736,19 +1878,10 @@ var cache = {};
 			}
 		}
 		else {
-			var messages, startIndex;
-
+			var messages = [];
 			var opcode = app.exvm.inst.currentOpcode;
-			var worker = opcode.worker;
-			if (worker) {
-				messages = worker.messages;
-				startIndex = worker.startIndex;
-			}
-			else {
-				messages = [];
-				startIndex = 0;
-			}
-			for (var i = startIndex; i < a.argv.length; i++) {
+
+			for (var i = 0; i < a.argv.length; i++) {
 				var arg = a.argv[i];
 				var re = /^([^=?!]+)([=?!]|&(?:default|exrc)?)/.exec(arg) || ['', arg, ''];
 				var info = app.config.getInfo(re[1]);
@@ -1824,34 +1957,40 @@ var cache = {};
 						else if (re[2] == '!') {
 							re[1] = 'inv' + info.name;
 						}
+
 						var result = app.config.setData(re[1], value);
 						if (typeof result == 'string') {
 							messages.push(result.replace(/\.$/, '') + ': ' + arg);
 							emphasis = true;
 							break;
 						}
-						if (info.isAsync) {
-							opcode.worker || (opcode.worker = {});
-							opcode.worker.messages = messages;
-							opcode.worker.startIndex = i + 1;
-							return app.exvm.EX_ASYNC;
+
+						// wait its completion if async item
+						else if (result instanceof Promise) {
+							yield result;
 						}
 					}
 				}
 			}
 		}
+		// if messages exists...
 		if (messages.length) {
+			// one line only
 			if (messages.length == 1 && !app.backlog.visible) {
 				app.low.requestShowMessage(messages[0], emphasis);
-				app.low.requestConsoleState(true);
+				app.low.requestConsoleClose();
 			}
+			// multiple messages
 			else {
 				app.backlog.push(messages);
-				app.low.requestConsoleState();
+				app.low.requestConsoleOpen();
+				//app.backlog.open();
+				//yield execGenerator(backlog.loop, backlog);
 			}
 		}
+		// messages is empty. request closing the console
 		else {
-			app.low.requestConsoleState(true);
+			app.low.requestConsoleClose();
 		}
 	}),
 	new ExCommand('sort', 'sor', '!s', 2 | EXFLAGS.addr2All, function (app, t, a) {
@@ -1912,18 +2051,6 @@ var cache = {};
 				'current pos: ' + app.editLogger.currentPosition
 			].join('\n'));
 			break;
-		case 'dump-internal-ids':
-			app.extensionChannel.postMessage(
-				{
-					type:'dump-internal-ids',
-					parentTabId: app.targetElement.parentTabId,
-					parentTabIdInternal: app.targetElement.internalId
-				},
-				function (req) {
-					req && req.log && console.log(req.log);
-				}
-			);
-			break;
 		case 'dump-options-doc':
 			app.extensionChannel.setClipboard(app.config.dumpData());
 			break;
@@ -1935,7 +2062,13 @@ var cache = {};
 	}),
 	new ExCommand('registers', 'reg', '', 0, function (app, t, a) {
 		app.backlog.push(app.registers.dump());
-		app.low.requestConsoleState();
+		app.low.requestConsoleOpen();
+	}),
+	new ExCommand('reload', 'rel', '', 0, function (app, t, a) {
+		if (app.isTestMode) {
+			app.low.requestShowMessage('Reloading now...');
+			app.low.notifyToParent('reload');
+		}
 	}),
 	new ExCommand('to', 't', 'l1', 2 | EXFLAGS.printDefault, function (app, t, a) {
 		return find('copy').handler.apply(this, arguments);
@@ -1966,7 +2099,7 @@ var cache = {};
 	}),
 	new ExCommand('unmap', 'unm', '!w1r', 0, function (app, t, a) {
 		var lhs = a.argv[0];
-		var map = app.mapManager.getMap(a.flags.force ? 'edit' : 'command');
+		var map = app.mapManager.maps[a.flags.force ? 'edit' : 'command'];
 		if (lhs == '[all]') {
 			map.removeAll();
 		}
@@ -1985,51 +2118,29 @@ var cache = {};
 		return find('global').handler.apply(this, arguments);
 	}),
 	new ExCommand('write', 'w', '!s', 2 | EXFLAGS.addr2All | EXFLAGS.addrZeroDef, function (app, t, a) {
-		var opcode = app.exvm.inst.currentOpcode;
-		var worker = opcode.worker;
-		if (worker) {
-			opcode.worker = null;
-
-			if (worker.error) {
-				return worker.error;
-			}
-			if (worker.req) {
-				app.isTextDirty = false;
-				if (/^(?:submit|wqs?|xit)$/.test(this.name)) {
-					return find('quit').handler.apply(this, arguments);
-				}
-				var path = worker.req.meta.path;
-				var bytes = worker.req.meta.bytes;
-				var message = app.low.getFileIoResultInfo(path, bytes);
-				app.low.requestShowMessage(_('Written: {0}', message));
-				return;
-			}
-
-			return _('Invalid write response.');
-		}
-
-		var parsedArgs = parseWriteArg(app, t, a);
+		var parsedArgs = parseWriteArg(app, t, a, this.name);
 		if (typeof parsedArgs == 'string') return parsedArgs;
 
 		var result;
 		if (this.name == 'write'
+		&& (parsedArgs.path != '' || app.fileName != '')
 		&& app.exvm.inst.index >= app.exvm.inst.opcodes.length - 2) {
-			// last opcode; do buffered write
+			// Last "write" command that tries to write to a cloud storage;
+			// do buffered writing.
+			// command is completed immediately.
 			parsedArgs.isBuffered = true;
 			result = writeCore(app, t, a, parsedArgs);
-			if (typeof result == 'string') return result;
 		}
-		else if (this.name != 'xit' || app.isTextDirty) {
-			// other; write immediately and wait its termination
-			parsedArgs.isBuffered = false;
-			result = writeCore(app, t, a, parsedArgs);
-			if (typeof result == 'string') return result;
-
-			result = app.exvm.EX_ASYNC;
+		else if (this.name == 'xit' && !app.isTextDirty) {
+			// Because text is not modified, "xit" command is
+			// consequently equivalent to "quit" command.
+			result = find('quit').handler.apply(this, arguments);
 		}
 		else {
-			// immediate quit op
-			result = find('quit').handler.apply(this, arguments);
+			// Other patterns are sequenced "write" command;
+			// write immediately and wait its termination
+			parsedArgs.isBuffered = false;
+			result = writeCore(app, t, a, parsedArgs);
 		}
 
 		return result;
@@ -2062,14 +2173,19 @@ var cache = {};
 	new ExCommand('@', '@', 'b', 1, function (app, t, a) {
 		var command;
 		var register;
-		var expression;
 
 		if (a.flags.register) {
 			register = a.register;
 		}
-		else if (!app.registers.exists('@')
-		|| (register = app.registers.get('@').data) == '') {
-			return _('No previous execution.');
+		else {
+			if (!app.registers.exists('@')) {
+				return _('No previous execution.');
+			}
+
+			register = app.registers.get('@').data;
+			if (register == '') {
+				return _('No previous execution.');
+			}
 		}
 
 		if (register == '@'
@@ -2077,10 +2193,33 @@ var cache = {};
 			return _('Invalid register name: {0}', register);
 		}
 
+		if (app.exvm.executedRegisterFlags[register]) {
+			return _('Register {0} was used recursively.', register);
+		}
+
+		function doexec () {
+			var ex = app.exvm.clone();
+			t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
+			var result = ex.inst.compile(command);
+			if (typeof result == 'string') {
+				return result;
+			}
+
+			app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
+			app.exvm.executedRegisterFlags[register] = true;
+			app.registers.get('@').set(register);
+		}
+
 		if (register.charAt(0) == '=') {
+			var expression;
+
 			if (register.length == 1) {
-				if (!app.registers.exists(register)
-				|| (expression = app.registers.get(register).data) == '') {
+				if (!app.registers.exists(register)) {
+					return _('Register {0} does not exist.', register);
+				}
+
+				expression = app.registers.get(register).data;
+				if (expression == '') {
 					return _('Register {0} is empty.', register);
 				}
 			}
@@ -2096,26 +2235,37 @@ var cache = {};
 			command = v.result;
 			register = register.charAt(0);
 			app.registers.get('=').set(expression);
-		}
-		else if (!app.registers.exists(register)
-		|| (command = app.registers.get(register).data) == '') {
-			return _('Register {0} is empty.', register);
+
+			return doexec();
 		}
 
-		if (app.exvm.executedRegisterFlags[register]) {
-			return _('Register {0} was used recursively.', register);
+		else if (!app.registers.isClipboard(register)) {
+			if (!app.registers.exists(register)) {
+				return _('Register {0} does not exist.', register);
+			}
+
+			command = app.registers.get(register).data;
+			if (command == '') {
+				return _('Register {0} is empty.', register);
+			}
+
+			return doexec();
 		}
 
-		var ex = app.exvm.clone();
-		t.setSelectionRange(new Wasavi.Position(a.range[0], 0));
-		var result = ex.inst.compile(command);
-		if (typeof result == 'string') {
-			return result;
-		}
+		else {
+			return new Promise(resolve => {
+				app.extensionChannel.getClipboard(text => {
+					app.registers.get('*').set(text);
 
-		app.exvm.inst.insert(ex.inst.opcodes, app.exvm.inst.index + 1);
-		app.exvm.executedRegisterFlags[register] = true;
-		app.registers.get('@').set(register);
+					if (text == '') {
+						resolve(_('Register {0} is empty.', register));
+					}
+					else {
+						resolve(doexec());
+					}
+				});
+			});
+		}
 	}),
 	new ExCommand('*', '*', 'b', 1, function (app, t, a) {
 		return find('@').handler.apply(this, arguments);

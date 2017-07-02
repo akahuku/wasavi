@@ -88,6 +88,7 @@ diag('defining classes');
 		set isInteractive (v) {isInteractive = v},
 		get isJumpBaseUpdateRequested () {return isJumpBaseUpdateRequested},
 		set isJumpBaseUpdateRequested (v) {isJumpBaseUpdateRequested = v},
+		get isTestMode () {return testMode},
 
 		get lastSimpleCommand () {return lastSimpleCommand},
 		get lastRegexFindCommand () {return lastRegexFindCommand},
@@ -114,7 +115,8 @@ diag('defining classes');
 			requestShowMessage:requestShowMessage,
 			requestNotice:requestNotice,
 			requestInputMode:requestInputMode,
-			requestConsoleState:requestConsoleState,
+			requestConsoleOpen:requestConsoleOpen,
+			requestConsoleClose:requestConsoleClose,
 			executeViCommand:executeViCommand,
 			getFindRegex:getFindRegex,
 			getFileIoResultInfo:getFileIoResultInfo,
@@ -126,9 +128,6 @@ diag('defining classes');
 			getFileSystemIndex:getFileSystemIndex,
 			splitPath:splitPath,
 			regalizeFilePath:regalizeFilePath,
-			registerMultiplexCallback:registerMultiplexCallback,
-			removeMultiplexCallback:removeMultiplexCallback,
-			interruptMultiplexCallback:interruptMultiplexCallback,
 			notifyError:handleWindowError,
 			getContainerRect:getContainerRect
 		}),
@@ -192,17 +191,11 @@ Collection.prototype = Object.create({}, {
 });
 
 /*constructor*/function ExCommandExecutor (app) {
-	const EX_SYNC = 1;
-	const EX_ASYNC = 2;
-
 	var self = this;
 	var running = false;
-	var async = false;
-	var suspended = false;
 	var pcOverride = false;
 	var pc = 0;
 	var opcodes = [];
-	var onexecutes = [];
 	var errorVectors = [];
 	var executedRegisterFlags = {};
 	var lastError;
@@ -221,7 +214,6 @@ Collection.prototype = Object.create({}, {
 	function clear () {
 		opcodes.length = 0;
 		pc = -1;
-		onexecutes.length = 0;
 	}
 	function createOpcode (command, args, rangeSource) {
 		if (isFunction(command)) {
@@ -269,45 +261,123 @@ Collection.prototype = Object.create({}, {
 		}
 		return result;
 	}
-	function run (source, callback, parents) {
-		if (running && !suspended) return;
+	function run (source) {
+		if (running) return Promise.resolve(self);
 
-		if (suspended) {
-			app.cursor.windup();
+		// append terminate command
+		clear();
+		var result = compile(source);
+		add(terminate).command.name = '$terminate';
+		if (isString(result)) {
+			pc = opcodes.length - 1;
+			lastError = result;
 		}
 		else {
-			clear();
-			var result = compile(source, parents);
-			add(terminate).command.name = '$terminate';
-			app.editLogger.open('ex');
-			showOverlay();
-			if (typeof result == 'string') {
-				pc = opcodes.length - 1;
-				lastError = result;
-			}
-			else {
-				pc = 0;
-				lastError = undefined;
-			}
-			suspended = false;
-			running = true;
-			async = false;
-			executedRegisterFlags = {};
+			pc = 0;
+			lastError = undefined;
 		}
 
-		if (isFunction(callback)) {
-			onexecutes.push(callback);
+		// initialize
+		app.editLogger.open('ex');
+		showOverlay();
+		app.keyManager.lock();
+		running = true;
+		executedRegisterFlags = {};
+
+		function settle (opcode, command, commandResult, ss) {
+			if (isString(opcode.rangeSource)) {
+				opcode.args.range = null;
+			}
+
+			if ((app.isJumpBaseUpdateRequested || command.flags.updateJump)
+			&& app.buffer.selectionStart.ne(ss)) {
+				app.marks.setJumpBaseMark(ss);
+				app.isJumpBaseUpdateRequested = false;
+			}
+
+			if (commandResult.flags.hash
+			|| commandResult.flags.list
+			|| commandResult.flags.print) {
+				var n = minmax(0,
+					app.buffer.selectionStartRow + commandResult.flagoff,
+					app.buffer.rowLength - 1);
+				app.buffer.setSelectionRange(app.buffer.getLineTopOffset2(n, 0));
+				Wasavi.ExCommand.printRow(app, app.buffer, n.row, n.row, commandResult.flags);
+			}
+
+			if (!pcOverride) {
+				pc++;
+			}
 		}
 
-		resume();
+		return Promise.resolve().then(function next () {
+			var buffer = app.buffer;
+
+			while (pc >= 0 && pc < opcodes.length) {
+				//dumpOpcodes();
+
+				var opcode = opcodes[pc];
+				var command = opcode.command;
+
+				// recalculate the range
+				if (!opcode.args.range && isString(opcode.rangeSource)) {
+					var newRange = Wasavi.ExCommand.parseRange(
+						app, opcode.rangeSource, undefined, true);
+
+					if (isString(newRange)) {
+						raiseError(command, newRange);
+						continue;
+					}
+
+					newRange = newRange.rows.last(
+						buffer, command.rangeCount,
+						command.flags.addr2All);
+
+					newRange = command.fixupRange(app, newRange);
+					if (isString(newRange)) {
+						raiseError(command, newRange);
+						continue;
+					}
+
+					opcode.args.range = newRange;
+				}
+
+				// execute
+				pcOverride = false;
+				var ss = buffer.selectionStart;
+				var commandResult = command.run(app, opcode.args);
+
+				if (isString(commandResult)) {
+					raiseError(command, commandResult);
+					continue;
+				}
+
+				if (commandResult.value instanceof Promise) {
+					return commandResult.value.then(v => {
+						if (isString(v)) {
+							raiseError(command, command.name + ': ' + v);
+						}
+						else {
+							commandResult.value = v;
+							settle(opcode, command, commandResult, ss);
+						}
+					})
+					.then(next);
+				}
+				else {
+					settle(opcode, command, commandResult, ss);
+				}
+			}
+
+			return true;
+		});
 	}
+
 	function showOverlay () {
 		$('wasavi_cover').className = 'dim';
-		app.keyManager.lock();
 	}
 	function hideOverlay () {
 		$('wasavi_cover').className = '';
-		app.keyManager.unlock();
 	}
 
 	function compile (source, parents) {
@@ -821,86 +891,9 @@ Collection.prototype = Object.create({}, {
 		}
 	}
 
-	function resume () {
-		var buffer = app.buffer;
-		suspended = false;
-		while (!suspended && pc >= 0 && pc < opcodes.length) {
-			//dumpOpcodes();
-
-			var opcode = opcodes[pc];
-			var command = opcode.command;
-
-			if (isClipboardAccess(opcode.args)) {
-				if ('clipboard' in opcode) {
-					app.registers.get('*').set(opcodes[pc].clipboard);
-				}
-				else {
-					app.extensionChannel.getClipboard(function (data) {
-						opcodes[pc].clipboard = data;
-						resume();
-					});
-					suspend();
-					break;
-				}
-			}
-			if (!opcode.args.range && isString(opcode.rangeSource)) {
-				var newRange = Wasavi.ExCommand.parseRange(app, opcode.rangeSource, undefined, true);
-				if (isString(newRange)) {
-					raiseError(command, newRange);
-					continue;
-				}
-
-				newRange = newRange.rows.last(
-					buffer, command.rangeCount,
-					command.flags.addr2All);
-
-				newRange = command.fixupRange(app, newRange);
-				if (isString(newRange)) {
-					raiseError(command, newRange);
-					continue;
-				}
-
-				opcode.args.range = newRange;
-			}
-
-			pcOverride = false;
-			var ss = buffer.selectionStart;
-			var result = command.run(app, opcode.args);
-
-			if (isString(opcode.rangeSource)) {
-				opcode.args.range = null;
-			}
-			if (isString(result)) {
-				raiseError(command, result);
-				continue;
-			}
-			if (command.flags.multiAsync || result.value === EX_ASYNC) {
-				suspend();
-				break;
-			}
-			if ((app.isJumpBaseUpdateRequested || command.flags.updateJump)
-			&& buffer.selectionStart.ne(ss)) {
-				app.marks.setJumpBaseMark(ss);
-				app.isJumpBaseUpdateRequested = false;
-			}
-			if (result.flags.hash
-			|| result.flags.list
-			|| result.flags.print) {
-				var n = minmax(0,
-					buffer.selectionStartRow + result.flagoff,
-					buffer.rowLength - 1);
-				buffer.setSelectionRange(buffer.getLineTopOffset2(n, 0));
-				Wasavi.ExCommand.printRow(app, buffer, n.row, n.row, result.flags);
-			}
-			if (!pcOverride) {
-				pc++;
-			}
-		}
-	}
 	function terminate (app, t, a) {
-		var executes = onexecutes.slice();
-
 		hideOverlay();
+		app.keyManager.unlock();
 		app.editLogger.close();
 		running = false;
 		clear();
@@ -909,23 +902,7 @@ Collection.prototype = Object.create({}, {
 			app.low.requestShowMessage(lastError, true);
 		}
 		if (!app.requestedState.console || app.requestedState.showInput) {
-			app.low.requestConsoleState(true);
-		}
-		if (async) {
-			processInput(app.keyManager.nopObject);
-		}
-
-		setTimeout(function (executes) {
-			executes.forEach(function (a) {a(self)});
-		}, 1, executes);
-	}
-	function isClipboardAccess (args) {
-		return args.flags.register && registers.isClipboard(args.register);
-	}
-	function suspend () {
-		if (running) {
-			async = true;
-			suspended = true;
+			app.low.requestConsoleClose();
 		}
 	}
 	function toString () {return '[object ExCommandExecutor]'}
@@ -933,12 +910,7 @@ Collection.prototype = Object.create({}, {
 	publish(this,
 		clone, run, showOverlay, hideOverlay, toString,
 		{
-			EX_SYNC: EX_SYNC,
-			EX_ASYNC: EX_ASYNC,
-
 			running: function () {return running},
-			async: function () {return async},
-			suspended: function () {return suspended},
 			executedRegisterFlags: function () {return executedRegisterFlags},
 			lastError: [
 				function () {return lastError},
@@ -1061,16 +1033,29 @@ function info () {
 function error () {
 	logMode && console.error('wasavi: ' + toArray(arguments).join(' '));
 }
-function notifyToParent (eventName, payload) {
+function notifyToParent (eventName /* [,payload][,callback]*/) {
 	if (!extensionChannel || extensionChannel.isTopFrame()) return false;
+
+	var payload, callback;
+	var args = toArray(arguments);
+
+	if (args.length && isFunction(args.lastItem)) {
+		callback = args.pop();
+	}
+	if (args.length && isObject(args.lastItem)) {
+		payload = args.pop();
+	}
+
 	payload || (payload = {});
 	payload.type = eventName;
 	payload.frameId = targetElement.frameId;
+
 	extensionChannel.postMessage({
 		type: 'transfer',
-		to: targetElement.parentInternalId,
+		to: targetElement.parentTabId,
 		payload: payload
-	});
+	}, callback);
+
 	return true;
 }
 function notifyActivity (code, key, note) {
@@ -1117,48 +1102,6 @@ function notifyCommandComplete (eventName, modeOverridden) {
 	else {
 		notifyToParent(eventName, {state:currentState});
 	}
-}
-function registerMultiplexCallback (id, callback) {
-	if (multiplexCallbackId != undefined) {
-		throw new Error(_('Already in a pending state.'));
-	}
-	if (isString(callback)) {
-		switch (callback) {
-		case 'read':
-			callback = getReadHandler(id);
-			break;
-		case 'write':
-			callback = getWriteHandler(id);
-			break;
-		case 'edit':
-			callback = getEditHandler(id);
-			break;
-		case 'chdir':
-			callback = getChdirHandler(id);
-			break;
-		}
-	}
-	if (isFunction(callback)) {
-		extensionChannel.preservedCallbacks[id] = callback;
-	}
-	multiplexCallbackId = id;
-}
-function removeMultiplexCallback (id) {
-	if (multiplexCallbackId) {
-		if (id != multiplexCallbackId) {
-			throw new Error(_('Pending Request ID mismatch.'));
-		}
-		extensionChannel.removeCallback(multiplexCallbackId);
-	}
-	multiplexCallbackId = undefined;
-}
-function interruptMultiplexCallback () {
-	if (multiplexCallbackId) {
-		extensionChannel.interruptCallback(multiplexCallbackId, {
-			error:[_('The ex command was interrupted.')]
-		});
-	}
-	multiplexCallbackId = undefined;
 }
 function install (x, req) {
 	/*
@@ -1211,7 +1154,7 @@ function install (x, req) {
 
 	// container
 	var cnt = $('wasavi_container');
-	if (!cnt) throw new Error('wasavi container not found');
+	if (!cnt) throw new TypeError('wasavi container not found');
 
 	//
 	var fontStyle = 'font:' + x.fontStyle + ';';
@@ -1388,6 +1331,8 @@ function install (x, req) {
 	searchUtils = new Wasavi.SearchUtils(appProxy);
 	notifier = new Wasavi.Notifier(appProxy, footerNotifier);
 	surrounding = new Wasavi.Surrounding(appProxy);
+	executingMacroInfo = [];
+
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 	config.setData('writeas', x.writeAs);
 
@@ -1408,11 +1353,15 @@ function install (x, req) {
 	 * notify initialized event to agent
 	 */
 
-	notifyToParent('initialized', {
-		height: cnt.offsetHeight,
-		childInternalId: extensionChannel.internalId
-	});
-	extensionChannel.isTopFrame() && runExrc();
+	if (extensionChannel.isTopFrame()) {
+		runExrc();
+	}
+	else {
+		notifyToParent('initialized', {
+			height: cnt.offsetHeight,
+			childTabId: extensionChannel.tabId
+		}, runExrc);
+	}
 
 	diag('leaving install()');
 }
@@ -1443,32 +1392,37 @@ function runExrc () {
 	 * execute exrc
 	 */
 
-	function finish (ex) {
-		!ex.async && processInput(keyManager.nopObject);
-
-		exrc = null;
-		config.setData('nomodified');
-		requestedState = {};
-
-		/*
-		 * final event
-		 */
-
-		notifyToParent('ready');
-		diag('ready');
-	}
-
 	isInteractive = false;
-	exvm.run(exrc[0], function (ex) {
-		config.saveSnapshot('exrc');
+	promise = exvm
+		.run(exrc[0])
+		.then(() => {
+			if (exvm.lastError) {
+				console.log(`wasavi: an error occured in exrc:\n${exvm.lastError}`);
+			}
 
-		if (config.vars.override && isString(exrc[1]) && exrc[1] != '') {
-			exvm.run(exrc[1], finish);
-		}
-		else {
-			finish(ex);
-		}
-	});
+			config.saveSnapshot('exrc');
+
+			if (config.vars.override && isString(exrc[1]) && exrc[1] != '') {
+				console.log(`evaluating exrc #1:\n${exrc[1]}`);
+				return exvm.run(exrc[1]);
+			}
+		})
+		.then(() => {
+			if (exvm.lastError) {
+				console.log(`wasavi: an error occured in exrc:\n${exvm.lastError}`);
+			}
+
+			exrc = null;
+			config.setData('nomodified');
+			requestedState = {};
+
+			/*
+			 * final event
+			 */
+
+			notifyToParent('ready');
+			diag('ready');
+		});
 
 	diag('leaving runExrc()');
 }
@@ -1509,6 +1463,7 @@ function uninstall (implicit) {
 	l10n = l10n.dispose();
 	recordedStrokes = recordedStrokes.dispose();
 	surrounding = surrounding.dispose();
+	executingMacroInfo = undefined;
 
 	keyManager.dispose();
 	theme.dispose();
@@ -1541,7 +1496,7 @@ function setupEventHandlers (install) {
 	// key manager
 	if (install) {
 		keyManager
-			.install({handlePasteEvent:false})
+			.install({handlePasteEvent: false, useGenerator: true})
 			.addListener(handleKeydown);
 	}
 	else {
@@ -1550,12 +1505,11 @@ function setupEventHandlers (install) {
 
 	// cover
 	var cover = $('wasavi_cover');
-	if (cover) {
-		cover[method]('mousedown', handleCoverMousedown, false);
-		cover[method]('click', handleCoverClick, false);
-		cover[method]('mousewheel', handleCoverMousewheel, false);
-	}
+	cover[method]('mousedown', handleCoverMousedown, false);
+	cover[method]('click', handleCoverClick, false);
+	cover[method]('mousewheel', handleCoverMousewheel, false);
 
+	// cursor
 	cursor.setupEventHandlers(install);
 }
 
@@ -1759,10 +1713,17 @@ function requestInputMode (mode, opts) {
 	}
 	return requestedState.inputMode;
 }
-function requestConsoleState (isClose) {
+function requestConsoleOpen () {
 	if (!requestedState.console) {
 		requestedState.console = {
-			open:!isClose
+			open:true
+		};
+	}
+}
+function requestConsoleClose () {
+	if (!requestedState.console) {
+		requestedState.console = {
+			open:false
 		};
 	}
 }
@@ -1772,7 +1733,7 @@ function requestSimpleCommandUpdate (initial) {
 	}
 }
 
-// for editing
+// main loop core functions
 function completeSelectionRange (ss, se) {
 	var s = buffer.selectionStart;
 	var e = buffer.selectionEnd;
@@ -1807,11 +1768,11 @@ function doEditComplete () {
 		});
 	}
 }
-function processAbbrevs (force, ignoreAbbreviation) {
-	if (ignoreAbbreviation) return;
-
+function processAbbrevs (force, terminator) {
 	var regex = config.vars.iskeyword;
 	var target, last, canTransit;
+
+	terminator || (terminator = '');
 
 	if (force) {
 		if (inputHandler.text.length < 1) return;
@@ -1878,12 +1839,23 @@ function processAbbrevs (force, ignoreAbbreviation) {
 
 		// remapped abbreviation
 		else {
+			let t = inputHandler.text;
+			let tf = inputHandler.textFragment;
+			let stripLength = abbrev.length + last.length;
+
+			// strip abbreviation trigger string and last character
 			inputHandler.text = inputHandler.text
-				.substring(0, inputHandler.text.length - abbrev.length - last.length);
+				.substring(0, inputHandler.text.length - stripLength);
 			inputHandler.textFragment = inputHandler.textFragment
-				.substring(0, inputHandler.textFragment.length - abbrev.length - last.length);
-			deleteCharsBackward(abbrev.length + last.length, {isSubseq:true});
-			keyManager.unshift(abbrevs[abbrev].value + last);
+				.substring(0, inputHandler.textFragment.length - stripLength);
+			inputHandler.stroke = inputHandler.stroke
+				.substring(0, inputHandler.stroke.length - stripLength);
+
+			//
+			deleteCharsBackward(stripLength, {isSubseq:true});
+
+			//
+			keyManager.unshift(abbrevs[abbrev].value, last, terminator);
 			keyManager.sweep();
 		}
 		break;
@@ -1893,9 +1865,11 @@ function processAbbrevs (force, ignoreAbbreviation) {
 function processAutoDivide (e) {
 	if (config.vars.textwidth <= 0) return;
 
-	var limitWidth = charWidth * config.vars.textwidth;
-	var tmpMark = 'auto-format';
-	var scaler = $('wasavi_singleline_scaler');
+	const limitWidth = charWidth * config.vars.textwidth;
+	const tmpMark = 'auto-format';
+	const scaler = $('wasavi_singleline_scaler');
+	const newlineObj = keyManager.objectFromCode(0x000d);
+
 	var inputStateSaved;
 	var prepared = false;
 
@@ -1955,8 +1929,7 @@ function processAutoDivide (e) {
 
 		inputHandler.inputHeadPosition = buffer.selectionStart;
 		inputHandler.textFragment = '';
-		var newlineObj = keyManager.objectFromCode(0x000d);
-		inputHandler.updateText(newlineObj);
+		inputHandler.appendText(newlineObj);
 		execMap(buffer, newlineObj, editMap, '\u000d', '', '\u000d');
 		inputHandler.flush();
 	}
@@ -1967,7 +1940,7 @@ function processAutoDivide (e) {
 		inputHandler.inputHeadPosition = buffer.leftClusterPos(buffer.selectionStart);
 		inputHandler.text = inputStateSaved.text;
 		inputHandler.textFragment = inputStateSaved.textFragment;
-		inputHandler.updateText(e);
+		inputHandler.appendText(e);
 	}
 }
 function needBreakUndo (s, ch) {
@@ -1978,13 +1951,15 @@ function needBreakUndo (s, ch) {
 		|| unicodeUtils.isIdeograph(ch);
 }
 function execMap (target, e, map, key, subkey, code, pos) {
+	const DUMP = false;
+
 	if (isArray(map)) {
-		map = map.filter(function (m) {return !!m[key]});
-		if (map.length == 0) return false;
+		map = map.filter(m => !!m[key]);
+		if (map.length == 0) return Promise.resolve(false);
 		map = map[0];
 	}
 	else {
-		if (!map[key]) return false;
+		if (!map[key]) return Promise.resolve(false);
 	}
 
 	subkey || (subkey = '');
@@ -1998,76 +1973,90 @@ function execMap (target, e, map, key, subkey, code, pos) {
 		selectionEnd:pos && pos.e || buffer.selectionEnd
 	};
 	var letter = e.code2letter(code) || code;
+	var handler;
 
-/*console.log([
-	'*** execMap ***',
-	'target: ' + getObjectType(target),
-	'   key: ' + (JSON.stringify(key)),
-	'subkey: ' + (JSON.stringify(subkey)),
-	'  code: ' + (JSON.stringify(code)),
-	'  mode: ' + inputMode,
-	'prefix: ' + prefixInput.toString(),
-	'typeof map item: ' + typeof map[key]
-].join('\n'));*/
+	if (DUMP) {
+		console.log([
+			'*** execMap ***',
+			'target: ' + getObjectType(target),
+			'   key: ' + (JSON.stringify(key)),
+			'subkey: ' + (JSON.stringify(subkey)),
+			'  code: ' + (JSON.stringify(code)),
+			'  mode: ' + inputMode,
+			'prefix: ' + prefixInput.toString(),
+			'typeof map item: ' + typeof map[key]
+		].join('\n'));
+	}
+
 	switch (typeof map[key]) {
 	case 'function':
 		if (subkey == '' || subkey == inputMode) {
-			return map[key].call(map, letter, opts);
+			handler = map[key];
 		}
 		break;
+
 	case 'object':
 		if (subkey != '' && subkey in map[key]) {
-			return map[key][subkey].call(map, letter, opts);
+			handler = map[key][subkey];
 		}
 		break;
 	}
 
-	return true;
+	if (!handler) {
+		return Promise.resolve(true);
+	}
+
+	if (isGenerator(handler)) {
+		return execGenerator(handler, map, letter, opts);
+	}
+
+	return Promise.resolve(handler.call(map, letter, opts));
 }
-function execCommandMap (r, e, map, key, subkey, code, updateBound) {
-	lastMessage = '';
+function execCommandMap (r, map, key, subkey, code, updateBound) {
 	var ss = buffer.selectionStart;
 	var se = buffer.selectionEnd;
-	if (execMap(buffer, e, map, key, subkey, code)) {
-		var canContinue = true;
 
-		if (prefixInput.operation.length) {
-			canContinue = execMap(
-				buffer, e, map, prefixInput.operation, '$op', code, {s:ss, e:se}
-			);
-		}
-		if (canContinue !== false) {
-			isEditCompleted && doEditComplete();
-			completeSelectionRange(ss, se);
-			buffer.isLineOrientSelection =
-			isEditCompleted =
-			isVerticalMotion =
-			isSmoothScrollRequested = false;
+	lastMessage = '';
 
-			if (requestedState.simpleCommand) {
-				lastSimpleCommand = requestedState.simpleCommand.initial
-					+ prefixInput.toString();
-				delete requestedState.simpleCommand;
-//console.log('execCommandMap: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
+	return execMap(buffer, r.e, map, key, subkey, code)
+	.then(isCompleted => execGenerator(function* () {
+		if (isCompleted) {
+			var canContinue = true;
+
+			if (prefixInput.operation.length) {
+				canContinue = yield execMap(
+					buffer, r.e, map, prefixInput.operation, '$op', code, {s:ss, e:se}
+				);
 			}
+			if (canContinue !== false) {
+				isEditCompleted && doEditComplete();
+				completeSelectionRange(ss, se);
+				buffer.isLineOrientSelection =
+				isEditCompleted =
+				isVerticalMotion =
+				isSmoothScrollRequested = false;
 
-			r.needEmitEvent = true;
-			prefixInput.reset();
-			requestShowPrefixInput();
+				if (requestedState.simpleCommand) {
+					setLastSimpleCommand(
+						requestedState.simpleCommand.initial,
+						prefixInput.toString());
+					delete requestedState.simpleCommand;
+				}
 
-//console.log('execCommandMap: undo log:\n' + editLogger.dump());
+				r.needEmitEvent = true;
+				prefixInput.reset();
+				requestShowPrefixInput();
+			}
 		}
-	}
 
-	var im;
-	if (isBound(im = inputMode)
-	|| requestedState.inputMode && isBound(im = requestedState.inputMode.mode)) {
-		var p = buffer.selectionStart;
-		extendBound(p, im);
-		marks.setPrivate('>', p);
-	}
+		var im;
+		if (isBound(im = inputMode)
+		|| requestedState.inputMode && isBound(im = requestedState.inputMode.mode)) {
+			var p = buffer.selectionStart;
+			extendBound(p, im);
+			marks.setPrivate('>', p);
+		}
 
-	if (!scroller.running) {
 		if (requestedState.inputMode) {
 			cursor.ensureVisible(false);
 		}
@@ -2077,39 +2066,54 @@ function execCommandMap (r, e, map, key, subkey, code, updateBound) {
 		if (!keyManager.isLocked) {
 			requestedState.updateCursor = true;
 		}
-	}
-}
-function execEditMap (r, e, key, subkey, code) {
-	if (!editMap[key]) return false;
-	var ss = buffer.selectionStart;
-	var se = buffer.selectionEnd;
-	cursor.windup();
-	execMap(buffer, e, editMap, key, subkey, code);
-	completeSelectionRange(ss, se);
-	return true;
-}
-function execLineInputEditMap (r, e, key, subkey, code) {
-	if (!lineInputEditMap[key]) return false;
-	if (execMap($('wasavi_footer_input'), e, lineInputEditMap, key, subkey, code)) {
-		r.needEmitEvent = true;
-	}
-	return true;
-}
-function executeViCommand (arg, callback) {
-	var seq = keyManager.createSequences(arg);
 
-	if (isFunction(callback)) {
-		seq.lastItem.callback = callback;
+		r.isCompleted = !!isCompleted;
+		return r;
+	}));
+}
+function execEditMap (r, key, subkey, code) {
+	var result;
+
+	if (editMap[key]) {
+		var ss = buffer.selectionStart;
+		var se = buffer.selectionEnd;
+		cursor.windup();
+		result = execMap(buffer, r.e, editMap, key, subkey, code).then(() => {
+			completeSelectionRange(ss, se);
+			r.isCompleted = true;
+			return r;
+		});
+	}
+	else {
+		result = Promise.resolve(r);
 	}
 
-	keyManager.setDequeue('unshift', seq, mapManager.markExpandedNoremap);
-	keyManager.sweep();
+	return result;
 }
-function processInput (e, ignoreAbbrev) {
+function execLineInputEditMap (r, key, subkey, code) {
+	var result;
 
-	var result = {
-		needEmitEvent:false,
-		ignoreAbbrev:ignoreAbbrev,
+	if (lineInputEditMap[key]) {
+		result = execMap($('wasavi_footer_input'), r.e, lineInputEditMap, key, subkey, code)
+		.then(() => {
+			if (r.isCompleted) {
+				r.needEmitEvent = true;
+			}
+			r.isCompleted = true;
+			return r;
+		});
+	}
+	else {
+		result = Promise.resolve(r);
+	}
+
+	return result;
+}
+function processInput (e, ignoreAbbrev, returnImmdeate) {
+	var payload = {
+		e: e,
+		needEmitEvent: false,
+		ignoreAbbrev: ignoreAbbrev,
 		code: e.code,
 		letter: e.char,
 		mapkey: e.key,
@@ -2117,19 +2121,36 @@ function processInput (e, ignoreAbbrev) {
 	};
 
 	// override the code with 32 if key was <S-space>
-	if (result.code == -32800) {
-		result.code = e.code = 32;
+	if (payload.code == -32800) {
+		payload.code = e.code = 32;
 	}
 
-	modeHandlers[inputMode].call(modeHandlers, e, result);
+	var result;
+	var handler = modeHandlers[modeTable[inputMode].handlerName];
 
+	if (handler) {
+		if (isGenerator(handler)) {
+			result = execGenerator(handler, modeHandlers, payload);
+		}
+		else {
+			result = handler.call(modeHandlers, payload);
+		}
+	}
+
+	if (returnImmdeate) {
+		return result;
+	}
+
+	if (!(result instanceof Promise)) {
+		result = Promise.resolve(result);
+	}
+
+	return result.then(processInputCompletion);
+}
+function processInputCompletion (result) {
 	if (terminated) {
 		uninstall();
-		return;
-	}
-
-	if ('callback' in e && isFunction(e.callback)) {
-		e.callback();
+		return result;
 	}
 
 	var messageUpdated = false;
@@ -2145,11 +2166,13 @@ function processInput (e, ignoreAbbrev) {
 		requestedState.updateCursor = true;
 		requestedState.inputMode = null;
 	}
+
 	if (requestedState.showInput) {
 		showPrefixInput(requestedState.showInput.message);
 		requestedState.showInput = null;
 		config.vars.errorbells && requestNotice();
 	}
+
 	if (requestedState.notice) {
 		var line = requestedState.notice;
 		if (line.bell) {
@@ -2163,6 +2186,7 @@ function processInput (e, ignoreAbbrev) {
 		}
 		requestedState.notice = null;
 	}
+
 	if (requestedState.console) {
 		if (requestedState.console.open) {
 			if (backlog.buffer.length > 1 || backlog.visible) {
@@ -2189,24 +2213,43 @@ function processInput (e, ignoreAbbrev) {
 		}
 		requestedState.console = requestedState.message = null;
 	}
+
 	if (!keyManager.isLocked && (result.needEmitEvent !== false || prefixInput == '')) {
 		requestedState.updateCursor = true;
 		notifyCommandComplete(
 			isString(result.needEmitEvent) ? result.needEmitEvent : null);
 	}
+
 	if (requestedState.updateCursor) {
 		cursor.update({focused:true, visible:true});
 		requestedState.updateCursor = null;
 	}
+
+	return result;
 }
 function processInputSupplement (e) {
 	if (inputMode != 'line_input') return;
-	var input = $('wasavi_footer_input');
-	var last = inputModeStack.lastItem;
-	var map = getMap(last.inputMode);
-	var line = toNativeControl(input.value);
-	execMap(input, e, map, last.mapkey, '$' + inputMode + '_reset', line);
-	execMap(input, e, map, last.mapkey, '$' + inputMode + '_notify', line);
+
+	const input = $('wasavi_footer_input');
+	const last = inputModeStack.lastItem;
+	const map = modeTable[last.inputMode].map;
+	const line = toNativeControl(input.value);
+
+	return Promise.all([
+		execMap(input, e, map, last.mapkey, '$' + inputMode + '_reset', line),
+		execMap(input, e, map, last.mapkey, '$' + inputMode + '_notify', line)
+	]);
+}
+
+// for editing
+function executeViCommand (arg) {
+	var seq = keyManager.createSequences(arg);
+	var terminator = keyManager.nopObject.clone();
+	terminator.char = terminator.key = '*macro-end*';
+	seq.push(terminator);
+
+	keyManager.setDequeue('unshift', seq, mapManager.markExpandedNoremap);
+	keyManager.sweep();
 }
 function extendRightIfInclusiveMotion () {
 	if (prefixInput.motion == ';' && lastHorzFindCommand.direction == 1
@@ -2439,12 +2482,17 @@ function operateToBound (c, o, updateSimpleCommand, callback1, callback2) {
 	}
 
 	if (updateSimpleCommand && !o.e.mapExpanded) {
-		lastSimpleCommand = recordedStrokes.items('bound').strokes;
-//console.log('operateToBound: lastSimpleCommand updated: "' + toVisibleString(lastSimpleCommand) + '"');
+		let command;
+		let boundStroke = recordedStrokes.items('bound');
+
+		if (boundStroke) {
+			setLastSimpleCommand(boundStroke.strokes);
+		}
 	}
 
+	// call processInput synchronously
 	var isEditCompletedSaved = isEditCompleted;
-	processInput(keyManager.objectFromCode(27));
+	processInput(keyManager.objectFromCode(27), false, true);
 	isEditCompleted = isEditCompletedSaved;
 
 	return callback2 ? callback2(marks.getPrivate('<'), marks.getPrivate('>'), act) : true;
@@ -2561,12 +2609,13 @@ function getLocalStorage (keyName, callback) {
 	);
 }
 function getPrimaryMode () {
-	if (inputMode in mode2stateTable) {
+	if (inputMode in modeTable && 'state' in modeTable[inputMode]) {
 		return inputMode;
 	}
 
 	for (var i = inputModeStack.length - 1; i >= 0; i--) {
-		if (inputModeStack[i].inputMode in mode2stateTable) {
+		if (inputModeStack[i].inputMode in modeTable
+		&&  'state' in modeTable[inputModeStack[i].inputMode]) {
 			return inputModeStack[i].inputMode;
 		}
 	}
@@ -2754,111 +2803,11 @@ function getFileSystemIndex (name) {
 	});
 	return result;
 }
-function getReadHandler (id) {
-	return function (req) {
-		if (req.error) {
-			removeMultiplexCallback(id);
-			exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
-			exvm.run();
-			return;
-		}
-
-		switch (req.state) {
-		case 'reading':
-			showMessage(_('Reading ({0}%)', req.progress.toFixed(2)));
-			break;
-
-		case 'complete':
-			removeMultiplexCallback(id);
-			exvm.inst.currentOpcode.worker = {req:req};
-			exvm.run();
-			break;
-		}
-	};
-}
-function getEditHandler (id) {
-	return getReadHandler(id);
-}
-function getWriteHandler (id) {
-	return function (req) {
-		var modeOverridden = null;
-		if ('meta' in req && req.meta && req.meta.path != '') {
-			modeOverridden = 'write handler';
-		}
-		if (req.error) {
-			removeMultiplexCallback(id);
-			if (req.exstate.isBuffered) {
-				showMessage(_.apply(null, req.error), true, false);
-				notifyActivity('', '', 'write handler error: ' + req.error);
-				notifyCommandComplete(null, modeOverridden);
-			}
-			else {
-				exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
-				exvm.run();
-			}
-			return;
-		}
-
-		switch (req.state) {
-		case 'buffered':
-			showMessage(_('Buffered: {0}', req.path));
-			break;
-		case 'writing':
-			showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
-			break;
-		case 'complete':
-			removeMultiplexCallback(id);
-			if (req.exstate.isBuffered) {
-				var path = req.meta.path;
-				var bytes = req.meta.bytes;
-				var message = getFileIoResultInfo(path, bytes);
-				showMessage(_('Written: {0}', message));
-				notifyActivity('', '', 'write handler completed');
-				notifyCommandComplete(null, modeOverridden);
-			}
-			else {
-				exvm.inst.currentOpcode.worker = {req:req};
-				exvm.run();
-			}
-			break;
-		}
-	};
-}
-function getChdirHandler (id) {
-	return function (req) {
-		if (req.error) {
-			removeMultiplexCallback(id);
-			exvm.inst.currentOpcode.worker = {error:_.apply(null, req.error)};
-			exvm.run();
-			return;
-		}
-
-		removeMultiplexCallback(id);
-		exvm.inst.currentOpcode.worker = {req:req};
-		exvm.run();
-	};
-}
 function getContainerRect () {
 	if (!containerRect) {
 		containerRect = $('wasavi_container').getBoundingClientRect();
 	}
 	return containerRect;
-}
-function getMap (mode) {
-	switch (mode) {
-	case 'command':
-		return commandMap;
-	case 'bound':
-	case 'bound_line':
-		return boundMap;
-	case 'edit':
-	case 'overwrite':
-		return editMap;
-	case 'line_input':
-		return lineInputEditMap;
-	default:
-		return null;
-	}
 }
 function getCurrentViewPositionIndices () {
 	function findTopLineIndex (line) {
@@ -2964,7 +2913,7 @@ function setGeometory (target) {
 
 	if (!container || !editor || !footer || !conCon || !con
 	||  !fNotifier || !curLine || !curCol) {
-		throw new Error(
+		throw new TypeError(
 			'setGeometory: invalid element: ' +
 			[
 				container, editor, footer, conCon, con, fNotifier,
@@ -2983,7 +2932,7 @@ function setGeometory (target) {
 	config.setData('columns', parseInt(editor.clientWidth / charWidth), true);
 }
 function setInputMode (newInputMode, opts) {
-	var newState = mode2stateTable[newInputMode] || state;
+	var newState = modeTable[newInputMode].state || state;
 	opts || (opts = {});
 
 	inputMode = newInputMode;
@@ -3034,6 +2983,17 @@ function setList (state) {
 	else {
 		editor.classList.remove('list');
 	}
+}
+function setLastSimpleCommand () {
+	let command = toArray(arguments).join('');
+
+	// strip last newline if new surrounding or surrounding change command
+	if (/[yc][sS].+(?:[!#$%&*+\\\-.:;=?@^_|~"'`abBr\[\]{}()]|[\u0014,<Tt].+>)\n$/.test(command)
+	||  /[sS](?:[!#$%&*+\\\-.:;=?@^_|~"'`abBr\[\]{}()]|[\u0014,<Tt].+>)\n$/.test(command)) {
+		command = command.substring(0, command.length - 1);
+	}
+
+	lastSimpleCommand = command;
 }
 
 /*
@@ -4008,35 +3968,48 @@ const motionUpDownDenotative = (function () {
 	};
 })();
 function scrollView (c, count) {
-	function down (count) {
-		var index = Math.min(v.top + count, buffer.rowLength - 1);
-		var dest = index == 0 ? 0 : buffer.rowNodes(index).offsetTop;
-		scroller.run(dest, function () {
-			var v2 = getCurrentViewPositionIndices();
-			if (v2.top >= 0 && v2.top < buffer.rowLength && v2.top > buffer.selectionStartRow) {
-				buffer.setSelectionRange(buffer.getLineTopOffset2(v2.top, 0));
-			}
-		});
-	}
-	function up (count) {
-		var index = Math.max(v.top - count, 0);
-		var dest = index == 0 ? 0 : buffer.rowNodes(index).offsetTop;
-		scroller.run(dest, function () {
-			var v2 = getCurrentViewPositionIndices();
-			if (v2.bottom >= 0 && v2.bottom < buffer.rowLength && v2.bottom < buffer.selectionStartRow) {
-				buffer.setSelectionRange(buffer.getLineTopOffset2(v2.bottom, 0));
-			}
-		});
-	}
-	var v = getCurrentViewPositionIndices();
+	let v = getCurrentViewPositionIndices();
+
 	if (typeof count == 'function') {
 		count = count(v);
 	}
-	if (typeof count == 'number' && !isNaN(count) && count != 0) {
-		count > 0 ? down(count) : up(-count);
-	}
+
 	prefixInput.motion = c;
-	return true;
+
+	function down (count) {
+		let index = Math.min(v.top + count, buffer.rowLength - 1);
+		let dest = index == 0 ? 0 : buffer.rowNodes(index).offsetTop;
+		return scroller.run(dest)
+			.then(() => {
+				let v2 = getCurrentViewPositionIndices();
+				if (v2.top >= 0 && v2.top < buffer.rowLength
+				&&  v2.top > buffer.selectionStartRow) {
+					buffer.setSelectionRange(buffer.getLineTopOffset2(v2.top, 0));
+				}
+				return true;
+			});
+	}
+
+	function up (count) {
+		let index = Math.max(v.top - count, 0);
+		let dest = index == 0 ? 0 : buffer.rowNodes(index).offsetTop;
+		return scroller.run(dest)
+			.then(() => {
+				let v2 = getCurrentViewPositionIndices();
+				if (v2.bottom >= 0 && v2.bottom < buffer.rowLength
+				&&  v2.bottom < buffer.selectionStartRow) {
+					buffer.setSelectionRange(buffer.getLineTopOffset2(v2.bottom, 0));
+				}
+				return true;
+			});
+	}
+
+	if (typeof count == 'number' && !isNaN(count) && count != 0) {
+		return count > 0 ? down(count) : up(-count);
+	}
+	else {
+		return Promise.resolve(true);
+	}
 }
 
 /*
@@ -4879,31 +4852,94 @@ function handleWindowError (message, fileName, lineNumber, columnNumber, errObj)
 	}
 }
 
+// mapManager
+function handleMapExpand (sequences) {
+	keyManager.setDequeue('unshift', sequences);
+	keyManager.sweep();
+}
+function handleMapRecurseMax () {
+	keyManager.invalidate();
+	low.showMessage(_('Map expansion reached maximum recursion limit.'), true);
+}
+
 // keyManager
-function handleKeydown (e) {
-	notifyActivity(e.code, e.key);
+function handleKeydown (g) {
+	var generator = g();
 
-	if (keyManager.isLocked) {
-		if (exvm.running && e.code == 3) {
-			interruptMultiplexCallback();
-			bell.play();
+	promise || (promise = Promise.resolve());
+
+	function run (isNext) {
+		try {
+			var result = isNext ? generator.next() : generator.throw();
 		}
-		return false;
+		catch (ex) {
+			g = generator = null;
+			keyManager.invalidate();
+			return;
+		}
+
+		if (result.done) {
+			g = generator = null;
+			return;
+		}
+
+		result.value.preventDefault();
+		isInteractive = true;
+
+		if (testMode && commandCompleteTimer) {
+			clearTimeout(commandCompleteTimer);
+			commandCompleteTimer = undefined;
+		}
+
+		if (!result.value.mapExpanded) {
+			recordedStrokes.appendStroke(result.value.toInternalString());
+		}
+
+		if (result.value.isNoremap) {
+			promise = promise
+			.then(() => {
+				notifyActivity(result.value.code, result.value.char);
+				return processInput(result.value);
+			});
+		}
+		else {
+			promise = promise
+			.then(() => mapManager.process(inputMode, result.value))
+			.then(e => {
+				if (e) {
+					notifyActivity(e.code, e.char);
+					return processInput(e);
+				}
+				else {
+					notifyActivity('-', '-', 'dummy key');
+				}
+			});
+		}
+
+		promise = promise
+		.then(
+			result => {
+				if (testMode && result) {
+					commandCompleteTimer = setTimeout(() => {
+						notifyCommandComplete('commands-completed');
+					}, 100);
+				}
+				run(true);
+			},
+			error => {
+				if (error) {
+					console.error(`sequence point with an error: ${error.stack}`);
+					handleWindowError(error);
+				}
+				else {
+					console.error(`sequence point with an error`);
+				}
+				run(false);
+			}
+		);
 	}
 
-	if (!e.mapExpanded) {
-		recordedStrokes.appendStroke(e.toInternalString());
-	}
-
-	isInteractive = true;
-	if (e.isNoremap) {
-		processInput(e);
-	}
-	else {
-		mapManager.process(e, processInput);
-	}
-
-	return false;
+	run(true);
 }
 
 // document
@@ -4936,7 +4972,7 @@ function handleCoverMousedown (e) {
 	e.preventDefault();
 }
 function handleCoverClick (e) {
-	notifyToParent('focus-me');
+	notifyToParent('focus-me', handleWindowFocus);
 }
 function handleCoverMousewheel (e) {
 	e.preventDefault();
@@ -4968,34 +5004,6 @@ function handleBackendMessage (req) {
 	logMode && log('got "' + req.type + '" message from backend:', JSON.stringify(req).substring(0, 200));
 
 	switch (req.type) {
-	/*
-	 * messages transferred from agent
-	 */
-	case 'got-initialized':
-		runExrc();
-		break;
-
-	case 'relocate':
-		if (exvm.running && exvm.suspended) {
-			exvm.run();
-		}
-		break;
-
-	case 'focus-me-response':
-		handleWindowFocus();
-		break;
-
-	case 'read-response':
-		getReadHandler(multiplexCallbackId)(req);
-		break;
-
-	case 'write-response':
-		getWriteHandler(multiplexCallbackId)(req);
-		break;
-
-	/*
-	 * messages from backend
-	 */
 	case 'update-storage':
 		for (var i in req.items) {
 			var value = req.items[i];
@@ -5015,17 +5023,42 @@ function handleBackendMessage (req) {
 
 	case 'fileio-authorize-response':
 		if (req.error) {
-			var errorMessage = _.apply(null, req.error);
-			if (exvm.running) {
-				exvm.lastError = errorMessage;
-				exvm.run();
-			}
-			else {
-				showMessage(errorMessage, true, false);
-			}
-			break;
+			showMessage(_.apply(null, req.error), true, false);
 		}
-		showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+		else {
+			showMessage(_('Obtaining access rights ({0})...', req.phase || '-'));
+		}
+		break;
+
+	case 'fileio-write-response':
+		var modeOverridden = null;
+		if ('meta' in req && req.meta && req.meta.path != '') {
+			modeOverridden = 'write handler';
+		}
+		if (req.error) {
+			showMessage(_.apply(null, req.error), true, false);
+			notifyActivity('', '', 'write handler error: ' + req.error);
+			notifyCommandComplete('commands-completed', modeOverridden);
+		}
+		else {
+			switch (req.state) {
+			case 'buffered':
+				showMessage(_('Buffered: {0}', req.path));
+				break;
+			case 'writing':
+				showMessage(_('Writing ({0}%)', req.progress.toFixed(2)));
+				break;
+			case 'complete':
+				var path = req.meta.path;
+				var bytes = req.meta.bytes;
+				var message = getFileIoResultInfo(path, bytes);
+
+				showMessage(_('Written: {0}', message));
+				notifyActivity('-', '-', 'write handler completed');
+				notifyCommandComplete('commands-completed', modeOverridden);
+				break;
+			}
+		}
 		break;
 
 	case 'ping':
@@ -5048,7 +5081,10 @@ const Position = Wasavi.Position;
 const abbrevs = new Collection;
 const keyManager = qeema;
 const regexConverter = new Wasavi.RegexConverter(appProxy);
-const mapManager = new Wasavi.MapManager(appProxy);
+const mapManager = new Wasavi.MapManager(appProxy, {
+	onexpand: handleMapExpand,
+	onrecursemax: handleMapRecurseMax
+});
 const theme = new Wasavi.Theme(appProxy);
 const bell = new Wasavi.Bell(appProxy);
 const completer = new Wasavi.Completer(appProxy,
@@ -5143,7 +5179,7 @@ const completer = new Wasavi.Completer(appProxy,
 			function (prefix, notifyCandidates, line) {
 				var drive = '', pathRegalized, pathInput, prefixBaseName;
 
-				pathRegalized = pathInput = extractDriveName(prefix, function (d) {drive = d});
+				pathRegalized = pathInput = extractDriveName(prefix, d => {drive = d});
 				pathRegalized = regalizeFilePath(drive + pathRegalized);
 				pathRegalized = pathRegalized.replace(/\/[^\/]*$/, '/');
 
@@ -5156,70 +5192,85 @@ const completer = new Wasavi.Completer(appProxy,
 				pathInput = pathInput.replace(/[^\/]+$/, '');
 				prefixBaseName = /[^\/]*$/.exec(prefix)[0];
 
-				extensionChannel.postMessage(
-					{
-						type:'fsctl',
-						subtype:'get-entries',
-						path:pathRegalized
-					},
-					function (res) {
-						if (!res || !res.data) {
-							notifyCandidates([]);
-							return;
-						}
-
-						var onlyDirectory = /^\s*(?:cd|chdi?r?)\b/.test(line);
-						var fs = drive == '' ? fileSystemIndex : getFileSystemIndex(drive);
-						var result = res.data
-							.map(function (file) {
-								var pathFixed = '';
-								var baseName = '';
-
-								if (onlyDirectory && !file.is_dir) {
-									return '';
-								}
-
-								if (getObjectType(file.path) == 'Array') {
-									pathFixed = file.path
-										.slice(0, file.path.length - 1)
-										.map(function (s) {return s.replace(/\//g, '\\/')})
-										.join('/') + '/';
-									baseName = file.path[file.path.length - 1];
-								}
-								else {
-									var re = /^(.*\/)([^\/]+)$/.exec(file.path);
-									if (!re) {
-										return '';
-									}
-									pathFixed = re[1];
-									baseName = re[2];
-								}
-
-								// remove dotfile if prefix does not start with a dot.
-								if (prefixBaseName.charAt(0) != '.' && baseName.charAt(0) == '.') {
-									return '';
-								}
-
-								if (pathInput.charAt(0) != '/') {
-									if (fs < 0) {
-										return '';
-									}
-									if (pathFixed.indexOf(fstab[fs].cwd) == 0) {
-										pathFixed = pathInput;
-									}
-								}
-
-								return drive +
-									pathFixed.replace(/\s/g, '\\$&') +
-									baseName.replace(/\s/g, '\\$&') +
-									(file.is_dir ? '/' : '');
-							})
-							.filter(function (s) {return s.length > 0})
-							.sort(function (a, b) {return a.toLowerCase().localeCompare(b.toLowerCase())});
-
-						notifyCandidates(result);
+				var port = chrome.runtime.connect({name: 'fsctl'});
+				port.onMessage.addListener(res => {
+					if (!res || res.error) {
+						notifyCandidates([]);
+						port.disconnect();
+						port = null;
+						return;
 					}
-				);
+
+					if (res.type != 'fileio-getentries-response') {
+						return;
+					}
+
+					if (!res.data) {
+						notifyCandidates([]);
+						port.disconnect();
+						port = null;
+						return;
+					}
+
+					var onlyDirectory = /^\s*(?:cd|chdi?r?)\b/.test(line);
+					var fs = drive == '' ? fileSystemIndex : getFileSystemIndex(drive);
+					var result = res.data
+						.map(file => {
+							var pathFixed = '';
+							var baseName = '';
+
+							if (onlyDirectory && !file.is_dir) {
+								return '';
+							}
+
+							if (getObjectType(file.path) == 'Array') {
+								pathFixed = file.path
+									.slice(0, file.path.length - 1)
+									.map(s => s.replace(/\//g, '\\/'))
+									.join('/') + '/';
+								baseName = file.path[file.path.length - 1];
+							}
+							else {
+								var re = /^(.*\/)([^\/]+)$/.exec(file.path);
+								if (!re) {
+									return '';
+								}
+								pathFixed = re[1];
+								baseName = re[2];
+							}
+
+							// remove dotfile if prefix does not start with a dot.
+							if (prefixBaseName.charAt(0) != '.' && baseName.charAt(0) == '.') {
+								return '';
+							}
+
+							if (pathInput.charAt(0) != '/') {
+								if (fs < 0) {
+									return '';
+								}
+								if (pathFixed.indexOf(fstab[fs].cwd) == 0) {
+									pathFixed = pathInput;
+								}
+							}
+
+							return drive +
+								pathFixed.replace(/\s/g, '\\$&') +
+								baseName.replace(/\s/g, '\\$&') +
+								(file.is_dir ? '/' : '');
+						})
+						.filter(s => s.length > 0)
+						.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+					port.disconnect();
+					port = null;
+
+					notifyCandidates(result);
+				});
+
+				port.postMessage({
+					type: 'get-entries',
+					path: pathRegalized
+				});
 			},
 			{isVolatile:true}
 		]
@@ -5292,10 +5343,13 @@ const config = new Wasavi.Configurator(appProxy,
 		['history', 'i', 20],
 		['monospace', 'i', 20],
 		['fullscreen', 'b', false, function (v) {
-			return extensionChannel && notifyToParent('window-state', {
-				tabId:extensionChannel.tabId,
-				state:v ? 'maximized' : 'normal'
-			}) ? v : undefined;
+			if (!extensionChannel) return;
+			return new Promise(resolve => {
+				notifyToParent('window-state', {
+					tabId:extensionChannel.tabId,
+					state:v ? 'maximized' : 'normal'
+				}, res => resolve(v));
+			});
 		}, {isAsync:true}],
 		['jkdenotative', 'b', false],
 		['undoboundlen', 'i', 20],
@@ -5305,7 +5359,12 @@ const config = new Wasavi.Configurator(appProxy,
 			return v;
 		}],
 		['syncsize', 'b', true, function (v) {
-			return extensionChannel && notifyToParent('set-size', {isSyncSize: v}) ? v : undefined;
+			if (!extensionChannel) return;
+			return new Promise(resolve => {
+				notifyToParent('set-size', {
+					isSyncSize: v
+				}, res => resolve(v));
+			});
 		}, {isAsync:true}],
 		['override', 'b', true, null, {isDynamic:true}],
 		['datetime', 's', '%c'],
@@ -5358,13 +5417,14 @@ const config = new Wasavi.Configurator(appProxy,
 		//['cdpath', 's', ':'],
 		//['cedit', 's', ''],
 		['columns', 'i', 0, function (v) {
-			if (extensionChannel && isNumber(charWidth)) {
+			if (!extensionChannel || !isNumber(charWidth)) return;
+			return new Promise(resolve => {
 				var ed = $('wasavi_editor');
-				return notifyToParent('set-size', {
+				notifyToParent('set-size', {
 					width: v * charWidth + (ed.offsetWidth - ed.clientWidth),
 					isSyncSize: config.vars.syncsize
-				}) ? v : undefined;
-			}
+				}, res => resolve(v));
+			});
 		}, {isDynamic:true, isAsync:true}],
 		//['combined', 'b', false],
 		//['comment', 'b', false],
@@ -5379,12 +5439,13 @@ const config = new Wasavi.Configurator(appProxy,
 		//['keytime', 'i', 6],
 		//['leftright', 'b', false],
 		['lines', 'i', 0, function (v) {
-			if (extensionChannel && isNumber(lineHeight)) {
-				return notifyToParent('set-size', {
+			if (!extensionChannel || !isNumber(lineHeight)) return;
+			return new Promise(resolve => {
+				notifyToParent('set-size', {
 					height: v * lineHeight,
 					isSyncSize: config.vars.syncsize
-				}) ? v : undefined;
-			}
+				}, res => resolve(v));
+			});
 		}, {isDynamic:true, isAsync:true}],
 		//['lisp', 'b', false],
 		//['lock', 'b', true],
@@ -5439,6 +5500,7 @@ const config = new Wasavi.Configurator(appProxy,
 );
 // >>>
 
+var promise;
 var extensionChannel;
 var version;
 var exrc;
@@ -5486,6 +5548,8 @@ var compositionLevel;
 var containerRect;
 var statusLineHeight;
 var surrounding;
+var executingMacroInfo;
+var commandCompleteTimer;
 
 var isEditCompleted;
 var isVerticalMotion;
@@ -5504,36 +5568,25 @@ var lastMessage;
 var lastBoundMode;
 
 /*
- * mode to state table
- * ----------------
- */
-
-const mode2stateTable = {
-	command: 'normal', bound: 'normal', bound_line: 'normal', edit: 'normal', overwrite: 'normal',
-	line_input: 'line_input',
-	backlog_prompt: 'console_wait', ex_s_prompt: 'console_wait'
-};
-
-/*
  * input handlers for each mode <<<1
  * ----------------
  */
 
 const modeHandlers = {
-	command: function (e, r) {
+	command: function (r) {
 		cursor.windup();
-		execCommandMap(r, e, commandMap, r.mapkey, r.subkey, r.code);
+		return execCommandMap(r, commandMap, r.mapkey, r.subkey, r.code);
 	},
-	wait_register: function (e, r) {
+	wait_register: function (r) {
 		var mapkeyActual = inputModeStack.lastItem.mapkey;
 		popInputMode();
 		r.mapkey = mapkeyActual;
-		return this[inputMode].apply(this, arguments);
+		var handler = this[modeTable[inputMode].handlerName];
+		return isGenerator(handler) ?
+			execGenerator(handler, this, r) :
+			handler.call(this, r);
 	},
-	wait_a_letter: function () {
-		return this.wait_register.apply(this, arguments);
-	},
-	backlog_prompt: function (e, r) {
+	backlog_prompt: function (r) {
 		if (backlog.queued) {
 			if (r.letter == 'q') {
 				backlog.clear();
@@ -5543,7 +5596,7 @@ const modeHandlers = {
 			else if (r.letter == ':') {
 				backlog.clear();
 				popInputMode();
-				keyManager.push(e);
+				keyManager.push(r.e);
 			}
 			else {
 				backlog.open(r.letter == '\u000d');
@@ -5554,16 +5607,12 @@ const modeHandlers = {
 			popInputMode();
 			requestShowPrefixInput();
 			if (r.letter != '\u000d' && r.letter != ' ' && state == 'normal') {
-				keyManager.push(e);
+				keyManager.push(r.e);
 			}
 		}
+		return r;
 	},
-	ex_s_prompt: function (e, r) {
-		exvm.inst.currentOpcode.letter = r.letter;
-		exvm.run();
-		r.needEmitEvent = true;
-	},
-	bound: function (e, r) {
+	bound: function (r) {
 		cursor.windup();
 
 		if (r.subkey == inputMode && r.code == 0x1b) {
@@ -5583,42 +5632,42 @@ const modeHandlers = {
 			}
 			marks.setPrivate('<');
 			marks.setPrivate('>');
+			return r;
 		}
 		else {
-			execCommandMap(r, e, boundMap, r.mapkey, r.subkey, r.code, true);
+			return execCommandMap(r, boundMap, r.mapkey, r.subkey, r.code, true);
 		}
 	},
-	bound_line: function () {
-		return this.bound.apply(this, arguments);
-	},
-	edit: function (e, r) {
+	edit: function* (r) {
 		if (compositionLevel == 0) {
 			cursor.windup();
 		}
 
 		if (r.subkey == inputMode && r.code == 0x1b) {
-			if (processAbbrevs(true, r.ignoreAbbrev)) {
-				keyManager.push('\u001b');
-				return;
+			if (!r.ignoreAbbrev && processAbbrevs(true, '\u001b')) {
+				return r;
+			}
+
+			var finalStroke = inputHandler.stroke;
+
+			// store input text in the first input session to dot register and prefixInput
+			if (inputHandler.countOrig == inputHandler.count) {
+				registers.set('.', finalStroke);
+				prefixInput.isLocked = false;
+				prefixInput.trailer = finalStroke;
+			}
+
+			// insert same input text if count > 1
+			if (inputHandler.count > 1) {
+				keyManager.unshift(
+					inputHandler.suffix,
+					registers.get('.').data,
+					'\u001b');
+				inputHandler.count--;
+				return r;
 			}
 
 			config.vars.showmatch && pairBracketsIndicator && pairBracketsIndicator.clear();
-
-			var finalStroke = inputHandler.stroke;
-			var finalStrokeFollowed = inputHandler.suffix + finalStroke;
-
-			if (inputHandler.count > 1) {
-				var strokes = keyManager.createSequences(finalStrokeFollowed);
-				var pe = {};
-				var goal = strokes.length;
-				for (var i = 1; i < inputHandler.count; i++) {
-					for (var j = 0; j < goal; j++) {
-						strokes[j].nativeEvent = pe;
-						processInput(strokes[j]);
-					}
-				}
-			}
-
 			inputHandler.close();
 
 			var n = buffer.selectionStart;
@@ -5629,16 +5678,13 @@ const modeHandlers = {
 			buffer.setSelectionRange(n);
 
 			popInputMode();
-			prefixInput.isLocked = false;
-			prefixInput.trailer = finalStroke;
-			registers.set('.', finalStroke);
-
 			cursor.ensureVisible();
 
 			if (requestedState.simpleCommand) {
-				lastSimpleCommand = requestedState.simpleCommand.initial
-					+ prefixInput.toString()
-					+ r.letter;
+				setLastSimpleCommand(
+					requestedState.simpleCommand.initial,
+					prefixInput.toString(),
+					r.letter);
 				delete requestedState.simpleCommand;
 			}
 			if (isEditCompleted || finalStroke != '') {
@@ -5654,71 +5700,80 @@ const modeHandlers = {
 //console.log('undo log:\n' + editLogger.dump());
 //console.log('finalStroke: "' + toVisibleString(finalStroke) + '"');
 //console.log('simpleCommand: "' + toVisibleString(lastSimpleCommand) + '"');
-		}
-		else {
-			var letterActual = inputHandler.updateText(e);
-			var prevPos = buffer.selectionStart;
-			inputHandler.updateStroke(e);
-			inputHandler.updateHeadPosition();
 
-			if (config.vars.showmatch && pairBracketsIndicator) {
-				pairBracketsIndicator.clear();
-				pairBracketsIndicator = null;
-			}
-			if (execEditMap(r, e, r.mapkey, r.subkey, r.code)) {
-				requestShowPrefixInput(getDefaultPrefixInputString());
-			}
-			else if (r.code >= 0 && !clipOverrun()) {
-				if (r.code < 32) {
-					inputHandler.ungetText();
-					inputHandler.ungetStroke();
-					e.code = toVisibleControl(e.code).charCodeAt(0);
-					letterActual = inputHandler.updateText(e);
-					inputHandler.updateStroke(e);
-				}
-				(inputMode == 'edit' ? insert : overwrite)(letterActual);
-				processAutoDivide(e);
-				processAbbrevs(false, r.ignoreAbbrev);
-				if (needBreakUndo(inputHandler.textFragment, letterActual)) {
-					inputHandler.newState();
-					if (!e.nativeEvent) {
-						keyManager.lock();
-						setTimeout(function () {keyManager.unlock()}, 1);
-					}
-				}
-			}
-			else {
+			return r;
+		}
+
+		var letterActual = inputHandler.appendText(r.e);
+		var prevPos = buffer.selectionStart;
+		inputHandler.appendStroke(r.e);
+		inputHandler.updateHeadPosition();
+
+		if (config.vars.showmatch && pairBracketsIndicator) {
+			pairBracketsIndicator.clear();
+			pairBracketsIndicator = null;
+		}
+
+		yield execEditMap(r, r.mapkey, r.subkey, r.code);
+
+		if (r.isCompleted) {
+			requestShowPrefixInput(getDefaultPrefixInputString());
+		}
+		else if (r.code >= 0 && !clipOverrun()) {
+			if (r.code < 32) {
 				inputHandler.ungetText();
 				inputHandler.ungetStroke();
+				r.e.code = toVisibleControl(r.e.code).charCodeAt(0);
+				letterActual = inputHandler.appendText(r.e);
+				inputHandler.appendStroke(r.e);
 			}
-			if (e.isCompositionedFirst && !e.isCompositionedLast) {
-				compositionLevel++;
-			}
-			else if (!e.isCompositionedFirst && e.isCompositionedLast) {
-				compositionLevel > 0 && compositionLevel--;
-			}
-			if (compositionLevel == 0) {
-				cursor.ensureVisible();
-				requestShowPrefixInput(getDefaultPrefixInputString());
-				r.needEmitEvent = true;
-			}
-			if (config.vars.showmatch && !pairBracketsIndicator) {
-				pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
-					letterActual, prevPos);
-			}
-			if (r.needEmitEvent === false) {
-				r.needEmitEvent = 'notify-state';
+
+			(inputMode == 'edit' ? insert : overwrite)(letterActual);
+			processAutoDivide(r.e);
+			!r.ignoreAbbrev && processAbbrevs(false);
+
+			if (needBreakUndo(inputHandler.textFragment, letterActual)) {
+				inputHandler.newState();
+				if (!r.e.nativeEvent) {
+					keyManager.lock();
+					setTimeout(function () {keyManager.unlock()}, 1);
+				}
 			}
 		}
+		else {
+			inputHandler.ungetText();
+			inputHandler.ungetStroke();
+		}
+
+		if (r.e.isCompositionedFirst && !r.e.isCompositionedLast) {
+			compositionLevel++;
+		}
+		else if (!r.e.isCompositionedFirst && r.e.isCompositionedLast) {
+			compositionLevel > 0 && compositionLevel--;
+		}
+
+		if (compositionLevel == 0) {
+			cursor.ensureVisible();
+			requestShowPrefixInput(getDefaultPrefixInputString());
+			r.needEmitEvent = true;
+		}
+
+		if (config.vars.showmatch && !pairBracketsIndicator) {
+			pairBracketsIndicator = searchUtils.getPairBracketsIndicator(
+				letterActual, prevPos);
+		}
+
+		if (r.needEmitEvent === false) {
+			r.needEmitEvent = 'notify-state';
+		}
+
+		return r;
 	},
-	overwrite: function () {
-		return this.edit.apply(this, arguments);
-	},
-	line_input: function (e, r) {
-		var input = $('wasavi_footer_input');
-		var canEscape = r.code == 0x1b
+	line_input: function* (r) {
+		const input = $('wasavi_footer_input');
+		const canEscape = r.code == 0x1b
 			|| r.code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
-		var isComplete = prefixInput.operation != ''
+		const isComplete = prefixInput.operation != ''
 			|| prefixInput.motion != '';
 		var line = toNativeControl(input.value);
 
@@ -5727,15 +5782,15 @@ const modeHandlers = {
 
 		if (r.subkey == inputMode && canEscape) {
 			var targetMode = inputModeStack.lastItem.inputMode;
-			var targetMap = getMap(targetMode);
+			var targetMap = modeTable[targetMode].map;
 			var targetKey = inputModeStack.lastItem.mapkey;
 			var currentSubkey = inputMode;
 
 			popInputMode();
 			cursor.windup();
 			backlog.hide();
-			execMap(
-				input, e,
+			yield execMap(
+				input, r.e,
 				targetMap, targetKey, '$' + currentSubkey + '_escape',
 				line);
 
@@ -5744,11 +5799,11 @@ const modeHandlers = {
 		}
 		else if (r.subkey == inputMode && (r.code == 0x0d || r.code == 0x0a)) {
 			if (isComplete) {
-				prefixInput.trailer = line + e.code2letter(r.code);
+				prefixInput.trailer = line + r.e.code2letter(r.code);
 			}
 			else {
 				line = line.replace(/\s+/g, ' ');
-				prefixInput.appendRegister(line + e.code2letter(r.code));
+				prefixInput.appendRegister(line + r.e.code2letter(r.code));
 			}
 
 			var internalPrefix = input.dataset.internalPrefix;
@@ -5757,54 +5812,61 @@ const modeHandlers = {
 			}
 
 			var targetMode = inputModeStack.lastItem.inputMode;
-			var targetMap = getMap(targetMode);
+			var targetMap = modeTable[targetMode].map;
 			var targetKey = inputModeStack.lastItem.mapkey;
 			var currentSubkey = inputMode;
 
 			popInputMode();
 			cursor.windup();
-			execMap(
-				input, e,
+
+			yield execMap(
+				input, r.e,
 				targetMap, targetKey, '$' + currentSubkey + '_reset',
 				line);
-			execCommandMap(
-				r, e,
+			yield execCommandMap(
+				r,
 				targetMap, targetKey, currentSubkey,
 				line);
 		}
-		else if (execLineInputEditMap(r, e, r.mapkey, r.subkey, r.code)) {
-			setTimeout(function () {
-				var input = $('wasavi_footer_input');
-
-				/*
-				 * Although following codes are very very strange,
-				 * required for Firefox.
-				 * It seems that Firefox has a bug which clears
-				 * the contents of input element by the escape key :-<
-				 */
-				if (Wasavi.IS_GECKO) {
-					var processed = input.dataset.processed;
-					if (input.value != processed) {
-						input.value = processed;
-						var pos = input.dataset.pos - 0;
-						input.selectionStart = pos;
-						input.selectionEnd = pos;
-					}
-				}
-				delete input.dataset.processed;
-				delete input.dataset.pos;
-
-				if (input.value != input.dataset.current) {
-					processInputSupplement(e);
-				}
-			}, 1);
-		}
 		else {
-			if (r.code >= 1) {
-				lineInputHistories.isInitial = true;
-				insertToLineInput(lineInputInfo, r.letter);
+			yield execLineInputEditMap(r, r.mapkey, r.subkey, r.code);
+
+			if (r.isCompleted) {
+				setTimeout(function () {
+					var input = $('wasavi_footer_input');
+
+					/*
+					 * Although following codes are very very strange,
+					 * required for Firefox.
+					 * It seems that Firefox has a bug which clears
+					 * the contents of input element by the escape key :-<
+					 */
+					if (Wasavi.IS_GECKO) {
+						var processed = input.dataset.processed;
+						if (input.value != processed) {
+							input.value = processed;
+							var pos = input.dataset.pos - 0;
+							input.selectionStart = pos;
+							input.selectionEnd = pos;
+						}
+					}
+					delete input.dataset.processed;
+					delete input.dataset.pos;
+
+					if (input.value != input.dataset.current) {
+						processInputSupplement(r.e);
+					}
+
+					cursor.update({focused:true, visible:true});
+				}, 1);
 			}
-			processInputSupplement(e);
+			else {
+				if (r.code >= 1) {
+					lineInputHistories.isInitial = true;
+					insertToLineInput(lineInputInfo, r.letter);
+				}
+				yield processInputSupplement(r.e);
+			}
 		}
 
 		if (!isCompleteResetCanceled) {
@@ -5813,6 +5875,8 @@ const modeHandlers = {
 
 		input.dataset.processed = input.value;
 		input.dataset.pos = input.selectionStart;
+
+		return r;
 	}
 };
 
@@ -5824,6 +5888,17 @@ const modeHandlers = {
 const commandMap = {
 	// internal special
 	'*nop*':function () {return true},
+	'*macro-end*': function () {
+		if (executingMacroInfo.length) {
+			if (executingMacroInfo[0].count > 1) {
+				executingMacroInfo[0].count--;
+				executeViCommand(executingMacroInfo[0].command);
+			}
+			else {
+				executingMacroInfo.shift();
+			}
+		}
+	},
 
 	// escape
 	'\u001b':function () {return inputEscape()},
@@ -5851,9 +5926,12 @@ const commandMap = {
 			requestShowPrefixInput();
 			if (registers.isClipboard(c)) {
 				keyManager.lock();
-				extensionChannel.getClipboard(function (data) {
-					registers.get('*').set(data);
-					keyManager.unlock();
+				return new Promise(resolve => {
+					extensionChannel.getClipboard(text => {
+						registers.get('*').set(text);
+						keyManager.unlock();
+						resolve();
+					});
 				});
 			}
 			else if (c == '=') {
@@ -6581,21 +6659,25 @@ const commandMap = {
 		var index = prefixInput.isCountSpecified ?
 			minmax(1, prefixInput.count, buffer.rowLength) : buffer.rowLength;
 		var n = new Position(index - 1, 0);
+
 		marks.setJumpBaseMark();
+		isVerticalMotion = true;
+		prefixInput.motion = c;
+
 		if (prefixInput.isEmptyOperation) {
 			buffer.setSelectionRange(buffer.getLineTopOffset2(n));
+			invalidateIdealWidthPixels();
+
 			var node = buffer.rowNodes(n);
-			var viewHeightHalf = parseInt((buffer.elm.clientHeight - lineHeight) / 2)
-			scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
+			var viewHeightHalf = parseInt((buffer.elm.clientHeight - lineHeight) / 2);
+
+			return scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
 		}
 		else {
 			buffer.extendSelectionTo(buffer.getLineTopOffset2(n));
+			invalidateIdealWidthPixels();
+			return true;
 		}
-		isVerticalMotion = true;
-		isSmoothScrollRequested = true;
-		invalidateIdealWidthPixels();
-		prefixInput.motion = c;
-		return true;
 	},
 	f:{
 		command:function (c, o) {
@@ -6807,33 +6889,23 @@ const commandMap = {
 			switch (motion) {
 			case '\u000d':
 				buffer.scrollLeft = 0;
-				scroller.run(current, function () {
-					buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-					invalidateIdealWidthPixels();
-				});
-				break;
+				buffer.setSelectionRange(buffer.getLineTopOffset2(n));
+				invalidateIdealWidthPixels();
+				return scroller.run(current);
 
 			case '.':
 				buffer.scrollLeft = 0;
-				scroller.run(
-					Math.max(current - parseInt((buffer.elm.clientHeight - lineHeight) / 2), 0),
-					function () {
-						buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-						invalidateIdealWidthPixels();
-					}
-				);
-				break;
+				var dest = Math.max(current - parseInt((buffer.elm.clientHeight - lineHeight) / 2), 0);
+				buffer.setSelectionRange(buffer.getLineTopOffset2(n));
+				invalidateIdealWidthPixels();
+				return scroller.run(dest);
 
 			case '-':
 				buffer.scrollLeft = 0;
-				scroller.run(
-					Math.max(current - (buffer.elm.clientHeight - lineHeight), 0),
-					function () {
-						buffer.setSelectionRange(buffer.getLineTopOffset2(n));
-						invalidateIdealWidthPixels();
-					}
-				);
-				break;
+				var dest = Math.max(current - (buffer.elm.clientHeight - lineHeight), 0);
+				buffer.setSelectionRange(buffer.getLineTopOffset2(n));
+				invalidateIdealWidthPixels();
+				return scroller.run(dest);
 
 			default:
 				requestShowMessage(_('Unknown adjust command.'), true);
@@ -6860,33 +6932,37 @@ const commandMap = {
 				}
 				var clusters = buffer.getGraphemeClusters();
 				var index = clusters.getClusterIndexFromUTF16Index(buffer.selectionStartCol);
-				var cluster = toNativeControl(clusters.rawStringAt(index));
-				var codePoints = clusters.codePointsAt(index).map(function (cp) {
-					return Unistring.getCodePointString(cp, 'unicode');
-				}).join(' ');
+				var codePoints = clusters.codePointsAt(index)
+					.map(cp => Unistring.getCodePointString(toNativeControl(cp).charCodeAt(0), 'unicode'))
+					.join(' ');
 
 				requestShowMessage(
-					'"' + toVisibleControl(cluster) + '"' +
+					'"' + toVisibleControl(clusters.rawStringAt(index)) + '"' +
 					' ' + codePoints);
 				break;
 
 			case 'g':// motion
 				var index = prefixInput.count;
 				var n = new Position(index - 1, 0);
+
 				marks.setJumpBaseMark();
+				isVerticalMotion = true;
+				prefixInput.motion = o.key + c;
+
 				if (prefixInput.isEmptyOperation) {
 					buffer.setSelectionRange(buffer.getLineTopOffset2(n));
+					invalidateIdealWidthPixels();
+
 					var node = buffer.rowNodes(n);
-					var viewHeightHalf = parseInt((buffer.elm.clientHeight - lineHeight) / 2)
-					scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
+					var viewHeightHalf = parseInt((buffer.elm.clientHeight - lineHeight) / 2);
+
+					result = scroller.run(Math.max(0, node.offsetTop - viewHeightHalf));
 				}
 				else {
 					buffer.extendSelectionTo(buffer.getLineTopOffset2(n));
+					invalidateIdealWidthPixels();
+					result = true;
 				}
-				isVerticalMotion = true;
-				invalidateIdealWidthPixels();
-				prefixInput.motion = o.key + c;
-				result = true;
 				break;
 			case 'i':// individual command
 				if (!prefixInput.isEmptyOperation) {
@@ -7222,6 +7298,10 @@ const commandMap = {
 				requestShowMessage(_('Register {0} is not exist.', c), true);
 				return inputEscape();
 			}
+			if (executingMacroInfo.some(i => i.register == c)) {
+				requestShowMessage(_('Register {0} was used recursively.', c), true);
+				return inputEscape();
+			}
 
 			var command = registers.get(c).data.replace(/^\n+|\n+$/g, '');
 			if (command == '') {
@@ -7229,19 +7309,13 @@ const commandMap = {
 				return inputEscape();
 			}
 
-			var count = prefixInput.count;
-			var terminator = function () {
-				if (--count > 0) {
-					executeViCommand(command, terminator);
-				}
-				else {
-					registers.set('@', command);
-					terminator = null;
-				}
-			};
-
 			prefixInput.trailer = c;
-			executeViCommand(command, terminator);
+			executingMacroInfo.unshift({
+				count: prefixInput.count,
+				register: c,
+				command: command
+			});
+			executeViCommand(command);
 			return true;
 		}
 	},
@@ -7314,9 +7388,7 @@ const commandMap = {
 		var range = [];
 		range.push(buffer.selectionStartRow + 1);
 		range.push(Math.min(range[0] + prefixInput.count - 1, buffer.rowLength));
-		var result = exvm.run(range.join(',') + '&');
-		typeof result == 'string' && requestShowMessage(result, true);
-		return true;
+		return exvm.run(range.join(',') + '&');
 	},
 	// substitute text for whole lines (equivalents to cc)
 	// or surrounding extension
@@ -7383,7 +7455,8 @@ const commandMap = {
 		$line_input_notify:function (c, o) {
 			var adjusted = adjustSurroundingInputForNotify(c || o.e.key);
 			if (/^<.*>$/.test(adjusted) || /^ ?[^ <]$/.test(adjusted)) {
-				keyManager.push('\n');
+				//keyManager.setDequeue('unshift', '\n', mapManager.markExpandedNoremap);
+				keyManager.unshift('\n');
 			}
 		},
 		line_input:function (c) {
@@ -7426,9 +7499,7 @@ const commandMap = {
 			if (!isAlias(c)) {
 				return inputEscape(prefixInput.operation);
 			}
-			var result = exvm.run('x');
-			typeof result == 'string' && requestShowMessage(result, true);
-			return true;
+			return exvm.run('x');
 		},
 		$op:function (c) {
 			prefixInput.appendOperation(c);
@@ -7482,8 +7553,7 @@ const commandMap = {
 			prefixInput.trailer = c;
 			registers.set(':', c);
 			lineInputHistories.push(c);
-			exvm.run(c);
-			return true;
+			return exvm.run(c);
 		}
 	},
 	// bound mode transitioner
@@ -7524,7 +7594,11 @@ const commandMap = {
  */
 
 const boundMap = {
-	'*nop*':commandMap['*nop*'], '\u0009':commandMap['\u0009'], '\u001b':inputEscape,
+	'*nop*':commandMap['*nop*'],
+	'*macro-end*': function () {
+		executeViCommand('\u001b');
+	},
+	'\u0009':commandMap['\u0009'], '\u001b':inputEscape,
 	'1':inputDigit, '2':inputDigit, '3':inputDigit, '4':inputDigit, '5':inputDigit,
 	'6':inputDigit, '7':inputDigit, '8':inputDigit, '9':inputDigit,
 	'"':commandMap['"'],
@@ -7948,6 +8022,9 @@ const boundMap = {
  */
 
 const editMap = {
+	'*macro-end*': function () {
+		executeViCommand('\u001b');
+	},
 	'<C-space>'/*^@*/:function () {
 		inputHandler.ungetText();
 		if (clipOverrun()) return;
@@ -7957,6 +8034,7 @@ const editMap = {
 			return;
 		}
 		var cmd = keyManager.createSequences(registers.get('.').data + '\u001b');
+		// TODO: use key input queue in keyManager
 		for (var i = 0, goal = cmd.length; i < goal; i++) {
 			processInput(cmd[i], true);
 		}
@@ -7998,6 +8076,7 @@ const editMap = {
 
 		if (buffer.selectionStartRow == 0 && buffer.selectionStartCol == 0) {
 			requestShowMessage(_('Top of text.'), true);
+			inputHandler.ungetText();
 			inputHandler.ungetStroke();
 			return;
 		}
@@ -8050,6 +8129,7 @@ const editMap = {
 		}
 
 		inputHandler.flush();
+		inputHandler.ungetText();
 		if (inputMode == 'overwrite' &&
 		buffer.selectionStart.le(inputHandler.getStartPosition())) {
 			switch (o.key) {
@@ -8154,18 +8234,22 @@ const editMap = {
 			var s;
 			if (registers.isClipboard(c)) {
 				keyManager.lock();
-				extensionChannel.getClipboard(function (data) {
-					registers.get('*').set(data);
-					if (data == '') {
-						showMessage(_('Register {0} is empty.', c));
-						cursor.update({visible:true, focused:true});
-					}
-					else {
-						paste(1, {content: data, isForward: false});
-						inputHandler.updateText(data);
-						inputHandler.updateStroke(data);
-					}
-					keyManager.unlock();
+				return new Promise(resolve => {
+					extensionChannel.getClipboard(data => {
+						registers.get('*').set(data);
+						keyManager.unlock();
+
+						if (data == '') {
+							requestShowMessage(_('Register {0} is empty.', c));
+						}
+						else {
+							paste(1, {content: data, isForward: false});
+							inputHandler.appendText(data);
+							inputHandler.appendStroke(data);
+						}
+
+						resolve();
+					});
 				});
 			}
 			else if (c == '=') {
@@ -8181,8 +8265,8 @@ const editMap = {
 			}
 			else if (registers.exists(c) && (s = registers.get(c).data) != '') {
 				paste(1, {content: s, isForward: false});
-				inputHandler.updateText(s);
-				inputHandler.updateStroke(s);
+				inputHandler.appendText(s);
+				inputHandler.appendStroke(s);
 			}
 			else {
 				requestShowMessage(_('Register {0} is empty.', c));
@@ -8244,7 +8328,7 @@ const editMap = {
 						var code = ch.charCodeAt(0);
 						var e = keyManager.objectFromCode(code);
 
-						inputHandler.updateText(e);
+						inputHandler.appendText(e);
 						if (code == 10 || code == 13) {
 							insert('\n');
 						}
@@ -8320,13 +8404,13 @@ const editMap = {
 	},
 	'<pageup>':function (c) {
 		inputHandler.newState();
-		scrollView(c, function (v) {
+		return scrollView(c, function (v) {
 			return -(Math.max(parseInt(v.lines - 2), 1));
 		});
 	},
 	'<pagedown>':function (c) {
 		inputHandler.newState();
-		scrollView(c, function (v) {
+		return scrollView(c, function (v) {
 			return Math.max(parseInt(v.lines - 2), 1);
 		});
 	}
@@ -8339,6 +8423,10 @@ const editMap = {
 
 const lineInputEditMap = {
 	'*nop*':function () {
+		return true;
+	},
+	'*macro-end*': function () {
+		executeViCommand('\u001b');
 		return true;
 	},
 	'\u0001'/*^A*/:function (c, o) {
@@ -8387,23 +8475,27 @@ const lineInputEditMap = {
 	'\u0009'/*^I, tab*/:function (c, o) {
 		lineInputHistories.isInitial = true;
 		isCompleteResetCanceled = true;
-		completer.run(o.target.value, o.target.selectionStart, o.e.shift, function (compl) {
-			if (!compl) {
-				notifier.show(_('No completions'));
-			}
-			else if (typeof compl == 'string') {
-				notifier.show(compl);
-			}
-			else {
-				o.target.value = compl.value;
-				o.target.selectionStart = o.target.selectionEnd = compl.pos;
-				lineInputInfo.invalidate();
-				notifier.show(
-					_('matched #{0} of {1}', compl.completed.index + 1, compl.filteredLength),
-					1000 * 3
-				);
-			}
-			notifyCommandComplete();
+		keyManager.lock();
+		return new Promise(resolve => {
+			completer.run(o.target.value, o.target.selectionStart, o.e.shift, compl => {
+				if (!compl) {
+					notifier.show(_('No completions'));
+				}
+				else if (typeof compl == 'string') {
+					notifier.show(compl);
+				}
+				else {
+					o.target.value = compl.value;
+					o.target.selectionStart = o.target.selectionEnd = compl.pos;
+					lineInputInfo.invalidate();
+					notifier.show(
+						_('matched #{0} of {1}', compl.completed.index + 1, compl.filteredLength),
+						1000 * 3
+					);
+				}
+				keyManager.unlock();
+				resolve();
+			});
 		});
 	},
 	'<S-tab>':function (c, o) {
@@ -8460,17 +8552,21 @@ const lineInputEditMap = {
 			var s;
 			if (registers.isClipboard(c)) {
 				keyManager.lock();
-				extensionChannel.getClipboard(function (data) {
-					registers.get('*').set(data);
-					keyManager.unlock();
-					if (data == '') {
-						notifier.show(_('Register {0} is empty.', c));
-					}
-					else {
-						notifier.hide();
-						insertToLineInput(lineInputInfo, data);
-					}
-					processInput(keyManager.nopObject);
+				return new Promise(resolve => {
+					extensionChannel.getClipboard(data => {
+						registers.get('*').set(data);
+						keyManager.unlock();
+
+						if (data == '') {
+							notifier.show(_('Register {0} is empty.', c));
+						}
+						else {
+							notifier.hide();
+							insertToLineInput(lineInputInfo, data);
+						}
+
+						resolve();
+					});
 				});
 			}
 			else if (c == '=') {
@@ -8629,6 +8725,54 @@ const lineInputEditMap = {
 	'<end>':function () {return this['\u0005'].apply(this, arguments)}
 };
 
+/*
+ * information table for each mode
+ * ----------------
+ */
+
+const modeTable = {
+	command: {
+		handlerName: 'command',
+		map: commandMap,
+		state: 'normal'
+	},
+	bound: {
+		handlerName: 'bound',
+		map: boundMap,
+		state: 'normal'
+	},
+	bound_line: {
+		handlerName: 'bound',
+		map: boundMap,
+		state: 'normal'
+	},
+	edit: {
+		handlerName: 'edit',
+		map: editMap,
+		state: 'normal'
+	},
+	overwrite: {
+		handlerName: 'edit',
+		map: editMap,
+		state: 'normal'
+	},
+	line_input: {
+		handlerName: 'line_input',
+		map: lineInputEditMap,
+		state: 'line_input'
+	},
+	backlog_prompt: {
+		handlerName: 'backlog_prompt',
+		state: 'console_wait'
+	},
+	wait_register: {
+		handlerName: 'wait_register'
+	},
+	wait_a_letter: {
+		handlerName: 'wait_register'
+	}
+};
+
 diag('entering start up section');
 
 /*
@@ -8674,7 +8818,6 @@ if (global.WasaviExtensionWrapper
 			run(function() {
 				!targetElement && install({
 					// parentTabId
-					// parentInternalId
 					// frameId
 					// url
 					// testMode
@@ -8704,4 +8847,4 @@ if (global.WasaviExtensionWrapper
 }
 })(this);
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> fdl=1 :

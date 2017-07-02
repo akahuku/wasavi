@@ -61,6 +61,7 @@ var devMode;
 var logMode;
 var blacklist;
 var statusLineHeight;
+var testLog;
 var wasaviAgentsHash = {};
 var diag = {
 	_messages: null,
@@ -874,7 +875,6 @@ var Agent = (function () {
 		var payload = {
 			type: 'push-payload',
 			parentTabId: extension.tabId,
-			parentInternalId: extension.internalId,
 			frameId: this.frameId,
 			url: window.location.href,
 			title: document.title,
@@ -978,10 +978,10 @@ var Agent = (function () {
 
 	// public methods
 	function notifyToChild (payload) {
-		if (!this.wasaviFrameInternalId) return;
+		if (!this.wasaviFrameTabId) return;
 		extension.postMessage({
 			type: 'transfer',
-			to: this.wasaviFrameInternalId,
+			to: this.wasaviFrameTabId,
 			payload: payload
 		});
 	}
@@ -1003,9 +1003,9 @@ var Agent = (function () {
 		}
 	}
 
-	function initialized (req) {
+	function initialized (req, sender, response) {
 		if (!this.wasaviFrame) return;
-		this.wasaviFrameInternalId = req.childInternalId;
+		this.wasaviFrameTabId = req.childTabId;
 		this.wasaviFrame.style.boxShadow = '0 3px 8px 4px rgba(0,0,0,0.5)';
 		this.wasaviFrame.setAttribute('data-wasavi-state', 'running');
 		this.targetElementResizeListener = createElementResizeListener(
@@ -1023,12 +1023,12 @@ var Agent = (function () {
 			document.getElementById('test-log').value = '';
 		}
 
-		this.notifyToChild({type: 'got-initialized'});
+		response({type: 'got-initialized'});
 	}
 
-	function ready (req) {
+	function ready (req, sender, response) {
 		this.wasaviFrame.style.visibility = 'visible';
-		document.activeElement != this.wasaviFrame && this.focusMe(req);
+		document.activeElement != this.wasaviFrame && this.focusMe(req, sender, response);
 		info('wasavi started');
 		fireCustomEvent('WasaviStarted', 0);
 
@@ -1040,7 +1040,7 @@ var Agent = (function () {
 		diag.out();
 	}
 
-	function windowState (req) {
+	function windowState (req, sender, response) {
 		switch (req.state) {
 		case 'maximized':
 		case 'normal':
@@ -1048,7 +1048,7 @@ var Agent = (function () {
 			locate(this.wasaviFrame, this.targetElement, {
 				isFullscreen: this.isFullscreen
 			});
-			this.notifyToChild({
+			response({
 				type: 'relocate',
 				state: req.state
 			});
@@ -1056,7 +1056,7 @@ var Agent = (function () {
 		}
 	}
 
-	function focusMe (req) {
+	function focusMe (req, sender, response) {
 		try {
 			this.wasaviFrame.focus && this.wasaviFrame.focus();
 		} catch (e) {}
@@ -1067,7 +1067,7 @@ var Agent = (function () {
 			&& this.wasaviFrame.contentWindow.focus();
 		} catch (e) {}
 
-		this.notifyToChild({type: 'focus-me-response'});
+		response({type: 'focus-me-response'});
 	}
 
 	function focusChanged (req) {
@@ -1102,7 +1102,7 @@ var Agent = (function () {
 		}, 1000, this.wasaviFrame);
 	}
 
-	function setSize (req) {
+	function setSize (req, sender, response) {
 		if ('isSyncSize' in req) {
 			this.isSyncSize = req.isSyncSize;
 			if (this.isSyncSize) {
@@ -1132,7 +1132,7 @@ var Agent = (function () {
 			}
 		}
 		this.targetElementResizeListener.fire();
-		this.notifyToChild({
+		response({
 			type: 'relocate',
 			isSyncSize: req.isSyncSize
 		});
@@ -1166,11 +1166,9 @@ var Agent = (function () {
 		fireCustomEvent('WasaviTerminated', Object.keys(wasaviAgentsHash).length);
 	}
 
-	function read (req) {
+	function read (req, sender, response) {
 		readContentFromElement(this.targetElement, (function (element, content, type) {
-			var payload = {
-				type: 'read-response',
-			};
+			var payload = {type: 'read-response'};
 
 			if (typeof content != 'string') {
 				payload.error = _('Cannot read the content of element.');
@@ -1184,11 +1182,11 @@ var Agent = (function () {
 				payload.content = content;
 			}
 
-			this.notifyToChild(payload);
+			response(payload);
 		}).bind(this));
 	}
 
-	function write (req) {
+	function write (req, sender, response) {
 		var payload = {type: 'write-response'};
 		try {
 			var result = writeContentToElement(this.targetElement, req.value, {
@@ -1232,13 +1230,20 @@ var Agent = (function () {
 				isBuffered: req.isBuffered
 			};
 
-			this.notifyToChild(payload);
+			response(payload);
 		}
 	}
 
 	function requestBlur (req) {
 		this.wasaviFrame.blur();
 		document.body.focus();
+	}
+
+	function reload (req) {
+		setTimeout(() => {
+			window.removeEventListener('beforeunload', handleBeforeUnload, false);
+			window.location.reload();
+		}, 1000);
 	}
 
 	// constructor
@@ -1248,7 +1253,7 @@ var Agent = (function () {
 		this.targetElementRemoveListener = null;
 		this.targetElementResizeListener = null;
 		this.wasaviFrame = null;
-		this.wasaviFrameInternalId = null;
+		this.wasaviFrameTabId = null;
 		this.wasaviFrameTimeoutTimer = null;
 		this.widthOwn = null;
 		this.heightOwn = null;
@@ -1272,7 +1277,8 @@ var Agent = (function () {
 		terminated:   terminated,
 		read:         read,
 		write:        write,
-		requestBlur:  requestBlur
+		requestBlur:  requestBlur,
+		reload:       reload
 	};
 
 	return Agent;
@@ -1298,10 +1304,17 @@ function findAgent (target, property) {
 }
 
 function keylog () {
+	testLog || (testLog = []);
+	testLog.push(Array.prototype.slice.call(arguments).join('\t'));
+}
+
+function keylogOutput () {
 	var t = document.getElementById('test-log');
 	if (!t) return;
-	t.value += '\n' + Array.prototype.slice.call(arguments).join('\t');
+	t.value.length && (t.value += '\n');
+	t.value += testLog.join('\n');
 	t.scrollTop = t.scrollHeight - t.clientHeight;
+	testLog.length = 0;
 }
 
 function getGlobRegex (s) {
@@ -1874,11 +1887,14 @@ var handleBackendMessage = (function () {
 		if (agent.wasaviFrame.getAttribute('data-wasavi-command-state') != 'busy') {
 			agent.wasaviFrame.setAttribute('data-wasavi-command-state', 'busy');
 			document.querySelector('h1').style.color = 'red';
-			keylog('', '', 'command start, frame #' + req.frameId);
+			keylog('-', '-', 'command start, frame #' + req.frameId);
 		}
-		keylog.apply(null, ['key', 'keyCode', 'eventType'].map(function (a) {
-			return (a in req) ? req[a] : '';
-		}));
+
+		var args = [];
+		'key'       in req && req.key.charCodeAt(0) >= 32 && args.push(req.key);
+		'keyCode'   in req && args.push(req.keyCode);
+		'eventType' in req && args.push(req.eventType);
+		keylog.apply(null, args);
 	}
 
 	function notifyError (agent, req) {
@@ -1918,8 +1934,15 @@ var handleBackendMessage = (function () {
 				});
 			}
 			finally {
-				agent.wasaviFrame.removeAttribute('data-wasavi-command-state');
-				keylog('*** sequence point (' + req.state.inputMode + ') ***');
+				if (req.type == 'command-completed') {
+					agent.wasaviFrame.removeAttribute('data-wasavi-command-state');
+					keylog('--- sequence point ---');
+				}
+				else {
+					agent.wasaviFrame.setAttribute('data-wasavi-command-state', 'completed');
+					keylog('*** complete sequence point ***');
+					keylogOutput();
+				}
 
 			}
 		});
@@ -1930,25 +1953,26 @@ var handleBackendMessage = (function () {
 		 * messages transferred from wasavi
 		 */
 
-		'initialized':       function initialized (agent, req)  { agent.initialized(req) },
-		'ready':             function ready (agent, req)        { agent.ready(req) },
-		'window-state':      function windowState (agent, req)  { agent.windowState(req) },
-		'focus-me':          function focusMe (agent, req)      { agent.focusMe(req) },
-		'focus-changed':     function focusChanged (agent, req) { agent.focusChanged(req) },
-		'blink-me':          function blinkMe (agent, req)      { agent.blinkMe(req) },
-		'set-size':          function setSize (agent, req)      { agent.setSize(req) },
-		'terminated':        function terminated (agent, req)   { agent.terminated(req) },
-		'read':              function read (agent, req)         { agent.read(req) },
-		'write':             function write (agent, req)        { agent.write(req) },
-		'request-blur':      function requestBlur (agent, req)  { agent.requestBlur(req) },
+		'initialized':   function initialized (a,d,s,r)  { a.initialized(d, s, r) },
+		'ready':         function ready (a,d,s,r)        { a.ready(d, s, r) },
+		'window-state':  function windowState (a,d,s,r)  { a.windowState(d, s, r) },
+		'focus-me':      function focusMe (a,d,s,r)      { a.focusMe(d, s, r) },
+		'focus-changed': function focusChanged (a,d,s,r) { a.focusChanged(d, s, r) },
+		'blink-me':      function blinkMe (a,d,s,r)      { a.blinkMe(d, s, r) },
+		'set-size':      function setSize (a,d,s,r)      { a.setSize(d, s, r) },
+		'terminated':    function terminated (a,d,s,r)   { a.terminated(d, s, r) },
+		'read':          function read (a,d,s,r)         { a.read(d, s, r) },
+		'write':         function write (a,d,s,r)        { a.write(d, s, r) },
+		'request-blur':  function requestBlur (a,d,s,r)  { a.requestBlur(d, s, r) },
+		'reload':        function reload (a,d,s,r)       { a.reload(d, s, r) },
 
 		/*
 		 * messages from backend
 		 */
 
-		'update-storage':    updateStorage,
-		'request-run':       requestRun,
-		'ping':              ping,
+		'update-storage': updateStorage,
+		'request-run':    requestRun,
+		'ping':           ping,
 
 		/*
 		 * following cases are for functionality test.
@@ -1959,9 +1983,10 @@ var handleBackendMessage = (function () {
 		'notify-error':      notifyError,
 		'notify-state':      notifyState,
 		'command-completed': commandCompleted,
+		'commands-completed': commandCompleted,
 	};
 
-	return function (req) {
+	return function (req, sender, response) {
 		if (!req || !req.type) return;
 
 		logMode && log(
@@ -1972,10 +1997,10 @@ var handleBackendMessage = (function () {
 
 		if ('frameId' in req) {
 			if (!(req.frameId in wasaviAgentsHash)) return;
-			handlerMap[req.type](wasaviAgentsHash[req.frameId], req);
+			handlerMap[req.type](wasaviAgentsHash[req.frameId], req, sender, response);
 		}
 		else {
-			handlerMap[req.type](null, req);
+			handlerMap[req.type](null, req, sender, response);
 		}
 	};
 })();
@@ -2018,4 +2043,4 @@ connect(handleConnect);
 
 })(this);
 
-// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker fmr=<<<,>>> :
+// vim:set ts=4 sw=4 fileencoding=UTF-8 fileformat=unix filetype=javascript fdm=marker fmr=<<<,>>> fdl=1 :

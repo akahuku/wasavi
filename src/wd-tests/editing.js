@@ -987,7 +987,7 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 		assert.value('#1-1', '9801');
 	});
 
-	it('pasteClipboard', function* () {
+	it('pasteFromClipboardInInputMode', function* () {
 		yield wasavi.send('afoo\nbar\u001b1G"*yG');
 		yield wasavi.send('O\u0012*\u001b');
 		assert.value('#1-1', 'foo\nbar\n\nfoo\nbar');

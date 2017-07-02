@@ -61,12 +61,23 @@
 	ChromeSyncStorage.prototype.constructor = SyncStorage;
 
 	exports.SyncStorage = function (options) {
-		if (global.chrome
-		&& 'storage' in chrome && 'sync' in chrome.storage
-		&& 'identity' in chrome && 'onSignInChanged' in chrome.identity) {
-			return new ChromeSyncStorage(options);
-		}
-		return new SyncStorage(options);
+		let isChrome = false;
+		do {
+			if (!global.chrome) break;
+			if (!('storage' in chrome)) break;
+			if (!('sync' in chrome.storage)) break;
+			if (!('identity' in chrome)) break;
+			if (!('onSignInChanged' in chrome.identity)) break;
+			if (typeof chrome.identity.onSignInChanged != 'object') break;
+			if (!('addListener' in chrome.identity.onSignInChanged)) break;
+			if (typeof chrome.identity.onSignInChanged.addListener != 'function') break;
+
+			isChrome = true;
+		} while (false);
+
+		return isChrome ?
+			new ChromeSyncStorage(options) :
+			new SyncStorage(options);
 	};
 })(this);
 

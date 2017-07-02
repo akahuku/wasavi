@@ -347,7 +347,7 @@ exports.suite = (assert, wasavi, driver) => {
 
 	function* _yankLineBound (command) {
 		yield wasavi.send('ifoo bar\nbaz bax\nqux quux\u001b');
-		yield wasavi.send('1G^wV2w"a' + command);
+		yield wasavi.send('1G^wV2w"a', command);
 
 		assert.value('#1-1', 'foo bar\nbaz bax\nqux quux');
 		assert.eq('#1-2', 'foo bar\nbaz bax\n', wasavi.getRegister('a'));

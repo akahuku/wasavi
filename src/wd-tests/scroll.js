@@ -53,7 +53,8 @@ exports.suite = (assert, wasavi, driver) => {
 	it('scroll up1Line', function* () {
 		var lines = yield wasavi.makeScrollableBuffer(2.5);
 
-		yield wasavi.send('G', 'H');
+		yield wasavi.send('G');
+		yield wasavi.send('H');
 		var rowTopBefore = wasavi.getRow();
 		yield wasavi.send('\u0019', 'H');
 		var rowTopAfter = wasavi.getRow();
@@ -85,9 +86,11 @@ exports.suite = (assert, wasavi, driver) => {
 	function* _testScrollUpAlmostView (a) {
 		var lines = yield wasavi.makeScrollableBuffer(2.5);
 
-		yield wasavi.send('G', 'H');
+		yield wasavi.send('G');
+		yield wasavi.send('H');
 		var rowTopBefore = wasavi.getRow();
-		yield wasavi.send(a, 'H');
+		yield wasavi.send(a);
+		yield wasavi.send('H');
 		var rowTopAfter = wasavi.getRow();
 		assert.eq('#1', -(lines - 2), rowTopAfter - rowTopBefore);
 
@@ -143,8 +146,8 @@ exports.suite = (assert, wasavi, driver) => {
 
 	function* _testScreenAdjustCenter (a) {
 		var lines = yield wasavi.makeScrollableBuffer(2);
-		yield wasavi.send('gg', Math.floor(lines * 0.75), 'G');
-
+		yield wasavi.send('gg');
+		yield wasavi.send(Math.floor(lines * 0.75), 'G');
 		yield wasavi.send('z', a);
 		assert.t('#1', wasavi.getLastMessage() == '');
 
@@ -163,8 +166,8 @@ exports.suite = (assert, wasavi, driver) => {
 
 	it('screen adjust bottom', function* () {
 		var lines = yield wasavi.makeScrollableBuffer(2);
-		yield wasavi.send('gg', '20G');
-
+		yield wasavi.send('gg');
+		yield wasavi.send('20G');
 		yield wasavi.send('z-');
 		assert.t('#1', wasavi.getLastMessage() == '');
 

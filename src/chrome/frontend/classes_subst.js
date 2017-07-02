@@ -132,9 +132,19 @@ Wasavi.SubstituteWorker.prototype = {
 			this.substCount = 0;
 
 			if (this.isConfirm) {
-				this.kontinue();
-				app.exvm.hideOverlay();
-				result = app.exvm.EX_ASYNC;
+				result = new Promise(resolve => {
+					function handleKeypress (e) {
+						e.preventDefault();
+						if (this.continueConfirmModeSubst(e.char)) {
+							// when continueConfirmModeSubst() completes, it returns true
+							app.keyManager.removeListener('interrupt', handleKeypress);
+							resolve();
+						}
+					}
+
+					this.setupConfirmModeSubst();
+					app.keyManager.addListener('interrupt', handleKeypress.bind(this));
+				});
 			}
 			else {
 				this.burst();
@@ -202,35 +212,35 @@ Wasavi.SubstituteWorker.prototype = {
 			}
 		}
 	},
-	kontinue: function (action) {
+	setupConfirmModeSubst: function () {
 		var t = this.app.buffer;
 		var buffer = this.buffer;
-		var k = this.kontinueWorker;
 
 		/*
 		 * initializing
 		 */
 
-		if (action == undefined) {
-			k = this.kontinueWorker = {
-				index: 0,
-				pos: t.offsetBy(
-					new Wasavi.Position(this.range[0], 0),
-					buffer[0].index),
-				replacer: this.executeReplacer(buffer[0])
-			};
+		var k = this.kontinueWorker = {
+			index: 0,
+			pos: t.offsetBy(
+				new Wasavi.Position(this.range[0], 0),
+				buffer[0].index),
+			replacer: this.executeReplacer(buffer[0])
+		};
 
-			t.setSelectionRange(k.pos);
-			this.app.cursor.ensureVisible();
-			t.emphasis(k.pos, buffer[k.index][0].length);
+		t.setSelectionRange(k.pos);
+		this.app.cursor.ensureVisible();
+		t.emphasis(k.pos, buffer[k.index][0].length);
 
-			this.app.low.requestInputMode('ex_s_prompt');
-			this.app.requestedState.modeline = null;
-			this.app.low.requestShowMessage(
-				_('Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit'),
-				false, true, true);
-			return;
-		}
+		this.app.exvm.hideOverlay();
+		this.app.low.showMessage(
+			_('Substitute? [y]es, [n]o, [a]ll, [l]ast, [q]uit'),
+			false, true, true);
+	},
+	continueConfirmModeSubst: function (action) {
+		var t = this.app.buffer;
+		var buffer = this.buffer;
+		var k = this.kontinueWorker;
 
 		/*
 		 * main job
@@ -302,22 +312,26 @@ Wasavi.SubstituteWorker.prototype = {
 				this.app.cursor.ensureVisible();
 				t.emphasis(k.pos, buffer[k.index][0].length);
 
-				return true;
+				// not finished
+				return false;
 			}
 		}
 
-		//
+		/*
+		 * all replacement is complete
+		 */
 
 		if ('nq\u001b'.indexOf(action) < 0) {
 			t.setSelectionRange(t.getLineTopOffset2(t.selectionStart));
 		}
 
-		this.app.low.popInputMode();
 		this.app.cursor.ensureVisible();
 		this.app.exvm.showOverlay();
-		this.app.exvm.inst.currentOpcode.worker = null;
 		this.showResult();
 		this.kontinueWorker = this.buffer = null;
+
+		// finished
+		return true;
 	},
 	doSubstitute: function (pos, length, replacer) {
 		var t = this.app.buffer;

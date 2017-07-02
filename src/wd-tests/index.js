@@ -44,11 +44,12 @@ const tests = [
 ];
 
 const debug = false;
+const captureConsole = false;
 const profileDir = 'src/wd-tests/profile';
 const testFrameUrl = 'http://127.0.0.1:8888/test_frame.html';
-const appModeTestFrameUrl = 'http://wasavi.appsweets.net/?testmode';
+const appModeTestFrameUrl = 'https://wasavi.appsweets.net/?testmode';
 const testFrameShutdownUrl = 'http://127.0.0.1:8888/shutdown';
-const waitMsecsForWaitWasaviLaunch = 1000 * 20;
+const waitMsecsForWasaviLaunch = 1000 * 20;
 
 /*
  * variables
@@ -71,11 +72,18 @@ function createDriver (name) {
 
 	switch (name) {
 	case 'chrome':
+		var loggingPrefs = new webdriver.logging.Preferences()
+		loggingPrefs.setLevel(
+			webdriver.logging.Type.BROWSER,
+			webdriver.logging.Level.ALL);
+
 		var options = new chrome.Options();
 		options.addArguments(
 			'--start-maximized',
 			'--lang=en',
 			'--user-data-dir=' + profilePath);
+		options.setLoggingPrefs(loggingPrefs);
+
 		result = new webdriver.Builder()
 			.withCapabilities(webdriver.Capabilities.chrome())
 			.setChromeOptions(options)
@@ -183,7 +191,7 @@ function invokeWasavi (currentTest) {
 				// wait until wasavi is launched
 				debug && console.log('waiting wasavi launch');
 				try {
-					wasaviFrame = yield driver.wait(until.elementLocated(By.id('wasavi_frame')), waitMsecsForWaitWasaviLaunch);
+					wasaviFrame = yield driver.wait(until.elementLocated(By.id('wasavi_frame')), waitMsecsForWasaviLaunch);
 					yield wasaviFrame.click();
 					invokeStates[i].increment();
 					break;
@@ -216,7 +224,7 @@ function invokeAppModeWasavi (currentTest) {
 			debug && console.log(appModeTestFrameUrl + ' loaded');
 
 			var wasaviFrame = yield driver.wait(
-				until.elementLocated(By.id('wasavi_cover')), waitMsecsForWaitWasaviLaunch);
+				until.elementLocated(By.id('wasavi_cover')), waitMsecsForWasaviLaunch);
 
 			if (wasaviFrame) {
 				yield wasaviFrame.click();
@@ -280,7 +288,8 @@ function StrokeSender (driver) {
 				var commandState = yield elm.getAttribute('data-wasavi-command-state');
 				var inputMode = yield elm.getAttribute('data-wasavi-input-mode');
 
-				if (commandState == null && inputMode in inputModeOfWatchTarget) {
+				//console.log(`waitCommandCompletion: commandState: ${commandState}`);
+				if (commandState == 'completed' && inputMode in inputModeOfWatchTarget) {
 					return elm;
 				}
 			}
@@ -683,24 +692,16 @@ function WasaviController (driver, currentTest) {
 	}
 
 	function makeScrollableBuffer (factor) {
+		factor || (factor = 1);
 		var lines;
-
 		// return Promise
 		return send('h')
 			.then(_ => {
-				factor || (factor = 1);
 				lines = getInt('lines');
 				var actualLines = Math.floor(lines * factor);
-				var buffer = [];
-
-				for (var i = 1; i <= actualLines; i++) {
-					buffer.push('line ' + i);
-				}
-
-				return send('i' + buffer.join('\n') + '\u001b');
+				return send(`iline\u001byy${actualLines-1}p`);
 			})
-			.then(_ => lines)
-			.catch(err => {console.error(err + '\n' + err.stack); throw err});
+			.then(_ => lines);
 	}
 
 	function setClipboardText (s) {
@@ -913,6 +914,32 @@ function WasaviTest (suiteName, options) {
 			.then(_ => {
 				currentTest.wasaviFrame = null;
 				currentTest.wasaviController = null;
+
+				if (captureConsole) {
+					return driver.manage().logs().get(webdriver.logging.Type.BROWSER)
+					.then(log => {
+						if (log && log.length) {
+							log.forEach(entry => {
+								var m = entry.message;
+								var index = m.indexOf('"');
+								if (index < 0) return;
+
+								m = m.substring(index + 1);
+
+								if (m.substr(-1) == '"') {
+									m = m.substring(0, m.length - 1);
+								}
+
+								m = m.replace(/\\n/g, '\n')
+									.replace(/\\"/g, '"');
+
+								console.log(m);
+							});
+						}
+					});
+				}
+			})
+			.then(_ => {
 				done();
 			})
 			.catch(ex => {

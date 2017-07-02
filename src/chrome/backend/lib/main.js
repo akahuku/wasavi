@@ -667,7 +667,15 @@
 			data.payload.value = marked(data.payload.value, markupOpts);
 		}
 
-		ext.postMessage(data.to, data.payload);
+		ext.postMessage(data.to, data.payload, res => {
+			respond(res);
+		});
+
+		if (data.payload.type == 'reload') {
+			chrome.runtime.reload();
+		}
+
+		return true;
 	}
 
 	function handleResetOptions (command, data, sender, respond) {
@@ -732,10 +740,8 @@
 
 	function handleSetMemorandum (command, data, sender, respond) {
 		memorandum.set(data.url, data.value);
-		ext.postMessage(sender, {
+		var payload = {
 			type: 'fileio-write-response',
-			internalId: command.internalId,
-			requestNumber: command.requestNumber,
 			state: 'complete',
 			meta: {
 				path: '',
@@ -744,15 +750,19 @@
 			exstate: {
 				isBuffered: data.isBuffered
 			}
-		});
+		};
+		if (data.isBuffered) {
+			ext.postMessage(sender, payload);
+		}
+		else {
+			respond(payload);
+		}
 	}
 
 	function handleGetMemorandum (command, data, sender, respond) {
 		var content = memorandum.get(data.url);
-		ext.postMessage(sender, {
+		response({
 			type: 'fileio-read-response',
-			internalId: command.internalId,
-			requestNumber: command.requestNumber,
 			state: 'complete',
 			meta: {
 				path: '',
@@ -767,115 +777,114 @@
 		playSound('launch');
 	}
 
-	function handleFsCtlReset (command, data, sender, respond) {
+	function handleFsCtlReset (port, data) {
 		ext.fileSystem.clearCredentials(data.name);
 	}
 
-	function handleFsCtlGetEntries (command, data, sender, respond) {
+	function handleFsCtlGetEntries (port, data) {
 		var path = data.path || '';
-		ext.fileSystem.ls(
-			path, sender,
-			{
-				onload: function (data) {
-					respond({data: data.contents});
-				},
-				onerror: function (error) {
-					respond({data: null});
-				}
+		ext.fileSystem.ls(path, port.sender.tab.id, {
+			onresponse: function (d) {
+				port.postMessage(d);
+			},
+			onload: function (d) {
+				port.postMessage({
+					type: 'fileio-getentries-response',
+					data: d.contents
+				});
+			},
+			onerror: function (error) {
+				port.postMessage({
+					type: 'fileio-getentries-response',
+					error: error
+				});
 			}
-		);
-		return true;
+		});
 	}
 
-	function handleFsCtlChDir (command, data, sender, respond) {
+	function handleFsCtlChDir (port, data) {
 		var path = data.path || '';
 		if (path == '') {
-			ext.postMessage(sender, {
+			port.postMessage({
 				type: 'fileio-chdir-response',
-				internalId: command.internalId,
-				requestNumber: command.requestNumber,
 				data: null
 			});
 		}
 		else {
-			ext.fileSystem.ls(
-				path, sender,
-				{
-					onload: function (data) {
-						ext.postMessage(sender, {
-							type: 'fileio-chdir-response',
-							internalId: command.internalId,
-							requestNumber: command.requestNumber,
-							data: data
-						});
-					},
-					onerror: function (error) {
-						ext.postMessage(sender, {
-							type: 'fileio-chdir-response',
-							internalId: command.internalId,
-							requestNumber: command.requestNumber,
-							error: error
-						});
-					}
+			ext.fileSystem.ls(path, port.sender.tab.id, {
+				onresponse: function (d) {
+					port.postMessage(d);
+				},
+				onload: function (d) {
+					port.postMessage({
+						type: 'fileio-chdir-response',
+						data: d
+					});
+				},
+				onerror: function (error) {
+					port.postMessage({
+						type: 'fileio-chdir-response',
+						error: error
+					});
 				}
-			);
+			});
 		}
 	}
 
-	function handleFsCtlRead (command, data, sender, respond) {
+	function handleFsCtlRead (port, data) {
 		var path = data.path || '';
-		if (path == '') return;
+		if (path == '') {
+			port.postMessage({error: 'Path is empty'});
+			return;
+		}
 
-		ext.fileSystem.read(
-			path, sender,
-			{
-				encoding: data.encoding,
-				onresponse: function (d, t) {
-					if (!d) return;
-
-					d.internalId = command.internalId;
-
-					if (d.type == 'fileio-read-response') {
-						d.requestNumber = command.requestNumber;
-					}
-
-					ext.postMessage(sender, d);
-				}
+		ext.fileSystem.read(path, port.sender.tab.id, {
+			encoding: data.encoding,
+			onresponse: function (d, t) {
+				port.postMessage(d);
 			}
-		);
+		});
 	}
 
-	function handleFsCtlWrite (command, data, sender, respond) {
+	function handleFsCtlWrite (port, data) {
 		var path = data.path || '';
-		if (path == '') return;
+		if (path == '') {
+			port.postMessage({error: 'Path is empty'});
+			return;
+		}
 
-		ext.fileSystem.write(
-			path, sender, data.value,
-			{
-				encoding: data.encoding,
-				delaySecs: data.isBuffered ? undefined : 0,
-				onresponse: function (d) {
-					if (!d) return;
-
-					d.internalId = command.internalId;
-					d.exstate = {
-						isBuffered: data.isBuffered
-					};
-
-					if (d.type == 'fileio-write-response') {
-						d.requestNumber = command.requestNumber;
-					}
-
-					ext.postMessage(sender, d);
-				}
+		ext.fileSystem.write(path, port.sender.tab.id, data.value, {
+			encoding: data.encoding,
+			delaySecs: data.isBuffered ? undefined : 0,
+			onresponse: function (d) {
+				d.exstate = {isBuffered: data.isBuffered};
+				port.postMessage(d);
 			}
-		);
+		});
 	}
 
-	function handleFsCtl (command, data, sender, respond) {
-		return data.subtype in fsctlMap ?
-			fsctlMap[data.subtype].apply(null, arguments) :
-			false;
+	function handleWrite (command, data, sender, respond) {
+		var path = data.path || '';
+		if (path == '') {
+			ext.postMessage(sender, {error: 'Path is empty'});
+			return;
+		}
+
+		ext.fileSystem.write(path, sender, data.value, {
+			encoding: data.encoding,
+			delaySecs: data.isBuffered ? undefined : 0,
+			onresponse: function (d) {
+				if (!d) return;
+
+				d.exstate = {isBuffered: data.isBuffered};
+
+				//if (d.type == 'fileio-write-response') {
+				//	d.requestNumber = command.requestNumber;
+				//}
+
+				ext.postMessage(sender, d);
+			}
+		});
 	}
 
 	function handleQueryShortcut (command, data, sender, respond) {
@@ -897,17 +906,6 @@
 		}
 	}
 
-	function handleDumpInternalIds (command, data, sender, respond) {
-		if (!ext.logMode) return;
-		var log =  ext.dumpInternalIds();
-		log.push(
-			'',
-			'sender id: #' + sender,
-			'  command: ' + JSON.stringify(command),
-			'     data: ' + JSON.stringify(data));
-		respond({log: log.join('\n')});
-	}
-
 	/** <<<2 request handler entry */
 
 	var commandMap = {
@@ -915,6 +913,7 @@
 		'init-options':			handleInit,
 		'init':					handleInit,
 		'transfer':				handleTransfer,
+		'write':				handleWrite,
 		'get-storage':			handleGetStorage,
 		'set-storage':			handleSetStorage,
 		'push-payload':			handlePushPayload,
@@ -925,14 +924,12 @@
 		'get-memorandum':		handleGetMemorandum,
 		'reset-options':		handleResetOptions,
 		'open-options':			handleOpenOptions,
-		'fsctl':				handleFsCtl,
 		'query-shortcut':		handleQueryShortcut,
-		'terminated':			handleTerminated,
-		'dump-internal-ids':	handleDumpInternalIds
+		'terminated':			handleTerminated
 	};
 	var fsctlMap = {
 		'reset':				handleFsCtlReset,
-		'get-entries':			handleFsCtlGetEntries ,
+		'get-entries':			handleFsCtlGetEntries,
 		'chdir':				handleFsCtlChDir,
 		'read':					handleFsCtlRead,
 		'write':				handleFsCtlWrite
@@ -966,23 +963,24 @@
 		}
 	}
 
-	/** <<<2 bootstrap */
-
-	function pre () {
-		// platform depends tweaks
-		switch (ext.kind) {
-		case 'Opera':
-			ext.resource('scripts/page_context.js', function (data) {
-				widget.preferences['pageContextScript'] =
-					'data:text/javascript;base64,' +
-					btoa(getShrinkedCode(data));
-			}, {noCache: true, sync: true});
-			break;
-		}
+	function handleConnect (port) {
+		port.onMessage.addListener(msg => {
+			switch (port.name) {
+			case 'fsctl':
+				msg.type in fsctlMap && fsctlMap[msg.type](port, msg);
+				break;
+			}
+		});
+		port.onDisconnect.addListener(() => {
+			port = null;
+		});
 	}
+
+	/** <<<2 bootstrap */
 
 	function boot () {
 		ext.receive(handleRequest);
+		chrome.runtime.onConnect.addListener(handleConnect);
 
 		initConfig(configInfo)
 
@@ -1016,10 +1014,10 @@
 						}
 					},
 					function () {
-						config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
+						ext.version != TEST_VERSION && config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
 					},
 					function () {
-						config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
+						ext.version != TEST_VERSION && config.get('upgradeNotify') && ext.openTabWithUrl(HOME_URL);
 					}
 				);
 				config.set('version', ext.version);
@@ -1042,8 +1040,7 @@
 		});
 	}
 
-	pre();
 	boot();
 })(this);
 
-// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> :
+// vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=javascript fdm=marker fmr=<<<,>>> fdl=2 :

@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-(function (global) {
+(function (g) {
 	'use strict';
 
 	// <<<1 consts
@@ -128,6 +128,17 @@
 			'\ue000' + this.key :
 			this.char;
 	};
+	VirtualInputEvent.prototype.clone = function () {
+		return new VirtualInputEvent(
+			this.nativeEvent,
+			this.code,
+			this.char,
+			this.key,
+			this.shift,
+			this.ctrl,
+			this.alt,
+			this.isSpecial);
+	};
 
 	function CompositionResult (e) {
 		this.prefix = '';
@@ -152,7 +163,8 @@
 		compositionstart: [],
 		compositionupdate: [],
 		compositionend: [],
-		log: []
+		log: [],
+		interrupt: []
 	};
 	var nopObject = new VirtualInputEvent(
 		null,
@@ -177,6 +189,7 @@
 		input: false
 	};
 	var handlePasteEvent = true;
+	var useGenerator = false;
 
 	// for general composition
 	var isInComposition = false;
@@ -379,34 +392,34 @@
 	}
 
 	function getFunctionKeyCodes () {
-		if (global.chrome) return WEBKIT_FUNCTION_KEYCODES;
-		if (global.opera) return PRESTO_FUNCTION_KEYCODES;
-		if (global.gecko) return GECKO_FUNCTION_KEYCODES;
+		if (g.chrome) return WEBKIT_FUNCTION_KEYCODES;
+		if (g.opera) return PRESTO_FUNCTION_KEYCODES;
+		if (g.gecko) return GECKO_FUNCTION_KEYCODES;
 	}
 
 	function getKeydownListener () {
-		if (global.chrome || global.opera) return keydown;
+		if (g.chrome || g.opera) return keydown;
 	}
 
 	function getKeyupListener () {
 	}
 
 	function getInputListener () {
-		if (global.chrome) return inputWebkit;
-		if (global.opera) return inputPresto;
-		if (global.gecko) return inputGecko;
+		if (g.chrome) return inputWebkit;
+		if (g.opera) return inputPresto;
+		if (g.gecko) return inputGecko;
 	}
 
 	function getCtrlMap () {
-		if (global.chrome) return WEBKIT_CTRL_MAP;
-		if (global.opera) return PRESTO_CTRL_MAP;
-		if (global.gecko) return GECKO_CTRL_MAP;
+		if (g.chrome) return WEBKIT_CTRL_MAP;
+		if (g.opera) return PRESTO_CTRL_MAP;
+		if (g.gecko) return GECKO_CTRL_MAP;
 	}
 
 	function getCodeToCharMap () {
-		if (global.chrome) return WEBKIT_CODE_TO_CHAR_MAP;
-		if (global.opera) return PRESTO_CODE_TO_CHAR_MAP;
-		if (global.gecko) return GECKO_CODE_TO_CHAR_MAP;
+		if (g.chrome) return WEBKIT_CODE_TO_CHAR_MAP;
+		if (g.opera) return PRESTO_CODE_TO_CHAR_MAP;
+		if (g.gecko) return GECKO_CODE_TO_CHAR_MAP;
 	}
 
 	function getListenersSet () {
@@ -875,8 +888,8 @@
 			code, char, stroke,
 			shiftKey, ctrlKey, altKey, isSpecial);
 
-		if (lockCount > 0 && code == 3) {
-			fire('input', ev);
+		if (lockCount > 0) {
+			fire('interrupt', ev);
 		}
 		else {
 			dequeue.push(ev);
@@ -971,7 +984,7 @@
 		opts || (opts = {});
 		[
 			'log', 'logBasic', 'logComposition', 'logInput',
-			'handlePasteEvent'
+			'handlePasteEvent', 'useGenerator'
 		].forEach(function (p) {
 			if (p in opts) {
 				this[p] = opts[p];
@@ -1218,7 +1231,7 @@
 				null,
 				desc.charCodeAt(0), desc.charAt(0), desc.charAt(0),
 				false, false, false,
-				desc.charCodeAt(0) in charToCodeMap
+				charToCodeMap && desc.charCodeAt(0) in charToCodeMap
 			)
 		};
 	}
@@ -1309,15 +1322,26 @@
 
 	function sweep () {
 		if (isSweeping) return;
+		if (dequeue.length == 0) return;
 
 		isSweeping = true;
-		try {
-			while (lockCount == 0 && dequeue.length) {
-				fire('input', dequeue.shift());
-			}
+		if (useGenerator) {
+			fire('input', function* () {
+				while (dequeue.length) {
+					yield dequeue.shift();
+				}
+				isSweeping = false;
+			});
 		}
-		finally {
-			isSweeping = false;
+		else {
+			try {
+				while (lockCount == 0 && dequeue.length) {
+					fire('input', dequeue.shift());
+				}
+			}
+			finally {
+				isSweeping = false;
+			}
 		}
 	}
 
@@ -1444,15 +1468,15 @@
 
 	// boot
 	(function () {
-		if (global.gecko) return;
-		for (var i in global) {
+		if (g.gecko) return;
+		for (var i in g) {
 			if (!/moz/i.test(i)) continue;
-			global.gecko = true;
+			g.gecko = true;
 			break;
 		}
 	})();
 
-	global.qeema = Object.create(Object.prototype, {
+	(typeof global != 'undefined' ? global : g).qeema = Object.create(Object.prototype, {
 		install: {value:install},
 		uninstall: {value:uninstall},
 		addListener: {value:addListener},
@@ -1511,6 +1535,10 @@
 		handlePasteEvent: {
 			get: function () {return handlePasteEvent},
 			set: function (v) {handlePasteEvent = !!v}
+		},
+		useGenerator: {
+			get: function () {return useGenerator},
+			set: function (v) {useGenerator = !!v}
 		}
 	});
 

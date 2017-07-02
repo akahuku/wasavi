@@ -117,8 +117,8 @@ FORCE:
 .PHONY: all crx nex xpi \
 	clean message \
 	test-chrome test-opera test-firefox \
-	run-chrome run-opera run-firefox \
-	dbgfx version \
+	run-chrome run-opera run-firefox debug-firefox \
+	start-server version \
 	FORCE
 
 
@@ -341,9 +341,16 @@ run-firefox: FORCE
 
 debug-firefox: FORCE
 	node $(TEST_WWW_SERVER) &
-#	web-ext run -s $(FIREFOX_SRC_PATH) --no-reload
-	cd $(FIREFOX_SRC_PATH) && web-ext run --start-url $(TEST_FRAME_URL)
+	-mkdir -p $(FIREFOX_TEST_PROFILE_PATH)-debug
+	web-ext run \
+		-u $(TEST_FRAME_URL) \
+		-s $(FIREFOX_SRC_PATH) \
+		-p $(FIREFOX_TEST_PROFILE_PATH)-debug \
+		--keep-profile-changes --no-reload
 	wget -q -O - $(TEST_SHUTDOWN_URL)
+
+start-server: FORCE
+	node $(TEST_WWW_SERVER)
 
 version: FORCE
 	@echo $(VERSION)

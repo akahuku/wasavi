@@ -654,67 +654,52 @@ Wasavi.CursorUI = function (app, comCursor, comCursorLine, comCursorColumn, comF
 };
 
 Wasavi.Scroller = function (app, cursor, modeLine) {
-	var buffer = app.buffer;
-	var running = false;
-	var consumeMsecs = 250;
-	var timerPrecision = 1;
-	var lastRan = 0;
-	var distance;
-	var scrollTopStart;
-	var scrollTopDest;
-	var scrollTimer;
+	let buffer = app.buffer;
+	let running = false;
+	let consumeMsecs = 250;
+	let timerPrecision = 1;
+	let lastRan = 0;
+	let distance;
+	let scrollTopStart;
+	let scrollTopDest;
+	let scrollTimer;
 
-	function run (dest, callback) {
-		if (running || !app.targetElement || !cursor || !modeLine) {
-			return;
-		}
-		if (dest < 0) {
-			dest = 0;
-		}
-		scrollTopStart = buffer.scrollTop;
-		scrollTopDest = dest;
-		if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
-			buffer.scrollTop = dest;
-			app.low.notifyActivity('', '', 'scroller exit (no effect)');
-			callback && callback();
-			return;
-		}
-		distance = scrollTopDest - scrollTopStart;
-		app.keyManager.lock();
-		running = true;
-		lastRan = +Date.now();
-		scrollTimer = setInterval(function () {
-			var now = +Date.now();
-			var y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
-
+	function run (dest) {
+		return new Promise(resolve => {
 			if (!app.targetElement || !cursor || !modeLine) {
-				clearInterval(scrollTimer);
-				scrollTimer = null;
-				app.low.notifyActivity('', '', 'scroller exit (illegal state)');
-				app.low.notifyCommandComplete();
-				running = false;
-				app.keyManager.unlock();
+				resolve(true);
 				return;
 			}
 
-			if (distance > 0 && y >= scrollTopDest
-			||  distance < 0 && y <= scrollTopDest) {
-				clearInterval(scrollTimer);
-				scrollTimer = null;
+			scrollTopStart = buffer.scrollTop;
+			scrollTopDest = Math.max(0, dest);
+
+			if (scrollTopStart == scrollTopDest || !app.config.vars.smooth || cursor.locked) {
 				buffer.scrollTop = scrollTopDest;
-				callback && callback();
-				cursor.ensureVisible();
-				cursor.update({visible:true});
-				modeLine.style.display == '' && app.low.showPrefixInput();
-				app.low.notifyActivity('', '', 'scroller exit (scrolled)');
-				app.low.notifyCommandComplete();
-				running = false;
-				app.keyManager.unlock();
+				resolve(true);
 				return;
 			}
 
-			buffer.scrollTop = parseInt(y);
-		}, timerPrecision);
+			distance = scrollTopDest - scrollTopStart;
+			running = true;
+			lastRan = Date.now();
+			scrollTimer = setInterval(() => {
+				let now = Date.now();
+				let y = scrollTopStart + ((now - lastRan) / consumeMsecs) * distance;
+
+				if (distance > 0 && y >= scrollTopDest
+				||  distance < 0 && y <= scrollTopDest) {
+					clearInterval(scrollTimer);
+					scrollTimer = undefined;
+					buffer.scrollTop = scrollTopDest;
+					running = false;
+					resolve(true);
+				}
+				else {
+					buffer.scrollTop = Math.floor(y);
+				}
+			}, timerPrecision);
+		});
 	}
 
 	function dispose () {

@@ -98,7 +98,7 @@ g.style = function (src, styles) {
 	}
 };
 
-//
+// simple functions
 g.$call = function () {
 	for (var i = 0, goal = arguments.length; i < goal; i++) {
 		typeof arguments[i] == 'function' && arguments[i]();
@@ -133,10 +133,15 @@ g.multiply = function (letter, times) {
 	return result.length == times ? result : result.substring(0, letter.length * times);
 };
 g.toVisibleString = function (s) {
-	return (s || '')
-		.replace(/[\u0000-\u001f\u007f]/g, function (a) {
-			return a.charCodeAt(0) == 0x7f ? '^_' : '^' + String.fromCharCode(a.charCodeAt(0) + 64);
-		})
+	if (typeof s == 'number' && !isNaN(s)) {
+		s = '' + s;
+	}
+	else {
+		s = s || '';
+	}
+	return s
+		.replace(/[\u0000-\u001f]/g, a => '^' + String.fromCharCode(a.charCodeAt(0) + 64))
+		.replace(/\u007f/g, '^_')
 		.replace(/\ue000/g, '');
 };
 g.toVisibleControl = function (s) {
@@ -179,26 +184,6 @@ g.trimTerm = function (s, ch) {
 	}
 	return s;
 };
-g._ = function () {
-	var args = toArray(arguments);
-	var format = args.shift();
-	return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, $1, $2) {
-		if ($1 == undefined || $1 == '') {
-			return args[$2];
-		}
-		// simple plural fix for english
-		if (args[$2] == 1) {
-			return $1;
-		}
-		if (/[hos]$/.test($1)) {
-			return $1 + 'es';
-		}
-		if (/[^aeiou]y$/i.test($1)) {
-			return $1.substr(0, $1.length - 1) + 'ies';
-		}
-		return $1 + 's';
-	});
-};
 g.getObjectType = function (a) {
     return Object.prototype.toString.call(a).replace(/^\[object\s+|\]$/g, '');
 };
@@ -220,6 +205,40 @@ g.isArray = function (a) {
 };
 g.isFunction = function (a) {
 	return getObjectType(a) == 'Function';
+};
+g.isGenerator = function (a) {
+	return getObjectType(a) == 'GeneratorFunction';
+};
+g.toArray = function (arg, index) {
+	return Array.prototype.slice.call(arg, index || 0);
+};
+g.minmax = function (min, value, max) {
+	return Math.max(min, Math.min(value, max));
+};
+g.getLiteralRegexp = function (s) {
+	return s.replace(/[.+*?(){}]/g, '\\$&');
+};
+
+// a bit complicated functions
+g._ = function () {
+	var args = toArray(arguments);
+	var format = args.shift();
+	return format.replace(/\{(?:([a-z]+):)?(\d+)\}/ig, function ($0, baseWord, index) {
+		if (baseWord == undefined || baseWord == '') {
+			return toVisibleString(args[index]);
+		}
+		// simple plural fix for english
+		if (args[index] == 1) {
+			return baseWord;
+		}
+		if (/[hos]$/.test(baseWord)) {
+			return baseWord + 'es';
+		}
+		if (/[^aeiou]y$/i.test(baseWord)) {
+			return baseWord.substr(0, baseWord.length - 1) + 'ies';
+		}
+		return baseWord + 's';
+	});
 };
 g.publish = function () {
 	if (arguments.length < 1) return;
@@ -267,9 +286,6 @@ g.publish = function () {
 		}
 	}
 };
-g.toArray = function (arg, index) {
-	return Array.prototype.slice.call(arg, index || 0);
-};
 g.expr = function (source) {
 	var tokens = [];
 	var i = 0;
@@ -302,7 +318,7 @@ loop:	while (true) {
 		if (r == '(') {
 			r = add();
 			if (tokens[i++] != ')') {
-				throw new Error(_('Missing ")".'));
+				throw new SyntaxError(_('Missing ")".'));
 			}
 		}
 		else {
@@ -324,7 +340,7 @@ loop:	while (true) {
 				r = parseFloat(sign + r, 10);
 			}
 			if (isNaN(r)) {
-				throw new Error(_('Missing a number.'));
+				throw new SyntaxError(_('Missing a number.'));
 			}
 		}
 		return r;
@@ -346,7 +362,7 @@ loop:	while (true) {
 		source = source.replace(/^\s+/, '');
 
 		if (source != '') {
-			throw new Error(_('Invalid token: {0}', source.charAt(0)));
+			throw new SyntaxError(_('Invalid token: {0}', source.charAt(0)));
 		}
 		if (tokens.length == 0) {
 			return {};
@@ -354,7 +370,7 @@ loop:	while (true) {
 
 		var result = add();
 		if (i < tokens.length) {
-			throw new Error(_('Extra token: {0}', tokens[i].charAt(0)));
+			throw new SyntaxError(_('Extra token: {0}', tokens[i].charAt(0)));
 		}
 		return {result: result};
 	}
@@ -363,20 +379,20 @@ loop:	while (true) {
 	}
 };
 g.strftime = (function () {
-	var weekdays = {
+	const weekdays = {
 		long:'Sunday Monday Tuesday Wednesday Thursday Friday Saturday'.split(' '),
 		short:'Sun Mon Tue Wed Thu Fri Sat'.split(' ')
 	};
-	var months = {
+	const months = {
 		long:'January February March April May June July August September October November December'.split(' '),
 		short:'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')
 	};
-	var nummap = {
+	const nummap = {
 		'_':function (s,w) {return s.length < w ? (multiply(' ', w) + s).substr(-w) : s},
 		'-':function (s,w) {return s.replace(/^[ 0]+/, '') || '0'},
 		'0':function (s,w) {return s.length < w ? (multiply('0', w) + s).substr(-w) : s}
 	};
-	var strmap = {
+	const strmap = {
 		'^':function (s, format, key) {
 			// make the behavior the same as mysterious glibc strftime: P is not capitalized
 			if (key == 'P') {
@@ -394,7 +410,7 @@ g.strftime = (function () {
 			return s;
 		}
 	};
-	var translators = {
+	const translators = {
 		'%':function () {return '%'},
 		a:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {weekday:'short'}).format(d), f)},
 		A:function (d,l,f,w) {return ff(Intl.DateTimeFormat(l, {weekday:'long'}).format(d), f)},
@@ -535,11 +551,47 @@ g.strftime = (function () {
 	}
 	return strftime;
 })();
-g.minmax = function (min, value, max) {
-	return Math.max(min, Math.min(value, max));
-};
-g.getLiteralRegexp = function (s) {
-	return s.replace(/[.+*?(){}]/g, '\\$&');
+g.execGenerator = function (generatorFn, thisObj, ...args) {
+	if (!isGenerator(generatorFn)) {
+		throw new TypeError('execGenerator: first argument is not a generator');
+	}
+
+	return new Promise((resolve, reject) => {
+		function next (value) {
+			run(generator.next, value);
+		}
+
+		function raise (error) {
+			run(generator.throw, error);
+		}
+
+		function run (f, a) {
+			try {
+				var result = f.call(generator, a);
+			}
+			catch (ex) {
+				reject(ex);
+				generator = generatorFn = thisObj = args = null;
+				return;
+			}
+
+			if (result.done) {
+				resolve(result.value);
+				generator = generatorFn = thisObj = args = null;
+				return;
+			}
+
+			if (result.value instanceof Promise) {
+				result.value.then(next, raise);
+			}
+			else {
+				next(result.value);
+			}
+		}
+
+		var generator = generatorFn.apply(thisObj, args);
+		next();
+	});
 };
 
 })(typeof global == 'object' ? global : window);

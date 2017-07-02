@@ -82,7 +82,7 @@ exports.suite = (assert, wasavi, driver) => {
 	}
 
 	function* read (fs) {
-		yield wasavi.send(':0r ' + fs + ':/wasavi-test/read\\ test.txt\n', 'gg');
+		yield wasavi.send(':0r ' + fs + ':/wasavi-test/read\\ test.txt\n');
 		assert.eq('#1-1', 'hello,\nworld', wasavi.getValue());
 	}
 
