@@ -8781,7 +8781,6 @@ diag('entering start up section');
  */
 
 if (global.WasaviExtensionWrapper
-&&  WasaviExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION
 &&  (extensionChannel = WasaviExtensionWrapper.create()).urlInfo.isAny) {
 	diag('connecting to extension');
 	extensionChannel.connect('init', function (req) {

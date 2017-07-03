@@ -963,15 +963,11 @@ var Agent = (function () {
 	}
 
 	function handlePostMessage (e) {
-		if (window.chrome) {
+		if (WasaviExtensionWrapper.IS_GECKO) {
+			if (e.origin != 'moz-extension://' + chrome.runtime.id) return;
+		}
+		else if (window.chrome) {
 			if (e.origin != 'chrome-extension://' + chrome.runtime.id) return;
-		}
-		else if (window.opera) {
-			if (e.origin != 'http://wasavi.appsweets.net'
-			&&  e.origin != 'https://wasavi.appsweets.net') return;
-		}
-		else if (WasaviExtensionWrapper.IS_GECKO) {
-			// on Firefox, e.origin is always null. maybe a bug?
 		}
 		diag.push('wasavi: ' + e.data);
 	}

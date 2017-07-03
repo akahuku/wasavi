@@ -25,11 +25,8 @@
 
 !this.WasaviExtensionWrapper && (function (global) {
 	/* <<<1 consts */
-	const IS_GECKO =
-		window.navigator.product == 'Gecko'
-		&& window.navigator.userAgent.indexOf('Gecko/') != -1;
-	const IS_FX_WEBEXT = Object.prototype.toString.call(global) == '[object Sandbox]'
-		&& global.chrome && global.chrome.extension;
+	const IS_GECKO = 'InstallTrigger' in global;
+	const IS_FX_WEBEXT = IS_GECKO && global.chrome && global.chrome.extension;
 	/* >>> */
 
 	/* <<<1 vars */
@@ -206,8 +203,6 @@
 	};
 	ExtensionWrapper.IS_GECKO = IS_GECKO;
 	ExtensionWrapper.IS_FX_WEBEXT = IS_FX_WEBEXT;
-	ExtensionWrapper.CAN_COMMUNICATE_WITH_EXTENSION = window.chrome && chrome.extension;
-	ExtensionWrapper.HOTKEY_ENABLED = IS_GECKO && IS_FX_WEBEXT;
 	ExtensionWrapper.urlInfo = new UrlInfo;
 	/* >>> */
 
