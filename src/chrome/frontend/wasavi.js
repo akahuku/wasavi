@@ -1382,13 +1382,6 @@ function runExrc () {
 	theme.update();
 
 	/*
-	 * show cursor
-	 */
-
-	cursor.ensureVisible();
-	cursor.update({type:inputMode, focused:true, visible:true});
-
-	/*
 	 * execute exrc
 	 */
 
@@ -1415,6 +1408,13 @@ function runExrc () {
 			exrc = null;
 			config.setData('nomodified');
 			requestedState = {};
+
+			/*
+			 * show cursor
+			 */
+
+			cursor.ensureVisible();
+			cursor.update({type:inputMode, focused:true, visible:true});
 
 			/*
 			 * final event
