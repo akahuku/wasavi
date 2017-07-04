@@ -1054,11 +1054,14 @@
 		if (!(type in listeners)) return;
 
 		listener = args.shift();
-		if (typeof listener != 'function') return;
-
-		var index = listeners[type].indexOf(listener);
-		if (index >= 0) {
-			listeners[type].splice(index, 1);
+		if (typeof listener == 'function') {
+			var index = listeners[type].indexOf(listener);
+			if (index >= 0) {
+				listeners[type].splice(index, 1);
+			}
+		}
+		else {
+			listeners[type].length = 0;
 		}
 
 		return this;

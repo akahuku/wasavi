@@ -505,9 +505,9 @@ function WasaviAsserts () {
 		t, f, eq, ne, pos, value,
 
 		shortcuts: {
-			ctrln: Key.chord(Key.CONTROL, 'n'),		// 0x000e
-			ctrlt: Key.chord(Key.CONTROL, 't'),		// 0x0014
-			ctrlw: Key.chord(Key.CONTROL, 'w')		// 0x0017
+			ctrln: '\u000e',	//Key.chord(Key.CONTROL, 'n')
+			ctrlt: '\u0014',	//Key.chord(Key.CONTROL, 't')
+			ctrlw: '\u0017'		//Key.chord(Key.CONTROL, 'w')
 		}
 	};
 }

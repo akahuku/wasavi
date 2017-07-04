@@ -135,9 +135,9 @@ Wasavi.SubstituteWorker.prototype = {
 				result = new Promise(resolve => {
 					function handleKeypress (e) {
 						e.preventDefault();
+						// when continueConfirmModeSubst() completes, it returns true
 						if (this.continueConfirmModeSubst(e.char)) {
-							// when continueConfirmModeSubst() completes, it returns true
-							app.keyManager.removeListener('interrupt', handleKeypress);
+							app.keyManager.removeListener('interrupt');
 							resolve();
 						}
 					}

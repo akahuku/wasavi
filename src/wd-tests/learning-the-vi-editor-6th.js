@@ -50,6 +50,8 @@ exports.suite = (assert, wasavi, driver) => {
 	});
 
 	it('test2_2_4', function* () {
+		this.timeout(1000 * 60);
+
 		/*
 		 * 0        10        20        30        40
 		 * *----+----*----+----*----+----*----+----*
