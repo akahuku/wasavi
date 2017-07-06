@@ -1548,60 +1548,89 @@ function popInputMode (context) {
 // for display
 function showPrefixInput (message) {
 	if (state != 'normal') return;
-	var line = $('wasavi_footer_status_container');
-	var alter = $('wasavi_footer_input_container');
-	var indf = $('wasavi_footer_file_indicator');
-	var indp = $('wasavi_footer_prefix_indicator');
+
+	let line = $('wasavi_footer_status_container');
+	let alter = $('wasavi_footer_input_container');
+	let indf = $('wasavi_footer_file_indicator');
+	let indp = $('wasavi_footer_prefix_indicator');
+
 	line.style.display = indf.style.display = indp.style.display = '';
 	alter.style.display = 'none';
+
+	if (indf.parentNode.nodeName == 'MARQUEE') {
+		let m = indf.parentNode;
+		let r = document.createRange();
+		r.selectNodeContents(m);
+		m.parentNode.insertBefore(r.extractContents(), m);
+		m.parentNode.removeChild(m);
+	}
+
+	let fileNameString = getFileNameString() + (config.vars.modified ? ' [+]' : '');
 	switch (inputMode) {
 	case 'edit':
-		indf.textContent = config.vars.showmode ? _('--INSERT--') : getFileNameString();
+		indf.textContent = config.vars.showmode ? _('--INSERT--') : fileNameString;
 		break;
 	case 'overwrite':
-		indf.textContent = config.vars.showmode ? _('--OVERWRITE--') : getFileNameString();
+		indf.textContent = config.vars.showmode ? _('--OVERWRITE--') : fileNameString;
 		break;
 	case 'bound':
-		indf.textContent = config.vars.showmode ? _('--BOUND--') : getFileNameString();
+		indf.textContent = config.vars.showmode ? _('--BOUND--') : fileNameString;
 		break;
 	case 'bound_line':
-		indf.textContent = config.vars.showmode ? _('--BOUND LINE--') : getFileNameString();
+		indf.textContent = config.vars.showmode ? _('--BOUND LINE--') : fileNameString;
 		break;
 	case 'command':
 	default:
-		document.title = indf.textContent =
-			getFileNameString() + (config.vars.modified ? ' [+]' : '');
+		document.title = indf.textContent = fileNameString;
 		break;
 	}
+
 	indp.textContent = message || prefixInput.toString() || getDefaultPrefixInputString();
 }
 function showMessageCore (message, emphasis, pseudoCursor, preserveLastMessage) {
 	if (state != 'normal' && state != 'console_wait') return;
-	var line = $('wasavi_footer_status_container');
-	var alter = $('wasavi_footer_input_container');
-	var indf = $('wasavi_footer_file_indicator');
-	var indp = $('wasavi_footer_prefix_indicator');
-	line.style.display = indf.style.display = indp.style.display = '';
-	alter.style.display = 'none';
-	indf.style.fontWeight = 'bold';
-	indp.textContent = '';
-	var pa = line;
+
+	let line = $('wasavi_footer_status_container');
+	let alter = $('wasavi_footer_input_container');
+	let indf = $('wasavi_footer_file_indicator');
+	let indp = $('wasavi_footer_prefix_indicator');
+
+	line.style.display = indf.style.display = '';
+	alter.style.display = indp.style.display = 'none';
+
+	if (indf.parentNode.nodeName == 'MARQUEE') {
+		let m = indf.parentNode;
+		let r = document.createRange();
+		r.selectNodeContents(m);
+		m.parentNode.insertBefore(r.extractContents(), m);
+		m.parentNode.removeChild(m);
+	}
+
 	if (emphasis) {
 		emptyNodeContents(indf);
-		var span = indf.appendChild(document.createElement('span'));
+		let span = indf.appendChild(document.createElement('span'));
 		span.style.color = theme.colors.warnedStatusFg;
 		span.style.backgroundColor = theme.colors.warnedStatusBg;
 		span.textContent = message;
-		pa = span;
 	}
 	else {
 		indf.textContent = message;
 	}
+
 	if (pseudoCursor) {
-		var blink = indf.appendChild(document.createElement('span'));
+		let blink = indf.appendChild(document.createElement('span'));
 		blink.className = 'blink';
 		blink.textContent = '\u2588';
 	}
+
+	if (indf.scrollWidth > indf.offsetWidth) {
+		let m = indf.parentNode.insertBefore(document.createElement('marquee'), indf);
+		m.appendChild(indf);
+		m.behavior = 'alternate';
+		m.scrollDelay = 200;
+		m.loop = 1;
+	}
+
 	if (!preserveLastMessage) {
 		lastMessage = toNativeControl(message);
 	}
