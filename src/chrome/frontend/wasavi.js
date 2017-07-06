@@ -7324,7 +7324,7 @@ const commandMap = {
 				return inputEscape();
 			}
 			if (!registers.exists(c)) {
-				requestShowMessage(_('Register {0} is not exist.', c), true);
+				requestShowMessage(_('Register {0} does not exist.', c), true);
 				return inputEscape();
 			}
 			if (executingMacroInfo.some(i => i.register == c)) {
@@ -7372,7 +7372,7 @@ const commandMap = {
 				return inputEscape();
 			}
 			if (/^(?:[A-Z])$/.test(c) && !registers.exists(c)) {
-				requestShowMessage(_('Register {0} is not exist.', c), true);
+				requestShowMessage(_('Register {0} does not exist.', c), true);
 				return inputEscape();
 			}
 			if (!/^(?:[a-zA-Z0-9"])$/.test(c)) {
