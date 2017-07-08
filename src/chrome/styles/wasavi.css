@@ -245,10 +245,8 @@
  * console
  */
 
-@-webkit-keyframes blink { 25% {opacity:0} 75% {opacity:1} }
-        @keyframes blink { 25% {opacity:0} 75% {opacity:1} }
+@keyframes blink { 25% {opacity:0} 75% {opacity:1} }
 .blink {
-	-webkit-animation:blink 1s linear infinite;
 	animation:blink 1s step-end infinite;
 }
 
@@ -316,6 +314,14 @@
 #wasavi_cover.dim {
 	transition:background-color .5s linear 1s;
 	background-color:rgba(0,0,0,0.25);
+}
+
+@keyframes visualbell {
+	0%   { background-color:#f5511e }
+	100% { background-color:rgba(0,0,0,0.0) }
+}
+#wasavi_cover.visualbell {
+	animation:.5s visualbell 0s;
 }
 
 #wasavi_cover #wasavi_cover_button {

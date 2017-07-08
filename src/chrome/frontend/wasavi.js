@@ -5462,6 +5462,7 @@ const config = new Wasavi.Configurator(appProxy,
 		['cursorline', 'b', false],
 		['cursorcolumn', 'b', false],
 		['nrformats', 's', 'bin,octal,hex'],
+		['visualbell', 'b', false],
 
 		/* defined by nvi */
 		//['altwerase', 'b', false],
@@ -5547,7 +5548,7 @@ const config = new Wasavi.Configurator(appProxy,
 
 		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab',
 		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink',
-		nf:'nrformats'
+		nf:'nrformats',			vb:'visualbell'
 	}
 );
 // >>>

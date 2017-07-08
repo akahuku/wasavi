@@ -287,10 +287,20 @@ Wasavi.Theme = function (app) {
 
 Wasavi.Bell = function (app) {
 	function play (key) {
-		app.extensionChannel.postMessage({
-			type: 'play-sound',
-			key: key || 'beep'
-		});
+		if (app.config.vars.visualbell) {
+			let cover = $('wasavi_cover');
+			cover.classList.add('visualbell');
+			cover.addEventListener('animationend', function animationend (e) {
+				e.target.removeEventListener(e.type, animationend);
+				e.target.classList.remove('visualbell');
+			});
+		}
+		else {
+			app.extensionChannel.postMessage({
+				type: 'play-sound',
+				key: key || 'beep'
+			});
+		}
 	}
 
 	publish(this, play);
