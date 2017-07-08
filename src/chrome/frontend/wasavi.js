@@ -914,7 +914,7 @@ Collection.prototype = Object.create({}, {
 			executedRegisterFlags: function () {return executedRegisterFlags},
 			lastError: [
 				function () {return lastError},
-				function (v) {lastError = '' + v}
+				function (v) {lastError = v}
 			],
 
 			inst: Object.freeze({
@@ -1391,6 +1391,7 @@ function runExrc () {
 		.then(() => {
 			if (exvm.lastError) {
 				console.log(`wasavi: an error occured in exrc:\n${exvm.lastError}`);
+				exvm.lastError = undefined;
 			}
 
 			config.saveSnapshot('exrc');
@@ -1402,7 +1403,13 @@ function runExrc () {
 		})
 		.then(() => {
 			if (exvm.lastError) {
-				console.log(`wasavi: an error occured in exrc:\n${exvm.lastError}`);
+				console.log(`wasavi: an error occured while restoring overriden settings:\n${exvm.lastError}`);
+				exvm.lastError = undefined;
+			}
+
+			if (requestedState.console.open) {
+				backlog.open();
+				pushInputMode({}, 'backlog_prompt');
 			}
 
 			exrc = null;
