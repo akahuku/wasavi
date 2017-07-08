@@ -49,6 +49,9 @@ g.Wasavi = Object.defineProperties({}, {
 	CURSOR_SPAN_CLASS: {value: 'wasavi_command_cursor_span'},
 	BOUND_CLASS: {value: 'wasavi_bound'},
 
+	MIGEMO_EXTENSION_ID: {value: 'dfccgbheolnlopfmahkcjiefggclmadb'},
+	MIGEMO_GET_REGEXP_STRING: {value: 'getRegExpString'},
+
 	LOG_PROMISE: {value: LOG_PROMISE},
 	LOG_EX: {value: LOG_EX},
 	LOG_MAP_MANAGER: {value: LOG_MAP_MANAGER},

@@ -900,7 +900,7 @@ sequential at:
 			se = buffer.selectionEnd;
 		}
 
-		app.motion.findByRegexForward(/./g, 1, {});
+		app.motion.findByRegexForward(/./g);
 
 		try {
 			var startPos = recursive ? ss.clone() : skipIndent(ss);
@@ -937,7 +937,7 @@ sequential at:
 
 			for (var i = 0; i < count; ) {
 				buffer.setSelectionRange(currentOffset);
-				openTagInfo = app.motion.findByRegexBackward(/<[^!?\/][^>]*>/g, 1, {});
+				openTagInfo = app.motion.findByRegexBackward(/<[^!?\/][^>]*>/g);
 				if (!openTagInfo) return result;
 
 				tagp = isInTag(openTagInfo.offset);

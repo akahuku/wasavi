@@ -2675,10 +2675,12 @@ function getFindRegex (src) {
 	var caseSensibility = false;
 	var global = 'g';
 	var multiline = 'm';
+
 	if (src instanceof RegExp) {
 		return src;
 	}
-	else if (typeof src == 'string') {
+
+	if (typeof src == 'string') {
 		pattern = src;
 	}
 	else if (typeof src == 'object') {
@@ -2695,10 +2697,12 @@ function getFindRegex (src) {
 			pattern = src.pattern;
 		}
 	}
+
 	if (caseSensibility === false) {
 		caseSensibility =
 			config.vars.smartcase && !/[A-Z]/.test(pattern) || config.vars.ignorecase ? 'i' : '';
 	}
+
 	try {
 		result = new RegExp(
 			regexConverter.toJsRegexString(pattern),
@@ -2707,6 +2711,7 @@ function getFindRegex (src) {
 	catch (e) {
 		result = null;
 	}
+
 	return result;
 }
 function getFileNameString (full) {
@@ -3615,28 +3620,31 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 	}
 	return true;
 }
-function motionFindByRegexForward (c, count, opts) {
+function motionFindByRegexForward (c, count) {
+	let text = lastRegexFindCommand.text;
+	let n = buffer.binaryPositionToLinearPosition(buffer.selectionEnd);
+	let startn = n;
+	let len = 0;
+	let regex = isObject(c) ? c.regex : getFindRegex(c);
+	let wrapped = false;
+	let opts = regexConverter.getDefaultOption();
+	let re;
+
 	count || (count = 1);
-	opts || (opts = regexConverter.getDefaultOption());
-	var text = lastRegexFindCommand.text;
-	var n = buffer.binaryPositionToLinearPosition(buffer.selectionEnd);
-	var startn = n;
-	var len = 0;
-	var regex = getFindRegex(c);
-	var wrapped = false;
-	var re;
-	if (typeof text != 'string') {
+
+	if (!isString(text)) {
 		lastRegexFindCommand.text = text = buffer.value;
 	}
+
 	if (regex && regex.source.length) {
-		regex.lastIndex = opts.includeCurrentChar ? n : n + 1;
-		for (var i = 0; i < count; i++) {
-			var loop;
+		regex.lastIndex = n + 1;
+		for (let i = 0; i < count; i++) {
+			let loop;
 			do {
 				loop = false;
 				re = regex.exec(text);
 				if (re) {
-					var newn = regex.lastIndex - re[0].length;
+					let newn = regex.lastIndex - re[0].length;
 					if (text.charAt(newn) == buffer.TERM_CHAR && newn - 1 == startn) {
 						loop = true;
 					}
@@ -3658,18 +3666,22 @@ function motionFindByRegexForward (c, count, opts) {
 			} while (loop);
 		}
 	}
+
 	invalidateIdealWidthPixels();
 	wrapped && requestNotice(_('Search wrapped.'));
+
 	return {offset:n, matchLength:len};
 }
-function motionFindByRegexBackward (c, count, opts) {
+function motionFindByRegexBackward (c, count) {
+	let text = lastRegexFindCommand.text;
+	let n = buffer.binaryPositionToLinearPosition(buffer.selectionStart);
+	let len = 0;
+	let regex = isObject(c) ? c.regex : getFindRegex(c);
+	let wrapped = false;
+	let opts = regexConverter.getDefaultOption();
+
 	count || (count = 1);
-	opts || (opts = regexConverter.getDefaultOption());
-	var text = lastRegexFindCommand.text;
-	var n = buffer.binaryPositionToLinearPosition(buffer.selectionStart);
-	var len = 0;
-	var regex = getFindRegex(c);
-	var wrapped = false;
+
 	function getLineTop (n) {
 		while (--n >= 0 && text.charCodeAt(n) != 0x0a) {}
 		n++;
@@ -3714,15 +3726,17 @@ function motionFindByRegexBackward (c, count, opts) {
 		}
 		return result;
 	}
-	if (typeof text != 'string') {
+
+	if (!isString(text)) {
 		lastRegexFindCommand.text = text = buffer.value;
 	}
+
 	if (regex && regex.source.length) {
-		var startn = n;
-		var linetop = getLineTop(n);
+		let startn = n;
+		let linetop = getLineTop(n);
 		regex.lastIndex = linetop;
-		for (var i = 0; i < count; i++) {
-			var loop;
+		for (let i = 0; i < count; i++) {
+			let loop;
 			do {
 				loop = false;
 				if (!doBackSearch()) {
@@ -3740,8 +3754,10 @@ function motionFindByRegexBackward (c, count, opts) {
 			} while (loop);
 		}
 	}
+
 	invalidateIdealWidthPixels();
 	wrapped && requestNotice(_('Search wrapped.'));
+
 	return {offset:n, matchLength:len};
 }
 function motionUpDown (c, count, isDown) {
@@ -5101,7 +5117,7 @@ function handleBackendMessage (req) {
 diag('defining variables');
 
 /*
- * variables <<<1
+ * consts <<<1
  * ----------------
  */
 
@@ -5528,73 +5544,6 @@ const config = new Wasavi.Configurator(appProxy,
 	}
 );
 // >>>
-
-var promise;
-var extensionChannel;
-var version;
-var exrc;
-var quickActivation;
-var testMode;
-var devMode;
-var logMode;
-var fstab;
-var resizeHandlerInvokeTimer;
-var l10n;
-var ffttDictionary;
-var lineBreaker;
-var targetElement;
-var buffer;
-var fileName;
-var fileSystemIndex;
-var preferredNewline;
-var terminated;
-var state;
-var registers;
-var lineInputHistories;
-var lineInputInfo;
-var marks;
-var cursor;
-var scroller;
-var editLogger;
-var prefixInput;
-var inputHandler;
-var inputModeStack;
-var inputMode;
-var requestedState;
-var lineHeight;
-var charWidth;
-var idealWidthPixels;
-var idealDenotativeWidthPixels;
-var backlog;
-var pairBracketsIndicator;
-var exvm;
-var searchUtils;
-var recordedStrokes;
-var literalInput;
-var notifier;
-var multiplexCallbackId;
-var compositionLevel;
-var containerRect;
-var statusLineHeight;
-var surrounding;
-var executingMacroInfo;
-var commandCompleteTimer;
-
-var isEditCompleted;
-var isVerticalMotion;
-var isReadonlyWarned;
-var isInteractive;
-var isSmoothScrollRequested;
-var isJumpBaseUpdateRequested;
-var isCompleteResetCanceled;
-var isUndoFlipped;
-
-var lastSimpleCommand;
-var lastHorzFindCommand;
-var lastRegexFindCommand;
-var lastSubstituteInfo;
-var lastMessage;
-var lastBoundMode;
 
 /*
  * input handlers for each mode <<<1
@@ -6406,41 +6355,106 @@ const commandMap = {
 		bound:function (c, o) {return this['/'].command.apply(this, arguments)},
 		bound_line:function (c, o) {return this['/'].command.apply(this, arguments)},
 		line_input:function (c, o) {
-			var pattern;
+			function doFind (pattern) {
+				var r = motionFindByRegexFacade(
+					pattern,
+					prefixInput.count,
+					o.key == '/' ? 1 : -1,
+					lastRegexFindCommand.verticalOffset);
+
+				if (r && lastRegexFindCommand.updateBound) {
+					extendBound(
+						o.key == '/' ? buffer.selectionEnd : buffer.selectionStart,
+						lastRegexFindCommand.updateBound);
+				}
+
+				return r;
+			}
+
 			if (c != '') {
 				lastRegexFindCommand.setPattern(c, true);
 				registers.set('/', lastRegexFindCommand.pattern, false);
-				pattern = lastRegexFindCommand.pattern;
+				c = lastRegexFindCommand.pattern;
 			}
 			else {
-				if (!registers.exists('/') || (pattern = registers.get('/').data) == '') {
+				if (!registers.exists('/') || (c = registers.get('/').data) == '') {
 					requestShowMessage(_('No previous search pattern.'), true);
 					return true;
 				}
 			}
-			lineInputHistories.push(pattern);
-			var r = motionFindByRegexFacade(
-				pattern,
-				prefixInput.count,
-				o.key == '/' ? 1 : -1,
-				lastRegexFindCommand.verticalOffset);
-			r && lastRegexFindCommand.updateBound && extendBound(
-				o.key == '/' ? buffer.selectionEnd : buffer.selectionStart,
-				lastRegexFindCommand.updateBound);
-			return r;
+
+			lineInputHistories.push(c);
+
+			if (/\\M/.test(c)) {
+				return new Promise(resolve => {
+					chrome.extension.sendMessage(
+						Wasavi.MIGEMO_EXTENSION_ID,
+						{
+							action: Wasavi.MIGEMO_GET_REGEXP_STRING,
+							query: c.replace(/\\M/g, '')
+						},
+						response => {
+							if (chrome.extension.lastError) {
+								notifier.show(_('Can not communicate with Migemo server.'));
+								resolve();
+							}
+							else {
+								lastRegexFindCommand.internalRegex = {
+									pattern: c,
+									regex: new RegExp(response.result, 'g')
+								};
+								resolve(doFind(lastRegexFindCommand.internalRegex));
+							}
+						}
+					);
+				});
+			}
+			else {
+				return doFind(c);
+			}
 		},
 		$line_input_notify:function (c, o) {
-			if (config.vars.searchincr) {
-				lastRegexFindCommand.setPattern(c, true);
-				var r = (o.key == '/' ? motionFindByRegexForward : motionFindByRegexBackward)
-					(lastRegexFindCommand.pattern, 1);
-				if (r) {
-					buffer.setSelectionRange(r.offset, r.offset + r.matchLength);
-					cursor.ensureVisible();
-					lastRegexFindCommand.updateBound && extendBound(
-						buffer.selectionStart, lastRegexFindCommand.updateBound);
-					buffer.emphasis(undefined, r.matchLength);
-				}
+			lastRegexFindCommand.setPattern(c, true);
+
+			function doFind (pattern) {
+				let finder = o.key == '/' ? motionFindByRegexForward : motionFindByRegexBackward;
+				let r = finder(pattern);
+				if (!r) return;
+
+				buffer.setSelectionRange(r.offset, r.offset + r.matchLength);
+				cursor.ensureVisible();
+				lastRegexFindCommand.updateBound && extendBound(
+					buffer.selectionStart, lastRegexFindCommand.updateBound);
+				buffer.emphasis(undefined, r.matchLength);
+			}
+
+			if (!config.vars.searchincr) return;
+
+			if (/\\M/.test(c)) {
+				return new Promise(resolve => {
+					chrome.extension.sendMessage(
+						Wasavi.MIGEMO_EXTENSION_ID,
+						{
+							action: Wasavi.MIGEMO_GET_REGEXP_STRING,
+							query: c.replace(/\\M/g, '')
+						},
+						response => {
+							if (chrome.extension.lastError) {
+								notifier.show(_('Can not communicate with Migemo server.'));
+								resolve();
+							}
+							else {
+								resolve(doFind({
+									pattern: c,
+									regex: new RegExp(response.result, 'g')
+								}));
+							}
+						}
+					);
+				});
+			}
+			else {
+				return doFind(lastRegexFindCommand.pattern);
 			}
 		},
 		$line_input_reset:function (c) {
@@ -6750,13 +6764,17 @@ const commandMap = {
 			requestShowMessage(_('No previous search pattern.'), true);
 			return;
 		}
+
 		prefixInput.motion = c;
 		isSmoothScrollRequested = true;
-		var regex = registers.get('/').data;
-		var isForward = o.key != 'N';
-		var dir = lastRegexFindCommand.direction * (isForward ? 1 : -1);
-		var result = motionFindByRegexFacade(regex, prefixInput.count, dir);
-		requestNotice((isForward ? '/' : '?') + regex);
+
+		let regex = lastRegexFindCommand.internalRegex || lastRegexFindCommand.pattern;
+		let isForward = o.key != 'N';
+		let dir = lastRegexFindCommand.direction * (isForward ? 1 : -1);
+		let result = motionFindByRegexFacade(regex, prefixInput.count, dir);
+
+		requestNotice((isForward ? '/' : '?') + lastRegexFindCommand.pattern);
+
 		return result;
 	},
 	// search previous match for current pattern
@@ -8801,6 +8819,77 @@ const modeTable = {
 		handlerName: 'wait_register'
 	}
 };
+
+/*
+ * variables <<<1
+ * ----------------
+ */
+
+var promise;
+var extensionChannel;
+var version;
+var exrc;
+var quickActivation;
+var testMode;
+var devMode;
+var logMode;
+var fstab;
+var resizeHandlerInvokeTimer;
+var l10n;
+var ffttDictionary;
+var lineBreaker;
+var targetElement;
+var buffer;
+var fileName;
+var fileSystemIndex;
+var preferredNewline;
+var terminated;
+var state;
+var registers;
+var lineInputHistories;
+var lineInputInfo;
+var marks;
+var cursor;
+var scroller;
+var editLogger;
+var prefixInput;
+var inputHandler;
+var inputModeStack;
+var inputMode;
+var requestedState;
+var lineHeight;
+var charWidth;
+var idealWidthPixels;
+var idealDenotativeWidthPixels;
+var backlog;
+var pairBracketsIndicator;
+var exvm;
+var searchUtils;
+var recordedStrokes;
+var literalInput;
+var notifier;
+var compositionLevel;
+var containerRect;
+var statusLineHeight;
+var surrounding;
+var executingMacroInfo;
+var commandCompleteTimer;
+
+var isEditCompleted;
+var isVerticalMotion;
+var isReadonlyWarned;
+var isInteractive;
+var isSmoothScrollRequested;
+var isJumpBaseUpdateRequested;
+var isCompleteResetCanceled;
+var isUndoFlipped;
+
+var lastSimpleCommand;
+var lastHorzFindCommand;
+var lastRegexFindCommand;
+var lastSubstituteInfo;
+var lastMessage;
+var lastBoundMode;
 
 diag('entering start up section');
 

@@ -120,6 +120,10 @@ The `:set` commands which you input while wasavi is running are stored to extens
 
 This setting override mechanism works each independent URLs (max 30). If you think this is unnecessary, put `:set nooverride` in your exrc. Then overriding will be skipped.
 
+## How to cooperate with Migemo
+
+wasavi for Chrome can [Migemo](http://0xcc.net/migemo/) search.  Install [Migemo Server](https://chrome.google.com/webstore/detail/migemo-server-for-google/dfccgbheolnlopfmahkcjiefggclmadb), then input a special meta character `\M` in search query of `/` or `?` command.  If `\M` included in search query, these search commands are executed via migemo.
+
 ## I have noticed a bug
 
 Please create an issue on [wasavi issue tracker](http://github.com/akahuku/wasavi/issues)

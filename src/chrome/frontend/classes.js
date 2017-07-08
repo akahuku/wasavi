@@ -899,28 +899,29 @@ Wasavi.PrefixInput = function () {
 };
 
 Wasavi.RegexFinderInfo = function () {
-	var head;
-	var direction;
-	var offset;
-	var scrollTop;
-	var scrollLeft;
-	var pattern;
-	var verticalOffset;
-	var text;
-	var updateBound;
+	let head;
+	let direction;
+	let offset;
+	let scrollTop;
+	let scrollLeft;
+	let pattern;
+	let verticalOffset;
+	let text;
+	let updateBound;
+	let internalRegex;
 
 	function parseFindString (s, delimiter) {
-		var result = {
+		let result = {
 			pattern: s,
 			offset: undefined
 		};
-		var regex = /\\.|[\S\s]/g;
-		var re;
+		let regex = /\\.|[\S\s]/g;
+		let re;
 		while ((re = regex.exec(s))) {
 			if (re[0] == delimiter) {
 				result.pattern = s.substring(0, re.index);
 
-				var trailer = /^\s*([+\-]?)(\d*)/.exec(s.substring(re.index + re[0].length));
+				let trailer = /^\s*([+\-]?)(\d*)/.exec(s.substring(re.index + re[0].length));
 				if (trailer && (trailer[1] != '' || trailer[2] != '')) {
 					if (trailer[2] == '') {
 						trailer[2] = '1';
@@ -940,13 +941,14 @@ Wasavi.RegexFinderInfo = function () {
 		scrollTop = o.scrollTop || 0;
 		scrollLeft = o.scrollLeft || 0;
 		updateBound = o.updateBound || false;
+		internalRegex = undefined;
 	}
 	function setPattern (p, withOffset) {
 		pattern = p;
 		verticalOffset = undefined;
 
 		if (withOffset) {
-			var parsed = parseFindString(p, head);
+			let parsed = parseFindString(p, head);
 			pattern = parsed.pattern;
 			verticalOffset = parsed.offset;
 		}
@@ -955,15 +957,16 @@ Wasavi.RegexFinderInfo = function () {
 	publish(this,
 		push, setPattern,
 		{
-			head: function () {return head},
-			direction: function () {return direction},
-			offset: function () {return offset},
-			scrollTop: function () {return scrollTop},
-			scrollLeft: function () {return scrollLeft},
-			pattern: function () {return pattern},
-			verticalOffset: function () {return verticalOffset},
-			text: [function () {return text}, function (v) {text = v}],
-			updateBound: function () {return updateBound}
+			head: () => head,
+			direction: () => direction,
+			offset: () => offset,
+			scrollTop: () => scrollTop,
+			scrollLeft: () => scrollLeft,
+			pattern: () => pattern,
+			verticalOffset: () => verticalOffset,
+			text: [() => text, (v) => text = v],
+			updateBound: () => updateBound,
+			internalRegex: [() => internalRegex, (v) => internalRegex = v]
 		}
 	);
 };

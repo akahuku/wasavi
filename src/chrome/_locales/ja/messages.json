@@ -344,6 +344,10 @@
 		"message": "バッファ済み: {0}",
 		"description": "Buffered: {0}"
 	},
+	"can_not_communicate_with_migemo_server": {
+		"message": "Migemo サーバと通信できません。",
+		"description": "Can not communicate with Migemo server."
+	},
 	"cannot_change_current_directory_into_a_file": {
 		"message": "カレントディレクトリをファイルへは変更できません。",
 		"description": "Cannot change current directory into a file."

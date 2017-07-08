@@ -861,7 +861,7 @@ var cache = {};
 				pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
 
 				app.motion.lineEnd('');
-				var result = app.motion.findByRegexForward(regex, 1);
+				var result = app.motion.findByRegexForward(regex);
 				if (!result) {
 					error = _('Pattern not found: {0}', pattern);
 					break;
@@ -889,7 +889,7 @@ var cache = {};
 				pattern != '' && app.lastRegexFindCommand.setPattern(pattern);
 
 				app.motion.lineStart('', true);
-				var result = app.motion.findByRegexBackward(regex, 1);
+				var result = app.motion.findByRegexBackward(regex);
 				if (!result) {
 					error = _('Pattern not found: {0}', pattern);
 					break;

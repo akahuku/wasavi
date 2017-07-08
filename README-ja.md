@@ -120,6 +120,10 @@ wasavi の実行時に入力された `:set` コマンドは、エクステン�
 
 この設定の上書き機構は最大 30 の各 URL ごとに機能します。この機能が不要であるならば、exrc に `:set nooverride` を追加してください。上書きは無効になります。
 
+## Migemo と協調する
+
+Chrome 版の wasavi は [Migemo](http://0xcc.net/migemo/) 検索を行うことができます。[Migemo Server](https://chrome.google.com/webstore/detail/migemo-server-for-google/dfccgbheolnlopfmahkcjiefggclmadb) をインストールし、`/` や `?` コマンドの検索文字列中に特別なメタ文字である `\M` を含めてください。`\M` が検索文字列に含まれていると、これらの検索コマンドは Migemo を介して実行されます。
+
 ## バグを見つけた
 
 [wasavi issue tracker](http://github.com/akahuku/wasavi/issues) で issue を作成してください。

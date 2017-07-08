@@ -344,6 +344,10 @@
 		"message": "Buffered: {0}",
 		"description": "Buffered: {0}"
 	},
+	"can_not_communicate_with_migemo_server": {
+		"message": "Can not communicate with Migemo server.",
+		"description": "Can not communicate with Migemo server."
+	},
 	"cannot_change_current_directory_into_a_file": {
 		"message": "Cannot change current directory into a file.",
 		"description": "Cannot change current directory into a file."
