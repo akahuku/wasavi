@@ -1210,6 +1210,17 @@ function install (x, req) {
 
 	// focus holder
 	var focusHolder = $('wasavi_focus_holder');
+	// issue #174
+	//
+	// focusHolder is input[type="password"].
+	// This is a hack for forcing IME to be disabled.
+	// But the latest Firefox shows disturbing message to a password field on http page.
+	// So we change the type of input to "text".
+	//
+	// https://github.com/akahuku/wasavi/issues/174
+	if (Wasavi.IS_GECKO) {
+		focusHolder.type = 'text';
+	}
 
 	// buffer
 	buffer = new Buffer($('wasavi_editor'));
