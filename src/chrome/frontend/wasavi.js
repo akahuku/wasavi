@@ -5621,7 +5621,7 @@ const modeHandlers = {
 			cursor.windup();
 		}
 
-		if (r.subkey == inputMode && r.code == 0x1b) {
+		if (r.subkey == inputMode && (r.code == 0x1b || r.code == 0x03)) {
 			if (!r.ignoreAbbrev && processAbbrevs(true, '\u001b')) {
 				return r;
 			}
@@ -5749,7 +5749,7 @@ const modeHandlers = {
 	},
 	line_input: function* (r) {
 		const input = $('wasavi_footer_input');
-		const canEscape = r.code == 0x1b
+		const canEscape = r.code == 0x1b || r.code == 0x03
 			|| r.code == 0x08 && input.selectionStart == 0 && input.selectionEnd == 0;
 		const isComplete = prefixInput.operation != ''
 			|| prefixInput.motion != '';
