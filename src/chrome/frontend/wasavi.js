@@ -4506,7 +4506,7 @@ function paste (count, opts) {
 		});
 	}
 	else {
-		if (isForward) {
+		if (isForward && !buffer.isNewline(n)) {
 			n = buffer.rightClusterPos(n);
 			buffer.setSelectionRange(n);
 		}
