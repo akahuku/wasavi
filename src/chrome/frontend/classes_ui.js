@@ -286,8 +286,8 @@ Wasavi.Theme = function (app) {
 };
 
 Wasavi.Bell = function (app) {
-	function play (key) {
-		if (app.config.vars.visualbell) {
+	function play (key, forcePlay) {
+		if (!forcePlay && app.config.vars.visualbell) {
 			let cover = $('wasavi_cover');
 			cover.classList.add('visualbell');
 			cover.addEventListener('animationend', function animationend (e) {
@@ -298,7 +298,8 @@ Wasavi.Bell = function (app) {
 		else {
 			app.extensionChannel.postMessage({
 				type: 'play-sound',
-				key: key || 'beep'
+				key: key || 'beep',
+				volume: app.config.vars.bellvolume
 			});
 		}
 	}

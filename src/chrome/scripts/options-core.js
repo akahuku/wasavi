@@ -152,18 +152,6 @@ function initPage (req) {
 		el.value = req.fontFamily;
 	}
 
-	// sounds
-	for (var i in req.sounds) {
-		el = $('sound-' + i);
-		if (el && el.nodeName == 'INPUT' && el.type == 'checkbox') {
-			el.checked = req.sounds[i];
-		}
-	}
-	el = $('sound-volume');
-	if (el && el.nodeName == 'INPUT') {
-		el.value = req.soundVolume;
-	}
-
 	// fstab
 	var defaultFs = req.fstab
 		.filter(function (fs) {return fs.isDefault})[0];
@@ -375,28 +363,6 @@ function handleOptionsSave () {
 	el = $('font-family');
 	if (el && el.nodeName == 'INPUT') {
 		items.push({key:'fontFamily', value:el.value});
-	}
-
-	// sounds
-	(function () {
-		var sounds = {};
-		Array.prototype.forEach.call(
-			document.querySelectorAll(
-				'#sounds-container input[type="checkbox"]'),
-			function (node) {
-				var re = /^sound-(\w+)/.exec(node.id);
-				if (!re) return;
-
-				sounds[re[1]] = node.checked;
-			}
-		);
-
-		items.push({key:'sounds', value:sounds});
-	})();
-
-	el = $('sound-volume');
-	if (el && el.nodeName == 'INPUT') {
-		items.push({key:'soundVolume', value:el.value - 0 || 0});
 	}
 
 	// fstab

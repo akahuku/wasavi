@@ -86,6 +86,14 @@ wasavi を終了するには `ZZ`、`:q`、`:wq` などの VI の終了コマン
 各ブラウザのエクステンション管理機能から wasavi の設定ページを開き
 （または wasavi 上で `:options` と入力）、"exrc" テキストボックスを編集してください。
 
+## ビープ音を制御する
+
+ビープ音を無効にするには、`set noerrorbells` と exrc に追加します。ビジュアルベルにしたい場合は代わりに `set visualbell` を追加します。
+
+また、wasavi 起動時のチャイム音は `set nolaunchbell` で無効にできます。
+
+いずれのビープ音のボリュームも、`set bellvolume=N` で制御できます。値 N の範囲は 1 から 100 です。
+
 ## ローカルファイルにアクセスする
 
 [ドキュメント](https://github.com/akahuku/wasavi/wiki/Local-access) を参照してください。

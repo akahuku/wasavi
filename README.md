@@ -86,6 +86,14 @@ Note: there are also options which are accepted but don't have any effect yet.
 Open preference wasavi extension (or enter `:options` on wasavi),
 and edit "exrc" textbox.
 
+## How to control beep
+
+Add `set noerrorbells` to your exrc to disable beep sound.  If you prefer a visual bell, add `set visualbell` instead.
+
+Also, a chime at wasavi startup can be disabled with `set nolaunchbell`.
+
+The volume of any beeps can be controlled with `set bellvolume=N`.  Range of value N is 1 to 100.
+
 ## How to access local files
 
 See [document](https://github.com/akahuku/wasavi/wiki/Local-access).

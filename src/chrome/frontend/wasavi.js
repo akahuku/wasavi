@@ -1418,6 +1418,10 @@ function runExrc () {
 				exvm.lastError = undefined;
 			}
 
+			if (config.vars.launchbell) {
+				bell.play('launch', true);
+			}
+
 			if (requestedState.console.open) {
 				backlog.open();
 				pushInputMode({}, 'backlog_prompt');
@@ -5451,6 +5455,7 @@ const config = new Wasavi.Configurator(appProxy,
 			}
 			return v;
 		}],
+		['launchbell', 'b', true],
 
 		/* defined by vim */
 		['expandtab', 'b', false],
@@ -5559,7 +5564,7 @@ const config = new Wasavi.Configurator(appProxy,
 
 		fs:'fullscreen',		jk:'jkdenotative',	et:'expandtab',
 		cul:'cursorline',		cuc:'cursorcolumn',	cub:'cursorblink',
-		nf:'nrformats',			vb:'visualbell'
+		nf:'nrformats',			vb:'visualbell',	lb:'launchbell'
 	}
 );
 // >>>

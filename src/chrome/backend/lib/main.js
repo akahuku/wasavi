@@ -60,8 +60,6 @@
 	var unicodeDictData;
 	var payload;
 	var config;
-	var sounds;
-	var soundVolume;
 
 	var isInitializing = true;
 	var blockedEvents = [];
@@ -160,24 +158,6 @@
 				set: function (value) {
 					ext.setLogMode(value);
 					return value;
-				},
-				setOnInit: true
-			},
-			sounds: {
-				def: {
-					launch: true,
-					beep: true
-				},
-				set: function (value) {
-					sounds = value;
-					return value;
-				},
-				setOnInit: true
-			},
-			soundVolume: {
-				def: 25,
-				set: function (value) {
-					return soundVolume = Math.max(0, Math.min(value, 100));
 				},
 				setOnInit: true
 			},
@@ -317,12 +297,6 @@
 		src = src.replace(/\n[\n\s]*/g, ' ');
 
 		return src;
-	}
-
-	function playSound (key) {
-		if (key in sounds && sounds[key]) {
-			ext.sound.play(key, {volume: soundVolume});
-		}
 	}
 
 	function isTestUrl (url) {
@@ -586,8 +560,6 @@
 
 		// for options
 		if (isOptions) {
-			o.sounds = config.get('sounds');
-			o.soundVolume = config.get('soundVolume');
 			o.upgradeNotify = config.get('upgradeNotify');
 		}
 
@@ -721,7 +693,7 @@
 	}
 
 	function handlePlaySound (command, data, sender, respond) {
-		playSound(data.key);
+		ext.sound.play(data.key, {volume: data.volume});
 	}
 
 	function handleOpenOptions (command, data, sender, respond) {
@@ -774,7 +746,6 @@
 
 	function handlePushPayload (command, data, sender, respond) {
 		payload = data;
-		playSound('launch');
 	}
 
 	function handleFsCtlReset (port, data) {
