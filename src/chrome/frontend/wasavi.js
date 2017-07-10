@@ -6420,8 +6420,8 @@ const commandMap = {
 						},
 						response => {
 							if (chrome.extension.lastError) {
-								notifier.show(_('Can not communicate with Migemo server.'));
-								resolve();
+								requestShowMessage(_('Can not communicate with Migemo server.'), true);
+								resolve(true);
 							}
 							else {
 								lastRegexFindCommand.internalRegex = {
