@@ -133,12 +133,35 @@ g.multiply = function (letter, times) {
 	return result.length == times ? result : result.substring(0, letter.length * times);
 };
 g.toVisibleString = function (s) {
-	if (typeof s == 'number' && !isNaN(s)) {
-		s = '' + s;
+	// treat falsy values as empty string
+	if (s === false
+	||  s === null
+	||  s === undefined
+	||  (typeof s == 'number' && isNaN(s))) {
+		return '';
 	}
-	else {
-		s = s || '';
+
+	// treat array as special string
+	if (s instanceof Array) {
+		if (s.length > 10) {
+			s = s.slice(0, 10).join(', ') + '...';
+		}
+		else {
+			s = s.join(', ');
+		}
 	}
+
+	// treat object as empty string
+	else if (typeof s == 'object') {
+		if ('toString' in s && typeof s.toString == 'function') {
+			s = s.toString();
+		}
+		if (/^\[object\s+[^\]]+\]$/.test(s)) {
+			return '';
+		}
+	}
+
+	s = '' + s;
 	return s
 		.replace(/[\u0000-\u001f]/g, a => '^' + String.fromCharCode(a.charCodeAt(0) + 64))
 		.replace(/\u007f/g, '^_')

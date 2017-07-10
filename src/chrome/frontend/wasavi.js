@@ -3638,7 +3638,8 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 	}
 	else {
 		prefixInput.reset();
-		requestShowMessage(_('Pattern not found: {0}', pattern), true);
+		let visiblePattern = isObject(pattern) ? pattern.pattern : pattern;
+		requestShowMessage(_('Pattern not found: {0}', visiblePattern), true);
 	}
 	return true;
 }
