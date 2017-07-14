@@ -32,10 +32,10 @@ const Wasavi = g.Wasavi;
 	const BLINK_COUNT_MAX = 10;
 
 	var buffer = app.buffer;
+	var bracketNode;
 	var timer1, timer2;
 
 	function setColor (visible) {
-		var nodes = buffer.getSpans(Wasavi.EMPHASIS_CLASS);
 		var fg, bg;
 		if (visible) {
 			fg = app.theme.colors.highlightFg;
@@ -45,10 +45,8 @@ const Wasavi = g.Wasavi;
 			fg = app.theme.colors.rowFg;
 			bg = 'transparent';
 		}
-		for (var i = 0; i < nodes.length; i++) {
-			nodes[i].style.color = fg;
-			nodes[i].style.backgroundColor = bg;
-		}
+		bracketNode.style.color = fg;
+		bracketNode.style.backgroundColor = bg;
 	}
 	function clear () {
 		timer1 && clearTimeout(timer1);
@@ -66,14 +64,18 @@ const Wasavi = g.Wasavi;
 
 	timer1 = setTimeout(function () {
 		timer1 = null;
-		buffer.emphasis(initialPos, 1);
-		var count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
-		var visible = true;
+		bracketNode = buffer.emphasis(initialPos, 1)[0];
+
+		let ss = buffer.selectionStart;
+		let count = minmax(1, app.config.vars.matchtime, BLINK_COUNT_MAX);
+		let visible = true;
+
+		app.keyManager.editable.setSelectionRange(buffer.rowNodes(ss), ss.col);
 		setColor(visible);
 		timer2 = setInterval(function () {
 			count--;
 			if (count <= 0) {
-				buffer.unEmphasis();
+				setColor(false);
 				clearInterval(timer2);
 				timer2 = null;
 			}
