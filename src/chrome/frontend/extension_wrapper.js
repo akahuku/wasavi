@@ -143,20 +143,41 @@
 			return this.requestNumber;
 		},
 		getMessage: function (messageId) {},
-		setClipboard: function (data, callback) {
-			this.postMessage({type:'set-clipboard', data:data}, callback);
+		setClipboard: function (data) {
+			if (IS_GECKO) {
+				let buffer = document.getElementById('wasavi_fx_clip');
+				buffer.value = data;
+				buffer.focus();
+				buffer.select();
+				document.execCommand('cut');
+			}
+			else {
+				this.postMessage({type:'set-clipboard', data:data});
+			}
 		},
 		getClipboard: function () {
 			var self = this;
 			var args = Array.prototype.slice.call(arguments);
 			var callback = args.shift();
-			this.postMessage({type:'get-clipboard'}, function (req) {
-				self.clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
+			if (IS_GECKO) {
+				let buffer = document.getElementById('wasavi_fx_clip');
+				buffer.value = '';
+				buffer.focus();
+				document.execCommand('paste');
 				if (callback) {
 					args.unshift(self.clipboardData);
 					callback.apply(null, args);
 				}
-			});
+			}
+			else {
+				this.postMessage({type:'get-clipboard'}, function (req) {
+					self.clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
+					if (callback) {
+						args.unshift(self.clipboardData);
+						callback.apply(null, args);
+					}
+				});
+			}
 		},
 		getPageContextScriptSrc: function (path) {
 			return '';

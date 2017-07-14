@@ -375,4 +375,17 @@
 	ime-mode:disabled;
 }
 
+#wasavi_fx_clip {
+	position:fixed;
+	border:none;
+	outline:none;
+	resize:none;
+	padding:0;
+	left:0;
+	top:-64px;
+	width:100%;
+	height:32px;
+	ime-mode:disabled;
+}
+
 /* vim:set ts=4 sw=4 fenc=UTF-8 ff=unix ft=css fdm=marker : */
