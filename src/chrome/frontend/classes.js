@@ -2214,6 +2214,11 @@ Wasavi.Editor.prototype = new function () {
 				appendNewline.call(this, newline);
 			}
 		},
+		getSelectionRange: function () {
+			return this.isLineOrientSelection ?
+				selectRows.apply(this, arguments).r :
+				select.apply(this, arguments).r;
+		},
 		getSelection: function () {
 			if (this.isLineOrientSelection) {
 				return this.getSelectionLinewise.apply(this, arguments);
@@ -2424,14 +2429,16 @@ Wasavi.Editor.prototype = new function () {
 				return n;
 			}
 
-			var node = this.elm.appendChild(this.rowNodes(n).cloneNode(false));
+			var node = $('wasavi_singleline_scaler');
 			var row = this.rowLength - 1;
 			node.textContent = this.rows(n);
 
-			var right = this.emphasis(
-				new Wasavi.Position(row, n.col),
-				this.rows(row).length - n.col,
-				'closest')[0];
+			var r = document.createRange();
+			r.setStart(node.firstChild, n.col);
+			r.setEnd(node.firstChild, node.textContent.length);
+			var right = document.createElement('span');
+			right.className = 'closest';
+			r.surroundContents(right);
 
 			if (right && right.firstChild) {
 				var width = 0;
@@ -2457,16 +2464,10 @@ Wasavi.Editor.prototype = new function () {
 
 					index += delta;
 					width = left.offsetWidth;
-					var lines = left.getClientRects().length;
 
-					if (width >= pixels || lines >= 2) {
+					if (width >= pixels) {
 						if (phase == 2 || width == pixels) {
-							if (lines >= 2) {
-								index -= 2;
-							}
-							else {
-								index -= Math.abs(widthp - pixels) <= Math.abs(width - pixels) ? 1 : 0;
-							}
+							index -= Math.abs(widthp - pixels) <= Math.abs(width - pixels) ? 1 : 0;
 							break;
 						}
 
@@ -2497,7 +2498,7 @@ Wasavi.Editor.prototype = new function () {
 				}
 			}
 
-			node.parentNode.removeChild(node);
+			node.textContent = '';
 			n.col = clusters.rawIndexAt(minmax(0, index, clusters.length));
 			return n;
 		},

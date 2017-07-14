@@ -1347,7 +1347,7 @@ function install (x, req) {
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
 	config.setData('writeas', x.writeAs);
 
-	refreshIdealWidthPixels();
+	computeIdealWidthPixels();
 	var initialMessage = getFileIoResultInfo('', x.value.length, true);
 	showMessage(initialMessage);
 	document.title = initialMessage;
@@ -1707,7 +1707,7 @@ function showLineInput (prefix, value, curpos) {
 function invalidateIdealWidthPixels () {
 	idealWidthPixels = -1;
 }
-function refreshIdealWidthPixels () {
+function computeIdealWidthPixels () {
 	if (idealWidthPixels >= 0) return;
 	var n = buffer.selectionStart;
 	idealWidthPixels = getPixelWidth(buffer.rows(n).substr(0, n.col));
@@ -2941,6 +2941,34 @@ function getCurrentViewPositionIndices () {
 
 	return result;
 }
+function getNativeCursorPosition (selection, rowNode) {
+	let r1 = selection.getRangeAt(0);
+	let r2 = document.createRange();
+
+	if (!rowNode) {
+		for (let p = r1.startContainer; p; p = p.parentNode) {
+			if (p.nodeName == 'DIV') {
+				rowNode = p;
+				break;
+			}
+		}
+	}
+
+	if (!rowNode) {
+		return undefined;
+	}
+
+	let row = buffer.indexOf(rowNode);
+	let col = 0;
+
+	if (rowNode.firstChild) {
+		r2.setStartBefore(rowNode.firstChild);
+		r2.setEnd(r1.startContainer, r1.startOffset);
+		col = r2.toString().length;
+	}
+
+	return new Position(row, col);
+}
 
 // setters
 function setLocalStorage (keyName, value) {
@@ -3106,46 +3134,52 @@ function motionLineEnd (c) {
 	return true;
 }
 function motionLineStartDenotative (c, realTop) {
-	var n = buffer.selectionStart;
-	var line = buffer.getGraphemeClusters(n);
-	var index = line.getClusterIndexFromUTF16Index(n.col);
-	var initialIndex = index;
-	var curRect = buffer.charRectAt(n, line.rawStringAt(index).length);
-	while (index > 0) {
-		index--;
-		n.col = line.rawIndexAt(index);
-		var newRect = buffer.charRectAt(n, line.rawStringAt(index).length);
-		if (newRect.top < curRect.top) {
-			index++;
-			break;
+	let docSelection = document.getSelection();
+	let n = buffer.selectionStart;
+	let initialIndex = n.col;
+
+	if (!buffer.isNewline(n)) {
+		buffer.elm.contentEditable = true;
+		try {
+			docSelection.removeAllRanges();
+			docSelection.addRange(buffer.getSelectionRange(n, n));
+			docSelection.modify('move', 'left', 'lineboundary');
+			n = getNativeCursorPosition(docSelection);
+		}
+		finally {
+			buffer.elm.contentEditable = false;
+		}
+
+		if (!realTop) {
+			while (n.col < initialIndex && spc('S').test(buffer.charAt(n))) {
+				n.col++;
+			}
 		}
 	}
-	if (!realTop) {
-		while (index < initialIndex && spc('S').test(line.charAt(index))) {
-			index++;
-		}
-	}
-	n.col = line.rawIndexAt(index);
+
 	buffer.selectionStart = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
 	return true;
 }
 function motionLineEndDenotative (c) {
-	var n = buffer.selectionEnd;
-	var line = buffer.getGraphemeClusters(n);
-	var index = line.getClusterIndexFromUTF16Index(n.col);
-	var curRect = buffer.charRectAt(n, line.rawStringAt(index).length);
-	while (index < line.length) {
-		index++;
-		n.col = line.rawIndexAt(index);
-		var newRect = buffer.charRectAt(n, line.rawStringAt(index).length);
-		if (newRect.top > curRect.top) {
-			index--;
-			break;
+	let docSelection = document.getSelection();
+	let n = buffer.selectionEnd;
+
+	if (!buffer.isNewline(n)) {
+		buffer.elm.contentEditable = true;
+		try {
+			docSelection.removeAllRanges();
+			docSelection.addRange(buffer.getSelectionRange(n, n));
+			docSelection.modify('move', 'right', 'lineboundary');
+			docSelection.modify('move', 'left', 'character');
+			n = getNativeCursorPosition(docSelection);
+		}
+		finally {
+			buffer.elm.contentEditable = false;
 		}
 	}
-	n.col = line.rawIndexAt(index);
+
 	buffer.selectionEnd = n;
 	prefixInput.motion = c;
 	invalidateIdealWidthPixels();
@@ -3785,7 +3819,7 @@ function motionFindByRegexBackward (c, count) {
 }
 function motionUpDown (c, count, isDown) {
 	count || (count = 1);
-	refreshIdealWidthPixels();
+	computeIdealWidthPixels();
 
 	var n;
 	if (isDown) {
@@ -3820,216 +3854,124 @@ function motionDown (c, count) {
 	return motionUpDown(c, count, true);
 }
 const motionUpDownDenotative = (function () {
-	function findNextTopOfWrapLine (start) {
-		var n = start.clone();
-		var clusters = buffer.getGraphemeClusters(n).clone();
-		var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
-		var cursorLength = clusters.rawStringAt(clusterIndex).length;
-
-		var foundBoundary = false;
-		var right = buffer.emphasis(
-			new Position(n.row, n.col + cursorLength),
-			buffer.rows(n).length - (n.col + cursorLength),
-			'wrapspan')[0];
-
-		if (right && right.firstChild) {
-			var delta = 1;
-			var phase = 0;
-
-			var rightText = right.firstChild;
-			var left = buffer.emphasis(n, cursorLength, 'wrapspan')[0];
-			var leftText = left.firstChild;
-
-			clusters.delete(0, clusterIndex + 1);
-			//left.style.backgroundColor = 'cyan';
-			//right.style.backgroundColor = 'red';
-
-			while (clusters.length) {
-				var clusterLength = Math.min(delta, clusters.length);
-				var clusterFragment = clusters.substr(0, clusterLength);
-				var fragment = clusterFragment.toString();
-				var length = fragment.length;
-
-				clusters.delete(0, clusterLength);
-				leftText.appendData(fragment);
-				rightText.deleteData(0, length);
-
-				if (left.getClientRects().length >= 2) {
-					if (phase == 2) {
-						n.col += Unistring(leftText.nodeValue).delete(-1).toString().length;
-						foundBoundary = true;
-						break;
-					}
-
-					clusters.insert(clusterFragment, 0);
-					leftText.deleteData(
-						leftText.nodeValue.length - length, length);
-					rightText.insertData(0, fragment);
-					if (phase == 1) {
-						if (delta > 2) {
-							delta = Math.max(1, delta >> 1);
-						}
-						else {
-							delta = 1;
-							phase = 2;
-						}
-					}
-					else {
-						phase = 1;
-						delta = Math.max(1, delta >> 1);
-					}
-					continue;
-				}
-
-				if (phase == 0) {
-					delta <<= 1;
-				}
-			}
+	/*
+	 * A blank line in wasavi is a div element containing empty text node.
+	 *
+	 * However, selection#modify() on Chrome does not place a cursor on
+	 * such element.
+	 *
+	 * As this workaround, we make blank lines pure empty element before up/down,
+	 * then restore after processing.
+	 */
+	function start (isDown, n, count) {
+		if (window.chrome && !Wasavi.IS_GECKO) {
+			(isDown ? startDown : startUp)(n, count);
 		}
-
-		buffer.unEmphasis('wrapspan');
-
-		if (!foundBoundary) {
-			n.row++;
-			n.col = 0;
-
-			if (n.row >= buffer.rowLength) {
-				return true;
-			}
-		}
-
-		start.row = n.row;
-		start.col = n.col;
-		return false;
 	}
 
-	function findPrevTailOfWrapLine (start) {
-		var n = start.clone();
-		var clusters = buffer.getGraphemeClusters(n).clone();
-		var clusterIndex = clusters.getClusterIndexFromUTF16Index(n.col);
-
-		var foundBoundary = false;
-		var left = buffer.emphasis(
-			new Position(n.row, 0),
-			n.col,
-			'wrapspan')[0];
-
-		if (left && left.firstChild) {
-			var delta = 1;
-			var phase = 0;
-
-			var leftText = left.firstChild;
-			var right = buffer.emphasis(
-				n, clusters.rawStringAt(clusterIndex).length, 'wrapspan')[0];
-			var rightText = right.firstChild;
-
-			clusters.delete(clusterIndex);
-			//left.style.backgroundColor = 'red';
-			//right.style.backgroundColor = 'cyan';
-
-			while (clusters.length) {
-				var clusterLength = Math.min(delta, clusters.length);
-				var clusterFragment = clusters.substr(-clusterLength);
-				var fragment = clusterFragment.toString();
-				var length = fragment.length;
-
-				clusters.delete(-clusterLength);
-				rightText.insertData(0, fragment);
-				leftText.deleteData(leftText.nodeValue.length - length, length);
-
-				if (right.getClientRects().length >= 2) {
-					if (phase == 2) {
-						n.col -= Unistring(rightText.nodeValue).delete(-1).toString().length;
-						foundBoundary = true;
-						break;
-					}
-
-					clusters.append(clusterFragment);
-					leftText.appendData(fragment);
-					rightText.deleteData(0, length);
-					if (phase == 1) {
-						if (delta > 2) {
-							delta = Math.max(1, delta >> 1);
-						}
-						else {
-							delta = 1;
-							phase = 2;
-						}
-					}
-					else {
-						phase = 1;
-						delta = Math.max(1, delta >> 1);
-					}
-					continue;
-				}
-
-				if (phase == 0) {
-					delta <<= 1;
-				}
-			}
+	function done (isDown, n, count) {
+		if (window.chrome && !Wasavi.IS_GECKO) {
+			(isDown ? doneDown : doneUp)(n, count);
 		}
-
-		buffer.unEmphasis('wrapspan');
-
-		if (!foundBoundary) {
-			if (n.row == 0) {
-				return true;
-			}
-
-			n.row--;
-			n.col = buffer.rows(n).length;
-		}
-
-		start.row = n.row;
-		start.col = n.col;
-		return false;
 	}
 
-	function findPrevTopOfWrapLine (start) {
-		if (findPrevTailOfWrapLine(start)) {
-			return true;
+	function startDown (n, count) {
+		let goal = Math.min(buffer.rowLength - 1, n.row + count);
+		n = n.clone();
+		while (++n.row <= goal) {
+			if (buffer.rows(n) == '') {
+				let node = buffer.rowNodes(n);
+				node.removeChild(node.firstChild);
+			}
 		}
-		if (findPrevTailOfWrapLine(start)) {
-			start.row = start.col = 0;
-			return false;
+	}
+
+	function doneDown (n, count) {
+		let goal = Math.min(buffer.rowLength - 1, n.row + count);
+		n = n.clone();
+		while (++n.row <= goal) {
+			let node = buffer.rowNodes(n);
+			if (!node.firstChild) {
+				node.appendChild(document.createTextNode(''));
+			}
 		}
-		var next = buffer.rightClusterPos(start);
-		start.row = next.row;
-		start.col = next.col;
-		return false;
+	}
+
+	function startUp (n, count) {
+		let goal = Math.max(0, n.row - count);
+		n = n.clone();
+		while (--n.row >= goal) {
+			if (buffer.rows(n) == '') {
+				let node = buffer.rowNodes(n);
+				node.removeChild(node.firstChild);
+			}
+		}
+	}
+
+	function doneUp (n, count) {
+		let goal = Math.max(0, n.row - count);
+		n = n.clone();
+		while (--n.row >= goal) {
+			let node = buffer.rowNodes(n);
+			if (!node.firstChild) {
+				node.appendChild(document.createTextNode(''));
+			}
+		}
 	}
 
 	return function motionUpDownDenotative (c, count, isDown) {
 		count || (count = 1);
-		refreshIdealWidthPixels();
-		var n = isDown ? buffer.selectionEnd : buffer.selectionStart;
-		var overed = false;
+		computeIdealWidthPixels();
 
-		for (var i = 0; i < count; i++) {
-			if (isDown  && findNextTopOfWrapLine(n)
-			||  !isDown && findPrevTopOfWrapLine(n)) {
-				overed = true;
-				break;
+		let n = isDown ? buffer.selectionEnd : buffer.selectionStart;
+		let orign = n.clone();
+		let docSelection = document.getSelection();
+
+		start(isDown, orign, count);
+		buffer.elm.contentEditable = true;
+		try {
+			docSelection.removeAllRanges();
+			docSelection.addRange(buffer.getSelectionRange(n, n));
+
+			let direction = isDown ? 'forward' : 'backward';
+			for (let i = 0; i < count; i++) {
+				docSelection.modify('move', direction, 'line');
+			}
+
+			let newn = getNativeCursorPosition(docSelection);
+			if (newn) {
+				if (!buffer.isNewline(newn) && !buffer.isEndOfText(newn)) {
+					// get position to top of logical line
+					docSelection.modify('move', 'left', 'lineboundary');
+					newn = getNativeCursorPosition(docSelection);
+
+					// get position to bottom of logical line
+					docSelection.modify('move', 'right', 'lineboundary');
+					docSelection.modify('move', 'left', 'character');
+					let right = getNativeCursorPosition(docSelection);
+
+					// get the ideal cursor position
+					newn = buffer.getClosestOffsetToPixels(newn, idealDenotativeWidthPixels);
+					if (newn.gt(right)) {
+						newn = right;
+					}
+				}
+
+				n = newn;
 			}
 		}
+		finally {
+			buffer.elm.contentEditable = false;
+			done(isDown, orign, count);
+		}
 
-		if (overed) {
-			if (i == 0) {
-				requestNotice({
-					silent:isDown ? _('Tail of text.') : _('Top of text.')
-				});
-			}
+		if (orign.eq(n)) {
+			requestNotice({silent:isDown ? _('Tail of text.') : _('Top of text.')});
 		}
 		else {
-			n = buffer.getClosestOffsetToPixels(n, idealDenotativeWidthPixels);
-			if (isDown) {
-				buffer.selectionEnd = n;
-			}
-			else {
-				buffer.selectionStart = n;
-			}
+			buffer[isDown ? 'selectionEnd' : 'selectionStart'] = n;
 		}
-		invalidateIdealWidthPixels();
+
 		prefixInput.motion = c;
 		isVerticalMotion = true;
 		return true;
