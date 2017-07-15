@@ -2969,6 +2969,39 @@ function getNativeCursorPosition (selection, rowNode) {
 
 	return new Position(row, col);
 }
+function getClipboard () {
+	keyManager.lock();
+	if (Wasavi.IS_GECKO) {
+		document.removeEventListener('paste', handlePaste, false);
+		return new Promise(resolve => {
+			let s = '';
+
+			function handlePasteTemp (e) {
+				s = e.clipboardData.getData('text/plain').replace(/\r\n/g, '\n');
+			}
+
+			let buffer = $('wasavi_fx_clip');
+			buffer.value = '';
+			buffer.focus();
+			document.addEventListener('paste', handlePasteTemp, false);
+			document.execCommand('paste');
+			document.removeEventListener('paste', handlePasteTemp, false);
+			document.addEventListener('paste', handlePaste, false);
+			registers.get('*').set(s);
+			keyManager.unlock();
+			resolve();
+		});
+	}
+	else {
+		return new Promise(resolve => {
+			extensionChannel.getClipboard(text => {
+				registers.get('*').set(text);
+				keyManager.unlock();
+				resolve();
+			});
+		});
+	}
+}
 
 // setters
 function setLocalStorage (keyName, value) {
@@ -4938,7 +4971,7 @@ function handleKeydown (g) {
 			},
 			error => {
 				if (error) {
-					console.error(`sequence point with an error: ${error.stack}`);
+					console.error(`sequence point with an error: ${error.message}\n${error.stack}`);
 					handleWindowError(error);
 				}
 				else {
@@ -5870,14 +5903,7 @@ const commandMap = {
 			prefixInput.appendRegister(c);
 			requestShowPrefixInput();
 			if (registers.isClipboard(c)) {
-				keyManager.lock();
-				return new Promise(resolve => {
-					extensionChannel.getClipboard(text => {
-						registers.get('*').set(text);
-						keyManager.unlock();
-						resolve();
-					});
-				});
+				return getClipboard();
 			}
 			else if (c == '=') {
 				requestInputMode('line_input', {
@@ -8247,23 +8273,16 @@ const editMap = {
 
 			var s;
 			if (registers.isClipboard(c)) {
-				keyManager.lock();
-				return new Promise(resolve => {
-					extensionChannel.getClipboard(data => {
-						registers.get('*').set(data);
-						keyManager.unlock();
-
-						if (data == '') {
-							requestShowMessage(_('Register {0} is empty.', c));
-						}
-						else {
-							paste(1, {content: data, isForward: false});
-							inputHandler.appendText(data);
-							inputHandler.appendStroke(data);
-						}
-
-						resolve();
-					});
+				return getClipboard().then(() => {
+					let data = registers.get('*').data;
+					if (data == '') {
+						requestShowMessage(_('Register {0} is empty.', c));
+					}
+					else {
+						paste(1, {content: data, isForward: false});
+						inputHandler.appendText(data);
+						inputHandler.appendStroke(data);
+					}
 				});
 			}
 			else if (c == '=') {
@@ -8565,22 +8584,15 @@ const lineInputEditMap = {
 		wait_register:function (c, o) {
 			var s;
 			if (registers.isClipboard(c)) {
-				keyManager.lock();
-				return new Promise(resolve => {
-					extensionChannel.getClipboard(data => {
-						registers.get('*').set(data);
-						keyManager.unlock();
-
-						if (data == '') {
-							notifier.show(_('Register {0} is empty.', c));
-						}
-						else {
-							notifier.hide();
-							insertToLineInput(lineInputInfo, data);
-						}
-
-						resolve();
-					});
+				return getClipboard().then(() => {
+					let data = registers.get('*').data;
+					if (data == '') {
+						notifier.show(_('Register {0} is empty.', c));
+					}
+					else {
+						notifier.hide();
+						insertToLineInput(lineInputInfo, data);
+					}
 				});
 			}
 			else if (c == '=') {

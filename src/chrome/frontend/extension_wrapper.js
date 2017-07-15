@@ -82,7 +82,6 @@
 	function ExtensionWrapper () {
 		this.tabId = null;
 		this.requestNumber = 0;
-		this.clipboardData = '';
 	}
 	ExtensionWrapper.prototype = {
 		get name () {return extensionName},
@@ -159,25 +158,11 @@
 			var self = this;
 			var args = Array.prototype.slice.call(arguments);
 			var callback = args.shift();
-			if (IS_GECKO) {
-				let buffer = document.getElementById('wasavi_fx_clip');
-				buffer.value = '';
-				buffer.focus();
-				document.execCommand('paste');
-				if (callback) {
-					args.unshift(self.clipboardData);
-					callback.apply(null, args);
-				}
-			}
-			else {
-				this.postMessage({type:'get-clipboard'}, function (req) {
-					self.clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
-					if (callback) {
-						args.unshift(self.clipboardData);
-						callback.apply(null, args);
-					}
-				});
-			}
+			this.postMessage({type:'get-clipboard'}, function (req) {
+				let clipboardData = (req && req.data || '').replace(/\r\n/g, '\n');
+				args.unshift(clipboardData);
+				callback.apply(null, args);
+			});
 		},
 		getPageContextScriptSrc: function (path) {
 			return '';
