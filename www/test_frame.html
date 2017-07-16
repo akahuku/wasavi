@@ -4,16 +4,25 @@
 		<meta charset="UTF-8">
 		<title>wasavi test frame</title>
 		<style>
-			body { background-color:#fff; color:#333; }
+			body {
+				background-color:#fff;
+				color:#333;
+			}
+			h1 {
+				margin:0;
+				padding:0;
+				line-height:1;
+			}
 			#container { margin:32px 0 0 32px; }
-			#log-container { margin:16px 0 0 32px; }
 			#textbox-container {
-				border-collapse:collapse;
-				border:none;
+				display:flex;
+				margin:8px 0 8px 0;
 			}
 			#t2 {
+				box-sizing:border-box;
 			    width:400px;
 			    height:300px;
+				margin:0 8px 0 0;
 			    padding:0;
 			    font:normal normal normal medium/1 "Consolas";
 			}
@@ -21,29 +30,30 @@
 				background-color:#eee;
 			}
 			#t3 {
+				box-sizing:border-box;
 				width:400px;
 				height:300px;
 				border:1px solid silver;
 				padding:1px;
+				flex-grow:1;
 				background-color:#eee;
 			    font:normal normal normal medium/1 "Consolas";
 				overflow-y:scroll;
 			}
+			#log-container {
+				display:flex;
+				margin:16px 0 0 32px;
+				background-color:#000;
+			}
 			#test-log {
-				width:100%;
+				flex-grow:1;
 				height:300px;
 				box-sizing:border-box;
 			}
-			#log-container > table {
-				border-collapse:collapse;
-				width:100%;
-			}
-			#log-container td {
-				width:50%;
-			}
 			#state {
-				background-color:#eee;
+				width:40%;
 				height:300px;
+				background-color:#eee;
 			}
 		</style>
 		<script>
@@ -186,12 +196,10 @@
 		<hr>
 		<form id="container" action="#">
 			<div><input type="text" id="t1"></div>
-			<table id="textbox-container">
-				<tr>
-					<td><textarea id="t2" data-textarea-extension="wasavi"></textarea></td>
-					<td><div id="t3" contenteditable="true"></div></td>
-				</tr>
-			</table>
+			<div id="textbox-container">
+				<textarea id="t2" data-textarea-extension="wasavi"></textarea>
+				<div id="t3" contenteditable="true"></div>
+			</div>
 			<div>
 				<input type="submit" id="submit-button">
 				<input type="reset" id="reset-button">
@@ -203,12 +211,8 @@
 			</div>
 		</form>
 		<div id="log-container">
-			<table>
-				<tr>
-					<td><textarea id="test-log"></textarea></td>
-					<td><div id="state"></div></td>
-				</tr>
-			</table>
+			<textarea id="test-log"></textarea>
+			<div id="state"></div>
 		</div>
 	</body>
 </html>
