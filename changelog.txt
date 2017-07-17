@@ -1,3 +1,41 @@
+0.7.721
+
+	* Relocate wasavi even if target position changes (#169)
+	* clipboard fixes for WebExtensions
+	* fix the issue that cursor position becomes illegal after emphasis a pair bracket
+	* overhaule gj/gk/g^/g$ (#161, #162)
+
+	* 対象の要素の位置が変化した場合も wasavi を再配置するようにした (#169)
+	* WebExtensions 版のクリップボード関連の修正
+	* 対となる括弧を強調表示した後にカーソルの位置が変になるのを修正
+	* gj/gj/g^/g$ コマンドをオーバーホール (#161, #162)
+
+0.7.711
+
+	* make sound settings controlled by wasavi options (#172)
+	* suppress 'This connection is not secure' alert on Firefox (#174)
+	* add visual bell feature and visualbell option (#172)
+	* open console automatically if there is an error in exrc (#171)
+	* make ^C exits input mode as well as esc key (#167)
+	* fix the issue charwise p command on empty line is incorrect (#163)
+	* support migemo search
+	* use marquee element if message is longer than width of status line
+	* use Promise
+	* update Unicode database for fFtT command to 9.0.0
+	* update internal Unicode data to 9.0.0
+
+	* 効果音の設定は、wasavi のオプションで制御するようにした (#172)
+	* Firefox 上で 'The connection is not secure' という警告が出るのを抑制 (#174)
+	* ビジュアルベル機能及び visualbell オプションを追加 (#172)
+	* exrc にエラーがある場合は自動的にコンソールを開くようにした (#171)
+	* esc と同様に ^C でもインプットモードを抜けるようにした (#167)
+	* 文字単位の p コマンドが空行上で正しく動作しないのを修正 (#163)
+	* migemo 検索に対応した
+	* ステータスラインのメッセージが長い場合に marquee 要素を使うようにした
+	* Promise を使うようにした
+	* fFtT コマンドが使用する Unicode データベースを 9.0.0 にアップデートした
+	* 内部で参照する Unicode データベースを 9.0.0 にアップデートした
+
 0.6.690
 
 	* improve expression parser
