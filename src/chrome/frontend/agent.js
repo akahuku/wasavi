@@ -567,19 +567,21 @@ function createElementRemoveListener (element, callback) {
 }
 
 function createElementResizeListener (element, callback) {
-	function fireIfResized () {
+	function fireIfResized (e) {
 		if (timer) return;
 		timer = setTimeout(function () {
 			timer = null;
+
 			var resized = false;
-			if (element.offsetWidth != width) {
-				resized = true;
-				width = element.offsetWidth;
-			}
-			if (element.offsetHeight != height) {
-				resized = true;
-				height = element.offsetHeight;
-			}
+			var currentRect = element.getBoundingClientRect();
+
+			['left', 'top', 'width', 'height'].forEach(p => {
+				if (rect[p] != currentRect[p]) {
+					rect[p] = currentRect[p];
+					resized = true;
+				}
+			});
+
 			resized && callback({target: element});
 		}, 100);
 	}
@@ -600,9 +602,18 @@ function createElementResizeListener (element, callback) {
 		element.removeEventListener('mouseup', fireIfResized, false);
 	}
 
+	function getRect (element) {
+		var r = element.getBoundingClientRect();
+		return {
+			left: r.left,
+			top: r.top,
+			width: r.width,
+			height: r.height
+		};
+	}
+
 	var mo = getMutationObserver('AttrModified', attrModified);
-	var width = element.offsetWidth;
-	var height = element.offsetHeight;
+	var rect = getRect(element);
 	var timer;
 
 	mo = new mo(fireIfResized);
