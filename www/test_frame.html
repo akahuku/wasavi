@@ -182,6 +182,12 @@
 					}
 				}, false);
 
+				window
+				.addEventListener('load', function (e) {
+					document.getElementById('t2').value = '';
+					document.getElementById('t2').focus();
+				}, false);
+
 				(function () {
 					function handler (e) {
 						doLog(e.target.id + ': ' + e.type + '(' + Object.prototype.toString.call(e) + ') event fired.');
