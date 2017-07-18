@@ -571,18 +571,7 @@ function createElementResizeListener (element, callback) {
 		if (timer) return;
 		timer = setTimeout(function () {
 			timer = null;
-
-			var resized = false;
-			var currentRect = element.getBoundingClientRect();
-
-			['left', 'top', 'width', 'height'].forEach(p => {
-				if (rect[p] != currentRect[p]) {
-					rect[p] = currentRect[p];
-					resized = true;
-				}
-			});
-
-			resized && callback({target: element});
+			callback({target: element});
 		}, 100);
 	}
 
