@@ -3769,6 +3769,8 @@ function motionFindByRegexBackward (c, count) {
 	let regex = isObject(c) ? c.regex : getFindRegex(c);
 	let wrapped = false;
 	let opts = regexConverter.getDefaultOption();
+	let startn;
+	let linetop;
 
 	count || (count = 1);
 
@@ -3822,8 +3824,8 @@ function motionFindByRegexBackward (c, count) {
 	}
 
 	if (regex && regex.source.length) {
-		let startn = n;
-		let linetop = getLineTop(n);
+		startn = n;
+		linetop = getLineTop(n);
 		regex.lastIndex = linetop;
 		for (let i = 0; i < count; i++) {
 			let loop;
