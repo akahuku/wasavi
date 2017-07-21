@@ -74,7 +74,8 @@
     "scripts/page_context.js"
   ],
   "options_ui": {
-    "page": "options.html"
+    "page": "options.html",
+    "open_in_tab": true
   },
   "homepage_url": "http://appsweets.net/",
   "update_url":"https://github.com/akahuku/wasavi/raw/master/dist/chrome.xml"
