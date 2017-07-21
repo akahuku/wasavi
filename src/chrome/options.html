@@ -48,8 +48,8 @@
 							monospace;
 			}
 			body {
-				background-color:#fff;
-				color:#000;
+				background-color:#fbfbfb;
+				color:#333;
 				font-family:"trebuchet ms",
 							"lucida grande",
 							"lucida sans unicode",
@@ -57,6 +57,16 @@
 							"helvetica",
 							sans-serif;
 				font-size:medium;
+			}
+			a {
+				color:#55f;
+				border-bottom:1px dotted #55f;
+				text-decoration:none;
+			}
+			a:hover {
+				color:#d00;
+				border-bottom:1px dotted #d00;
+				text-decoration:none;
 			}
 			ul {
 				margin:1em 0 0 0;
@@ -72,23 +82,29 @@
 				font-size:xx-large;
 				font-weight:bold;
 				border-bottom:1px solid silver;
+				display:flex;
 			}
 			h1 img {
 				vertical-align:middle;
 				margin:0 8px 0 0;
 			}
+			h1 div.title {
+				flex-grow:1;
+			}
 			h1 div.credit {
-				float:right;
-				font-size:medium;
+				font-size:small;
 				font-weight:normal;
 			}
 			h2 {
-				float:left;
-				clear:left;
-				padding:0 0 0 100px;
-				margin:0;
-				font-size:large;
+				margin:-16px -16px 16px -16px;
+				padding:10px 16px 10px 16px;
+				font-size:x-large;
 				font-weight:bold;
+				line-height:1;
+				background-color:#f0f0f0;
+				color:#333;
+				border-radius:2px 2px 0 0;
+				border-bottom:1px solid #e0e0e0;
 			}
 			h3 {
 				margin:0 0 8px 0;
@@ -97,8 +113,12 @@
 				font-weight:bold;
 			}
 			div.opt-unit {
-				margin:0 0 0 300px;
-				padding:0;
+				margin:0 auto 32px auto;
+				padding:16px;
+				max-width:640px;
+				background-color:#fff;
+				border-radius:2px;
+				box-shadow:0px 1px 3px 0px rgba(0,0,0,0.75);
 			}
 			div.opt-unit-inner {
 				margin:0.5em 0 0 2em;
@@ -111,23 +131,25 @@
 				margin:0 0 4px 0;
 			}
 			div.opt-unit2 {
-				background-color:#eaeef3;
+				background-color:#eee;
 				position:fixed;
 				left:-8px;
 				right:-8px;
 				bottom:-8px;
-				padding:12px 0 20px 300px;
+				padding:12px 0 20px 0;
 				box-shadow: 0 0 2px 2px rgba(128,128,128,0.5) inset;
+			}
+			div.opt-unit2 > div {
+				margin:auto;
+				width:640px;
 			}
 			div.bottom {
 				height:100px;
 			}
 			div.tips {
 				margin:0 0 1em 0;
-				width:640px;
 				font-size:80%;
 				color:#888;
-				/*white-space:pre-line*/;
 			}
 			div.tips i {
 				color:#333;
@@ -144,25 +166,30 @@
 				border:none;
 				border-top:1px solid #e0e0e0;
 			}
-			textarea {
+			textarea, input[type="text"] {
 				background-color:#f0f0f0;
 				color:#000;
-				border:1px solid #808080;
+				border:1px solid #a0a0a0;
 			}
 			textarea#exrc {
-				width:640px;
+				box-sizing:border-box;
+				width:100%;
 				height:320px;
 			}
 			textarea#qa-blacklist {
-				width:640px;
+				box-sizing:border-box;
+				width:100%;
 				height:160px;
 			}
 			input#shortcut, input#font-family {
-				width:640px;
+				box-sizing:border-box;
+				width:100%;
 			}
 			button#save {
 				font-size:large;
 				font-weight:bold;
+				padding-left:4em;
+				padding-right:4em;
 			}
 			button#capture {
 				font-size:medium;
@@ -193,93 +220,116 @@
 	</head>
 	<body>
 		<h1>
+			<div class="title">
+				<img src="images/icon048.png">__MSG_option_title__
+			</div>
 			<div class="credit">
 				<a href="http://appsweets.net/wasavi/"><img src="images/appsweets.png">appsweets.net</a>
 				| <a href="https://pledgie.com/campaigns/26501">Make a donation</a>
 				| <a href="LICENSE">__MSG_option_license__</a>
 				| <a href="NOTICE">__MSG_option_notice__</a>
 			</div>
-			<img src="images/icon048.png">__MSG_option_title__
 		</h1>
-		<h2>__MSG_option_exrc_head__</h2>
-		<div class="opt-unit">
-			<textarea id="exrc" class="monospace"></textarea>
-			<div class="tips">__MSG_option_exrc_desc__</div>
-		</div>
-		<hr>
-		<h2>__MSG_option_target_elements_head__</h2>
-		<div class="opt-unit" id="targets-container">
-			<label><input type="checkbox" id="enableTextArea"       >textarea</label>
-			<label><input type="checkbox" id="enableText"           >input [type=text]</label>
-			<label><input type="checkbox" id="enableSearch"         >input [type=search]</label>
-			<label><input type="checkbox" id="enableTel"            >input [type=tel]</label>
-			<label><input type="checkbox" id="enableUrl"            >input [type=url]</label>
-			<label><input type="checkbox" id="enableEmail"          >input [type=email]</label>
-			<label><input type="checkbox" id="enablePassword"       >input [type=password]</label>
-			<label><input type="checkbox" id="enableNumber"         >input [type=number]</label>
-			<label><input type="checkbox" id="enableContentEditable">[contentEditable]</label>
-			<label><input type="checkbox" id="enablePage"           >body</label>
-		</div>
-		<hr>
-		<h2>__MSG_option_starting_type_head__</h2>
-		<div class="opt-unit">
-			<label><input type="radio" name="quick-activation" value="1">__MSG_option_quick_activation_on__</label>
 
-			<label><input type="radio" name="quick-activation" value="0">__MSG_option_quick_activation_off__</label>
-			<div class="opt-unit-inner">
-				<label><input type="text" id="shortcut" class="monospace"></label>
-				<button id="capture"
-					><span id="capture-normal" class="normal">__MSG_option_capture_normal__</span
-					><span id="capture-wait" class="wait"></span
-					><span id="capture-wait-buffer" class="hidden">__MSG_option_capture_wait__</span
-				></button>
-				<div class="tips">__MSG_option_target_elements_desc__</div>
+		<div class="opt-unit">
+			<h2>__MSG_option_exrc_head__</h2>
+			<div>
+				<textarea id="exrc" class="monospace"></textarea>
+				<div class="tips">__MSG_option_exrc_desc__</div>
 			</div>
 		</div>
-		<hr>
-		<h2>__MSG_option_exceptional_urls_head__</h2>
-		<div class="opt-unit">
-			<textarea id="qa-blacklist" class="monospace"></textarea>
-			<div class="tips">__MSG_option_qa_blacklist_tips__</div>
-		</div>
-		<hr>
-		<h2>__MSG_option_font_family_head__</h2>
-		<div class="opt-unit">
+
+		<div class="opt-unit" id="targets-container">
+			<h2>__MSG_option_target_elements_head__</h2>
 			<div>
-				<h3>__MSG_option_font_family_head__</h3>
+				<label><input type="checkbox" id="enableTextArea"       >textarea</label>
+				<label><input type="checkbox" id="enableText"           >input [type=text]</label>
+				<label><input type="checkbox" id="enableSearch"         >input [type=search]</label>
+				<label><input type="checkbox" id="enableTel"            >input [type=tel]</label>
+				<label><input type="checkbox" id="enableUrl"            >input [type=url]</label>
+				<label><input type="checkbox" id="enableEmail"          >input [type=email]</label>
+				<label><input type="checkbox" id="enablePassword"       >input [type=password]</label>
+				<label><input type="checkbox" id="enableNumber"         >input [type=number]</label>
+				<label><input type="checkbox" id="enableContentEditable">[contentEditable]</label>
+				<label><input type="checkbox" id="enablePage"           >body</label>
+			</div>
+		</div>
+
+		<div class="opt-unit">
+			<h2>__MSG_option_starting_type_head__</h2>
+			<div>
+				<label><input type="radio" name="quick-activation" value="1">__MSG_option_quick_activation_on__</label>
+
+				<label><input type="radio" name="quick-activation" value="0">__MSG_option_quick_activation_off__</label>
+				<div class="opt-unit-inner">
+					<label><input type="text" id="shortcut" class="monospace"></label>
+					<button id="capture"
+						><span id="capture-normal" class="normal">__MSG_option_capture_normal__</span
+						><span id="capture-wait" class="wait"></span
+						><span id="capture-wait-buffer" class="hidden">__MSG_option_capture_wait__</span
+					></button>
+					<div class="tips">__MSG_option_target_elements_desc__</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="opt-unit">
+			<h2>__MSG_option_exceptional_urls_head__</h2>
+			<div>
+				<textarea id="qa-blacklist" class="monospace"></textarea>
+				<div class="tips">__MSG_option_qa_blacklist_tips__</div>
+			</div>
+		</div>
+
+		<div class="opt-unit">
+			<h2>__MSG_option_font_family_head__</h2>
+			<div>
 				<label><input type="text" id="font-family" class="monospace"></label>
 			</div>
 		</div>
-		<hr>
-		<h2>__MSG_option_preferred_storage_head__</h2>
+
 		<div class="opt-unit" id="fstab-container">
-			<label><input type="radio" name="fstab" id="fstab-dropbox" checked="checked" value="dropbox">Dropbox</label>
-			<label><input type="radio" name="fstab" id="fstab-gdrive" value="gdrive">Google Drive</label>
-			<label><input type="radio" name="fstab" id="fstab-onedrive" value="onedrive">Microsoft OneDrive</label>
-			<label><input type="radio" name="fstab" id="fstab-file" value="file">Local filesystem</label>
+			<h2>__MSG_option_preferred_storage_head__</h2>
+			<div>
+				<label><input type="radio" name="fstab" id="fstab-dropbox" checked="checked" value="dropbox">Dropbox</label>
+				<label><input type="radio" name="fstab" id="fstab-gdrive" value="gdrive">Google Drive</label>
+				<label><input type="radio" name="fstab" id="fstab-onedrive" value="onedrive">Microsoft OneDrive</label>
+				<label><input type="radio" name="fstab" id="fstab-file" value="file">Local filesystem</label>
+			</div>
 		</div>
-		<hr>
-		<h2>__MSG_option_upgrade_head__</h2>
+
 		<div class="opt-unit">
-			<label><input type="checkbox" id="upgrade-notify">__MSG_option_upgrade_notify__</label>
+			<h2>__MSG_option_upgrade_head__</h2>
+			<div>
+				<label><input type="checkbox" id="upgrade-notify">__MSG_option_upgrade_notify__</label>
+			</div>
 		</div>
-		<hr>
-		<h2>__MSG_option_init_head__</h2>
+
 		<div class="opt-unit">
-			<button id="opt-init">__MSG_option_init_desc__</button>
-			<span id="opt-init-confirm" class="hidden">__MSG_option_init_confirm__</span>
+			<h2>__MSG_option_init_head__</h2>
+			<div>
+				<button id="opt-init">__MSG_option_init_desc__</button>
+				<span id="opt-init-confirm" class="hidden">__MSG_option_init_confirm__</span>
+			</div>
 		</div>
-		<hr>
-		<h2>__MSG_option_debug_head__</h2>
+
 		<div class="opt-unit">
-			<label><input type="checkbox" id="log-mode">__MSG_option_log_desc__</label>
+			<h2>__MSG_option_debug_head__</h2>
+			<div>
+				<label><input type="checkbox" id="log-mode">__MSG_option_log_desc__</label>
+			</div>
 		</div>
+
 		<div class="bottom">
 		</div>
+
 		<div class="opt-unit2">
-			<button id="save">__MSG_option_save__</button>
-			<span id="save-result">__MSG_option_saved__</span>
+			<div>
+				<button id="save">__MSG_option_save__</button>
+				<span id="save-result">__MSG_option_saved__</span>
+			</div>
 		</div>
+
 		<div id="overlay" class="overlay covered"></div>
 	</body>
 </html>
