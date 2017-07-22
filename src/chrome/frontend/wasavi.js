@@ -6829,6 +6829,7 @@ const commandMap = {
 		}
 
 		registers.get('/').set(word);
+		lastRegexFindCommand.setPattern(word);
 		lastRegexFindCommand.push({
 			head:c,
 			direction:direction,
