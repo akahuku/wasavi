@@ -3710,16 +3710,16 @@ function motionFindByRegexFacade (pattern, count, direction, verticalOffset) {
 	}
 	return true;
 }
-function motionFindByRegexForward (c, count) {
+function motionFindByRegexForward (c, count, opts) {
 	let text = lastRegexFindCommand.text;
 	let n = buffer.binaryPositionToLinearPosition(buffer.selectionEnd);
 	let startn = n;
 	let len = 0;
 	let regex = isObject(c) ? c.regex : getFindRegex(c);
 	let wrapped = false;
-	let opts = regexConverter.getDefaultOption();
 	let re;
 
+	opts || (opts = regexConverter.getDefaultOption());
 	count || (count = 1);
 
 	if (!isString(text)) {
@@ -3762,16 +3762,16 @@ function motionFindByRegexForward (c, count) {
 
 	return {offset:n, matchLength:len};
 }
-function motionFindByRegexBackward (c, count) {
+function motionFindByRegexBackward (c, count, opts) {
 	let text = lastRegexFindCommand.text;
 	let n = buffer.binaryPositionToLinearPosition(buffer.selectionStart);
 	let len = 0;
 	let regex = isObject(c) ? c.regex : getFindRegex(c);
 	let wrapped = false;
-	let opts = regexConverter.getDefaultOption();
 	let startn;
 	let linetop;
 
+	opts || (opts = regexConverter.getDefaultOption());
 	count || (count = 1);
 
 	function getLineTop (n) {
