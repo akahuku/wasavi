@@ -138,7 +138,8 @@ $(CHROME_TARGET_PATH): $(CHROME_MTIME_PATH) $(BINKEYS_PATH)
 	$(TOOL_DIR)/update-chrome-manifest.js \
 		--indir $(CHROME_SRC_PATH) \
 		--outdir $(CHROME_EMBRYO_SRC_PATH) \
-		--ver $(VERSION)
+		--ver $(VERSION) \
+		--strip-applications
 
 #	build general crx
 	[ -f $(PRODUCT).pem ] && $(CHROME) \
