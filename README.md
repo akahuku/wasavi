@@ -15,13 +15,9 @@ And we also welcome a donation to continue development:
 A Quick Walkthrough
 ====================
 
-* Here is a native TEXTAREA
+* Here is a native TEXTAREA.  Focus the TEXTAREA, and press `Ctrl+Enter` to launch wasavi
 
-  ![native textarea](http://appsweets.net/wasavi/image/0.6.669/native-textarea.png)
-
-* Focus the TEXTAREA, and press `Ctrl+Enter` to launch wasavi
-
-  ![wasavi running](http://appsweets.net/wasavi/image/0.6.669/wasavi.png)
+  ![launch, edit, quit of wasavi](http://appsweets.net/wasavi/image/0.6.669/wasavi.gif)
 
 Salient Features
 ----------------
@@ -272,63 +268,63 @@ Two addresses are usually connected by a `,`, wasavi also supports `;`.
 Input mode commands
 -------------------
 
-* `^@`: input the most recently input text, and exit input mode. this key stroke is actually `Ctrl+Space`.
-* `^D`: unshift. but if the last input character is `0` or `^`, delete all indentation
-* `^H`: delete a character
-* `^R`: paste register's content
-* `^T`: shift
-* `^U`: delete all the characters entered in the current input session
-* `^V`: literal input
-* `^W`: delete a word
+* `^@` input the most recently input text, and exit input mode. this key stroke is actually `Ctrl+Space`.
+* `^D` unshift. but if the last input character is `0` or `^`, delete all indentation
+* `^H` delete a character
+* `^R` paste register's content
+* `^T` shift
+* `^U` delete all the characters entered in the current input session
+* `^V` literal input
+* `^W` delete a word
 
 Line input mode commands
 ------------------------
 
-* `^A`: move cursor to top of line
-* `^B`: back
-* `^E`: move cursor to end of line
-* `^F`: forward
-* `^H`: delete a character
-* `^N`: next history
-* `^P`: previous history
-* `^R`: paste register's content
-* `^U`: delete whole line
-* `^V`: literal input
-* `^W`: delete a word
-* `tab`: complete ex command name, set option name, file name argument of read/edit/write/file
+* `^A` move cursor to top of line
+* `^B` back
+* `^E` move cursor to end of line
+* `^F` forward
+* `^H` delete a character
+* `^N` next history
+* `^P` previous history
+* `^R` paste register's content
+* `^U` delete whole line
+* `^V` literal input
+* `^W` delete a word
+* `tab` complete ex command name, set option name, file name argument of read/edit/write/file
 
 Bound mode commands
 ------------------------
 
 Bound mode is similar to vim's visual mode.
 
-* `c`: delete the bound, and switch to insert mode
-* `d`: delete the bound
-* `y`: yank the bound
-* `<`: unshift the bound
-* `>`: shift the bound
-* `C`: delete the line-wise bound, and switch to insert mode
-* `S`: surround the bound
-* `R`: same as `C`
-* `D`: delete the line-wise bound
-* `X`: same as `D`
-* `Y`: yank the line-wise bound
+* `c` delete the bound, and switch to insert mode
+* `d` delete the bound
+* `y` yank the bound
+* `<` unshift the bound
+* `>` shift the bound
+* `C` delete the line-wise bound, and switch to insert mode
+* `S` surround the bound
+* `R` same as `C`
+* `D` delete the line-wise bound
+* `X` same as `D`
+* `Y` yank the line-wise bound
 * `g` prefix commands
 * `a`, `i` prefix range symbols
-* `~`: swap lower case and upper case in the bound
-* `:`: switch to line input mode
-* `J`: join the bound
-* `p`: delete the bound, and paste a register's content
-* `P`: same as `p`
-* `r`: fill the bound up with inputted letter
-* `s`: same as `c`
-* `u`: lower-ize the bound
-* `U`: upper-ize the bound
-* `v`: character wise bound mode
-* `V`: line wise bound mode
-* `x`: same as `d`
-* `^A`: add the counter to all numeric strings within the bound
-* `^X`: subtract the counter to all numeric strings within the bound
+* `~` swap lower case and upper case in the bound
+* `:` switch to line input mode
+* `J` join the bound
+* `p` delete the bound, and paste a register's content
+* `P` same as `p`
+* `r` fill the bound up with inputted letter
+* `s` same as `c`
+* `u` lower-ize the bound
+* `U` upper-ize the bound
+* `v` character wise bound mode
+* `V` line wise bound mode
+* `x` same as `d`
+* `^A` add the counter to all numeric strings within the bound
+* `^X` subtract the counter to all numeric strings within the bound
 
 Surrounding identifiers
 -----------------------
@@ -350,11 +346,11 @@ Vim features in wasavi
 * incremental search
 * range symbols (aka, Vim text objects)
 * following registers
-  - `"`: unnamed register
-  - `:`: last executed ex command
-  - `*`: reading from and writing to the system clipboard
-  - `/`: last searched string
-  - `=`: evaluate math expression. supported operators are: `+` `-` `*` `/` `%`. supported numeric expressions are: integer, float (including exponential form), binary (with leading `0b`), octal (with leading 0), hex (with leading `0x`)
+  - `"` unnamed register
+  - `:` last executed ex command
+  - `*` reading from and writing to the system clipboard
+  - `/` last searched string
+  - `=` evaluate math expression. supported operators are: `+` `-` `*` `/` `%`. supported numeric expressions are: integer, float (including exponential form), binary (with leading `0b`), octal (with leading 0), hex (with leading `0x`)
 * auto-reformat in input mode, and reformat operator (gq command) on the state of textwidth > 0
 * bound mode (aka, Vim visual mode)
 * options: `iskeyword`, `incsearch`, `smartcase`, `undolevels`, `quoteescape`, `relativenumber`, `textwidth`, `expandtab`, `cursorline`, `cursorcolumn`, `nrformats`
