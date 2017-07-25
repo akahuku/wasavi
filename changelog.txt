@@ -1,3 +1,17 @@
+0.7.734
+
+	* fix tag symbol degrade
+	* fix '*', '#' command degrade
+	* fix '?' command degrade
+	* make options appears on Firefox's extensions details page
+	* relax the condition of relocation (#169)
+
+	* タグシンボルが動かなくなっていたのを修正
+	* '*', '#' コマンドが動かなくなっていたのを修正
+	* '?' コマンドが動かなくなっていたのを修正
+	* Firefox のエクステンション詳細ページにオプションボタンが表示されるようにした
+	* 再配置の条件をゆるめた (#169)
+
 0.7.721
 
 	* Relocate wasavi even if target position changes (#169)
