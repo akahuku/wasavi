@@ -1186,7 +1186,8 @@ var cache = {};
 		if (copied >= app.config.vars.report) {
 			app.low.requestShowMessage(_('Copied {0} {line:0}.', copied));
 		}
-		t.setSelectionRange(t.getLineTopOffset2(a.lineNumber + 1 + copied - 1, 0));
+		var finalRow = minmax(0, a.lineNumber + 1 + copied - 1, t.rowLength - 1);
+		t.setSelectionRange(t.getLineTopOffset2(finalRow, 0));
 		app.isEditCompleted = true;
 	}),
 	new ExCommand('delete', 'd', 'bca1', 2 | EXFLAGS.printDefault, function (app, t, a) {
