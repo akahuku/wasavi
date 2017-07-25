@@ -17,7 +17,7 @@ A Quick Walkthrough
 
 * Here is a native TEXTAREA.  Focus the TEXTAREA, and press `Ctrl+Enter` to launch wasavi
 
-  ![launch, edit, quit of wasavi](http://appsweets.net/wasavi/image/0.6.669/wasavi.gif)
+  ![launch, edit, quit of wasavi](http://appsweets.net/wasavi/image/0.7.733/wasavi.gif)
 
 Salient Features
 ----------------

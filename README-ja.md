@@ -17,7 +17,7 @@ wasavi の開発は継続中です。バグレポートや機能の要請はど�
 
 * ネイティブな TEXTAREA があったとき、TEXTAREA にフォーカスし、`Ctrl+Enter` を押すと wasavi が起動します
 
-  ![wasavi の起動、編集、終了](http://appsweets.net/wasavi/image/0.6.669/wasavi.gif)
+  ![wasavi の起動、編集、終了](http://appsweets.net/wasavi/image/0.7.733/wasavi.gif)
 
 込み入った使い方
 ----------------
