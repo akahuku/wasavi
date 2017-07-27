@@ -178,7 +178,7 @@ describe('class MapManager', () => {
 			assert.equal(sequences[1].char, 'b', '#3');
 			assert.equal(sequences[1].isNoremap, true, '#4');
 			assert.equal(sequences[2].char, 'Z', '#5');
-			assert.equal(sequences[2].isNoremap, undefined, '#6');
+			assert.equal(sequences[2].isNoremap, true, '#6');
 			assert.equal(mm.isWaiting, false);
 			done();
 		};

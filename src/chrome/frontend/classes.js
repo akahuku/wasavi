@@ -1196,6 +1196,10 @@ Wasavi.MapManager = function MapManager (app, opts) {
 			if (expandOptions.extraEvent) {
 				let seq = expandOptions.extraEvent.clone();
 
+				if (!remap) {
+					seq.isNoremap = true;
+				}
+
 				if (expandOptions.extraOverrideMap) {
 					seq.overrideMap = expandOptions.extraOverrideMap;
 				}

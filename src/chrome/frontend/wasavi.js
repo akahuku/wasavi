@@ -4904,7 +4904,7 @@ function handleMapExpand (sequences) {
 }
 function handleMapRecurseMax () {
 	keyManager.invalidate();
-	low.showMessage(_('Map expansion reached maximum recursion limit.'), true);
+	showMessage(_('Map expansion reached maximum recursion limit.'), true);
 }
 
 // keyManager
