@@ -1,3 +1,11 @@
+0.7.737
+
+	* When an incomplete map is determined by unmapped key, mark that key as noremap
+	* fix that editor may point to an invalid row after :copy
+
+	* 不完全なマップがマップされていないキーによって完全になった際、そのキーは noremap 扱いとするようにした
+	* :copy 後に不正な行を指す場合があるのを修正
+
 0.7.734
 
 	* fix tag symbol degrade
