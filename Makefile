@@ -1,7 +1,7 @@
 # application macros
 # ========================================
 
-VERSION := $(shell echo -n `git describe --tags --abbrev=0|sed -e 's/[^0-9.]//g' -e 's/^\([0-9]\+\.[0-9]\+\).*/\1/g'`.`git rev-list --count HEAD`)
+VERSION := $(shell echo -n `git describe --abbrev=0|awk 'match($$0,/([0-9]+\.[0-9]+)/,a){print a[0]}'`.`git rev-list --count HEAD`)
 
 SHELL := /bin/sh
 PATH_SEPARATOR := /
