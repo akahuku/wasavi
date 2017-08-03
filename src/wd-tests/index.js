@@ -192,7 +192,14 @@ function invokeWasavi (currentTest) {
 				debug && console.log('waiting wasavi launch');
 				try {
 					wasaviFrame = yield driver.wait(until.elementLocated(By.id('wasavi_frame')), waitMsecsForWasaviLaunch);
-					yield wasaviFrame.click();
+
+					// wasavi launched
+					debug && console.log('attempting to focus');
+					yield driver.executeScript([
+						'document.getElementById("wasavi_frame").focus()',
+						'document.getElementById("wasavi_frame").click()'
+					].join(';'));
+
 					invokeStates[i].increment();
 					break;
 				}
@@ -281,6 +288,7 @@ function StrokeSender (driver) {
 	}
 
 	function waitCommandCompletion (inputModeOfWatchTarget) {
+		let message;
 		// return Promise
 		return driver.wait(_ => promise.consume(function* () {
 			try {
@@ -288,7 +296,11 @@ function StrokeSender (driver) {
 				var commandState = yield elm.getAttribute('data-wasavi-command-state');
 				var inputMode = yield elm.getAttribute('data-wasavi-input-mode');
 
-				//console.log(`waitCommandCompletion: commandState: ${commandState}`);
+				var m = `waitCommandCompletion: commandState:${commandState} inputMode:${inputMode}`;
+				if (debug && m != message) {
+					console.log(message = m);
+				}
+
 				if (commandState == 'completed' && inputMode in inputModeOfWatchTarget) {
 					return elm;
 				}
