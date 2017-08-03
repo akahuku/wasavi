@@ -11,7 +11,7 @@ app.mk
 .rsync*
 mkmain
 mkqeema
-push
+pushbins
 resetbins
 syncsrc
 syncwww
