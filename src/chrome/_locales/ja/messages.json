@@ -192,10 +192,6 @@
 		"message": "{0} は略語ではありません。",
 		"description": "{0} is not an abbreviation."
 	},
-	"@0_is_not_mapped": {
-		"message": "{0} はマップされていません。",
-		"description": "{0} is not mapped."
-	},
 	"@0_line_@1_character": {
 		"message": "{0} 行、{1} 文字。",
 		"description": "{0} {line:0}, {1} {character:1}."
@@ -276,9 +272,9 @@
 		"message": "  {0}  {1}",
 		"description": "  {0}  {1}"
 	},
-	"_@0_mode_maps_": {
-		"message": "*** {0} モードのマップ ***",
-		"description": "*** {0} mode maps ***"
+	"_@0_map_": {
+		"message": "*** {0} マップ ***",
+		"description": "*** {0} map ***"
 	},
 	"_abbreviations_": {
 		"message": "*** 略語展開 ***",
@@ -311,6 +307,10 @@
 	"all_options_are_reset_to_@0": {
 		"message": "All options are reset to {0}.",
 		"description": "All options are reset to {0}."
+	},
+	"all_rules_for_@0_map_have_been_cleared": {
+		"message": "{0} マップの全ルールが消去されました。",
+		"description": "All rules for {0} map have been cleared."
 	},
 	"an_extra_value_assigned_to_@0_option": {
 		"message": "オプション {0} に余分な値が代入されました。",
@@ -728,10 +728,6 @@
 		"message": "--バッファに行がありません--",
 		"description": "--No lines in buffer--"
 	},
-	"no_mappings_for_@0_mode_are_defined": {
-		"message": "{0} モードにはマップは定義されていません。",
-		"description": "No mappings for {0} mode are defined."
-	},
 	"no_previous_execution": {
 		"message": "前回の実行レジスタはありません。",
 		"description": "No previous execution."
@@ -747,6 +743,10 @@
 	"no_redo_item": {
 		"message": "これ以上リドゥできません。",
 		"description": "No redo item."
+	},
+	"no_rules_for_@0_map_are_defined": {
+		"message": "{0} マップにはルールは定義されていません。",
+		"description": "No rules for {0} map are defined."
 	},
 	"no_undo_item": {
 		"message": "これ以上アンドゥできません。",

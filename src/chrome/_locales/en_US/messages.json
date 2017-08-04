@@ -192,10 +192,6 @@
 		"message": "{0} is not an abbreviation.",
 		"description": "{0} is not an abbreviation."
 	},
-	"@0_is_not_mapped": {
-		"message": "{0} is not mapped.",
-		"description": "{0} is not mapped."
-	},
 	"@0_line_@1_character": {
 		"message": "{0} {line:0}, {1} {character:1}.",
 		"description": "{0} {line:0}, {1} {character:1}."
@@ -276,9 +272,9 @@
 		"message": "  {0}  {1}",
 		"description": "  {0}  {1}"
 	},
-	"_@0_mode_maps_": {
-		"message": "*** {0} mode maps ***",
-		"description": "*** {0} mode maps ***"
+	"_@0_map_": {
+		"message": "*** {0} map ***",
+		"description": "*** {0} map ***"
 	},
 	"_abbreviations_": {
 		"message": "*** abbreviations ***",
@@ -311,6 +307,10 @@
 	"all_options_are_reset_to_@0": {
 		"message": "All options are reset to {0}.",
 		"description": "All options are reset to {0}."
+	},
+	"all_rules_for_@0_map_have_been_cleared": {
+		"message": "All rules for {0} map have been cleared.",
+		"description": "All rules for {0} map have been cleared."
 	},
 	"an_extra_value_assigned_to_@0_option": {
 		"message": "An extra value assigned to {0} option.",
@@ -728,10 +728,6 @@
 		"message": "--No lines in buffer--",
 		"description": "--No lines in buffer--"
 	},
-	"no_mappings_for_@0_mode_are_defined": {
-		"message": "No mappings for {0} mode are defined.",
-		"description": "No mappings for {0} mode are defined."
-	},
 	"no_previous_execution": {
 		"message": "No previous execution.",
 		"description": "No previous execution."
@@ -747,6 +743,10 @@
 	"no_redo_item": {
 		"message": "No redo item.",
 		"description": "No redo item."
+	},
+	"no_rules_for_@0_map_are_defined": {
+		"message": "No rules for {0} map are defined.",
+		"description": "No rules for {0} map are defined."
 	},
 	"no_undo_item": {
 		"message": "No undo item.",

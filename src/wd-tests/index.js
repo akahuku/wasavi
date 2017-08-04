@@ -45,6 +45,7 @@ const tests = [
 
 const debug = false;
 const captureConsole = false;
+const sourceDir = 'src';
 const profileDir = 'src/wd-tests/profile';
 const testFrameUrl = 'http://127.0.0.1:8888/test_frame.html';
 const appModeTestFrameUrl = 'https://wasavi.appsweets.net/?testmode';
@@ -92,7 +93,8 @@ function createDriver (name) {
 
 	case 'firefox':
 		var options = new firefox.Options();
-		var profile = new firefox.Profile(profilePath);
+		var profile = new firefox.Profile();
+		profile.addExtension(`${sourceDir}/${name}`);
 		options.setProfile(profile);
 		result = new webdriver.Builder()
 			.withCapabilities(webdriver.Capabilities.firefox())

@@ -797,28 +797,32 @@ exports.suite = (assert, wasavi, driver) => {
 	it('map', function* () {
 		yield wasavi.send(':map\n');
 		assert.eq('#1-1', [
-			'No mappings for NORMAL mode are defined.'
+			'No rules for NORMAL map are defined.',
+			' ',
+			'No rules for BOUND map are defined.'
 		].join('\n'), wasavi.getLastMessage());
 
 		yield wasavi.send(':map Q 1G\n');
 		yield wasavi.send(':map XQ G\n');
 		yield wasavi.send(':map\n');
 		assert.eq('#2-1', [
-			'*** NORMAL mode maps ***',
+			'*** NORMAL map ***',
 			'Q \t1G',
 			'XQ\tG'
 		].join('\n'), wasavi.getLastMessage());
 
 		yield wasavi.send(':map X\n');
 		assert.eq('#3-1', [
-			'*** NORMAL mode maps ***',
+			'*** NORMAL map ***',
 			'XQ\tG'
 		].join('\n'), wasavi.getLastMessage());
 
 		yield wasavi.send(':map [clear]\n');
 		yield wasavi.send(':map\n');
 		assert.eq('#4-1', [
-			'No mappings for NORMAL mode are defined.'
+			'No rules for NORMAL map are defined.',
+			' ',
+			'No rules for BOUND map are defined.'
 		].join('\n'), wasavi.getLastMessage());
 	});
 
@@ -890,9 +894,9 @@ exports.suite = (assert, wasavi, driver) => {
 		assert.value('#1-1', 'foo\tbar');
 	});
 
-	it('no remap', function* () {
+	it('final map', function* () {
 		yield wasavi.send(':map [clear]\n');
-		yield wasavi.send(':map [noremap] j jj\n');
+		yield wasavi.send(':map [final] j jj\n');
 		yield wasavi.send('i1\n2\n3\n4\n5\u001b');
 
 		yield wasavi.send('ggj');

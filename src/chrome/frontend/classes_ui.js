@@ -739,17 +739,35 @@ Wasavi.Backlog = function (app, container, con) {
 	var charHeight;
 
 	function append (line) {
-		var el = con.appendChild(document.createElement('div'));
+		let el = con.appendChild(document.createElement('div'));
 		el.className = 'backlog-row';
 
 		if (line.emphasis) {
-			var span = el.appendChild(document.createElement('span'));
+			let span = el.appendChild(document.createElement('span'));
 			span.style.color = app.theme.colors.warnedStatusFg;
 			span.style.backgroundColor = app.theme.colors.warnedStatusBg;
 			span.textContent = line.text;
 		}
 		else {
-			el.appendChild(document.createTextNode(line.text));
+			let components = line.text.split(/(\ue000(?:<[^>]+>|#\d{1,2}))/);
+			components.forEach(component => {
+				if (component.charAt(0) == '\ue000') {
+					let span = el.appendChild(document.createElement('span'));
+					span.className = 'special-key';
+					span.style.backgroundColor = app.theme.colors.consoleFg;
+					span.style.color = app.theme.colors.consoleBg;
+
+					if (component.charAt(1) == '<') {
+						span.textContent = component.substring(2, component.length - 1);
+					}
+					else {
+						span.textContent = 'F' + component.substring(2);
+					}
+				}
+				else {
+					el.appendChild(document.createTextNode(component));
+				}
+			});
 		}
 
 		return el;

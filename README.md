@@ -130,7 +130,7 @@ wasavi for Chrome can [Migemo](http://0xcc.net/migemo/) search.  Install [Migemo
 
 ## I have noticed a bug
 
-Please create an issue on [wasavi issue tracker](http://github.com/akahuku/wasavi/issues)
+Please create an issue on [wasavi issue tracker](https://github.com/akahuku/wasavi/issues)
 
 Tips and Tricks
 ===============
@@ -151,6 +151,7 @@ Tips and Tricks
 	+ `:map [noremap] lhs rhs` also registers, but it is non-recursive.
 	+ `:map` targets the normal mode mappings. On the other hand,
 	  `:map!` targets the insert mode. This is equivalent to vim's `:imap`.
+	+ For more detailed information, see [Syntax of map command](https://github.com/akahuku/wasavi/wiki/Syntax-of-Map-command).
 * `j` `k` `^` `$` moves cursor by physical row, on the other hand,
   `gj` `gk` `g^` `g$` moves by wrapped row. To swap the behavior: `:set jkdenotative`
 * `f` `F` `t` `T` extension for Japanese: these commands recognizes reading (ro-ma ji

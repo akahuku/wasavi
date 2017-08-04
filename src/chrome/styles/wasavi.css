@@ -297,6 +297,12 @@
 	flex-grow:1;
 }
 
+#wasavi_console .special-key {
+	margin:0 3px 0 3px;
+	padding:0 1px 0 1px;
+	border-radius:3px;
+}
+
 /*
  * overlay
  */

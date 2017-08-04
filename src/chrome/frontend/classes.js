@@ -1109,7 +1109,8 @@ Wasavi.MapManager = function MapManager (app, opts) {
 			for (let lhs in this.rules) {
 				result.push({
 					lhs: lhs,
-					rhs: this.rules[lhs]
+					rhs: this.rules[lhs],
+					options: this.options[lhs]
 				});
 			}
 			return result;
@@ -1117,17 +1118,19 @@ Wasavi.MapManager = function MapManager (app, opts) {
 	};
 
 	const maps = {
-		command: new MapGroup('command'),
-		edit:    new MapGroup('edit')
+		normal: new MapGroup('NORMAL'),
+		bound:  new MapGroup('BOUND'),
+		input:  new MapGroup('INPUT')
 	};
 
 	const modeToTypeTable = {
-		command:    'command',
-		bound:      'command',
-		bound_line: 'command',
+		command:    'normal',
 
-		edit:       'edit',
-		overwrite:  'edit'
+		bound:      'bound',
+		bound_line: 'bound',
+
+		insert:     'input',
+		overwrite:  'input'
 	};
 
 	const RECURSE_MAX = 100;

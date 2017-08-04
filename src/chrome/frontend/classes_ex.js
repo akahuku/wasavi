@@ -81,29 +81,31 @@ ExCommand.prototype = {
 			result.argv.push(s);
 		}
 		function push_2words (s) {
-			var state = 0;
-			while ((s = s.replace(/^\s+/, '')) != '') {
-				var re = /(?:\u0016.|\S)*/.exec(s);
-				switch (state) {
-				case 0:
-					if (/^\[.+\]$/.test(re[0])) {
-						result.argv.push(stripv(re[0]));
-						s = s.substring(re[0].length);
-						state = 1;
-						break;
-					}
-					// FALLTHRU
-				case 1:
-					result.argv.push(stripv(re[0]));
-					s = s.substring(re[0].length);
-					state = 2;
-					break;
-				case 2:
-					result.argv.push(stripv(s));
-					s = '';
-					break;
-				}
+			s = s.replace(/^\s+/, '');
+			if (s == '') return;
+
+			let re;
+
+			// optional bracket attribute
+			re = /^\[(?:\\\]|[^\]])*\]/.exec(s);
+			if (re) {
+				result.argv.push(stripp(re[0]));
+				s = s.substring(re[0].length);
 			}
+			s = s.replace(/^\s+/, '');
+			if (s == '') return;
+
+			// first word
+			re = /(?:\u0016.|\S)*/.exec(s);
+			if (re) {
+				result.argv.push(stripv(re[0]));
+				s = s.substring(re[0].length)
+			}
+			s = s.replace(/^\s+/, '');
+			if (s == '') return;
+
+			// second word
+			result.argv.push(stripv(s));
 		}
 		function push_words (s) {
 			var index = 0;
@@ -768,6 +770,43 @@ function chdirCore (app, t, a, data) {
 	app.fileSystemIndex = index;
 	if (path != '') {
 		app.fstab[index].cwd = app.low.regalizeFilePath(path, false);
+	}
+}
+
+function parseMapAttributes (app, attributes, options, maps) {
+	let re = /^\[(.+)\]$/.exec(attributes);
+	if (!re) return false;
+
+	re[1].split(',').forEach(attr => {
+		attr = attr.replace(/^\s+\|\s+$/g, '');
+
+		switch (attr) {
+		case 'clear':
+		case 'final':
+		case 'noremap':
+		case 'all':
+			options[attr] = true;
+			break;
+
+		case 'normal':
+		case 'bound':
+		case 'input':
+			maps[attr] = app.mapManager.maps[attr];
+			break;
+		}
+	});
+	return true;
+}
+
+function selectDefaultMaps (app, a, maps) {
+	if (Object.keys(maps).length) return;
+
+	if (a.flags.force) {
+		maps.input = app.mapManager.maps.input;
+	}
+	else {
+		maps.normal = app.mapManager.maps.normal;
+		maps.bound = app.mapManager.maps.bound;
 	}
 }
 
@@ -1554,75 +1593,95 @@ var cache = {};
 		return find('mark').handler.apply(this, arguments);
 	}),
 	new ExCommand('map', 'map', '!W', 0, function (app, t, a) {
-		var internalMapName = a.flags.force ? 'edit' : 'command';
-		var displayMapName = a.flags.force ? 'INPUT' : 'NORMAL';
-		var map = app.mapManager.maps[internalMapName];
-
-		function dispMap (map) {
+		function dispMap (map, name) {
 			if (map.length) {
-				var maxWidth = 0;
-				var list = [_('*** {0} mode maps ***', displayMapName)];
+				let maxWidth = 0;
+				let list = [_('*** {0} map ***', name)];
 				map.map(function (o) {
-					var lhs = toVisibleString(o.lhs);
-					var rhs = toVisibleString(o.rhs);
+					let lhs = toVisibleString(o.lhs);
+					let rhs = toVisibleString(o.rhs);
 					if (lhs.length > maxWidth) {
 						maxWidth = lhs.length;
 					}
-					return [lhs, rhs];
+					return o;
 				})
 				.forEach(function (o) {
 					list.push(
-						o[0] + multiply(' ', maxWidth - o[0].length) +
-						'\t' + o[1]);
+						(o.options.remap ? '       ' : '[final]') + ' ' +
+						o.lhs + multiply(' ', maxWidth - o.lhs.length) +
+						'\t' + o.rhs);
 				});
 				app.backlog.push(list);
 			}
 			else {
-				app.backlog.push(_('No mappings for {0} mode are defined.', displayMapName));
+				app.backlog.push(_('No rules for {0} map are defined.', name));
 			}
 			app.low.requestConsoleOpen();
 		}
 
-		var lhs, rhs, option;
-		lhs = a.argv.shift();
-		if (/^\[.+\]$/.test(lhs)) {
-			option = lhs;
+		let lhs = a.argv.shift();
+		let rhs;
+		let options = {};
+		let maps = {};
+
+		if (parseMapAttributes(app, lhs, options, maps)) {
 			lhs = a.argv.shift();
 		}
+
 		rhs = a.argv.shift();
+		selectDefaultMaps(app, a, maps);
 
-		// prior option
-		switch (option) {
-		case '[clear]':
-			map.removeAll();
-			return;
+		// 'clear' is a preferred option; remove all rules
+		if ('clear' in options) {
+			for (let i in maps) {
+				maps[i].removeAll();
+				app.backlog.push(_('All rules for {0} map have been cleared.', maps[i].name));
+			}
+			app.low.requestConsoleOpen();
 		}
 
-		// no args
-		if (lhs == undefined && rhs == undefined) {
-			dispMap(map.toArray());
+		// no args: display all of mapping rules
+		else if (lhs == undefined && rhs == undefined) {
+			let delimiter;
+			for (let i in maps) {
+				delimiter && app.backlog.push(delimiter);
+				dispMap(maps[i].toArray(), maps[i].name);
+				delimiter = ' ';
+			}
 		}
 
-		// one arg
+		// one arg: display current mapping rules which partially matches lhs
 		else if (lhs != undefined && rhs == undefined) {
-			dispMap(map.toArray().filter(function (o) {
-				return o.lhs.indexOf(lhs) >= 0;
-			}));
+			let delimiter;
+			for (let i in maps) {
+				delimiter && app.backlog.push(delimiter);
+				dispMap(maps[i].toArray().filter(o => o.lhs.indexOf(lhs) >= 0), maps[i].name);
+				delimiter = ' ';
+			}
 		}
 
-		// two args
+		// two args: define new mapping rule
 		else if (lhs != undefined && rhs != undefined) {
-			// reject some mappings for text input mode: <escape>, <nl>
-			if (a.flags.force && /^[\u001b\u000a]$/.test(lhs)) {
-				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-			}
-			// reject some mappings for command mode: :, <escape>
-			if (!a.flags.force && /^[:\u001b]$/.test(lhs)) {
-				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
-			}
+			// insert U+e000 in front of <...>
 			lhs = app.keyManager.insertFnKeyHeader(lhs);
 			rhs = app.keyManager.insertFnKeyHeader(rhs);
-			map.register(lhs, rhs, option != '[noremap]');
+
+			let allowRecursive = !('final' in options || 'noremap' in options);
+			let lhsSeq = app.keyManager.createSequences(lhs);
+
+			// reject some mappings for input map: <escape>
+			if ('input' in maps && lhsSeq.some(s => s.code == 0x1b)) {
+				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+			}
+
+			// reject some mappings for normal map: <escape>, ":"
+			if ('normal' in maps && lhsSeq.some(s => s.code == 0x1b || s.code == 0x3a)) {
+				return _('Key {0} cannot be remapped.', toVisibleString(lhs));
+			}
+
+			for (let i in maps) {
+				maps[i].register(lhs, rhs, allowRecursive);
+			}
 		}
 	}),
 	new ExCommand('mark', 'ma', 'w1r', 1, function (app, t, a) {
@@ -2098,17 +2157,30 @@ var cache = {};
 				_('{0} {operation:0} have reverted.', result));
 		}
 	}),
-	new ExCommand('unmap', 'unm', '!w1r', 0, function (app, t, a) {
-		var lhs = a.argv[0];
-		var map = app.mapManager.maps[a.flags.force ? 'edit' : 'command'];
-		if (lhs == '[all]') {
-			map.removeAll();
+	new ExCommand('unmap', 'unm', '!W', 0, function (app, t, a) {
+		let lhs = a.argv.shift();
+		let options = {};
+		let maps = {};
+
+		if (parseMapAttributes(app, lhs, options, maps)) {
+			lhs = a.argv.shift();
 		}
-		else if (!map.isMapped(lhs)) {
-			return _('{0} is not mapped.', lhs);
+
+		selectDefaultMaps(app, a, maps);
+
+		if ('all' in options) {
+			// 'all' is a preferred option: remove all rules
+			for (let i in maps) {
+				maps[i].removeAll();
+				app.backlog.push(_('All rules for {0} map have been cleared.', maps[i].name));
+			}
+			app.low.requestConsoleOpen();
 		}
 		else {
-			map.remove(lhs);
+			// remove the rule corresponding to lhs
+			for (let i in maps) {
+				maps[i].remove(lhs);
+			}
 		}
 	}),
 	new ExCommand('version', 've', '', 0, function (app, t, a) {

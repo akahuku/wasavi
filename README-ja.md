@@ -130,7 +130,7 @@ Chrome 版の wasavi は [Migemo](http://0xcc.net/migemo/) 検索を行うこと
 
 ## バグを見つけた
 
-[wasavi issue tracker](http://github.com/akahuku/wasavi/issues) で issue を作成してください。
+[wasavi issue tracker](https://github.com/akahuku/wasavi/issues) で issue を作成してください。
 
 Tips and Tricks
 ===============
@@ -151,6 +151,7 @@ Tips and Tricks
 	+ `:map [noremap] lhs rhs` も登録しますが、こちらは再帰しません
 	+ `:map` はノーマルモード用のマップを対象とします。一方、
 	  `:map!` は挿入モード用です。これは vim の `:imap` に相当します
+	+ より詳細な情報は、[map コマンドの文法](https://github.com/akahuku/wasavi/wiki/Syntax-of-Map-command) を参照してください。
 * `j` `k` `^` `$` はカーソルを物理行単位で移動させます。一方、`gj` `gk` `g^` `g$` は
   折り返し行単位で移動させます。この振る舞いを交換するには: `:set jkdenotative`
 * 日本語のための `f` `F` `t` `T` の拡張: これらのコマンドはひらがな、カタカナ、および

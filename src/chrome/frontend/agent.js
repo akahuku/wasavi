@@ -1013,10 +1013,10 @@ var Agent = (function () {
 		}
 
 		if (isTestFrame) {
-			if (!document.getElementById('wasavi_frame')) {
+			if (!$('wasavi_frame')) {
 				this.wasaviFrame.id = 'wasavi_frame';
 			}
-			document.getElementById('test-log').value = '';
+			$('test-log').value = '';
 		}
 
 		response({type: 'got-initialized'});
@@ -1305,7 +1305,7 @@ function keylog () {
 }
 
 function keylogOutput () {
-	var t = document.getElementById('test-log');
+	var t = $('test-log');
 	if (!t) return;
 	t.value.length && (t.value += '\n');
 	t.value += testLog.join('\n');
@@ -1922,7 +1922,7 @@ var handleBackendMessage = (function () {
 
 				document.querySelector('h1').style.color = '';
 
-				var state = document.getElementById('state');
+				var state = $('state');
 				state.textContent = '';
 				['running', 'state', 'inputMode', 'row', 'col', 'lastMessage'].forEach(function (p) {
 					state.appendChild(document.createElement('div')).textContent =
