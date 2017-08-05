@@ -1110,7 +1110,8 @@ var cache = {};
 			}
 			if (list.length) {
 				list = list.map(function (l) {
-					return l[0] +
+					return (ab[l[1]].final ? '       ' : '[final]') + ' ' +
+						l[0] +
 						multiply(' ', maxWidth - l[0].length + PAD_WIDTH) +
 						toVisibleString(ab[l[1]].value);
 				}).sort();
@@ -1118,10 +1119,11 @@ var cache = {};
 				list.unshift(
 					_('*** abbreviations ***'),
 
-					'LHS' +
+					'        LHS' +
 					multiply(' ', maxWidth - MIN_WIDTH + PAD_WIDTH) +
 					'RHS',
 
+					'        ' +
 					multiply('-', MIN_WIDTH) +
 					multiply(' ', maxWidth - MIN_WIDTH + PAD_WIDTH) +
 					multiply('-', MIN_WIDTH));
@@ -1176,7 +1178,7 @@ var cache = {};
 			}
 
 			app.abbrevs[lhs] = {
-				noremap: option == '[noremap]',
+				final: option == '[final]' || option == '[noremap]',
 				value: app.keyManager.insertFnKeyHeader(rhs)
 			};
 		}

@@ -285,9 +285,9 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send(':abbre\n');
 		assert.eq('#4-2', [
 			'*** abbreviations ***',
-			'LHS    RHS',
-			'---    ---',
-			'foo    bar'
+			'        LHS    RHS',
+			'        ---    ---',
+			'        foo    bar'
 		].join('\n'), wasavi.getLastMessage());
 
 		//
@@ -297,19 +297,19 @@ exports.suite = (assert, wasavi, driver) => {
 		yield wasavi.send(':abbr foo\n');
 		assert.eq('#5-1', [
 			'*** abbreviations ***',
-			'LHS    RHS',
-			'---    ---',
-			'foo    bar'
+			'        LHS    RHS',
+			'        ---    ---',
+			'        foo    bar'
 		].join('\n'), wasavi.getLastMessage());
 
 		yield wasavi.send(':abbr\n');
 		assert.eq('#5-2', [
 			'*** abbreviations ***',
-			'LHS    RHS',
-			'---    ---',
-			'bar    BAZ',
-			'baz    B A Z',
-			'foo    bar'
+			'        LHS    RHS',
+			'        ---    ---',
+			'        bar    BAZ',
+			'        baz    B A Z',
+			'        foo    bar'
 		].join('\n'), wasavi.getLastMessage());
 
 		//

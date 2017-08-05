@@ -1869,7 +1869,7 @@ function processAbbrevs (force, terminator) {
 		if (!canTransit) continue;
 
 		// noremapped abbreviation
-		if (abbrevs[abbrev].noremap) {
+		if (abbrevs[abbrev].final) {
 			var a = inputHandler.text;
 			var a2 = inputHandler.textFragment;
 
