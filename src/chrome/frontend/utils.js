@@ -616,6 +616,44 @@ g.execGenerator = function (generatorFn, thisObj, ...args) {
 		next();
 	});
 };
+g.splitex = function (s, d, num) {
+	s = '' + s;
+	num = num - 0;
+
+	if (!isString(d) && !(d instanceof RegExp)) {
+		throw new Error('splitex: delimiter is neither string nor RegExp');
+	}
+	if (!isNumber(num) || isNaN(num)) {
+		throw new Error('splitex: num is not a number');
+	}
+
+	if (num < 0) return s.split(d);
+	if (num == 0) return [];
+	if (num == 1) return [s];
+
+	let regex = new RegExp(isString(d) ? getLiteralRegexp(d) : d, 'g');
+	let result = [];
+	let from = 0;
+	let re;
+
+	while (result.length < num && (re = regex.exec(s))) {
+		result.push(s.substring(from, re.index));
+		from = re.index + re[0].length;
+	}
+
+	if (result.length < num) {
+		result.push(s.substring(from));
+	}
+	else if (re && from < s.length) {
+		result.lastItem += s.substring(re.index);
+	}
+
+	while (result.length < num) {
+		result.push('');
+	}
+
+	return result;
+};
 
 })(typeof global == 'object' ? global : window);
 

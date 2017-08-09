@@ -59,7 +59,7 @@ var fontFamily;
 var quickActivation;
 var devMode;
 var logMode;
-var blacklist;
+var siteOverrides;
 var statusLineHeight;
 var testLog;
 var wasaviAgentsHash = {};
@@ -83,37 +83,6 @@ var diag = {
 		this._messages = null;
 	}
 };
-
-/*
- * There are various newline formats in content editable element.
- * These formats are different depending on sites, so we have to choice
- * the correct format by list.  So `writeAs` property can be assigned
- * following values:
- *
- *   - 'html': treat a text as markdown, and build DOM tree (default)
- *   - 'div': create div element from each line
- *
- *       <div>line1</div><div>line2</div> ...
- *
- *   - 'p': create p element from each line
- *
- *       <p>line1</p><p>line2</p> ...
- *
- *   - 'textAndBreak': create text node from each line, and each line is
- *     divided by a BR element.
- *
- *       #text <br> #text ...
- *
- *   - 'plaintext': create a text node. newline is '\n'
- *
- *       line1 \n line2 ...
- */
-
-var contentEditableProfile = [
-	{
-		pattern: /\bworkflowy\.com$/, writeAs: 'plaintext'
-	}
-];
 
 // utility functions <<<1
 function log () {
@@ -883,7 +852,7 @@ var Agent = (function () {
 			nodeName: element.nodeName,
 			nodePath: getNodePath(element),
 			elementType: element.type,
-			writeAs: '',
+			setargs: siteOverrides.setargs(element) || '',
 			selectionStart: element.selectionStart || 0,
 			selectionEnd: element.selectionEnd || 0,
 			scrollTop: element.scrollTop || 0,
@@ -1314,55 +1283,105 @@ function keylogOutput () {
 }
 
 function getGlobRegex (s) {
-	return new RegExp('^' + s
-		.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
-		.replace(/\?/g, '.')
-		.replace(/\*/g, '.+?'), 'i');
+	try {
+		return new RegExp('^' + s
+			.replace(/[\\^$+.()|{}]/g, function ($0) {return '\\' + $0})
+			.replace(/\?/g, '.')
+			.replace(/\*/g, '.+?'), 'i');
+	}
+	catch (e) {
+		return null;
+	}
 }
 
-function parseBlacklist (blacklist) {
-	var result = {
-		fullBlocked: false,
-		selectors: [],
-		includes: function (element) {
-			return this.fullBlocked || this.selectors.some(function (s) {
+function parseSiteOverrides (list) {
+	let result = {
+		_selectors: [],
+		blocked: function (element) {
+			return this._selectors.some(s => {
 				try {
-					return Array.prototype.indexOf.call(
-						document.querySelectorAll(s), element) >= 0;
+					let match = Array.prototype.indexOf.call(
+						document.querySelectorAll(s.selector), element);
+					return match >= 0 && s.blocked;
 				}
 				catch (e) {}
 			});
+		},
+		setargs: function (element) {
+			let result;
+			this._selectors.some(s => {
+				try {
+					let match = Array.prototype.indexOf.call(
+						document.querySelectorAll(s.selector), element);
+					if (match >= 0) {
+						result = s.setargs;
+						return true;
+					}
+				}
+				catch (e) {}
+			});
+
+			return result;
 		}
 	};
-	(blacklist || '').split('\n').some(function (line) {
-		line = line.replace(/^\s+|\s+$/g, '');
-		if (line == '' || /^[#;]/.test(url)) return;
 
-		var delimiter = /\s+/.exec(line);
-		if (delimiter) {
-			line = [
-				line.substring(0, delimiter.index),
-				line.substring(delimiter.index + delimiter[0].length)
-			];
+	function splitex (string, delimiter, limit) {
+		let regex = new RegExp(delimiter, 'g');
+		let result = [];
+		let from = 0;
+		let re;
+
+		while (result.length < limit && (re = regex.exec(string))) {
+			result.push(string.substring(from, re.index));
+			from = re.index + re[0].length;
+		}
+
+		if (result.length < limit) {
+			result.push(string.substring(from));
+		}
+		else if (re && from < string.length) {
+			result[result.length - 1] += string.substring(re.index);
+		}
+
+		return result;
+	}
+
+	(list || '').split('\n').forEach(line => {
+		line = line.replace(/^\s+|\s+$/g, '');
+		if (line == '' || /^[#;]/.test(line)) return;
+
+		let parts = splitex(line, /\s+/, 3);
+		if (parts.length < 3) return;
+
+		let [urlPattern, selector, action] = parts;
+
+		urlPattern = getGlobRegex(urlPattern);
+		if (!urlPattern || !urlPattern.test(window.location.href)) return;
+
+		let blocked, setargs;
+
+		if (action.toLowerCase() == 'block') {
+			blocked = true;
 		}
 		else {
-			line = [line, ''];
+			setargs = action;
 		}
-		try {
-			var url = getGlobRegex(line[0]);
 
-			if (url.test(window.location.href)) {
-				if (line[1] == '') {
-					result.fullBlocked = true;
-					return true;
-				}
-				else {
-					result.selectors.push(line[1]);
-				}
-			}
-		}
-		catch (e) {}
+		result._selectors.push({
+			selector: selector,
+			blocked: blocked,
+			setargs: setargs
+		});
 	});
+
+	result._selectors.sort((a, b) => {
+		if (a.selector == '*') return 1;
+		if (b.selector == '*') return -1;
+		return 0;
+	});
+
+	console.log(JSON.stringify(result, null, ' '));
+
 	return result;
 }
 
@@ -1531,14 +1550,14 @@ var readContentFromElement = (function () {
 		}
 
 		else if (element.isContentEditable) {
-			var writeAs = 'html';
-
-			contentEditableProfile.some(function (p) {
-				if (p.pattern.test(window.location.hostname)) {
-					writeAs = p.writeAs;
-					return true;
+			let setargs = siteOverrides.setargs(element);
+			let writeAs = 'html';
+			if (setargs) {
+				let re = /\bwriteas\s*=\s*(\w+)/.exec(setargs);
+				if (re) {
+					writeAs = re[1];
 				}
-			});
+			}
 
 			callback(element, getMarkdown(element), 'contentEditable', writeAs);
 		}
@@ -1717,41 +1736,38 @@ var writeContentToElement = (function () {
 		}
 
 		else if (element.isContentEditable) {
-			var writeAs = opts.writeAs;
-			try {
-				var data = JSON.parse(writeAs);
-				for (var pattern in data) {
-					if (!getGlobRegex(pattern).test(window.location.href)) continue;
-
-					// simple string
-					if (typeof data[pattern] == 'string') {
-						writeAs = data[pattern];
-					}
-
-					// array...
-					else if (data[pattern] instanceof Array) {
-						data[pattern].some(function (pair) {
-							if (!('selector' in pair)) return;
-							if (document.querySelector(pair.selector)) {
-								writeAs = pair.writeas;
-								return true;
-							}
-						});
-					}
-					break;
-				}
-			}
-			catch (e) {
-			}
-
-			switch (writeAs) {
+			/*
+			 * There are various newline formats in content editable element.
+			 * These formats are different depending on sites, so we have to choice
+			 * the correct format by list.  So `writeAs` property can be assigned
+			 * following values:
+			 *
+			 *   - 'html': treat a text as markdown, and build DOM tree (default)
+			 *   - 'div': create div element from each line
+			 *
+			 *       <div>line1</div><div>line2</div> ...
+			 *
+			 *   - 'p': create p element from each line
+			 *
+			 *       <p>line1</p><p>line2</p> ...
+			 *
+			 *   - 'textAndBreak': create text node from each line, and each line is
+			 *     divided by a BR element.
+			 *
+			 *       #text <br> #text ...
+			 *
+			 *   - 'plaintext': create a text node. newline is '\n'
+			 *
+			 *       line1 \n line2 ...
+			 */
+			switch (opts.writeAs.toLowerCase()) {
 			case 'div':
 				return overwrite(element, content, toDiv);
 
 			case 'p':
 				return overwrite(element, content, toParagraph);
 
-			case 'textAndBreak':
+			case 'textandbreak':
 				return overwrite(element, content, toTextAndBreak);
 
 			case 'plantext':
@@ -1778,7 +1794,7 @@ function handleKeydown (e) {
 	if (e.keyCode == 16 || e.keyCode == 17 || e.keyCode == 18) return;
 
 	var target = getShadowActiveElement(e.target);
-	if (blacklist.includes(target)) return;
+	if (siteOverrides.blocked(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
 	if (!matchWithShortcut(e)) return;
@@ -1793,7 +1809,7 @@ function handleTargetFocus (e) {
 	if (!quickActivation || !e || !e.target || !allowedElements) return;
 
 	var target = getShadowActiveElement(e.target);
-	if (blacklist.includes(target)) return;
+	if (siteOverrides.blocked(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
 	if (findAgent(target)) return;
@@ -1807,7 +1823,7 @@ function handleRequestLaunch () {
 	if (typeof document.hasFocus == 'function' && !document.hasFocus()) return;
 
 	var target = getShadowActiveElement(document.activeElement);
-	if (blacklist.includes(target)) return;
+	if (siteOverrides.blocked(target)) return;
 	if (!isLaunchableElement(target)) return;
 	if (!doesTargetAllowLaunch(target)) return;
 	if (findAgent(target)) return;
@@ -1835,7 +1851,7 @@ function handleAgentInitialized (req) {
 var handleBackendMessage = (function () {
 	function updateStorage (agent, req) {
 		var logbuf = [];
-		var qaBlacklist;
+		var so;
 		for (var i in req.items) {
 			var value = req.items[i];
 			switch (i) {
@@ -1859,13 +1875,15 @@ var handleBackendMessage = (function () {
 				logbuf.push(i);
 				break;
 
-			case 'qaBlacklist':
-				qaBlacklist = value;
+			case 'siteOverrides':
+				so = value;
 				logbuf.push(i);
 				break;
 			}
 		}
-		blacklist = parseBlacklist(qaBlacklist);
+		if (so) {
+			siteOverrides = parseSiteOverrides(so);
+		}
 		logbuf.length && log(
 			'update-storage: consumed ', logbuf.join(', '));
 	}
@@ -2025,7 +2043,7 @@ function handleConnect (req) {
 	quickActivation = req.quickActivation;
 	devMode = req.devMode;
 	logMode = req.logMode;
-	blacklist = parseBlacklist(req.qaBlacklist);
+	siteOverrides = parseSiteOverrides(req.siteOverrides);
 	statusLineHeight = req.statusLineHeight;
 
 	extension.ensureRun(handleAgentInitialized, req);

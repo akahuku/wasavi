@@ -153,6 +153,9 @@
 			qaBlacklist: {
 				def: ''
 			},
+			siteOverrides: {
+				def: false
+			},
 			logMode: {
 				def: false,
 				set: function (value) {
@@ -175,109 +178,162 @@
 	/* <<<1 classes */
 
 	function Config (info, opts) {
-		Object.defineProperty(this, 'info', {value: info});
-		this.opts_ = opts || {};
-		this.init();
-	}
+		function init (emitUpdateEvent) {
+			let updateHandler = opts.onupdate;
 
-	Config.prototype = {
-		init: function (emitUpdateEvent) {
-			var updateHandler = this.opts_.onupdate;
 			if (!emitUpdateEvent) {
-				this.opts_.onupdate = null;
+				opts.onupdate = null;
 			}
-			['sync', 'local'].forEach(function (storage) {
-				for (var key in this.info[storage]) {
-					var item = this.info[storage][key];
-					var defaultValue = this.getDefaultValue(key);
-					var currentValue = this.get(key);
 
-					if (currentValue === undefined) {
-						this.set(key, defaultValue);
-						continue;
+			return Promise.all([
+				new Promise(resolve => {
+					let defaults = {};
+
+					for (let i in info.sync) {
+						defaults[i] = info.sync[i].def;
 					}
 
-					var defaultType = ext.utils.objectType(defaultValue);
-					var currentType = ext.utils.objectType(currentValue);
-
-					if (defaultType != currentType) {
-						this.set(key, defaultValue);
-						continue;
-					}
-
-					if (defaultType != 'Object') {
-						if (item.setOnInit && item.set) {
-							item.set.call(this, currentValue);
+					chrome.storage.sync.get(defaults, items => {
+						if (chrome.runtime.lastError) {
+							ext.log(`!ERROR: failed to retrieve sync storage: ${chrome.runtime.lastError.message}`);
 						}
-						continue;
-					}
-
-					if (currentType == 'Object') {
-						Object.keys(currentValue).forEach(function (key) {
-							if (!(key in defaultValue)) {
-								delete currentValue[key];
+						else {
+							for (let i in items) {
+								values[i] = items[i];
 							}
-						});
-					}
-					else {
-						currentType = {};
-					}
-
-					Object.keys(defaultValue).forEach(function (key) {
-						if (!(key in currentValue)) {
-							currentValue[key] = defaultValue[key];
+							console.log('got sync stroage');
+							console.dir(items);
 						}
+						resolve();
 					});
+				}),
+				new Promise(resolve => {
+					let defaults = {};
 
-					this.set(key, currentValue);
-				}
-			}, this);
-			this.opts_.onupdate = updateHandler;
-		},
-		getInfo: function (name) {
-			return this.info.sync[name] || this.info.local[name];
-		},
-		getDefaultValue: function (name) {
-			var info = this.getInfo(name);
-			if (!info) return undefined;
-			if (typeof info.def == 'function') {
-				return info.def.call(this);
-			}
-			return info.def;
-		},
-		get: function (name) {
-			var info = this.getInfo(name);
-			if (!info) return undefined;
-			var result = ext.storage.getItem(name);
-			if (info.get) {
-				result = info.get.call(this, result);
+					for (let i in info.local) {
+						defaults[i] = info.local[i].def;
+					}
+
+					chrome.storage.local.get(defaults, items => {
+						if (chrome.runtime.lastError) {
+							ext.log(`!ERROR: failed to retrieve local storage: ${chrome.runtime.lastError.message}`);
+						}
+						else {
+							for (let i in items) {
+								values[i] = items[i];
+							}
+							console.log('got local stroage');
+							console.dir(items);
+						}
+						resolve();
+					});
+				})
+			]).then(() => {
+				opts.onupdate = updateHandler;
+				console.log('Config#init done');
+			});
+		}
+
+		function clear () {
+			return Promise.all([
+				new Promise(resolve => {
+					chrome.storage.sync.clear(() => {
+						if (chrome.runtime.lastError) {
+							ext.log(`!ERROR: failed to clearing sync storage: ${chrome.runtime.lastError.message}`);
+						}
+						console.log('cleared sync stroage');
+						console.dir(items);
+						resolve();
+					})
+				}),
+				new Promise(resolve => {
+					chrome.storage.local.clear(() => {
+						if (chrome.runtime.lastError) {
+							ext.log(`!ERROR: failed to clearing local storage: ${chrome.runtime.lastError.message}`);
+						}
+						console.log('cleared local stroage');
+						console.dir(items);
+						resolve();
+					})
+				})
+			])
+			.then(() => {
+				return self.init();
+			});
+		}
+
+		function get (name) {
+			let itemInfo = getInfo(name);
+			if (!itemInfo) return undefined;
+			let result = values[name];
+			if (itemInfo.get) {
+				result = itemInfo.get.call(self, result);
 			}
 			return result;
-		},
-		set: function (name, value) {
-			var info = this.getInfo(name);
-			if (!info) return;
-			if (info.set) {
-				value = info.set.call(this, value);
-			}
-			ext.storage.setItem(name, value);
-			if (this.opts_.onupdate) {
-				this.opts_.onupdate.call(this, name, value);
-			}
-		},
-		clear: function () {
-			var storages = Array.prototype.slice.call(arguments);
-			if (storages.length == 0) {
-				storages.push('sync', 'local');
-			}
-			storages.forEach(function (storage) {
-				if (!(storage in this.info)) return;
-				for (var key in this.info[storage]) {
-					ext.storage.setItem(key, undefined);
-				}
-			}, this);
 		}
-	};
+
+		function set (name, value) {
+			let itemInfo = getInfo(name);
+			if (!itemInfo) return;
+			if (itemInfo.set) {
+				itemInfo.set.call(self, value);
+			}
+			values[name] = value;
+			let payload = {};
+			payload[name] = value;
+			if (name in info.sync) {
+				chrome.storage.sync.set(payload);
+			}
+			else if (name in info.local) {
+				chrome.storage.local.set(payload);
+			}
+			if (opts.onupdate) {
+				opts.onupdate.call(self, name, value);
+			}
+		}
+
+		function getInfo (name) {
+			return info.sync[name] || info.local[name];
+		}
+
+		function getDefaultValue (name) {
+			let itemInfo = getInfo(name);
+			if (!itemInfo) return undefined;
+			if (typeof itemInfo.def == 'function') {
+				return itemInfo.def.call(self);
+			}
+			return itemInfo.def;
+		}
+
+		function handleStorageChanged (changes, areaName) {
+			for (let name in changes) {
+				let itemInfo = getInfo(name);
+				let value = changes[name].newValue;
+				if (!itemInfo) continue;
+				if (itemInfo.set) {
+					itemInfo.set.call(self, value);
+				}
+				values[name] = value;
+				if (opts.onupdate) {
+					opts.onupdate.call(self, name, value);
+				}
+			}
+		}
+
+		let self = this;
+		let values = {};
+
+		opts || (opts = {});
+		chrome.storage.onChanged.addListener(handleStorageChanged);
+		Object.defineProperties(this, {
+			info: {value: info},
+			opts: {value: opts},
+			init: {value: init},
+			get: {value: get},
+			set: {value: set},
+			clear: {value: clear}
+		});
+	}
 
 	/* <<<1 functions */
 
@@ -308,63 +364,25 @@
 	/** <<<2 async initializer: init the config object */
 
 	function initConfig (configInfo) {
-		return new Promise(function (resolve, reject) {
-			function handleStorageUpdate (key, value) {
-				var that = this;
+		config = new Config(configInfo, {
+			onupdate: function (key, value) {
+				if (!this._updates) {
+					this._updates = {};
+				}
 				this._updates[key] = value;
 				this._timer && ext.utils.clearTimeout(this._timer);
-				this._timer = ext.utils.setTimeout(function () {
-					ext.broadcast({
+				this._timer = ext.utils.setTimeout(() => {
+					ext.broadcastToAllTabs({
 						type: 'update-storage',
-						items: that._updates
+						items: this._updates
 					});
-
-					var syncUpdates = {};
-					for (var i in that.info.sync) {
-						if (i in that._updates) {
-							syncUpdates[i] = that._updates[i];
-						}
-					}
-					that._syncStorage.set(syncUpdates);
-
-					that._timer = null;
-					that._updates = {};
-					that = null;
+					delete this._timer;
+					delete this._updates;
 				}, STORAGE_UPDATE_BROADCAST_DELAY_SECS);
 			}
-			function handleGetSyncStorage (items) {
-				if (config) {
-					config.clear('sync');
-					for (var i in items) {
-						ext.storage.setItem(i, items[i]);
-					}
-					config.init(true);
-				}
-				else {
-					for (var i in items) {
-						ext.storage.setItem(i, items[i]);
-					}
-					config = new Config(configInfo, {onupdate: handleStorageUpdate});
-					config._updates = {};
-					config._timer = null;
-					config._syncStorage = syncStorage;
-				}
-			}
-
-			var syncStorage = require('./SyncStorage').SyncStorage({
-				onSignInChanged: function () {
-					if (!config || !config._syncStorage) return;
-					config._syncStorage.get(
-						Object.keys(config.info.sync), handleGetSyncStorage);
-				}
-			});
-
-			syncStorage.get(Object.keys(configInfo.sync), function (items) {
-				handleGetSyncStorage(items);
-				syncStorage = null;
-				resolve();
-			});
 		});
+
+		return config.init();
 	}
 
 	/** <<<2 async initializer: init the content of wasavi frame */
@@ -601,7 +619,30 @@
 
 		// for agent and options
 		else {
-			o.qaBlacklist = config.get('qaBlacklist');
+			o.siteOverrides = config.get('siteOverrides');
+			if (!o.siteOverrides) {
+				let lines = config.get('qaBlacklist');
+				/*
+				lines = [
+					'# test data',
+					'http://example.org/',
+					'',
+					'http://example.org/    #some-id'
+				].join('\n');
+				*/
+				lines = lines.split('\n').map(line => {
+					let l = line.replace(/^\s+|\s+$/g, '');
+					if (l == '' || /^[#;]/.test(l)) return line;
+					l = l.split(/\s+/);
+					if (l.length == 1) {
+						return line + '\t*\tblock';
+					}
+					else {
+						return line + '\tblock';
+					}
+				}).join('\n');
+				o.siteOverrides = lines;
+			}
 		}
 
 		respond(o);
@@ -651,11 +692,9 @@
 	}
 
 	function handleResetOptions (command, data, sender, respond) {
-		config.clear();
-		config._syncStorage.clear();
 		ext.fileSystem.clearCredentials();
 		contextMenu.build(true);
-		config.init(true);
+		config.clear();
 	}
 
 	function handleGetStorage (command, data, sender, respond) {

@@ -134,10 +134,10 @@ function initPage (req) {
 		el.checked = true;
 	}
 
-	// blacklist
-	el = $('qa-blacklist');
+	// site overrides
+	el = $('site-overrides');
 	if (el && el.nodeName == 'TEXTAREA') {
-		el.value = req.qaBlacklist;
+		el.value = req.siteOverrides;
 	}
 
 	// shortcut
@@ -347,10 +347,10 @@ function handleOptionsSave () {
 		items.push({key:'quickActivation', value:el.value == '1'});
 	}
 
-	// blacklist
-	el = $('qa-blacklist');
+	// site overrides
+	el = $('site-overrides');
 	if (el && el.nodeName == 'TEXTAREA') {
-		items.push({key:'qaBlacklist', value:el.value});
+		items.push({key:'siteOverrides', value:el.value});
 	}
 
 	// shortcut

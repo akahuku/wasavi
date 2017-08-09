@@ -442,7 +442,7 @@ Wasavi.Configurator = function (app, internals, abbrevs) {
 			else {
 				tmp.length && result.push(' ');
 				for (var j = 0; j < tmp.length; j++) {
-					result.push(tmp[j]);
+					result.push(toVisibleString(tmp[j]));
 				}
 			}
 		}

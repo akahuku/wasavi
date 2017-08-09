@@ -29,12 +29,12 @@
         "message": "when a key combination is entered",
         "description": ""
     },
-    "option_exceptional_urls_head": {
-        "message": "Exceptional URLs",
+    "option_site_overrides_head": {
+        "message": "Site overrides",
         "description": ""
     },
-    "option_qa_blacklist_tips": {
-        "message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* You can also put blank and CSS selector expression after URL, like [c]http://example.net/ [name=\"foo\"][/c]. The selector will changes a blacklisting target to an element from a page.",
+    "option_site_overrides_tips": {
+        "message": "* Put any URL to control wasavi behavior for each site.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* Each valid line consists of three components delimited by space: URL, CSS-selector, action.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* action is [c]block[/c] or [c]:set[/c] command of wasavi. block action prevents wasavi from launch. set command will be evaluated after exrc.",
         "description": ""
     },
     "option_target_elements_desc": {

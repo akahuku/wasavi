@@ -29,13 +29,13 @@
 		"message": "when a key combination is entered",
 		"description": "when a key combination is entered"
 	},
-	"option_exceptional_urls_head": {
-		"message": "Exceptional URLs",
-		"description": "Exceptional URLs"
+	"option_site_overrides_head": {
+		"message": "Site overrides",
+		"description": "Site overrides"
 	},
-	"option_qa_blacklist_tips": {
-		"message": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* You can also put blank and CSS selector expression after URL, like [c]http://example.net/ [name=\"foo\"][/c]. The selector will changes a blacklisting target to an element from a page.",
-		"description": "* Put any URL to prevent from wasavi activation.\n* One URL per line.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* You can also put blank and CSS selector expression after URL, like [c]http://example.net/ [name=\"foo\"][/c]. The selector will changes a blacklisting target to an element from a page."
+	"option_site_overrides_tips": {
+		"message": "* Put any URL to control wasavi behavior for each site.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* Each valid line consists of three components delimited by space: URL, CSS-selector, action.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* action is [c]block[/c] or [c]:set[/c] command of wasavi. block action prevents wasavi from launch. set command will be evaluated after exrc.",
+		"description": "* Put any URL to control wasavi behavior for each site.\n* A line starting with [c];[/c] or [c]#[/c] is treated as comment.\n* Each valid line consists of three components delimited by space: URL, CSS-selector, action.\n* You can use wildcard [c]*[/c] and [c]?[/c] in URL.\n* action is [c]block[/c] or [c]:set[/c] command of wasavi. block action prevents wasavi from launch. set command will be evaluated after exrc."
 	},
 	"option_target_elements_desc": {
 		"message": "* Format is <(modifier-)* key>,...\nFor example, <c-enter>, <insert> means \"Launch wasavi when ctrl+enter or insert is pressed.\"\n* Following keys can be used:\n[c]backspace[/c] [c]bs[/c] [c]tab[/c] [c]enter[/c] [c]return[/c] [c]ret[/c] [c]pageup[/c] [c]pagedown[/c] [c]end[/c] [c]home[/c] [c]left[/c] [c]up[/c] [c]right[/c] [c]down[/c] [c]insert[/c] [c]ins[/c] [c]delete[/c] [c]del[/c] [c],[/c] [c]comma[/c] [c].[/c] [c]dot[/c] [c]period[/c] [c]/[/c] [c]slash[/c] [c]\\[[/c] [c]\\\\[/c] [c]backslash[/c] [c]\\][/c]\n[c]f1[/c] to [c]f12[/c], [c]a[/c] to [c]z[/c], [c]0[/c] to [c]9[/c]\n* Following keys can be used as modifier: [c]s[/c] (for SHIFT), [c]c[/c] (for CTRL).\n* If text field is left empty default shortcut <c-enter>, <insert> is used.",

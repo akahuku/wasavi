@@ -1283,7 +1283,11 @@ function install (x, req) {
 		'lang', l10n.getMessage('wasavi_locale_code'));
 
 	extensionChannel.tabId = req.tabId;
-	exrc = [req.exrc, req.ros];
+	exrc = {
+		main: req.exrc,
+		setargs: x.setargs ? 'set ' + x.setargs.replace(/([^\u0016])\|.*/, '$1')  : null,
+		ros: req.ros
+	};
 	quickActivation = req.quickActivation;
 	global._ = l10n.getTranslator();
 	devMode = req.devMode;
@@ -1345,7 +1349,6 @@ function install (x, req) {
 	executingMacroInfo = [];
 
 	config.setData(x.readOnly ? 'readonly' : 'noreadonly');
-	config.setData('writeas', x.writeAs);
 
 	computeIdealWidthPixels();
 	var initialMessage = getFileIoResultInfo('', x.value.length, true);
@@ -1398,23 +1401,33 @@ function runExrc () {
 
 	isInteractive = false;
 	promise = exvm
-		.run(exrc[0])
+		.run(exrc.main)
 		.then(() => {
 			if (exvm.lastError) {
-				console.log(`wasavi: an error occured in exrc:\n${exvm.lastError}`);
+				log(`wasavi: an error occured in exrc.main:\n${exvm.lastError}`);
+				exvm.lastError = undefined;
+			}
+			if (isString(exrc.setargs) && exrc.setargs != '') {
+				log(`evaluating exrc.setargs:\n${exrc.setargs}`);
+				return exvm.run(exrc.setargs);
+			}
+		})
+		.then(() => {
+			if (exvm.lastError) {
+				log(`wasavi: an error occured in exrc.setargs:\n${exvm.lastError}`);
 				exvm.lastError = undefined;
 			}
 
 			config.saveSnapshot('exrc');
 
-			if (config.vars.override && isString(exrc[1]) && exrc[1] != '') {
-				console.log(`evaluating exrc #1:\n${exrc[1]}`);
-				return exvm.run(exrc[1]);
+			if (config.vars.override && isString(exrc.ros) && exrc.ros != '') {
+				log(`evaluating exrc.ros:\n${exrc.ros}`);
+				return exvm.run(exrc.ros);
 			}
 		})
 		.then(() => {
 			if (exvm.lastError) {
-				console.log(`wasavi: an error occured while restoring overriden settings:\n${exvm.lastError}`);
+				log(`wasavi: an error occured in exrc.ros:\n${exvm.lastError}`);
 				exvm.lastError = undefined;
 			}
 
@@ -5416,19 +5429,10 @@ const config = new Wasavi.Configurator(appProxy,
 		['cursorblink', 'b', true],
 		['esctoblur', 'b', false],
 		['writeas', 's', '', function (v) {
-			switch (v) {
+			switch (v.toLowerCase()) {
 			case 'html': case 'div': case 'p':
-			case 'textAndBreak': case 'plaintext':
+			case 'textandbreak': case 'plaintext':
 				targetElement.writeAs = v;
-				break;
-			default:
-				var asjson = parseJson(v);
-				if (asjson) {
-					targetElement.writeAs = v;
-				}
-				else {
-					v = targetElement.writeAs;
-				}
 				break;
 			}
 			return v;
@@ -8924,7 +8928,7 @@ if (global.WasaviExtensionWrapper
 					nodeName:'textarea',
 					// nodePath
 					elementType:'textarea',
-					writeAs: '',
+					setargs: '',
 					selectionStart:0, selectionEnd:0,
 					scrollTop:0, scrollLeft:0,
 					readOnly:false,
