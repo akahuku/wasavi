@@ -1770,7 +1770,7 @@ var writeContentToElement = (function () {
 			case 'textandbreak':
 				return overwrite(element, content, toTextAndBreak);
 
-			case 'plantext':
+			case 'plaintext':
 				return overwrite(element, content, toPlaintext);
 
 			case 'html': default:
