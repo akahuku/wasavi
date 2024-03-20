@@ -259,7 +259,7 @@ The addressing in ex command is fully supported:
 * the last line of buffer: `$p`
 * absolute line number: `1,2p`
 * relative line number: `+1,+2p`
-* regal expression: `/re/p` `?re?p`
+* regular expression: `/re/p` `?re?p`
 * mark referencing: `'a,'bp`
 
 In addition to this wasavi also accepts offset, for example: `/re/+1p`.
